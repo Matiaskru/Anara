@@ -86,8 +86,15 @@ anterior. Enquanto aguarda aprovação: salva como rascunho, **não** gera PDF f
 
 ## Estado atual (03/09/2026)
 
-Auditoria e plano concluídos e em revisão. **Nenhuma linha de código funcional foi alterada.**
-A única etapa autorizável é a **Fase 0 — Fundação**, e ela **ainda aguarda autorização explícita
-em nova sessão**. As Ondas 1 a 8 não estão autorizadas.
+Auditoria, plano e **Fase 0 — Fundação** concluídos. Nenhuma regra de negócio foi alterada:
+os 173 testes originais continuam passando sem edição, e nenhuma cotação histórica mudou de
+número. As **Ondas 1 a 8 não estão autorizadas** — a Fase 0 ter terminado não autoriza a Onda 1.
+
+O repositório agora é Git, e é **local**: a senha compartilhada de `app/auth.py:10-11` está no
+histórico desde o commit inicial. Sem remote e sem push até a Onda 4 ou até uma sanitização de
+histórico autorizada em separado.
+
+Antes de qualquer onda: o procedimento de `BACKUP.md`. Depois: comparar contra
+`relatorios/baseline_fase0.json`.
 
 Consulte `ANARA_EXECUTION_STATE.md` antes de agir.

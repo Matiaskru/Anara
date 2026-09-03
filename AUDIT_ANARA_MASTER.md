@@ -55,6 +55,44 @@ Implementação 1 a 8**. São 1 fase + 8 ondas.
 | **B-10** | §20/§58 — NCM roupão | `seeds.NCM_POR_FAMILIA` | 6309.00.10 (legado proibido) | MÉDIO | 6208.91.00 / 6208.92.00 (ver D-02, fechada) |
 | **B-11** | §61 — migrations | `app/migrations.py` | `create_all` + diff de metadata; sem downgrade | MÉDIO | Alembic |
 | **B-12** | §13 — métodos de custo | `models.CostMethod` | Enum pobre: falta `KTC_SPECIAL_QUOTED`, `KTC_ESTIMATED_FROM_QUOTES`, `A_COTAR_*`, `DAUNE_DIRECT`, `DECOR_DIRECT` | MÉDIO | Migrar enum com mapeamento do legado |
+| **B-13** | §61 — esquema declarado ≠ esquema real | modelos × `data/anara.db` | 21 divergências entre o que `models.py` declara e o que o banco tem: 5 índices, 2 chaves estrangeiras, 10 colunas NOT NULL e 4 tipos booleanos. Consequência direta do B-11 — `ALTER TABLE ADD COLUMN` no SQLite não cria índice, FK nem constraint | MÉDIO | Migration própria, em etapa autorizada. **Descoberto na Fase 0** |
+| **B-14** | §27 — origem fiscal | `models.Cotacao.estado_origem`, `BaseImportacao.origem_uf`, `premissa.catalogo_origem` | Três origens fiscais convivem: modelo default "Santa Catarina", bases legadas "SC", premissa de catálogo "São Paulo". 14 das 18 cotações estão gravadas com Santa Catarina, e `RegraFiscalVenda` só tem regra explícita para SP→SP | ALTO | Onda 1, junto com B-01/B-02. **Descoberto na Fase 0** |
+
+### 1.2.1. Descobertos na Fase 0 (03/09/2026)
+
+Os dois vieram da própria Fundação: o B-13 apareceu ao gerar a revisão inicial do Alembic,
+que comparou modelo e banco pela primeira vez; o B-14 apareceu na ponte da `BaseImportacao`,
+que compara campo legado com premissa versionada.
+
+**B-13 — inventário da divergência.** Nada aqui muda número; muda garantia.
+
+| Tipo | Quantidade | Quais |
+|---|---|---|
+| Índices declarados e ausentes | 5 | `ix_cotacao_numero`, `ix_produto_cost_method`, `ix_produto_custo_confianca`, `ix_produto_familia`, `ix_produto_fornecedor_id` |
+| Chaves estrangeiras ausentes | 2 | `produto.fornecedor_id` → `fornecedor.id`, `cotacaoitem.fornecedor_id` → `fornecedor.id` |
+| NOT NULL declarado, coluna nullable | 10 | `baseimportacao.icms_por_estado_json`, `baseimportacao.cenarios_fiscais_json`, `cliente.ativo`, `cotacao.estado_origem`, `cotacao.contribuinte_icms`, `cotacao.validade_dias`, `cotacao.freight_type`, `cotacao.freight_incluso`, `produto.precisa_revisao`, `toalhapreco.preco_final` |
+| Tipo BOOLEAN declarado, INTEGER no banco | 4 | `cliente.ativo`, `cotacao.freight_incluso`, `produto.precisa_revisao`, `toalhapreco.preco_final` |
+
+Os índices são desempenho; as FKs e os NOT NULL são integridade referencial que hoje não
+existe em produção; os tipos são cosméticos no SQLite (afinidade NUMERIC × INTEGER guarda
+0/1 igual) e deixam de ser cosméticos no PostgreSQL da Onda 4. A revisão inicial `0001`
+fotografa o banco **como ele é**, com as diferenças anotadas no próprio arquivo; corrigir é
+etapa própria, não efeito colateral da Fase 0.
+
+**B-14 — a origem fiscal não é uma só.**
+
+| Onde | Valor | Alcance |
+|---|---|---|
+| `models.Cotacao.estado_origem` (default) | `"Santa Catarina"` | toda cotação nova que não definir origem |
+| `BaseImportacao.origem_uf` | `"SC"` | as 4 bases |
+| `premissa.catalogo_origem` | `"São Paulo"` | preço-base do catálogo |
+| `pricing_engine.TaxRuleSet.origem_uf` (default) | `"SC"` | motor |
+| Decisões de 03/09 | **São Paulo** | SP→SP 18%; nacional saindo de SP 7%/12% |
+
+Hoje: 14 cotações gravadas com Santa Catarina (todas arquivadas) e 4 com São Paulo (as 2
+ativas). `RegraFiscalVenda` tem regra explícita só para SP→SP, então cotação que ficar no
+default cai na resolução por `EstadoFiscal` em vez da regra decidida. Não foi tocado na
+Fase 0 — é matéria fiscal, portanto Onda 1.
 
 ### 1.3. Módulos exigidos e ausentes
 

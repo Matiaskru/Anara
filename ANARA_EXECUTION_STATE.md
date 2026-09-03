@@ -2,22 +2,37 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **03/09/2026**
+Última atualização: **03/09/2026 — fim da Fase 0**
 
 ---
 
 # Estado atual
 
-**Auditoria e planejamento concluídos. Nenhuma linha de código funcional alterada.**
+**Fase 0 — Fundação concluída. Nenhuma regra de negócio foi alterada.**
 
 - Fase 1 do SUPER PROMPT v2 (auditoria read-only): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
-- Fase 0 — Fundação: **autorizada pelo usuário, NÃO executada nesta sessão**
-- Ondas 1 a 8: **não autorizadas**
+- Fase 0 — Fundação: **CONCLUÍDA em 03/09/2026**
+- Ondas 1 a 8: **não autorizadas** — a Onda 1 **não** foi iniciada
 
-O sistema continua rodando como antes: 173 testes passando, 339 SKUs, 3 fornecedores,
-4 bases de importação, 18 cotações no total (2 ativas + 16 arquivadas), 45 itens de cotação,
-plataforma em `http://127.0.0.1:8420`.
+O sistema continua rodando como antes: **173 testes originais passando** (mais 13 novos da
+Fundação, 186 no total), 339 SKUs, 3 fornecedores, 4 bases de importação, 18 cotações
+(2 ativas + 16 arquivadas), 45 itens, plataforma em `http://127.0.0.1:8420`.
+
+Nenhuma cotação, item ou snapshot mudou de número: provado por digest coluna a coluna e
+pelo baseline, que foi gerado antes das migrations e continua reproduzindo idêntico.
+
+## Git
+
+O repositório foi inicializado nesta fase e é **local**. Commit inicial
+`Estado herdado do sistema Anara (pré-Fase 0)` é o ponto de retorno do código.
+
+> **BLOQUEIO DE PUBLICAÇÃO REMOTA.** `app/auth.py:10-11` tem senha compartilhada em texto
+> claro (`SENHA = "[SENHA-LEGADA-REMOVIDA]"`) e `SECRET_KEY` com fallback fixo, e isso está no histórico
+> do Git desde o commit inicial. Enquanto essa credencial existir no histórico: **nenhum
+> remote, nenhum push, nenhum GitHub**. Some-se a isso que `referencia/` versiona tabelas
+> de preço de fornecedor. Liberar exige a Onda 4 (reforma de autenticação) **ou** uma
+> sanitização explícita de histórico autorizada em separado.
 
 > Estes números são o retrato de **03/09/2026**. O usuário usa a plataforma entre sessões,
 > então contagens de cotações/itens **podem ter mudado legitimamente**. Divergência nessas
@@ -28,30 +43,52 @@ plataforma em `http://127.0.0.1:8420`.
 
 # Última fase concluída
 
-**Fase 2 — Plano**, com duas rodadas de decisões do usuário incorporadas (03/09/2026).
+**Fase 0 — Fundação** (03/09/2026). Entregou: Git local com commit inicial seguro,
+baseline ampliado, Alembic com o esquema atual como revisão inicial, migration-ponte da
+`BaseImportacao`, script de backup com restore ensaiado e 13 testes de Fundação.
 
 ---
 
-# Alterações realizadas
+# Alterações realizadas na Fase 0
 
-Apenas documentação. **Zero alteração em código, migrations, banco, templates ou testes.**
+**Nenhuma regra de negócio, nenhum motor de cálculo, nenhum template.** O único arquivo de
+aplicação tocado foi `app/models.py`, e só de forma aditiva.
 
 | Arquivo | O que é |
 |---|---|
-| `AUDIT_ANARA_MASTER.md` | Novo. Matriz de auditoria: 15 comportamentos corretos, 12 bugs P0, 11 módulos ausentes, questões encerradas, contradições |
-| `IMPLEMENTATION_PLAN_ANARA.md` | Novo. Fase 0 + Ondas 1 a 8, com escopo, migrations, testes, risco e resultado esperado |
-| `CLAUDE.md` | Reescrito como instruções operacionais curtas. Versão anterior em `data/backups/CLAUDE.md.antes-handoff` |
+| `.gitignore` | Novo. Banco, backups, uploads, logs, caches e credenciais fora do Git |
+| `alembic.ini`, `alembic/env.py`, `alembic/script.py.mako` | Novos. URL vem de `app.db.DB_PATH`, sobreponível por `ANARA_DB_URL` |
+| `alembic/versions/0001_esquema_inicial.py` | Novo. Fotografia fiel do banco de 03/09 |
+| `alembic/versions/0002_ponte_baseimportacao.py` | Novo. Ponte da decisão H |
+| `app/models.py` | **Aditivo**: 4 colunas de vigência em `BaseImportacao` + modelo `BasePremissaPonte` |
+| `scripts/fundacao.py` | Novo. Digest por tabela e por coluna, comparação de estados |
+| `scripts/backup_banco.py` | Novo. Backup, verificação, restore de ensaio e restore real |
+| `scripts/baseline_regressao_v2.py` | Novo. Baseline ampliado, com modo `--verificar` |
+| `scripts/conferir_esquema_alembic.py` | Novo. Prova que as migrations reproduzem produção |
+| `tests/test_fundacao.py` | Novo. 13 testes |
+| `BACKUP.md` | Novo. Política de backup, restore e rollback |
+| `relatorios/baseline_fase0.json` | Novo. O baseline (2,1 MB) |
+| `relatorios/fase0_estado_banco_antes.json` / `_depois.json` | Novos. Retratos do banco |
+| `AUDIT_ANARA_MASTER.md` | **B-13** e **B-14**, descobertos na Fase 0 |
 | `ANARA_EXECUTION_STATE.md` | Este arquivo |
-| `PLANO_EXECUCAO_ANARA_v2.md` | Convertido em ponteiro para os dois documentos oficiais |
 
 ---
 
 # Testes / baseline
 
-- Suíte atual: **173 testes, todos passando** (estado herdado, não alterado nesta sessão)
-- Baseline ampliado da Fase 0: **ainda não gerado** — é o primeiro entregável da Fase 0
-- Baseline antigo existente: `relatorios/baseline_regressao.json` (241 SKUs × 9 cenários) e
-  `relatorios/regressao.json`
+- **173 testes originais: todos passando, nenhum alterado.** Nenhum teste legado foi
+  "consertado" para acomodar a Fundação
+- **13 testes novos** em `tests/test_fundacao.py` — 186 no total
+- Baseline ampliado: `relatorios/baseline_fase0.json` — 339 SKUs × 6 cenários fiscais ×
+  5 condições de pagamento = 8.670 células (289 SKUs com custo; 50 sem custo não geram
+  célula, porque o baseline não inventa margem), mais 18 cotações com totais, 45 itens com
+  sha256 da memória congelada, as 4 bases e as premissas vigentes
+- Reprodutibilidade conferida: `python3 scripts/baseline_regressao_v2.py --verificar`
+- Baseline antigo preservado: `relatorios/baseline_regressao.json` (241 SKUs × 9 cenários)
+
+> O baseline registra o comportamento **atual, com os bugs conhecidos de pé** — B-01 ainda
+> devolve 4% para venda interestadual a contribuinte de fornecedor nacional. É de propósito:
+> quando a Onda 1 mudar isso, a diferença tem que ser mensurável e explicável.
 
 ---
 
@@ -115,34 +152,53 @@ Apenas documentação. **Zero alteração em código, migrations, banco, templat
 | C-NEW-03 Passo Fundo-RS | Sem tarifa → `FRETE_A_COTAR` para a região |
 | C-NEW-05 Cobertura | TRANSAL cobre SC, PR, SP e RS. CIF fora disso → `FRETE_A_COTAR`. Limite operacional, não bug |
 
-**Nenhum blocker impede a Fase 0 nem as Ondas 1, 2 e 3.**
+| **PUBLICAÇÃO REMOTA** | **BLOQUEADA.** Credencial legada (`app/auth.py:10-11`) no histórico do Git desde o commit inicial. Sem remote e sem push até a Onda 4 ou sanitização explícita de histórico |
+| B-13 esquema | Modelos e banco divergem em 21 pontos (índices, FKs, NOT NULL, tipos). Descoberto na Fase 0. Não impede onda nenhuma; exige migration própria em etapa autorizada |
+| B-14 origem fiscal | Três origens convivem: "SC" nas bases, "Santa Catarina" no default do modelo, "São Paulo" na premissa e nas decisões. Descoberto na Fase 0. **Resolver na Onda 1** |
+
+**Nenhum blocker impede as Ondas 1, 2 e 3.** A Fase 0 está concluída.
+
+---
+
+# Fase 0 — o que foi entregue
+
+| # | Entrega | Situação |
+|---|---|---|
+| 1 | Git local + `.gitignore` + commit inicial seguro | Feito. Sem remote |
+| 2 | Baseline ampliado | Feito. `relatorios/baseline_fase0.json`, reprodutível |
+| 3 | Alembic, esquema atual como revisão inicial | Feito. `0001`, fiel ao banco vivo |
+| 4 | Ponte `BaseImportacao` | Feito. `0002`, aditiva, 40 linhas de ponte |
+| 5 | Bases históricas e snapshots preservados | Provado por digest coluna a coluna |
+| 6 | Script/procedimento de backup | Feito. `scripts/backup_banco.py` + `BACKUP.md` |
+| 7 | Restore testado | Ensaio e restore real exercitados, em cópia |
+| 8 | Testes da Fundação | 13 testes, todos passando |
+
+Ponto de rollback do dado, fora da pasta que é podada automaticamente:
+`~/Anara-Cotacao-Backups/anara_fase0_pre_20260903-080837.db`
 
 ---
 
 # Próxima fase
 
-## FASE 0 — FUNDAÇÃO (autorizada, aguardando início em nova sessão)
+## ONDA 1 — P0 FISCAL — **NÃO AUTORIZADA**
 
-Entregar:
-1. Baseline ampliado — 339 SKUs × 6 cenários fiscais × 5 condições de pagamento + 45 itens +
-   totais por cotação
-2. Alembic com o esquema atual como revisão inicial
-3. Ponte `BaseImportacao` (migration explícita, sem apagar base antiga nem tocar snapshot)
-4. Script de backup
-5. Restore testado
-6. Testes da Fundação
+Não iniciar sem autorização explícita e nova. Escopo em `IMPLEMENTATION_PLAN_ANARA.md`.
+Quando for autorizada, precisa resolver também o **B-14** (origem fiscal), descoberto na
+Fase 0, junto com B-01 e B-02.
 
-Ao terminar, **parar** e reportar os 10 itens exigidos:
-arquivos criados/alterados · migrations criadas · resultado dos 173 testes originais · resultado
-dos testes novos · resultado do baseline ampliado · prova de que nenhuma cotação ou snapshot
-histórico mudou · prova de backup e restore · anomalias · git diff ou resumo equivalente ·
-confirmação de que a Onda 1 não foi iniciada.
+Antes de começar, o procedimento do `BACKUP.md`: estado, backup, cópia do backup para
+`~/Anara-Cotacao-Backups/` com nome próprio, ensaio de restore. Depois: comparar contra
+`relatorios/baseline_fase0.json` e explicar cada número que mudou, com a regra que o
+explica.
 
 ---
 
 # O que NÃO fazer
 
-- **Não** iniciar a Onda 1 automaticamente após a Fase 0
+- **Não** iniciar a Onda 1 sem autorização explícita e nova — a Fase 0 ter terminado não
+  autoriza nada
+- **Não** configurar remote nem dar push enquanto a credencial legada estiver no histórico
+- **Não** "consertar" o baseline: ele registra o estado atual, bugs conhecidos incluídos
 - **Não** executar mais de uma etapa por autorização
 - **Não** apagar `BaseImportacao`, snapshots, cotações ou histórico
 - **Não** reescrever componente que está correto por preferência arquitetural
@@ -165,6 +221,8 @@ confirmação de que a Onda 1 não foi iniciada.
 | 3 | `IMPLEMENTATION_PLAN_ANARA.md` | Escopo exato da Fase 0 e das ondas |
 | 4 | `AUDIT_ANARA_MASTER.md` | O que está certo, o que está quebrado, e por quê |
 | 5 | `referencia/SUPER_PROMPT_ANARA_v2.txt` | Fonte de verdade de negócio (cópia no repo) |
+| 6 | `BACKUP.md` | Backup, restore e rollback — o que fazer antes de cada onda |
+| 7 | `relatorios/baseline_fase0.json` | Contra o que comparar depois de cada onda |
 | — | `README.md` | Como rodar, estrutura de pastas |
 
 Documentos-fonte de dados, todos em `~/Anara-Cotacao/referencia/`:

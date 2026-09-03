@@ -274,7 +274,16 @@ class CondicaoPagamento(SQLModel, table=True):
 # Catálogo
 # ---------------------------------------------------------------------------
 class BaseImportacao(SQLModel, table=True):
-    """Snapshot das premissas vigentes numa importação de planilha (legado, preservado)."""
+    """Snapshot das premissas vigentes numa importação de planilha (legado, preservado).
+
+    É o modelo anterior às tabelas versionadas: guardava todas as premissas fiscais e
+    comerciais em colunas de uma linha só. Continua existindo e continua sendo o que
+    torna cada cotação histórica reproduzível — **nunca é apagado nem reescrito**.
+
+    A Fase 0 acrescentou a ele a mesma vigência que as tabelas versionadas já têm
+    (`valid_from`/`valid_to`/`ativo`/`fonte`) e a ponte `BasePremissaPonte`, que diz,
+    campo a campo, onde cada premissa desta base vive hoje no mundo versionado.
+    """
     id: Optional[int] = Field(default=None, primary_key=True)
     importado_em: datetime = Field(default_factory=datetime.utcnow)
     nome_arquivo: str
@@ -289,6 +298,43 @@ class BaseImportacao(SQLModel, table=True):
     cambio_usd_brl: Optional[float] = None
     frete_usd_kg: Optional[float] = None
     outras_desp_usd_un: Optional[float] = None
+
+    # --- vigência (Fase 0): metadado, não altera nenhum valor econômico da base ---
+    valid_from: Optional[date] = None
+    valid_to: Optional[date] = None          # preenchido quando uma base mais nova entrou
+    ativo: Optional[bool] = True             # só a base mais recente fica ativa
+    fonte: Optional[str] = None
+
+
+class BasePremissaPonte(SQLModel, table=True):
+    """Ponte entre a `BaseImportacao` legada e as premissas versionadas (Fase 0).
+
+    Uma linha por campo de premissa de cada base. Responde, sem tocar em nada:
+
+    * qual era o valor legado daquela base;
+    * onde essa premissa vive hoje (tabela e chave do mundo versionado);
+    * quanto ela vale hoje, quando é um escalar comparável;
+    * se legado e vigente divergem.
+
+    É o que permite migrar premissa nas ondas seguintes sem perder a reprodutibilidade
+    das cotações já emitidas: a cotação continua apontando para a base, e a base agora
+    aponta para a premissa versionada equivalente.
+
+    A ponte é **descritiva**. Nenhum cálculo lê esta tabela; ela não muda preço nenhum.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    base_importacao_id: int = Field(foreign_key="baseimportacao.id", index=True)
+    campo_legado: str = Field(index=True)        # icms_pct, pis_cofins_pct, ...
+    valor_legado_num: Optional[float] = None
+    valor_legado_txt: Optional[str] = None
+    premissa_tabela: Optional[str] = None        # premissa | condicaopagamento | estadofiscal...
+    premissa_chave: Optional[str] = None         # chave/coluna dentro dessa tabela
+    valor_vigente_num: Optional[float] = None    # o que o mundo versionado resolve hoje
+    valor_vigente_txt: Optional[str] = None
+    diverge: Optional[bool] = None               # None = não é escalar comparável
+    observacao: Optional[str] = None
+    origem: str = "FASE_0_PONTE"
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
 
 
 class Produto(SQLModel, table=True):
