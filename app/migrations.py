@@ -30,9 +30,15 @@ def fazer_backup(motivo: str = "migration") -> str:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     destino = os.path.join(BACKUP_DIR, f"anara.db.{motivo}-{stamp}")
     shutil.copy2(DB_PATH, destino)
-    backups = sorted(f for f in os.listdir(BACKUP_DIR) if f.startswith("anara.db."))
-    for antigo in backups[:-MAX_BACKUPS]:
-        os.remove(os.path.join(BACKUP_DIR, antigo))
+    # Ordenar por DATA DE MODIFICAÇÃO, não pelo nome. O nome começa pelo motivo
+    # ("exclusao", "migration", "fase0-pre"...), então a ordem alfabética fazia o motivo decidir
+    # quem era apagado: um backup recém-criado com motivo de letra baixa era destruído na hora,
+    # enquanto um antigo com motivo de letra alta sobrevivia. Encontrado em 03/09/2026, quando
+    # a suíte apagou o próprio backup que acabara de criar.
+    caminhos = [os.path.join(BACKUP_DIR, f) for f in os.listdir(BACKUP_DIR)
+                if f.startswith("anara.db.")]
+    for antigo in sorted(caminhos, key=os.path.getmtime)[:-MAX_BACKUPS]:
+        os.remove(antigo)
     return destino
 
 

@@ -254,24 +254,69 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
                        f"{interestadual:.2%}, sem DIFAL"),
                 fonte=f"AliquotaInterestadual#{linha.id}",
                 difal_pct=None, difal_responsavel=NAO_APLICAVEL, **base)
-        # Contribuinte que consome: há DIFAL, e quem recolhe é o destinatário.
-        # Registrado na memória, **fora** do waterfall da Anara.
-        return ResultadoFiscal(
+        # Contribuinte que consome: há DIFAL, e quem recolhe é o destinatário. O preço não
+        # depende dele — o que reduz a receita da Anara é só a interestadual destacada.
+        #
+        # Mas o VALOR do DIFAL só pode ser informado se a carga final cadastrada corresponder
+        # a esta operação (mesma guarda do caso não contribuinte). Não correspondendo, o preço
+        # continua correto e o DIFAL fica **em branco, com o motivo** — em vez de exibir o
+        # diferencial de uma operação de 4% como se fosse o desta.
+        inter_da_tabela = getattr(destino, "aliquota_interestadual", None)
+        carga_aplicavel = (inter_da_tabela is not None
+                           and abs(float(inter_da_tabela) - interestadual) <= 1e-9)
+        if carga_aplicavel:
+            return ResultadoFiscal(
+                icms_pct=interestadual,
+                regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria "
+                       f"{origem_fiscal.lower()}, contribuinte consumidor final — "
+                       f"{interestadual:.2%} destacado; DIFAL de {difal:.2%} recolhido pelo "
+                       "destinatário"),
+                fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}.carga_final",
+                difal_pct=difal, difal_responsavel=DESTINATARIO, difal_entra_na_margem=False,
+                **base)
+        resultado = ResultadoFiscal(
             icms_pct=interestadual,
             regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria {origem_fiscal.lower()}, "
-                   f"contribuinte consumidor final — {interestadual:.2%} destacado; DIFAL de "
-                   f"{difal:.2%} recolhido pelo destinatário"),
-            fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}.carga_final",
-            difal_pct=difal, difal_responsavel=DESTINATARIO, difal_entra_na_margem=False, **base)
+                   f"contribuinte consumidor final — {interestadual:.2%} destacado; DIFAL "
+                   "recolhido pelo destinatário, valor não determinável"),
+            fonte=f"AliquotaInterestadual#{linha.id}",
+            difal_pct=None, difal_responsavel=DESTINATARIO, difal_entra_na_margem=False, **base)
+        resultado.avisos.append(
+            f"DIFAL não informado: a carga final de {uf_destino} foi apurada para "
+            f"{float(inter_da_tabela or 0):.2%} e esta operação é {interestadual:.2%}. O preço "
+            "não depende desse valor, porque quem recolhe é o destinatário.")
+        return resultado
 
     # Não contribuinte: consumidor final por natureza; o remetente recolhe o DIFAL, e ele
-    # entra no waterfall. A carga final do destino já embute o diferencial e é usada como está.
+    # entra no waterfall.
+    #
+    # GUARDA CRÍTICA. A coluna `carga_final` da tabela de DIFAL da Anara **não é chaveada só
+    # pela UF de destino**: cada linha foi apurada para uma alíquota interestadual específica,
+    # que está gravada na própria linha (`EstadoFiscal.aliquota_interestadual`). Conferido em
+    # 03/09/2026: as 27 UFs têm 4% ali, e `base_simples`, `base_dupla` e `carga_final`
+    # reproduzem exatamente `interna − 4%` e `(interna − 4%)/(1 − interna)`, mais FEM.
+    #
+    # Usar essa carga numa operação cujo interestadual é 12% ou 7% seria cobrar o DIFAL de
+    # uma operação de 4% — número errado, com aparência de certo. E recalcular a carga por
+    # base simples/dupla/FEM é proibido pela regra do projeto. Logo: quando a alíquota da
+    # operação não é a que a linha pressupõe, o cenário **bloqueia**.
+    inter_da_tabela = getattr(destino, "aliquota_interestadual", None)
+    if inter_da_tabela is None or abs(float(inter_da_tabela) - interestadual) > 1e-9:
+        return _bloqueio(
+            f"A carga final de {uf_destino} ({carga_final:.4%}) foi apurada para operação com "
+            f"alíquota interestadual de {float(inter_da_tabela or 0):.2%}, mas esta operação é "
+            f"{origem_fiscal.lower()} a {interestadual:.2%}. Não há carga final cadastrada para "
+            f"este cenário, e recalcular por base simples/dupla/FEM é proibido. Cadastrar a "
+            f"carga final de {uf_destino} para {interestadual:.2%} antes de cotar.",
+            **base)
+
     return ResultadoFiscal(
         icms_pct=carga_final,
         regra=(f"Interestadual {uf_origem}→{uf_destino} para não contribuinte — carga final de "
-               f"{uf_destino} ({carga_final:.2%}), coluna 'Carga Final' usada como está; "
-               f"DIFAL de {difal:.2%} recolhido pelo remetente"),
-        fonte=f"EstadoFiscal#{destino.id}.carga_final",
+               f"{uf_destino} ({carga_final:.2%}) apurada para interestadual de "
+               f"{interestadual:.2%}, usada como está; DIFAL de {difal:.2%} recolhido pelo "
+               f"remetente"),
+        fonte=f"EstadoFiscal#{destino.id}.carga_final (apurada para {interestadual:.2%})",
         difal_pct=difal, difal_responsavel=REMETENTE, difal_entra_na_margem=True, **base)
 
 
