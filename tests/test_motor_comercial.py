@@ -81,7 +81,51 @@ def test_condicao_sem_taxa_confirmada_avisa_em_vez_de_estimar(session):
     assert r.confirmado is False and r.pct == 0.0 and r.aviso
 
 
-def test_condicao_nao_cadastrada_usa_regua_antiga_com_aviso(session):
+@pytest.mark.parametrize("codigo", [
+    "30/60/90/120/150/180",   # a régua antiga devolveria 9,6%
+    "45 DD",                  # nunca existiu na tabela
+    "45",                     # parecido com uma canônica, mas não é
+    "30/45",                  # duas barras: a régua antiga devolveria 3,2%
+    "  30 / 60  ",            # espaçamento diferente não vira match
+    "14/28/56/84",            # a régua histórica que o projeto proíbe
+])
+def test_condicao_nao_cadastrada_bloqueia_em_vez_de_interpolar(session, codigo):
+    """Onda 1: acabou a interpolação por contagem de barras (B-15).
+
+    Este teste substitui `test_condicao_nao_cadastrada_usa_regua_antiga_com_aviso`, que
+    afirmava que "30/60/90/120/150/180" devolvia 9,6% pela régua legada. O teste estava certo
+    quanto ao código e errado quanto à regra aprovada: condição desconhecida exige premissa
+    cadastrada ou override autorizado — nunca um número estimado.
+    """
     condicoes = session.exec(select(CondicaoPagamento)).all()
-    r = resolver_encargo(condicoes, "30/60/90/120/150/180")
-    assert r.origem == "legado" and r.pct == pytest.approx(0.096) and r.aviso
+    r = resolver_encargo(condicoes, codigo)
+    assert r.bloqueado, f"'{codigo}' não pode produzir encargo"
+    assert r.pct == 0.0
+    assert r.confirmado is False
+    assert r.motivo and "não é estimado" in r.motivo
+
+
+def test_condicao_vazia_nao_vira_um_e_seis(session):
+    """O default silencioso também caiu: sem condição, não há encargo presumido."""
+    condicoes = session.exec(select(CondicaoPagamento)).all()
+    r = resolver_encargo(condicoes, "")
+    assert r.bloqueado and r.pct == 0.0 and r.confirmado is False
+
+
+def test_override_autorizado_funciona_mas_exige_motivo(session):
+    """A saída legítima para uma condição negociada: override explícito, com motivo."""
+    condicoes = session.exec(select(CondicaoPagamento)).all()
+    sem_motivo = resolver_encargo(condicoes, "45 DD", override_pct=0.024)
+    assert sem_motivo.bloqueado
+
+    com_motivo = resolver_encargo(condicoes, "45 DD", override_pct=0.024,
+                                  override_motivo="Aprovado pela diretoria em 03/09")
+    assert not com_motivo.bloqueado
+    assert com_motivo.pct == pytest.approx(0.024)
+    assert com_motivo.origem == "override"
+
+
+def test_regua_de_barras_nao_existe_mais_no_codigo():
+    """Garantia contra o retorno do B-15: o código morto que a reimplementava saiu."""
+    import app.pricing_engine as pe
+    assert not hasattr(pe, "encargo_financeiro_efetivo")

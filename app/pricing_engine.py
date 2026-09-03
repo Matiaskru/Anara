@@ -114,18 +114,6 @@ def _resolve_markup_de_margem(margem_alvo: float, regras: TaxRuleSet):
     return e, pct
 
 
-def encargo_financeiro_efetivo(condicao_pagamento: str, base_pct: float) -> float:
-    """Condição de pagamento é única por cotação (não mais por item). A regra
-    já usada na aba COTAÇÃO do Excel: mantém o encargo base pra 30 dias, e
-    soma +1,6% de encargo financeiro pra cada parcela extra além da primeira
-    (30/60 = +1,6%, 30/60/90 = +3,2%, ...).
-    """
-    if not condicao_pagamento:
-        return base_pct
-    parcelas_extra = condicao_pagamento.count("/")
-    return base_pct + parcelas_extra * 0.016
-
-
 def calcular_por_preco(custo: float, qtd: float, preco_negociado: float,
                         regras: TaxRuleSet, preco_base: Optional[float] = None
                         ) -> ResultadoPrecificacao:

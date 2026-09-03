@@ -170,7 +170,6 @@ def test_produto_sem_custo_continua_cotavel(s):
 
 @pytest.mark.parametrize("campo,valor", [
     ("condicao_pagamento", "30/60/90"), ("estado_destino", "Bahia"),
-    ("estado_origem", "Santa Catarina"),
 ])
 def test_mudanca_no_cabecalho_recalcula_os_itens(s, campo, valor):
     from app.models import CotacaoItem
@@ -187,6 +186,28 @@ def test_mudanca_no_cabecalho_recalcula_os_itens(s, campo, valor):
     s.refresh(item)
     assert item.preco_negociado != pytest.approx(preco_antes)
     assert item.margem_liquida == pytest.approx(0.16, abs=1e-6)
+
+
+def test_estado_origem_logistico_nao_mexe_mais_no_fiscal(s):
+    """Onda 1: `estado_origem` é origem logística/comercial e **não** decide imposto.
+
+    Antes desta onda, mudar este campo para "Santa Catarina" mudava o preço — era o B-14 em
+    ação. Origem logística não prova origem fiscal da NF; quem decide o imposto é a origem
+    fiscal da operação, resolvida por item.
+    """
+    from app.models import CotacaoItem
+    from app.routers.cotacoes import atualizar_cabecalho
+    cotacao_id = criar_cotacao(s)
+    preco_antes = add_item(s, cotacao_id, 1)["preco_negociado"]
+
+    chamar(atualizar_cabecalho, cotacao_id=cotacao_id, session=s, condicao_pagamento="30",
+           estado_origem="Santa Catarina", estado_destino="São Paulo",
+           contribuinte_icms="sim", freight_type="CIF")
+
+    item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
+    s.refresh(item)
+    assert item.preco_negociado == pytest.approx(preco_antes)
+    assert item.uf_origem_fiscal == "SP", "a origem FISCAL continua vindo da premissa"
 
 
 def test_contribuinte_muda_o_preco_quando_a_venda_e_interestadual(s):
@@ -216,12 +237,28 @@ def test_dentro_de_sp_o_contribuinte_nao_muda_o_preco(s):
     assert item.preco_negociado == pytest.approx(preco_antes)
 
 
-def test_snapshot_fiscal_fica_gravado_na_cotacao(s):
-    from app.models import Cotacao
+def test_snapshot_fiscal_fica_gravado_no_item(s):
+    """Onda 1: o snapshot fiscal é do ITEM. A cotação guarda só o que é comum a todos.
+
+    Antes, `Cotacao.icms_aplicado` era a fonte da alíquota (B-02). Agora é consolidação: bate
+    com o item quando todos concordam, e diz "cotação mista" quando não concordam.
+    """
+    from app.models import Cotacao, CotacaoItem
     cotacao_id = criar_cotacao(s, estado_destino="Piauí", contribuinte_icms="nao")
+    add_item(s, cotacao_id, 1)
+
+    item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
+    assert item.icms_pct == pytest.approx(0.2587)
+    assert "carga final" in (item.icms_regra or "").lower()
+    assert item.uf_origem_fiscal == "SP" and item.uf_destino_fiscal == "PI"
+    assert item.origem_fiscal in ("IMPORTADA", "NACIONAL")
+    assert item.consumidor_final is True          # não contribuinte → consumidor final
+    assert item.difal_responsavel == "REMETENTE"  # e o remetente recolhe
+    assert item.difal_valor and item.difal_valor > 0
+    assert item.status_fiscal == "OK"
+    assert item.encargo_pct == pytest.approx(0.016)
+
     c = s.get(Cotacao, cotacao_id)
-    assert c.icms_aplicado == pytest.approx(0.2587)
-    assert "carga final" in (c.icms_regra or "").lower()
     assert c.pis_cofins_pct == pytest.approx(0.0759)
     assert c.encargo_financeiro_pct == pytest.approx(0.016)
 

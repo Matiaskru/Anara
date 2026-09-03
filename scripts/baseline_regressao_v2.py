@@ -44,7 +44,7 @@ from sqlmodel import Session, select  # noqa: E402
 
 from app import config_service as cfg  # noqa: E402
 from app import pricing_service as ps  # noqa: E402
-from app.fiscal_rules import resolver_icms_estruturado  # noqa: E402
+from app.fiscal_rules import resolver_fiscal_item  # noqa: E402
 from app.models import (  # noqa: E402
     BaseImportacao, CmtPreco, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal,
     Fornecedor, MargemRegra, MaterialPreco, NcmRegra, ParametroKTC, Premissa, Produto,
@@ -82,6 +82,11 @@ def chave_cenario(origem: str, destino: str, contribuinte: bool) -> str:
     return f"{origem}|{destino}|{'SIM' if contribuinte else 'NAO'}"
 
 
+def _uf(estados, nome):
+    from app.fiscal_rules import normalizar_uf
+    return normalizar_uf(estados, nome)
+
+
 def _json(valor):
     if isinstance(valor, (datetime, date)):
         return valor.isoformat()
@@ -107,41 +112,44 @@ def abrir_sessao(db_path: str = DB_PATH) -> Session:
 # ---------------------------------------------------------------------------
 def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True) -> dict:
     with abrir_sessao(db_path) as s:
+        from app.models import AliquotaInterestadual
         estados = s.exec(select(EstadoFiscal)).all()
         regras_fiscais = s.exec(select(RegraFiscalVenda)).all()
-        fallback = cfg.num(s, "icms_fallback_pct", 0.18)
+        aliquotas = s.exec(select(AliquotaInterestadual)).all()
+        finalidade_padrao = cfg.txt(s, "fiscal_finalidade_padrao", "USO_CONSUMO")
 
         # --- cenários fiscais ---
+        # Desde a Onda 1 a alíquota depende também da NATUREZA da mercadoria: o mesmo par de
+        # UF dá 4% para importada e 7% ou 12% para nacional. Por isso cada cenário é resolvido
+        # para as duas naturezas.
         cenarios = {}
         for origem, destino, contrib in CENARIOS:
-            icms, regra = resolver_icms_estruturado(regras_fiscais, estados, origem, destino,
-                                                    contrib, fallback=fallback)
-            cenarios[chave_cenario(origem, destino, contrib)] = {
-                "origem": origem, "destino": destino, "contribuinte": contrib,
-                "icms": icms, "regra": regra,
-            }
+            for natureza in ("IMPORTADA", "NACIONAL"):
+                r = resolver_fiscal_item(
+                    regras_fiscais, estados, aliquotas,
+                    uf_origem="SP" if origem == "São Paulo" else origem,
+                    uf_destino=_uf(estados, destino), origem_fiscal=natureza,
+                    contribuinte=contrib, finalidade=finalidade_padrao)
+                cenarios[f"{chave_cenario(origem, destino, contrib)}|{natureza}"] = {
+                    "origem": origem, "destino": destino, "contribuinte": contrib,
+                    "natureza": natureza, "icms": r.icms_pct, "regra": r.regra,
+                    "status": r.status, "motivo": r.motivo,
+                    "difal_pct": r.difal_pct, "difal_responsavel": r.difal_responsavel,
+                    "consumidor_final": r.consumidor_final,
+                }
 
         # --- as 30 combinações cenário × condição, cada uma com seu TaxRuleSet ---
-        grade_regras = {}
+        # As 30 combinações cenário × condição. O TaxRuleSet agora depende do PRODUTO, então
+        # aqui guardamos só a cotação virtual; as regras são resolvidas item a item abaixo.
+        cotacoes_virtuais = {}
         for origem, destino, contrib in CENARIOS:
             for condicao in CONDICOES:
-                virtual = Cotacao(cliente_id=0, estado_origem=origem, estado_destino=destino,
-                                  contribuinte_icms=contrib, condicao_pagamento=condicao)
-                regras, contexto = ps.regras_da_cotacao(s, virtual)
                 chave = f"{chave_cenario(origem, destino, contrib)}#{condicao}"
-                grade_regras[chave] = {
-                    "regras": regras,
-                    "resumo": {
-                        "icms_pct": regras.icms_pct,
-                        "pis_cofins_pct": regras.pis_cofins_pct,
-                        "encargo_pct": regras.encargo_financeiro_pct,
-                        "taxa_fixa": regras.taxa_fixa(),
-                        "encargo_label": contexto["encargo_label"],
-                        "encargo_confirmado": contexto["encargo_confirmado"],
-                        "comissao_tabela": [list(f) for f in regras.comissao_tabela],
-                        "icms_regra": contexto["icms_regra"],
-                    },
-                }
+                cotacoes_virtuais[chave] = Cotacao(
+                    cliente_id=0, estado_origem=origem,
+                    uf_origem_fiscal="SP" if origem == "São Paulo" else origem,
+                    estado_destino=destino, contribuinte_icms=contrib,
+                    finalidade=finalidade_padrao, condicao_pagamento=condicao)
 
         # --- produtos ---
         consulta = select(Produto).order_by(Produto.sku_key)
@@ -156,12 +164,18 @@ def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True
             custo_recalculado = custo_memoria.get("net_brl")
 
             grade = {}
-            for chave, item in grade_regras.items():
+            for chave, virtual in cotacoes_virtuais.items():
                 if not p.custo_unitario:
                     grade[chave] = None            # sem custo não se inventa margem
                     continue
+                regras, contexto = ps.regras_da_cotacao(s, virtual, p)
+                if regras is None:
+                    # cenário irresolvido: não se forma preço. Registrado como bloqueio.
+                    grade[chave] = {"status": "REVIEW_REQUIRED",
+                                    "motivo": contexto.get("motivo_bloqueio")}
+                    continue
                 r = calcular_por_margem(p.custo_unitario, 1.0, margem.margem_pct,
-                                        item["regras"], preco_base=p.preco_base)
+                                        regras, preco_base=p.preco_base)
                 comissao_pct = (r.comissao / r.faturamento) if r.faturamento else 0.0
                 grade[chave] = [r.preco_negociado, r.margem_liquida, r.markup_implicito,
                                 comissao_pct, r.impostos, r.lucro]
@@ -305,7 +319,9 @@ def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True
         "cenarios_fiscais": len(cenarios),
         "condicoes_pagamento": len(CONDICOES),
         "celulas_da_grade": sum(1 for linha in linhas for v in linha["grade"].values()
-                                if v is not None),
+                                if isinstance(v, list)),
+        "celulas_bloqueadas": sum(1 for linha in linhas for v in linha["grade"].values()
+                                  if isinstance(v, dict)),
         "cotacoes": len(cotacoes),
         "itens": len(itens),
         "bases_importacao": len(bases),
@@ -329,7 +345,7 @@ def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True
         },
         "resumo": resumo,
         "cenarios_fiscais": cenarios,
-        "grade_regras": {k: v["resumo"] for k, v in grade_regras.items()},
+        "cenarios_por_condicao": sorted(cotacoes_virtuais),
         "premissas": premissas,
         "produtos": linhas,
         "cotacoes": cotacoes,

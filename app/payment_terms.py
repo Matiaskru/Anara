@@ -1,17 +1,23 @@
 """Condição de pagamento e encargo financeiro — uma regra, um lugar.
 
-Antes o encargo era calculado contando as barras da string ("30/60/90") dentro do motor de
-preço. Agora cada condição é uma linha de tabela com seu encargo, o que permite cadastrar
-condições que não seguem a régua de 1,6% por parcela (sinal + parcelas, cartão) sem inventar
-taxa nenhuma: condição sem taxa confirmada é sinalizada, não estimada.
+Reescrito na Onda 1. O encargo de cada condição é uma linha de tabela versionada, e **só isso**.
 
-A contagem de barras continua existindo só como rede para condições antigas que ainda não
-foram cadastradas — e quando ela é usada, o chamador recebe um aviso.
+O que saiu daqui, e por quê: a versão anterior tinha uma "rede" que contava as barras da string
+("30/60/90" → 3 parcelas → 4,8%) para condições não cadastradas, e devolvia 1,6% quando o código
+vinha vazio. Isso é interpolação — produz um encargo plausível para uma condição que ninguém
+aprovou, e o número seguia para o preço. A regra do projeto é explícita: **não interpolar, não
+aproximar, não contar barras, não inferir parcela**. Condição que não está cadastrada exige
+premissa versionada ou override autorizado; sem isso, o cálculo é bloqueado.
+
+Condições canônicas (todas cadastradas em `CondicaoPagamento`):
+
+    30 DD 1,6% · 30/60 3,2% · 30/60/90 4,8% · 30/60/90/120 6,4% · 30/60/90/120/150 8,0%
 """
 from dataclasses import dataclass
 from typing import Optional, Sequence
 
-ENCARGO_POR_PARCELA = 0.016
+OK = "OK"
+REVIEW_REQUIRED = "REVIEW_REQUIRED"
 
 
 @dataclass
@@ -19,30 +25,56 @@ class EncargoResolvido:
     pct: float
     confirmado: bool
     label: str
-    origem: str            # "tabela" | "legado" | "padrao"
+    origem: str                 # "tabela" | "override" | "bloqueado"
+    status: str = OK
     aviso: Optional[str] = None
+    motivo: Optional[str] = None
+
+    @property
+    def bloqueado(self) -> bool:
+        return self.status == REVIEW_REQUIRED
+
+
+def _bloqueio(label: str, motivo: str) -> EncargoResolvido:
+    return EncargoResolvido(pct=0.0, confirmado=False, label=label, origem="bloqueado",
+                            status=REVIEW_REQUIRED, aviso=motivo, motivo=motivo)
 
 
 def resolver_encargo(condicoes: Sequence, codigo: str,
-                     base_pct: float = ENCARGO_POR_PARCELA) -> EncargoResolvido:
+                     override_pct: Optional[float] = None,
+                     override_motivo: Optional[str] = None) -> EncargoResolvido:
+    """Encargo financeiro da condição. Só devolve número quando há premissa ou override.
+
+    `override_pct` existe para o caso autorizado — uma condição negociada fora da tabela. Quem
+    usa precisa registrar o motivo; sem motivo, o override é recusado.
+    """
     codigo = (codigo or "").strip()
-    for c in condicoes:
-        if (c.codigo or "").strip().lower() == codigo.lower():
-            if c.encargo_pct is None:
-                return EncargoResolvido(
-                    0.0, False, c.label, "tabela",
-                    f"A condição '{c.label}' ainda não tem encargo financeiro confirmado. "
-                    "O preço está sendo formado sem encargo — cadastrar a taxa no painel antes "
-                    "de usar comercialmente.")
-            return EncargoResolvido(float(c.encargo_pct), bool(c.encargo_confirmado),
-                                    c.label, "tabela")
+
+    if override_pct is not None:
+        if not override_motivo:
+            return _bloqueio(codigo or "(sem condição)",
+                             "Override de encargo financeiro exige motivo registrado.")
+        return EncargoResolvido(float(override_pct), True, codigo or "(override)", "override",
+                                aviso=f"Encargo por override autorizado: {override_motivo}")
 
     if not codigo:
-        return EncargoResolvido(base_pct, True, "30 dias", "padrao")
+        return _bloqueio("(sem condição)",
+                         "Condição de pagamento não informada. O encargo financeiro não é "
+                         "presumido — escolha uma condição cadastrada.")
 
-    parcelas_extra = codigo.count("/")
-    pct = base_pct + parcelas_extra * ENCARGO_POR_PARCELA
-    return EncargoResolvido(
-        pct, False, codigo, "legado",
-        f"Condição '{codigo}' não está cadastrada; encargo calculado pela régua antiga "
-        f"({base_pct:.1%} + {ENCARGO_POR_PARCELA:.1%} por parcela extra). Cadastrar no painel.")
+    for c in condicoes:
+        if (c.codigo or "").strip().lower() != codigo.lower():
+            continue
+        if c.encargo_pct is None:
+            return _bloqueio(
+                c.label,
+                f"A condição '{c.label}' está cadastrada mas não tem encargo financeiro "
+                "confirmado. Cadastrar a taxa no painel antes de usar comercialmente.")
+        return EncargoResolvido(float(c.encargo_pct), bool(c.encargo_confirmado), c.label,
+                                "tabela")
+
+    return _bloqueio(
+        codigo,
+        f"Condição de pagamento '{codigo}' não está cadastrada. O encargo não é estimado "
+        "por contagem de parcelas — cadastre a condição com sua taxa, ou use um override "
+        "autorizado.")

@@ -32,15 +32,31 @@ Jinja2 · ReportLab · openpyxl · pytest. ~8.800 linhas, 56 módulos, 14 templa
 
 ## Estados de confiança
 
-| Estado | Pode cotar? | Pode gerar PDF? | Pode virar pedido/WON? |
-|---|---|---|---|
-| CONFIRMADO | sim | sim | sim |
-| ESTIMADO | sim | sim | **não**, enquanto `confirmation_pending = true` — só após um Admin confirmar |
-| A_COTAR | não gera preço automático | **não** | não |
-| REVIEW_REQUIRED | bloqueia conclusão | **não** | não |
+São **cinco**, e a diferença entre eles é *de onde veio o número*, não quanto ele parece bom.
+
+| Estado | De onde vem | Pode cotar? | PDF? | Pedido/WON? |
+|---|---|---|---|---|
+| CONFIRMADO | referência direta, atual e confiável | sim | sim | sim |
+| ESTIMADO | **proxy**: curva, análogo forte, interpolação documentada | sim | sim | **não** enquanto `confirmation_pending = true` |
+| REVALIDAR | referência **direta** que envelheceu, venceu ou tem anomalia | sim, **com alerta** | sim | **não** antes de reconfirmar |
+| A_COTAR | não existe base segura | **não** gera preço automático | **não** | não |
+| REVIEW_REQUIRED | problema crítico de premissa, fiscal, rastreabilidade ou dado | bloqueia conclusão | **não** | não |
+
+As três distinções que mais custam caro se forem confundidas:
+
+- **REVALIDAR ≠ ESTIMADO** — o REVALIDAR tem número próprio, direto; o ESTIMADO veio de proxy.
+- **REVALIDAR ≠ A_COTAR** — o REVALIDAR já tem número utilizável; o A_COTAR não tem nenhum.
+- **REVALIDAR ≠ REVIEW_REQUIRED** — envelhecer não é erro de cálculo.
+
+**ESTIMADO nunca é promovido a CONFIRMADO em silêncio.**
 
 `FRETE_A_COTAR` e `FRETE_REVIEW_REQUIRED` bloqueiam o PDF quando o frete é CIF. `A_COMBINAR` é
 termo comercial deliberado e **não** bloqueia.
+
+> **Atenção ao legado.** Os 121 SKUs hoje marcados `REVIEW_REQUIRED` e os 156 com
+> `precisa_revisao` carregam o sentido **antigo** do campo. `legacy REVIEW_REQUIRED ≠
+> REVIEW_REQUIRED canônico`. Reclassificar exige o gate de reconciliação da Onda 1 — nunca
+> conversão automática.
 
 ## Papéis
 
@@ -71,6 +87,13 @@ anterior. Enquanto aguarda aprovação: salva como rascunho, **não** gera PDF f
 - **Peso real da KTC nunca** é substituído por estimativa
 - **Carga final do DIFAL entra como está** — não recalcular por base simples/dupla/FEM
 - **Contribuinte não se infere pelo estado**, e contribuinte ≠ consumidor final
+- **Origem fiscal é atributo da operação/NF, não do fornecedor.** Origem logística ≠ origem
+  fiscal. Itajaí-SC ser o ponto de entrada da KTC não prova a origem fiscal da venda. Sem
+  evidência da origem, é `REVIEW_REQUIRED` — nunca um default
+- **Condição de pagamento desconhecida não se interpola.** Não contar barras, não somar 1,6% por
+  parcela, não devolver como confirmada. Exige condição cadastrada ou override autorizado
+- **Preço bruto de fornecedor nacional não é preço de venda.** Bruto → créditos → CUSTO NET →
+  fiscal, financeiro, comissão, frete → margem → preço recomendado
 - Taxa por kg de toalha **já é EXW final** — não aplicar CMT, 2ª qualidade nem margem por cima
 - Casamento de produto é por **campos estruturados**, nunca por nome
 

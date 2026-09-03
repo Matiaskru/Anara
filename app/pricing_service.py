@@ -17,15 +17,18 @@ from typing import Optional, Tuple
 from sqlmodel import Session, select
 
 from app import config_service as cfg
-from app.fiscal_rules import resolver_icms_estruturado
+from app.fiscal_rules import (
+    consumidor_final_de, linha_estado, normalizar_uf, resolver_fiscal_item,
+)
 from app.ktc_engine import (
     CALCULATED, REVIEW_REQUIRED, ParametrosKTC, calcular_duvet_cover, calcular_flat_sheet,
     calcular_toalha, shrinkage_por_composicao,
 )
 from app.margin_rules import MargemResolvida, resolver_margem
 from app.models import (
-    CondicaoPagamento, CostConfidence, CostMethod, Cotacao, EstadoFiscal, Fornecedor, MargemRegra,
-    NcmRegra, Produto, RegraFiscalVenda, TipoFornecedor,
+    AliquotaInterestadual, CondicaoPagamento, CostConfidence, CostMethod, Cotacao, EstadoFiscal,
+    Finalidade, Fornecedor, MargemRegra, NcmRegra, OrigemFiscal, Produto, RegraFiscalVenda,
+    TipoFornecedor,
 )
 from app.nationalization import PremissasNacionalizacao, nacionalizar
 from app.payment_terms import resolver_encargo
@@ -44,41 +47,146 @@ FAMILIAS_TOALHA = {"bath towel", "hand towel", "face towel", "pool towel", "beac
 # ---------------------------------------------------------------------------
 # Cenário fiscal e regras da cotação
 # ---------------------------------------------------------------------------
-def regras_da_cotacao(session: Session, cotacao: Cotacao) -> Tuple[TaxRuleSet, dict]:
-    """TaxRuleSet efetivo + contexto (de onde veio cada número), para exibir e para snapshot."""
+def origem_fiscal_do_produto(session: Session, produto: Optional[Produto]) -> Tuple[Optional[str], str]:
+    """Natureza fiscal do item: IMPORTADA ou NACIONAL, e de onde essa conclusão veio.
+
+    Precedência: override do próprio produto → tipo do fornecedor. Fornecedor "OUTRO" ou
+    ausente **não** vira default — devolve None, e o fiscal bloqueia.
+    """
+    if produto is None:
+        return None, "produto não informado"
+    if produto.origem_fiscal:
+        return produto.origem_fiscal.strip().upper(), f"override do SKU {produto.sku_key}"
+    fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
+    if fornecedor is None:
+        return None, "produto sem fornecedor — natureza fiscal indeterminada"
+    if fornecedor.tipo == TipoFornecedor.importado_ktc:
+        return OrigemFiscal.importada.value, f"tipo do fornecedor {fornecedor.nome} (importado)"
+    if fornecedor.tipo == TipoFornecedor.nacional:
+        return OrigemFiscal.nacional.value, f"tipo do fornecedor {fornecedor.nome} (nacional)"
+    return None, (f"fornecedor {fornecedor.nome} tem tipo '{fornecedor.tipo}', que não define "
+                  "natureza fiscal")
+
+
+def uf_origem_fiscal(session: Session, cotacao: Cotacao,
+                     produto: Optional[Produto] = None) -> Tuple[Optional[str], str]:
+    """UF de origem FISCAL da operação, e a fonte da conclusão.
+
+    Precedência: cotação → fornecedor do item → premissa padrão versionada. `estado_origem` da
+    cotação **não** entra: é origem logística/comercial, e origem logística não prova origem
+    fiscal da NF.
+    """
+    estados = session.exec(select(EstadoFiscal)).all()
+    if cotacao is not None and getattr(cotacao, "uf_origem_fiscal", None):
+        uf = normalizar_uf(estados, cotacao.uf_origem_fiscal)
+        if uf:
+            return uf, "definida na cotação"
+    if produto is not None and produto.fornecedor_id:
+        fornecedor = session.get(Fornecedor, produto.fornecedor_id)
+        if fornecedor is not None and getattr(fornecedor, "uf_origem_fiscal", None):
+            uf = normalizar_uf(estados, fornecedor.uf_origem_fiscal)
+            if uf:
+                return uf, f"cadastro do fornecedor {fornecedor.nome}"
+    padrao = cfg.txt(session, "fiscal_uf_origem_padrao")
+    if padrao:
+        uf = normalizar_uf(estados, padrao)
+        if uf:
+            return uf, "premissa versionada fiscal_uf_origem_padrao (default, não evidência)"
+    return None, "não há origem fiscal definida em lugar nenhum"
+
+
+def finalidade_da_operacao(session: Session, cotacao: Cotacao) -> Tuple[Optional[str], str]:
+    """Finalidade: cotação → cliente → premissa padrão. Nunca inventada no código."""
+    if cotacao is not None and getattr(cotacao, "finalidade", None):
+        return cotacao.finalidade.strip().upper(), "definida na cotação"
+    if cotacao is not None and getattr(cotacao, "cliente_id", None):
+        from app.models import Cliente
+        cliente = session.get(Cliente, cotacao.cliente_id)
+        if cliente is not None and getattr(cliente, "finalidade", None):
+            return cliente.finalidade.strip().upper(), f"cadastro do cliente {cliente.nome}"
+    padrao = cfg.txt(session, "fiscal_finalidade_padrao")
+    if padrao:
+        return padrao.strip().upper(), "premissa versionada fiscal_finalidade_padrao"
+    return None, "não há finalidade definida em lugar nenhum"
+
+
+def fiscal_do_item(session: Session, cotacao: Cotacao, produto: Optional[Produto] = None):
+    """Resolução fiscal completa de um item, com a memória de cada variável."""
     estados = session.exec(select(EstadoFiscal)).all()
     explicitas = session.exec(select(RegraFiscalVenda)).all()
-    fallback = cfg.num(session, "icms_fallback_pct", 0.18)
+    aliquotas = session.exec(select(AliquotaInterestadual)).all()
 
-    icms, regra_icms = resolver_icms_estruturado(
-        explicitas, estados, cotacao.estado_origem, cotacao.estado_destino,
-        cotacao.contribuinte_icms, fallback=fallback)
+    uf_origem, fonte_origem = uf_origem_fiscal(session, cotacao, produto)
+    uf_destino = normalizar_uf(estados, getattr(cotacao, "estado_destino", None))
+    origem_fiscal, fonte_natureza = origem_fiscal_do_produto(session, produto)
+    finalidade, fonte_finalidade = finalidade_da_operacao(session, cotacao)
 
+    resultado = resolver_fiscal_item(
+        explicitas, estados, aliquotas,
+        uf_origem=uf_origem, uf_destino=uf_destino, origem_fiscal=origem_fiscal,
+        contribuinte=getattr(cotacao, "contribuinte_icms", None),
+        finalidade=finalidade,
+        ncm=getattr(produto, "ncm", None),
+        produto_id=getattr(produto, "id", None))
+    resultado.avisos.append(f"origem fiscal: {fonte_origem}")
+    resultado.avisos.append(f"natureza da mercadoria: {fonte_natureza}")
+    resultado.avisos.append(f"finalidade: {fonte_finalidade}")
+    return resultado
+
+
+def regras_da_cotacao(session: Session, cotacao: Cotacao,
+                      produto: Optional[Produto] = None) -> Tuple[Optional[TaxRuleSet], dict]:
+    """TaxRuleSet efetivo **do item** + contexto, para exibir e para snapshot.
+
+    Devolve `(None, contexto)` quando o fiscal ou a condição de pagamento não se resolvem: não
+    se forma preço com premissa faltando. O contexto sempre diz o motivo.
+    """
+    fiscal = fiscal_do_item(session, cotacao, produto)
     condicoes = session.exec(select(CondicaoPagamento)).all()
-    encargo = resolver_encargo(condicoes, cotacao.condicao_pagamento)
+    encargo = resolver_encargo(condicoes, getattr(cotacao, "condicao_pagamento", None))
     pis_cofins = cfg.num(session, "pis_cofins_pct", 0.0759)
     comissao = cfg.tabela_comissao(session)
 
-    regras = TaxRuleSet(icms_pct=icms, pis_cofins_pct=pis_cofins,
-                        encargo_financeiro_pct=encargo.pct, comissao_tabela=comissao,
-                        origem_uf=cotacao.estado_origem or "SP")
     contexto = {
-        "icms_pct": icms, "icms_regra": regra_icms,
+        "fiscal": fiscal,
+        "icms_pct": fiscal.icms_pct, "icms_regra": fiscal.regra, "icms_fonte": fiscal.fonte,
+        "status_fiscal": fiscal.status, "motivo_fiscal": fiscal.motivo,
+        "origem_fiscal": fiscal.origem_fiscal, "uf_origem_fiscal": fiscal.uf_origem,
+        "uf_destino_fiscal": fiscal.uf_destino, "finalidade": fiscal.finalidade,
+        "consumidor_final": fiscal.consumidor_final,
+        "difal_pct": fiscal.difal_pct, "difal_responsavel": fiscal.difal_responsavel,
+        "difal_entra_na_margem": fiscal.difal_entra_na_margem,
         "pis_cofins_pct": pis_cofins,
         "encargo_pct": encargo.pct, "encargo_label": encargo.label,
         "encargo_confirmado": encargo.confirmado, "encargo_aviso": encargo.aviso,
+        "status_pagamento": encargo.status, "motivo_pagamento": encargo.motivo,
         "comissao_tabela": comissao,
+        "bloqueado": fiscal.bloqueado or encargo.bloqueado,
     }
+    if contexto["bloqueado"]:
+        contexto["motivo_bloqueio"] = fiscal.motivo or encargo.motivo
+        return None, contexto
+
+    regras = TaxRuleSet(icms_pct=fiscal.icms_pct, pis_cofins_pct=pis_cofins,
+                        encargo_financeiro_pct=encargo.pct, comissao_tabela=comissao,
+                        origem_uf=fiscal.uf_origem or "")
     return regras, contexto
 
 
 def cenario_padrao_catalogo(session: Session) -> Cotacao:
-    """Cotação 'virtual' com o cenário padrão usado para formar o preço-base do catálogo."""
+    """Cotação 'virtual' com o cenário padrão usado para formar o preço-base do catálogo.
+
+    A origem fiscal do cenário vem da premissa versionada, não do campo logístico: o preço-base
+    do catálogo é formado com a mesma regra fiscal que uma venda real usaria.
+    """
+    origem = cfg.txt(session, "catalogo_origem", "São Paulo")
     return Cotacao(
         cliente_id=0,
-        estado_origem=cfg.txt(session, "catalogo_origem", "São Paulo"),
+        estado_origem=origem,
+        uf_origem_fiscal=origem,
         estado_destino=cfg.txt(session, "catalogo_destino", "São Paulo"),
         contribuinte_icms=bool(cfg.num(session, "catalogo_contribuinte", 0.0)),
+        finalidade=cfg.txt(session, "fiscal_finalidade_padrao", Finalidade.uso_consumo.value),
         condicao_pagamento=cfg.txt(session, "catalogo_condicao_pagamento", "30"),
     )
 
@@ -358,13 +466,15 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
     from app.pricing_engine import calcular_por_margem, calcular_por_preco
 
     cot = cotacao or cenario_padrao_catalogo(session)
-    regras, contexto = regras_da_cotacao(session, cot)
+    regras, contexto = regras_da_cotacao(session, cot, produto)
     custo = custo_net(session, produto)
     margem = margem_padrao(session, produto, margem_override)
 
     net = custo.get("net_brl") or produto.custo_unitario
     resultado = None
-    if net:
+    # `regras` é None quando o fiscal ou a condição de pagamento não se resolveram: nesse caso
+    # não se forma preço nenhum. A memória continua sendo devolvida, com o motivo do bloqueio.
+    if net and regras is not None:
         if preco_negociado:
             resultado = calcular_por_preco(net, quantidade, preco_negociado, regras,
                                            produto.preco_base)
@@ -391,12 +501,20 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
         "revisao_motivo": produto.revisao_motivo,
         "custo": custo,
         "frescor": frescor(session, produto.custo_ref_data),
-        "fiscal": contexto,
+        "fiscal": {**{k: v for k, v in contexto.items() if k != "fiscal"},
+                   "memoria_fiscal": contexto["fiscal"].como_dict()},
         "margem": margem.como_dict(),
         "comercial": (asdict(resultado) if resultado else None),
-        "cenario": {"origem": cot.estado_origem, "destino": cot.estado_destino,
+        "cenario": {"origem_logistica": cot.estado_origem,
+                    "uf_origem_fiscal": contexto.get("uf_origem_fiscal"),
+                    "destino": cot.estado_destino,
+                    "uf_destino_fiscal": contexto.get("uf_destino_fiscal"),
                     "contribuinte": cot.contribuinte_icms,
+                    "finalidade": contexto.get("finalidade"),
+                    "consumidor_final": contexto.get("consumidor_final"),
                     "condicao_pagamento": cot.condicao_pagamento},
+        "bloqueado": contexto.get("bloqueado", False),
+        "motivo_bloqueio": contexto.get("motivo_bloqueio"),
         "gerado_em": datetime.utcnow().isoformat(),
     }
 

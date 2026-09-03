@@ -57,7 +57,7 @@ def test_custo_calculado_nao_e_sobrescrito_pela_planilha(ambiente):
                                   documento="planilha.xlsx"))
         margem = ps.margem_padrao(s, produto)
         cenario = ps.cenario_padrao_catalogo(s)
-        regras, _ = ps.regras_da_cotacao(s, cenario)
+        regras, _ = ps.regras_da_cotacao(s, cenario, produto)
         produto.preco_base = calcular_por_margem(produto.custo_unitario, 1, margem.margem_pct,
                                                  regras).preco_negociado
         s.add(produto)
@@ -88,7 +88,7 @@ def test_preco_base_da_planilha_nao_e_copiado(ambiente):
         margem = ps.margem_padrao(s, produto)
         assert margem.margem_pct == pytest.approx(0.12)
         cenario = ps.cenario_padrao_catalogo(s)
-        regras, _ = ps.regras_da_cotacao(s, cenario)
+        regras, _ = ps.regras_da_cotacao(s, cenario, produto)
         produto.preco_base = calcular_por_margem(40.0, 1, margem.margem_pct, regras).preco_negociado
         s.add(produto)
         s.commit()

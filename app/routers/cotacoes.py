@@ -38,15 +38,45 @@ def proximo_numero(session: Session) -> str:
     return f"{prefixo}{n:04d}"
 
 
-def montar_regras(cotacao: Cotacao, session: Session):
-    """TaxRuleSet efetivo da cotação + a regra fiscal textual aplicada."""
-    regras, contexto = ps.regras_da_cotacao(session, cotacao)
+def montar_regras(cotacao: Cotacao, session: Session, produto=None):
+    """TaxRuleSet efetivo **do item** + a regra fiscal textual aplicada.
+
+    `regras` volta None quando o fiscal ou a condição de pagamento não se resolveram — nesse
+    caso não existe preço confiável a formar, e o chamador grava o bloqueio no item.
+    """
+    regras, contexto = ps.regras_da_cotacao(session, cotacao, produto)
     return regras, contexto["icms_regra"], contexto
+
+
+def bloqueios_fiscais(itens) -> list:
+    """Itens cujo cenário não se resolveu. Lista vazia = documento pode ser emitido."""
+    motivos = []
+    for it in itens:
+        if it.status_fiscal == "REVIEW_REQUIRED":
+            motivos.append(f"Item '{it.nome_produto}': {it.motivo_fiscal}")
+        if it.status_pagamento == "REVIEW_REQUIRED":
+            motivos.append(f"Item '{it.nome_produto}': {it.motivo_pagamento}")
+    return motivos
+
+
+def _resultado_bloqueado(qtd: float, custo: float):
+    """Resultado neutro para item cujo cenário não se resolve. Não inventa preço."""
+    from app.pricing_engine import ResultadoPrecificacao
+    return ResultadoPrecificacao(
+        preco_negociado=0.0, quantidade=qtd or 0.0, faturamento=0.0,
+        custo_total=(custo or 0.0) * (qtd or 0.0), impostos=0.0, comissao=0.0,
+        lucro=0.0, margem_liquida=0.0, markup_implicito=0.0, diferenca_pct_vs_base=None)
 
 
 def _calcular(modo: str, custo: float, qtd: float, valor: float,
               regras: TaxRuleSet, preco_base=None):
-    """Despacha para o modo escolhido: margem (padrão), preço ou markup."""
+    """Despacha para o modo escolhido: margem (padrão), preço ou markup.
+
+    `regras is None` significa cenário irresolvido: devolve resultado zerado em vez de um preço
+    que pareceria confiável.
+    """
+    if regras is None:
+        return _resultado_bloqueado(qtd, custo)
     if modo == "margem":
         return calcular_por_margem(custo, qtd, valor, regras, preco_base)
     if modo == "markup":
@@ -166,12 +196,29 @@ def criar(request: Request, cliente_id: int = Form(...), condicao_pagamento: str
 
 
 def _gravar_snapshot_fiscal(session: Session, cotacao: Cotacao):
-    regras, contexto = ps.regras_da_cotacao(session, cotacao)
-    cotacao.icms_aplicado = contexto["icms_pct"]
-    cotacao.icms_regra = contexto["icms_regra"]
+    """Snapshot no nível da cotação — o que é comum a todos os itens.
+
+    Desde a Onda 1 o ICMS **não** é da cotação: é de cada item. Os campos `icms_aplicado` e
+    `icms_regra` continuam existindo por compatibilidade com o histórico e passam a guardar o
+    cenário **sem item** (útil para exibir o cabeçalho); quando os itens divergem entre si, o
+    campo registra isso em vez de fingir uma alíquota única.
+    """
+    _regras, contexto = ps.regras_da_cotacao(session, cotacao)
+    itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao.id)).all()
+    alíquotas = {it.icms_pct for it in itens if it.icms_pct is not None}
+    if len(alíquotas) == 1:
+        cotacao.icms_aplicado = alíquotas.pop()
+        cotacao.icms_regra = next((it.icms_regra for it in itens if it.icms_regra), None)
+    elif len(alíquotas) > 1:
+        cotacao.icms_aplicado = None
+        cotacao.icms_regra = (f"Cotação mista: {len(alíquotas)} alíquotas diferentes entre os "
+                              "itens. O ICMS é por item — ver a memória de cada linha.")
+    else:
+        cotacao.icms_aplicado = contexto.get("icms_pct")
+        cotacao.icms_regra = contexto.get("icms_regra") or contexto.get("motivo_fiscal")
     cotacao.pis_cofins_pct = contexto["pis_cofins_pct"]
     cotacao.encargo_financeiro_pct = contexto["encargo_pct"]
-    return regras, contexto
+    return _regras, contexto
 
 
 @router.get("/cotacoes/{cotacao_id}", response_class=HTMLResponse)
@@ -241,17 +288,19 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
 
 
 def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
-    regras, _regra, _ctx = montar_regras(cotacao, session)
+    """Recalcula item a item: cada um resolve o próprio cenário fiscal."""
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao.id)).all()
     for it in itens:
+        produto = session.get(Produto, it.produto_id) if it.produto_id else None
+        regras, _regra, ctx = montar_regras(cotacao, session, produto)
         res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
                         regras, it.preco_base)
-        _aplicar_resultado(it, res, regras)
+        _aplicar_resultado(it, res, regras, ctx)
         session.add(it)
     session.commit()
 
 
-def _aplicar_resultado(it: CotacaoItem, res, regras: TaxRuleSet = None):
+def _aplicar_resultado(it: CotacaoItem, res, regras: TaxRuleSet = None, contexto: dict = None):
     it.preco_negociado = res.preco_negociado
     it.margem_liquida = res.margem_liquida
     it.faturamento = res.faturamento
@@ -263,6 +312,38 @@ def _aplicar_resultado(it: CotacaoItem, res, regras: TaxRuleSet = None):
     it.markup_implicito = res.markup_implicito
     if regras:
         it.comissao_pct = regras.comissao_para_markup(res.markup_implicito)
+    if contexto:
+        _gravar_fiscal_no_item(it, contexto, res)
+
+
+def _gravar_fiscal_no_item(it: CotacaoItem, contexto: dict, res=None):
+    """Congela no item o cenário fiscal que formou o preço dele.
+
+    Isto é o coração da Onda 1: o item — não a cotação — carrega origem, destino, natureza da
+    mercadoria, finalidade, consumidor final derivado, alíquota, DIFAL e quem o recolhe. Uma
+    cotação com KTC, Daune e Decor guarda três combinações diferentes.
+    """
+    it.origem_fiscal = contexto.get("origem_fiscal")
+    it.uf_origem_fiscal = contexto.get("uf_origem_fiscal")
+    it.uf_destino_fiscal = contexto.get("uf_destino_fiscal")
+    it.finalidade = contexto.get("finalidade")
+    it.consumidor_final = contexto.get("consumidor_final")
+    it.icms_pct = contexto.get("icms_pct")
+    it.icms_regra = contexto.get("icms_regra")
+    it.icms_fonte = contexto.get("icms_fonte")
+    it.difal_pct = contexto.get("difal_pct")
+    it.difal_responsavel = contexto.get("difal_responsavel")
+    # O DIFAL só vira dinheiro na conta da Anara quando o remetente é quem recolhe. Quando é do
+    # destinatário, fica registrado com valor nulo — aparece na memória, não na margem.
+    if contexto.get("difal_entra_na_margem") and res is not None and contexto.get("difal_pct"):
+        it.difal_valor = (res.faturamento or 0.0) * float(contexto["difal_pct"])
+    else:
+        it.difal_valor = None
+    it.status_fiscal = contexto.get("status_fiscal")
+    it.motivo_fiscal = contexto.get("motivo_fiscal")
+    it.status_pagamento = contexto.get("status_pagamento")
+    it.motivo_pagamento = contexto.get("motivo_pagamento")
+    it.encargo_pct = contexto.get("encargo_pct")
 
 
 # ---------------------------------------------------------------------------
@@ -277,7 +358,7 @@ def calc(cotacao_id: int, produto_id: int = Form(...), quantidade: float = Form(
     if not cotacao or not produto:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
 
-    regras, _regra, _ctx = montar_regras(cotacao, session)
+    regras, _regra, ctx = montar_regras(cotacao, session, produto)
     margem = ps.margem_padrao(session, produto)
     if not produto.custo_unitario:
         return JSONResponse({
@@ -324,7 +405,7 @@ def adicionar_item(cotacao_id: int, produto_id: int = Form(...), quantidade: flo
     if not cotacao or not produto:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
 
-    regras, _regra, _ctx = montar_regras(cotacao, session)
+    regras, _regra, ctx = montar_regras(cotacao, session, produto)
     margem = ps.margem_padrao(session, produto)
     if valor is None:
         valor = margem.margem_pct if modo == "margem" else (produto.preco_base or 0)
@@ -347,7 +428,7 @@ def adicionar_item(cotacao_id: int, produto_id: int = Form(...), quantidade: flo
         preco_base=produto.preco_base or 0.0, modo_edicao=modo, valor_editado=valor,
     )
     _preencher_item(session, item, produto, margem)
-    _aplicar_resultado(item, res, regras)
+    _aplicar_resultado(item, res, regras, ctx)
     item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
         session, produto, cotacao, preco_negociado=res.preco_negociado, quantidade=quantidade))
     session.add(item)
@@ -369,14 +450,14 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
     if not cotacao or not item or item.cotacao_id != cotacao_id:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
 
-    regras, _regra, _ctx = montar_regras(cotacao, session)
+    produto = session.get(Produto, item.produto_id) if item.produto_id else None
+    regras, _regra, ctx = montar_regras(cotacao, session, produto)
     res = _calcular(modo, item.custo_unitario, quantidade, valor, regras, item.preco_base)
 
     item.quantidade = quantidade
     item.modo_edicao = modo
     item.valor_editado = valor
-    _aplicar_resultado(item, res, regras)
-    produto = session.get(Produto, item.produto_id) if item.produto_id else None
+    _aplicar_resultado(item, res, regras, ctx)
     if produto:
         item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
             session, produto, cotacao, preco_negociado=res.preco_negociado,
@@ -480,12 +561,14 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
     session.commit()
     session.refresh(nova)
 
-    regras, _regra, _ctx = montar_regras(nova, session)
+    # A duplicação usa as premissas ATUAIS — e agora resolve o fiscal por item, como uma
+    # cotação nova faria. A cotação original não é tocada.
     itens_originais = session.exec(select(CotacaoItem)
                                    .where(CotacaoItem.cotacao_id == cotacao_id)
                                    .order_by(CotacaoItem.ordem)).all()
     for it in itens_originais:
         produto_atual = session.get(Produto, it.produto_id) if it.produto_id else None
+        regras, _regra, ctx = montar_regras(nova, session, produto_atual)
         preco_base_atual = produto_atual.preco_base if produto_atual else it.preco_base
         custo_atual = (produto_atual.custo_unitario if produto_atual else it.custo_unitario) or 0.0
 
@@ -501,7 +584,7 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
         if produto_atual:
             _preencher_item(session, novo_item, produto_atual,
                             ps.margem_padrao(session, produto_atual))
-        _aplicar_resultado(novo_item, res, regras)
+        _aplicar_resultado(novo_item, res, regras, ctx)
         session.add(novo_item)
     session.commit()
     return RedirectResponse(url=f"/cotacoes/{nova.id}", status_code=303)
@@ -515,6 +598,17 @@ def gerar_pdf(cotacao_id: int, session: Session = Depends(get_session)):
     cliente = session.get(Cliente, cotacao.cliente_id)
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)
                          .order_by(CotacaoItem.ordem)).all()
+
+    # Onda 1: item com cenário fiscal ou condição financeira irresolvida não sai em PDF final.
+    # O rascunho continua salvo e editável; o que não acontece é o documento comercial sair com
+    # um número que ninguém consegue justificar.
+    bloqueios = bloqueios_fiscais(itens)
+    if bloqueios:
+        return JSONResponse(
+            {"erro": "PDF bloqueado", "motivos": bloqueios,
+             "detalhe": ("Há item com cenário fiscal ou condição de pagamento não resolvida. "
+                         "Resolva a pendência antes de emitir o documento.")},
+            status_code=409)
 
     if not cotacao.termos_texto:
         cotacao.termos_texto = cfg.txt(session, "termos_padrao")

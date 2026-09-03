@@ -53,6 +53,41 @@ class CostConfidence(str, enum.Enum):
     review_required = "REVIEW_REQUIRED"
 
 
+class OrigemFiscal(str, enum.Enum):
+    """Natureza fiscal da mercadoria — decide qual faixa interestadual se aplica."""
+    importada = "IMPORTADA"
+    nacional = "NACIONAL"
+
+
+class Finalidade(str, enum.Enum):
+    """Finalidade da operação. `consumidor_final` é DERIVADO daqui, nunca um valor do enum."""
+    revenda = "REVENDA"
+    industrializacao = "INDUSTRIALIZACAO"
+    uso_consumo = "USO_CONSUMO"
+    ativo_imobilizado = "ATIVO_IMOBILIZADO"
+
+
+# Consumidor final é derivado: uso/consumo e ativo imobilizado encerram a cadeia.
+FINALIDADES_CONSUMIDOR_FINAL = {Finalidade.uso_consumo.value, Finalidade.ativo_imobilizado.value}
+
+
+class StatusFiscal(str, enum.Enum):
+    """Resultado da resolução fiscal do item. Separado do status de confiança do CUSTO."""
+    ok = "OK"
+    review_required = "REVIEW_REQUIRED"
+
+
+class ResponsavelDifal(str, enum.Enum):
+    nao_aplicavel = "NAO_APLICAVEL"
+    remetente = "REMETENTE"          # entra no waterfall da Anara
+    destinatario = "DESTINATARIO"    # registrado, NÃO reduz a margem da Anara
+
+
+class StatusPagamento(str, enum.Enum):
+    ok = "OK"
+    review_required = "REVIEW_REQUIRED"
+
+
 class TipoFrete(str, enum.Enum):
     cif = "CIF"
     fob = "FOB"
@@ -72,6 +107,7 @@ class Cliente(SQLModel, table=True):
     email: Optional[str] = None
     contato_nome: Optional[str] = None
     departamento: Optional[str] = None          # Compras, Governança, Operações, ...
+    finalidade: Optional[str] = None            # Finalidade — default vem de premissa
     ativo: bool = True                          # arquivar em vez de apagar
     criado_em: datetime = Field(default_factory=datetime.utcnow)
 
@@ -85,6 +121,9 @@ class Fornecedor(SQLModel, table=True):
     pais: Optional[str] = None
     moeda_custo: str = "BRL"
     cost_method_padrao: CostMethod = Field(default=CostMethod.national_supplier)
+    # UF de onde a NF deste fornecedor efetivamente sai. NULO = desconhecida — cai para a
+    # premissa padrão, e a memória registra que veio de default, não de evidência.
+    uf_origem_fiscal: Optional[str] = None
     ativo: bool = True
     observacoes: Optional[str] = None
 
@@ -241,6 +280,33 @@ class RegraFiscalVenda(SQLModel, table=True):
     fonte: Optional[str] = None
 
 
+class AliquotaInterestadual(SQLModel, table=True):
+    """Alíquota interestadual por par de UF × natureza da mercadoria.
+
+    É **tabela de dados versionada**, nunca um `if` no código. Isso é o que permite tratar a
+    exceção sem alterar programa: os 4% de mercadoria importada valem **quando a regra aplicável
+    à mercadoria importada efetivamente se aplica** — e uma linha de prioridade menor, por NCM ou
+    por produto, sobrepõe o par de UF quando houver exceção (conteúdo de importação, lista de
+    bens sem similar nacional, decisão do fisco).
+
+    Sem linha que resolva o cenário, o resultado é `REVIEW_REQUIRED`. **Nunca um padrão.**
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uf_origem: str = Field(index=True)
+    uf_destino: str = Field(index=True)
+    origem_fiscal: str = Field(index=True)      # OrigemFiscal
+    aliquota: float
+    ncm: Optional[str] = Field(default=None, index=True)      # exceção por NCM
+    produto_id: Optional[int] = Field(default=None, foreign_key="produto.id")  # exceção por SKU
+    prioridade: int = 100                       # menor ganha
+    regra: str = ""
+    valid_from: date = Field(default_factory=date.today)
+    valid_to: Optional[date] = None
+    ativo: bool = True
+    fonte: Optional[str] = None
+    notas: Optional[str] = None
+
+
 class MargemRegra(SQLModel, table=True):
     """Margem líquida-alvo padrão. Resolvida por prioridade — nunca por `if` espalhado no código."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -354,6 +420,8 @@ class Produto(SQLModel, table=True):
     fornecedor_id: Optional[int] = Field(default=None, foreign_key="fornecedor.id", index=True)
     cost_method: Optional[str] = Field(default=None, index=True)      # CostMethod
     custo_confianca: Optional[str] = Field(default=None, index=True)  # CostConfidence
+    # Override de natureza fiscal do item. NULO = deriva do tipo do fornecedor.
+    origem_fiscal: Optional[str] = Field(default=None, index=True)    # OrigemFiscal
     precisa_revisao: bool = False
     revisao_motivo: Optional[str] = None
 
@@ -440,7 +508,12 @@ class Cotacao(SQLModel, table=True):
     status: StatusCotacao = Field(default=StatusCotacao.rascunho)
     condicao_pagamento: str = Field(default="30")
     estado_destino: Optional[str] = None
+    # `estado_origem` é LEGADO e representa origem logística/comercial. **Não é usado no
+    # cálculo fiscal** desde a Onda 1 — origem logística não prova origem fiscal da NF.
     estado_origem: str = Field(default="Santa Catarina")
+    # Origem fiscal da operação (UF). NULO = resolver pela hierarquia do pricing_service.
+    uf_origem_fiscal: Optional[str] = None
+    finalidade: Optional[str] = None            # override da finalidade do cliente
     contribuinte_icms: bool = Field(default=True)
     frete: Optional[str] = None
     observacoes: Optional[str] = None
@@ -513,3 +586,23 @@ class CotacaoItem(SQLModel, table=True):
     comissao_valor: Optional[float] = None
     markup_implicito: Optional[float] = None
     memoria_json: Optional[str] = None          # memória do preço congelada (snapshot completo)
+
+    # --- snapshot fiscal POR ITEM (Onda 1) ---
+    # Uma cotação pode ter KTC, Daune e Decor com três tratamentos fiscais diferentes. O que
+    # decide o preço deste item mora aqui, congelado no momento em que o item foi salvo.
+    origem_fiscal: Optional[str] = None         # OrigemFiscal — IMPORTADA | NACIONAL
+    uf_origem_fiscal: Optional[str] = None
+    uf_destino_fiscal: Optional[str] = None
+    finalidade: Optional[str] = None            # Finalidade
+    consumidor_final: Optional[bool] = None     # DERIVADO da finalidade
+    icms_pct: Optional[float] = None            # o que efetivamente reduz a receita da Anara
+    icms_regra: Optional[str] = None
+    icms_fonte: Optional[str] = None            # de qual tabela/linha veio a alíquota
+    difal_pct: Optional[float] = None           # diferencial apurado, exista ou não ônus Anara
+    difal_responsavel: Optional[str] = None     # ResponsavelDifal
+    difal_valor: Optional[float] = None         # em R$, quando o remetente recolhe
+    status_fiscal: Optional[str] = None         # StatusFiscal — separado da confiança do CUSTO
+    motivo_fiscal: Optional[str] = None
+    status_pagamento: Optional[str] = None      # StatusPagamento
+    motivo_pagamento: Optional[str] = None
+    encargo_pct: Optional[float] = None         # encargo financeiro efetivamente aplicado

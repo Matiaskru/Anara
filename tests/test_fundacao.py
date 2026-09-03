@@ -70,17 +70,19 @@ def alembic(comando: str, db: str) -> subprocess.CompletedProcess:
 # 1. baseline
 # ---------------------------------------------------------------------------
 @sem_banco
-def test_baseline_e_reprodutivel(baseline):
-    """Rodar de novo sobre o mesmo banco tem que dar exatamente os mesmos números.
+def test_baseline_e_reprodutivel():
+    """Rodar duas vezes sobre o mesmo banco tem que dar exatamente os mesmos números.
 
-    Sem isso, comparar antes e depois de uma onda não prova nada: qualquer diferença
-    poderia ser do gerador, não da onda.
+    Sem isso, comparar antes e depois de uma onda não prova nada: qualquer diferença poderia
+    ser do gerador, não da onda. A comparação é do gerador **contra ele mesmo** — comparar
+    contra o arquivo congelado da Fase 0 é papel do relatório de regressão de cada onda, e
+    ali a diferença é o resultado esperado, não a falha.
     """
     from scripts.baseline_regressao_v2 import comparaveis, gerar
 
-    novo = json.loads(json.dumps(comparaveis(gerar(com_estado_banco=False)),
-                                 ensure_ascii=False))
-    assert novo == comparaveis(baseline)
+    a = json.loads(json.dumps(comparaveis(gerar(com_estado_banco=False)), ensure_ascii=False))
+    b = json.loads(json.dumps(comparaveis(gerar(com_estado_banco=False)), ensure_ascii=False))
+    assert a == b
 
 
 @sem_banco
@@ -120,10 +122,14 @@ def test_baseline_registra_o_estado_atual_com_os_bugs_conhecidos(baseline):
 # ---------------------------------------------------------------------------
 @sem_banco
 def test_ponte_nao_altera_nenhum_dado_herdado(copia_do_banco):
-    """A migration-ponte só acrescenta: tabela nova e colunas novas, nada reescrito."""
+    """A migration-ponte só acrescenta: tabela nova e colunas novas, nada reescrito.
+
+    O alvo é a revisão **0002** e não `head`: este teste é sobre a ponte, e a cabeça do
+    projeto avança a cada onda.
+    """
     alembic("downgrade 0001", copia_do_banco)
     antes = estado_banco(copia_do_banco)
-    alembic("upgrade head", copia_do_banco)
+    alembic("upgrade 0002", copia_do_banco)
     depois = estado_banco(copia_do_banco)
 
     comp = comparar_estados(antes, depois)
@@ -140,7 +146,7 @@ def test_ponte_nao_toca_em_cotacao_nem_em_snapshot(copia_do_banco):
     """Snapshot é intocável — inclusive a memória de preço congelada em cada item."""
     alembic("downgrade 0001", copia_do_banco)
     antes = estado_banco(copia_do_banco)
-    alembic("upgrade head", copia_do_banco)
+    alembic("upgrade 0002", copia_do_banco)
     depois = estado_banco(copia_do_banco)
 
     for tabela in ("cotacao", "cotacaoitem", "produto"):
@@ -154,7 +160,7 @@ def test_ponte_preserva_as_quatro_bases_e_as_liga_ao_versionado(copia_do_banco):
     """As 4 bases continuam inteiras, e cada campo de premissa ganha sua linha de ponte."""
     import sqlite3
 
-    alembic("upgrade head", copia_do_banco)
+    alembic("upgrade 0002", copia_do_banco)
     con = sqlite3.connect(copia_do_banco)
     con.row_factory = sqlite3.Row
 
@@ -197,11 +203,13 @@ def test_migration_e_idempotente(copia_do_banco):
     """Reaplicar não duplica dado, e o ciclo downgrade → upgrade devolve o mesmo conteúdo."""
     import sqlite3
 
-    alembic("upgrade head", copia_do_banco)
+    # a cópia vem do banco de produção, que está na cabeça do projeto; volta-se a 0002 para
+    # exercitar a ponte e só ela
+    alembic("downgrade 0002", copia_do_banco)
     primeiro = estado_banco(copia_do_banco)
 
     alembic("downgrade 0001", copia_do_banco)
-    alembic("upgrade head", copia_do_banco)
+    alembic("upgrade 0002", copia_do_banco)
     segundo = estado_banco(copia_do_banco)
 
     comp = comparar_estados(primeiro, segundo)

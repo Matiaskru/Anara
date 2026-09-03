@@ -11,6 +11,7 @@ from sqlmodel import Session, select
 
 from app.db import engine
 from app.models import (
+    AliquotaInterestadual,
     CmtPreco, CondicaoPagamento, EstadoFiscal, Fornecedor, MargemRegra, MaterialPreco,
     NcmRegra, ParametroKTC, Premissa, RegraFiscalVenda, ToalhaPreco, TipoFornecedor, CostMethod,
 )
@@ -50,8 +51,21 @@ PREMISSAS = [
          descricao="Outras despesas de nacionalização por unidade", fonte=FONTE_PLANILHA),
     dict(chave="pis_cofins_pct", valor_num=0.0759, unidade="%",
          descricao="PIS/COFINS sobre a venda", fonte=FONTE_PLANILHA),
-    dict(chave="icms_fallback_pct", valor_num=0.18, unidade="%",
-         descricao="ICMS usado quando o cenário não é encontrado (com aviso)", fonte="Regra Anara"),
+    # A premissa `icms_fallback_pct` foi APOSENTADA na Onda 1: cenário fiscal que não se
+    # resolve vira REVIEW_REQUIRED, não vira 18%. A linha some da semeadura; bases antigas que
+    # já a têm continuam com ela guardada, sem efeito — nenhum código a lê mais.
+    dict(chave="fiscal_uf_origem_padrao", valor_txt="SP", unidade="UF",
+         descricao="Origem FISCAL padrão da operação quando nem a cotação nem o fornecedor a "
+                   "definem. É default configurado, não evidência — a memória do preço registra "
+                   "quando a origem veio daqui.",
+         fonte="Decisões de 03/09/2026 — cenários nacionais SP→*",
+         notas="Origem fiscal não se confunde com origem logística. Se um fornecedor faturar de "
+               "outra UF, cadastrar em Fornecedor.uf_origem_fiscal."),
+    dict(chave="fiscal_finalidade_padrao", valor_txt="USO_CONSUMO",
+         descricao="Finalidade padrão da operação — hotel consome o enxoval, não revende",
+         fonte="Decisões de 03/09/2026",
+         notas="Editável por cliente/unidade e sobrescrevível na cotação. Consumidor final é "
+               "DERIVADO desta finalidade, nunca digitado."),
     dict(chave="validade_dias", valor_num=5.0, unidade="dias",
          descricao="Validade padrão da proposta", fonte="Premissas do site de cotação (ago/2026)"),
     dict(chave="comissao_tabela", valor_txt="[[0.0,0.05],[0.6,0.06],[0.7,0.07],[0.8,0.08],[0.9,0.09],[1.0,0.1]]",
@@ -373,6 +387,40 @@ def _existe(session, modelo, **filtros) -> bool:
     return session.exec(stmt).first() is not None
 
 
+# ---------------------------------------------------------------------------
+# Alíquotas interestaduais — tabela de dados, não `if` no código
+# ---------------------------------------------------------------------------
+# Decisões de 03/09/2026. Origem SP. A mercadoria NACIONAL segue as duas faixas do Senado;
+# a IMPORTADA segue os 4% da Res. 13/2012 **enquanto a regra lhe for aplicável** — e é por isso
+# que isto é uma tabela: uma exceção por NCM ou por produto entra como linha de prioridade menor,
+# sem tocar em uma linha de código.
+UFS_FAIXA_7 = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "PA",
+               "PB", "PE", "PI", "RN", "RO", "RR", "SE", "TO"]
+UFS_FAIXA_12 = ["MG", "PR", "RJ", "RS", "SC"]
+
+FONTE_ALIQUOTAS = "Decisões Anara 03/09/2026 · Res. Senado 22/1989 e 13/2012"
+
+
+def aliquotas_interestaduais_seed() -> list:
+    linhas = []
+    for uf in UFS_FAIXA_7:
+        linhas.append(dict(uf_origem="SP", uf_destino=uf, origem_fiscal="NACIONAL",
+                           aliquota=0.07, prioridade=100, fonte=FONTE_ALIQUOTAS,
+                           regra=f"Interestadual SP→{uf}, mercadoria nacional — 7%"))
+    for uf in UFS_FAIXA_12:
+        linhas.append(dict(uf_origem="SP", uf_destino=uf, origem_fiscal="NACIONAL",
+                           aliquota=0.12, prioridade=100, fonte=FONTE_ALIQUOTAS,
+                           regra=f"Interestadual SP→{uf}, mercadoria nacional — 12%"))
+    for uf in UFS_FAIXA_7 + UFS_FAIXA_12:
+        linhas.append(dict(
+            uf_origem="SP", uf_destino=uf, origem_fiscal="IMPORTADA", aliquota=0.04,
+            prioridade=100, fonte=FONTE_ALIQUOTAS,
+            regra=f"Interestadual SP→{uf}, mercadoria importada — 4% (Res. Senado 13/2012)",
+            notas="Vale enquanto a regra da mercadoria importada for aplicável ao item. "
+                  "Exceção entra como linha por NCM ou por produto, com prioridade menor."))
+    return linhas
+
+
 def semear(verbose: bool = True) -> dict:
     contagem = {}
     with Session(engine) as s:
@@ -392,6 +440,14 @@ def semear(verbose: bool = True) -> dict:
             if not _existe(s, Premissa, chave=p["chave"]):
                 s.add(Premissa(**p)); n += 1
         contagem["premissas"] = n
+
+        # alíquotas interestaduais (Onda 1) — idempotente por par UF × natureza
+        n = 0
+        for a in aliquotas_interestaduais_seed():
+            if not _existe(s, AliquotaInterestadual, uf_origem=a["uf_origem"],
+                           uf_destino=a["uf_destino"], origem_fiscal=a["origem_fiscal"]):
+                s.add(AliquotaInterestadual(**a)); n += 1
+        contagem["aliquotas_interestaduais"] = n
 
         # materiais
         n = 0

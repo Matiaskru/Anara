@@ -87,7 +87,6 @@ def confirmar(request: Request, token: str = Form(...), nome_arquivo: str = Form
 
     ktc = session.exec(select(Fornecedor).where(Fornecedor.codigo == "KTC")).first()
     cenario = ps.cenario_padrao_catalogo(session)
-    regras, _ctx = ps.regras_da_cotacao(session, cenario)
 
     produtos_atuais = {p.sku_key: p for p in session.exec(select(Produto)).all()}
     vistos = set()
@@ -149,8 +148,12 @@ def confirmar(request: Request, token: str = Form(...), nome_arquivo: str = Form
         margem = ps.margem_padrao(session, produto)
         produto.margem_padrao_pct = margem.margem_pct
         if produto.custo_unitario:
-            produto.preco_base = calcular_por_margem(produto.custo_unitario, 1, margem.margem_pct,
-                                                     regras).preco_negociado
+            # cenário fiscal resolvido COM o produto — a natureza da mercadoria entra na conta
+            regras, _ctx = ps.regras_da_cotacao(session, cenario, produto)
+            if regras is not None:
+                produto.preco_base = calcular_por_margem(produto.custo_unitario, 1,
+                                                         margem.margem_pct,
+                                                         regras).preco_negociado
         session.add(produto)
         session.flush()
 

@@ -188,9 +188,16 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
     produto.margem_padrao_pct = margem.margem_pct
     if produto.custo_unitario:
         from app.pricing_engine import calcular_por_margem
-        regras, _ctx = ps.regras_da_cotacao(session, ps.cenario_padrao_catalogo(session))
-        produto.preco_base = calcular_por_margem(produto.custo_unitario, 1, margem.margem_pct,
-                                                 regras).preco_negociado
+        # O preço-base do catálogo é do PRODUTO: o cenário fiscal é resolvido com ele, não
+        # em abstrato. Sem cenário resolvido, o produto fica sem preço-base — não se inventa.
+        regras, ctx = ps.regras_da_cotacao(session, ps.cenario_padrao_catalogo(session), produto)
+        if regras is not None:
+            produto.preco_base = calcular_por_margem(produto.custo_unitario, 1,
+                                                     margem.margem_pct, regras).preco_negociado
+        else:
+            produto.preco_base = None
+            produto.precisa_revisao = True
+            produto.revisao_motivo = f"Preço-base não formado: {ctx.get('motivo_bloqueio')}"
 
     session.add(produto)
     session.commit()

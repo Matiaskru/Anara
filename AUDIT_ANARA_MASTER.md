@@ -1,13 +1,34 @@
 # AUDIT_ANARA_MASTER
 
-Auditoria read-only exigida pela Fase 1 do SUPER PROMPT v2.
-Atualizada em 03/09/2026 com as decisões do usuário, a tabela da transportadora e as
-resoluções de ICMS do frete, GRIS e volume/cubagem.
+Auditoria exigida pela Fase 1 do SUPER PROMPT v2. Atualizada na **Sessão 0.1 (03/09/2026)** com
+os estados de confiança canônicos, a regra de origem fiscal por operação, a re-extração da tabela
+TRANSAL e a nova referência Daune.
 
-**Nenhuma linha de código foi alterada.**
+## Sequência histórica — leia antes de interpretar qualquer coisa aqui
 
-Base auditada: `~/Anara-Cotacao` — 8.827 linhas Python, 56 módulos, 14 templates, 173 testes
-passando, 339 SKUs ativos, 3 fornecedores, 17 cotações, 45 itens de cotação.
+1. **Fase 1 — auditoria** e **Fase 2 — plano**: feitas sem alteração ampla de código.
+2. **Fase 0 — Fundação**: autorizada especificamente e **executada**. Alterou `app/models.py` de
+   forma aditiva, criou 2 migrations Alembic, alterou o esquema do banco, criou 13 testes e dois
+   commits locais.
+3. **Sessão 0.1** (esta): documental. Nenhum código, banco, migration, teste ou baseline tocado.
+
+> Não escreva mais "nenhuma linha de código foi alterada" como descrição do estado atual — é
+> falso desde a Fase 0. O que continua verdadeiro é que **nenhuma regra de negócio, nenhum motor
+> de cálculo e nenhum valor econômico foram alterados**.
+
+**Checkpoint da Fase 0, revisado externamente e aceito:** HEAD `165d75e` · árvore Git limpa ·
+nenhum push remoto · 186 testes passando · 173 herdados preservados sem edição · Alembic com o
+esquema atual como revisão inicial · ponte para `BaseImportacao` · backup e restore ensaiados ·
+alteração aditiva em models · **nenhuma alteração econômica nos snapshots históricos**.
+
+O baseline gerado na Fundação é agora o **BASELINE IMUTÁVEL PRÉ-ONDA 1**
+(`relatorios/baseline_fase0.json`). Não se regenera. É contra ele que toda onda é medida.
+
+**Nenhuma Onda 1+ foi iniciada.**
+
+Base auditada: `~/Anara-Cotacao` — 9.637 linhas Python em 61 arquivos (5.726 em 37 módulos de
+`app/`), 14 templates, 186 testes passando (173 herdados + 13 da Fundação), 339 SKUs ativos,
+3 fornecedores, 1 cliente, 18 cotações, 45 itens de cotação.
 
 ---
 
@@ -18,6 +39,48 @@ Legenda de prioridade: **P0** matemática/fiscal/dados · **P1** segurança/mult
 
 Nomenclatura oficial do projeto: **Fase 0 — Fundação** (preparatória) e **Ondas de
 Implementação 1 a 8**. São 1 fase + 8 ondas.
+
+### 1.0. Estados de confiança canônicos — REGRA APROVADA
+
+São **cinco**. A diferença entre eles é **de onde veio o número**, não o quanto ele parece bom.
+
+| Estado | Origem do número | Pode cotar? | PDF? | PO / pedido / WON? | Condição |
+|---|---|---|---|---|---|
+| **CONFIRMADO** | referência direta, atual e suficientemente confiável | sim | sim | **sim** | dentro da validade |
+| **ESTIMADO** | **proxy**: curva, análogo forte, interpolação documentalmente suportada, outra referência indireta robusta | sim | sim | **não** | `confirmation_pending = true` até confirmação |
+| **REVALIDAR** | referência **direta** que era confiável e envelheceu, perdeu freshness, venceu, tem anomalia ou precisa de reconfirmação | sim, **com alerta** | sim | **não** | reconfirmar antes de compromisso firme |
+| **A_COTAR** | não existe base segura | **não** gera preço automático | **não** | não | pedir referência ao fornecedor |
+| **REVIEW_REQUIRED** | problema crítico de premissa, fiscal, rastreabilidade, configuração ou consistência | bloqueia conclusão | **não** | não | impedir passagem silenciosa |
+
+**As três confusões que precisam ser evitadas:**
+
+- **REVALIDAR ≠ ESTIMADO.** O REVALIDAR tem número **próprio e direto**; o ESTIMADO veio de proxy.
+- **REVALIDAR ≠ A_COTAR.** O REVALIDAR já tem número comercialmente utilizável; o A_COTAR não tem
+  número nenhum.
+- **REVALIDAR ≠ REVIEW_REQUIRED.** Envelhecer não é erro crítico de cálculo. Nem toda anomalia de
+  freshness invalida a matemática.
+
+**ESTIMADO não é promovido a CONFIRMADO em silêncio** — a promoção exige ato humano registrado.
+
+**Situação no código (03/09/2026):** o enum `CostConfidence` tem `CALCULATED`, `QUOTED`,
+`ESTIMATED`, `MANUAL`, `LEGACY`, `REVIEW_REQUIRED`. **`REVALIDAR` não existe.** O conceito mais
+próximo é `pricing_service.frescor` (FRESH ≤30 d · AGING ≤60 d · STALE >60 d · UNKNOWN), hoje
+usado apenas em relatório e sem ligação com bloqueio. Distribuição atual: **147 FRESH · 4 AGING ·
+67 STALE · 121 sem data de referência**. Implementação na Onda 2.
+
+### 1.0.1. Gate de reconciliação — `legacy REVIEW_REQUIRED` ≠ `REVIEW_REQUIRED` canônico
+
+**REGRA APROVADA.** Hoje há **121 SKUs** com `custo_confianca = REVIEW_REQUIRED` (71
+`LEGACY_EXCEL` + 50 `MANUAL`) e **156** com `precisa_revisao = true`. Esses campos carregam o
+sentido **histórico** do rótulo, não o canônico definido em 1.0.
+
+**Nenhuma conversão automática.** Antes de `REVIEW_REQUIRED` virar blocker real de operação, é
+obrigatório um relatório por SKU com: SKU · fornecedor · família · método de custo · confidence
+legado · `precisa_revisao` · motivo · custo atual · fonte · data · freshness · rastreabilidade ·
+**status canônico recomendado** (CONFIRMADO / ESTIMADO / REVALIDAR / A_COTAR / REVIEW_REQUIRED) ·
+justificativa.
+
+Sem esse gate, ativar o blocker torna **36% do catálogo não-cotável de uma vez**.
 
 ### 1.1. Comportamento verificado como CORRETO — preservar
 
@@ -56,7 +119,9 @@ Implementação 1 a 8**. São 1 fase + 8 ondas.
 | **B-11** | §61 — migrations | `app/migrations.py` | `create_all` + diff de metadata; sem downgrade | MÉDIO | Alembic |
 | **B-12** | §13 — métodos de custo | `models.CostMethod` | Enum pobre: falta `KTC_SPECIAL_QUOTED`, `KTC_ESTIMATED_FROM_QUOTES`, `A_COTAR_*`, `DAUNE_DIRECT`, `DECOR_DIRECT` | MÉDIO | Migrar enum com mapeamento do legado |
 | **B-13** | §61 — esquema declarado ≠ esquema real | modelos × `data/anara.db` | 21 divergências entre o que `models.py` declara e o que o banco tem: 5 índices, 2 chaves estrangeiras, 10 colunas NOT NULL e 4 tipos booleanos. Consequência direta do B-11 — `ALTER TABLE ADD COLUMN` no SQLite não cria índice, FK nem constraint | MÉDIO | Migration própria, em etapa autorizada. **Descoberto na Fase 0** |
-| **B-14** | §27 — origem fiscal | `models.Cotacao.estado_origem`, `BaseImportacao.origem_uf`, `premissa.catalogo_origem` | Três origens fiscais convivem: modelo default "Santa Catarina", bases legadas "SC", premissa de catálogo "São Paulo". 14 das 18 cotações estão gravadas com Santa Catarina, e `RegraFiscalVenda` só tem regra explícita para SP→SP | ALTO | Onda 1, junto com B-01/B-02. **Descoberto na Fase 0** |
+| **B-14** | §27 — origem fiscal | `models.Cotacao.estado_origem` (default), `BaseImportacao.origem_uf`, `premissa.catalogo_origem`, `TaxRuleSet.origem_uf` (default) | **Origens fiscais inconsistentes e hardcoded no legado, e ausência de resolução canônica por item/operação.** Quatro origens convivem — "Santa Catarina", "SC", "São Paulo" e "SC" — nenhuma delas resolvida a partir da operação real. 14 das 18 cotações gravadas com Santa Catarina; `RegraFiscalVenda` só tem regra explícita para SP→SP | ALTO | Onda 1: modelar origem fiscal **por item/operação**, auditável, snapshotada e sobrescrevível com autorização. Sem evidência → `REVIEW_REQUIRED` |
+| **B-15** | §22 — condição de pagamento não se interpola | `payment_terms.py:41-47` e `pricing_engine.py:117` | Condição não cadastrada devolve `base + 1,6% × número de barras` na string, com `confirmado=False` e aviso — mas o número **segue para o preço**. Condição vazia devolve 1,6% com `confirmado=True`, **sem aviso**. `pricing_engine.encargo_financeiro_efetivo` é código morto que reimplementa a mesma régua e pode ressuscitá-la | **ALTO** | Onda 1, junto com o fim dos fallbacks silenciosos: exigir condição cadastrada ou override autorizado; remover o código morto; reescrever o teste que protege o comportamento |
+| **B-16** | §13/§21 — casamento por campos estruturados | `models.Produto.gsm` | **A gramatura dos edredons não é campo estruturado.** 28 dos 31 SKUs da família `Duvet Insert` têm `gsm` NULO; a gramatura existe apenas dentro da string do nome ("Edredom 190x260 · 180 g · 100% fibras de poliéster"). O casamento por campos estruturados, que a regra exige, é **hoje impossível** para gramatura — exatamente na família onde a nova fonte Daune 280g vai cair | MÉDIO | Onda 2: preencher `gsm` a partir da fonte antes de qualquer match, nunca casar por nome. **Descoberto na Sessão 0.1** |
 
 ### 1.2.1. Descobertos na Fase 0 (03/09/2026)
 
@@ -79,6 +144,33 @@ existe em produção; os tipos são cosméticos no SQLite (afinidade NUMERIC × 
 fotografa o banco **como ele é**, com as diferenças anotadas no próprio arquivo; corrigir é
 etapa própria, não efeito colateral da Fase 0.
 
+**B-15 — a régua proibida, e onde ela mora.**
+
+```
+payment_terms.resolver_encargo(condicoes, codigo)
+  1. código na tabela, com encargo   → encargo cadastrado                    CORRETO
+  2. código na tabela, encargo NULL  → 0,0% + confirmado=False + aviso       CORRETO
+  3. código VAZIO                    → 1,6% "padrão", confirmado=True        ← default SILENCIOSO
+  4. código NÃO cadastrado           → 1,6% + 1,6% por barra, aviso          ← INTERPOLAÇÃO PROIBIDA
+```
+
+Os casos 3 e 4 contrariam a regra aprovada: não interpolar, não aproximar, não contar barras, não
+inferir 1,6% por parcela, não devolver como confirmada. Exigir condição cadastrada ou override
+explícito autorizado.
+
+**Código morto a eliminar junto:** `pricing_engine.encargo_financeiro_efetivo` (linha 117)
+implementa a mesma contagem de barras e não é chamado por ninguém. Enquanto existir, convida à
+reintrodução do comportamento.
+
+**Teste que protege o erro:** `test_motor_comercial::test_condicao_nao_cadastrada_usa_regua_antiga_com_aviso`
+afirma que `"30/60/90/120/150/180"` devolve 9,6%. Correto quanto ao código, **errado quanto à
+regra**. Reescrever na Onda 1.
+
+**Situação atual do cadastro:** as cinco condições canônicas estão corretas (1,6% · 3,2% · 4,8% ·
+6,4% · 8,0%), mais `À VISTA` a 0% e duas sem taxa confirmada (`SINAL30+30/60/90`, `CARTAO`), que
+já se comportam corretamente. **Não existem** condições históricas de 14, 28, 56 ou 84 dias, nem
+na tabela nem nas 18 cotações.
+
 **B-14 — a origem fiscal não é uma só.**
 
 | Onde | Valor | Alcance |
@@ -91,8 +183,36 @@ etapa própria, não efeito colateral da Fase 0.
 
 Hoje: 14 cotações gravadas com Santa Catarina (todas arquivadas) e 4 com São Paulo (as 2
 ativas). `RegraFiscalVenda` tem regra explícita só para SP→SP, então cotação que ficar no
-default cai na resolução por `EstadoFiscal` em vez da regra decidida. Não foi tocado na
-Fase 0 — é matéria fiscal, portanto Onda 1.
+default cai na resolução por `EstadoFiscal` em vez da regra decidida.
+
+**REGRA CANÔNICA APROVADA (Sessão 0.1).** Não existe obrigatoriamente uma única "origem fiscal da
+Anara". A origem fiscal é **atributo da operação / item / NF**, e precisa ser:
+
+- resolvida **por item**;
+- auditável e rastreável até a evidência;
+- **snapshotada** na cotação;
+- sobrescrevível **com autorização registrada**;
+- **separada da origem logística**.
+
+**Nunca tratar origem logística como sinônimo de origem fiscal da NF.** Itajaí-SC ser o ponto de
+entrada da importação da KTC **não prova** a origem fiscal da venda.
+
+Cenários nacionais aprovados, quando a operação sair **fiscalmente** de SP:
+
+| Operação | Alíquota no cenário geral |
+|---|---|
+| SP → SP | interna paulista, hoje **18%** |
+| SP → N / NE / CO / ES | **7%** |
+| SP → MG, PR, RJ, RS, SC | **12%** |
+
+"SP" **não** vira constante eterna do fornecedor. Se a NF real tiver outra origem, vale a origem
+real. Para a KTC vale o mesmo: **não hardcodar `KTC = SP` nem `KTC = SC`**.
+
+**Se a origem fiscal necessária para calcular a operação não puder ser determinada com confiança:
+`REVIEW_REQUIRED`.** Nunca um default.
+
+Antes de qualquer migração massiva na Onda 1, exigir relatório: SKU → fornecedor → origem atual →
+fonte → origem proposta → evidência. **Sem evidência, `REVIEW_REQUIRED`.**
 
 ### 1.3. Módulos exigidos e ausentes
 
@@ -130,12 +250,157 @@ Implementei as fórmulas e comparei com os cinco backtests do próprio §18
 Consequência: **39 fronhas** deixam de ser "sem fórmula". O valor implícito confirma
 250TC Sateen CVC 70/30 plain = US$ 1,25/m².
 
-### 2.2. Fonte Daune — CONFIRMADA
+### 2.2. Daune — modelo econômico aprovado e situação real do catálogo
 
-`Linha Hotelaria - Daune - 12.08.26.xlsx` existe, 28 itens, com aba "Informações" onde o
-fornecedor declara por escrito: *"todos os impostos estão inclusos, e o crédito de ICMS é 12%"*,
-*"30 DD após a emissão da nota"*, *"frete CIF São Paulo"*. Fecha a questão do crédito e confirma
-o modelo do §21.
+**Daune é fornecedor nacional.** Não passa por nacionalização KTC.
+
+**Condições de compra aprovadas**, declaradas por escrito pelo fornecedor na aba "Informações" de
+`Linha Hotelaria - Daune - 12.08.26.xlsx` (verificado verbatim na Sessão 0.1):
+
+- *"Sim todos os impostos estão inclusos, e o credito de ICMS é 12%"*
+- *"Considerei 30 DD após a emissão da nota"*
+- *"Sim frete CIF São Paulo"*
+
+O arquivo tem **3 abas**: `Preços Daune 12.08.26` (fonte mais nova, **28 itens**),
+`Preços Daune 27.07.26` (versão anterior — **é uma aba do mesmo arquivo**, não um arquivo
+separado) e `Informações`.
+
+#### Fórmula aprovada — CUSTO NET ANARA a partir do preço BRUTO do fornecedor
+
+```
+ICMS_credit        = gross × 12%
+base_pc            = gross − ICMS_credit
+PIS_COFINS_credit  = base_pc × 9,25%
+CUSTO_NET_ANARA    = gross − ICMS_credit − PIS_COFINS_credit
+
+fator equivalente  ≈ gross × 0,7986      (1 × 0,88 × 0,9075 = 0,798600)
+```
+
+#### O preço bruto Daune NÃO é o preço de venda da Anara
+
+Depois do CUSTO NET, o motor comercial ainda aplica: fiscal da venda · PIS/COFINS de saída
+vigente · condição financeira · comissão pela faixa de markup · frete comercial da Anara quando
+aplicável · demais custos atribuíveis · e a **margem-alvo Daune de 14%**.
+
+```
+PREÇO BRUTO FORNECEDOR → créditos recuperáveis → CUSTO NET ANARA
+                       → fiscal / financeiro / comissão / frete
+                       → margem 14% → PREÇO RECOMENDADO ANARA
+```
+
+**Nenhuma referência Daune é copiada para o cliente como preço de venda.**
+
+#### Situação real do catálogo (verificada no banco, Sessão 0.1)
+
+| | SKUs | Método | Confiança | Fonte cadastrada |
+|---|---|---|---|---|
+| Com custo | **32** | `NATIONAL_SUPPLIER` | `QUOTED` | `tabela de preços Daune Anara-Trousseau-Fio a Fio.xlsx` |
+| Sem custo | **20** | `MANUAL` | `REVIEW_REQUIRED` | bloco "TAMANHOS DE EDREDOM SOLICITADOS", tipo `A_COTAR` |
+| **Total** | **52** | | | |
+
+Custo médio dos 32 com custo: R$ 685,44 (faixa R$ 34,48 a R$ 2.064,71).
+
+**Correção obrigatória de documentação:** a frase "52 SKUs Daune terão custo reduzido em ~20%"
+está errada. Só **32** têm custo para converter. Os 20 restantes são edredons em `A_COTAR` e
+continuarão assim até haver fonte.
+
+**Complicação adicional:** os 32 SKUs custeados vieram de um documento **diferente** daquele que
+a Onda 2 vai importar. A migração não é aplicar um fator — é **trocar a fonte e casar SKU a SKU
+entre duas planilhas de origens distintas**.
+
+### 2.2.1. NOVA FONTE DAUNE — Edredom 100% poliéster 280 g (registrada na Sessão 0.1)
+
+**Informação fornecida diretamente pelo responsável do projeto em 03/09/2026.** Registrada aqui
+para tratamento futuro na **Onda 2**. **Não implementada. Nenhum SKU criado. Nenhum preço
+calculado.**
+
+**Produto:** DAUNE · EDREDOM · **100% FIBRAS DE POLIÉSTER** · **280 GRAMAS**.
+
+> **280 g é uma linha própria.** Não é 180 g. Não é 250 g. **Não converter silenciosamente uma
+> gramatura na outra.**
+
+**Preços BRUTOS DO FORNECEDOR** — nove dimensões:
+
+| Dimensão | Preço bruto Daune |
+|---|---:|
+| 180×250 | R$ 427,50 |
+| 190×260 | R$ 469,30 |
+| 220×250 | R$ 495,00 |
+| 230×260 | R$ 538,20 |
+| 250×250 | R$ 562,50 |
+| 260×260 | R$ 608,40 |
+| 285×265 | R$ 679,72 |
+| 290×245 | R$ 639,45 |
+| 290×260 | R$ 678,60 |
+
+Fonte: tabela/imagem fornecida diretamente pelo responsável do projeto em 03/09/2026.
+
+> **ESTES NÃO SÃO PREÇOS FINAIS ANARA.** São **preço bruto do fornecedor** — o início da cadeia
+> econômica, não o fim. R$ 469,30 na tabela **não** significa vender por R$ 469,30. Cada um ainda
+> precisa passar por créditos → CUSTO NET → fiscal, financeiro, comissão e frete → margem de 14%
+> → preço recomendado. Não cadastrar, não documentar e não exibir como preço de venda.
+
+#### O que o catálogo tem hoje, e por que o match não é trivial
+
+Verificado no banco na Sessão 0.1, sem alterar nada:
+
+- A família `Duvet Insert` tem **31 SKUs**: 28 Daune (8 com custo, 20 sem) e 3 KTC.
+- Os 20 sem custo são **5 dimensões × 2 composições (plumas de ganso / fibras de poliéster) ×
+  2 gramaturas (180 g e 250 g)**.
+- **Nenhum SKU do catálogo é 280 g.** Busca por `280 g`, `280g` e `gsm = 280`: **zero
+  resultados**.
+- Dimensões dos edredons Daune no catálogo: 156×230, 190×260, 220×240, 240×260, 250×260, 260×290,
+  270×265, 285×265, 290×260.
+
+Cruzando com as nove dimensões da nova fonte:
+
+| Situação | Dimensões |
+|---|---|
+| Coincidem com dimensão existente | **190×260 · 285×265 · 290×260** (3) |
+| Sem SKU correspondente | 180×250 · 220×250 · 230×260 · 250×250 · 260×260 · 290×245 (6) |
+| SKU existe, sem preço 280 g | 250×260 · 270×265 (e as demais dimensões Daune) |
+
+**A armadilha está exatamente nas três dimensões que coincidem:** o SKU existente é 180 g ou
+250 g, e o preço novo é de 280 g. **Coincidência de medida não é match.** Sobrescrever seria
+atribuir a um edredom de 180 g o preço de um de 280 g.
+
+**Agravante — ver B-16:** `gsm` está **NULO em 28 dos 31** SKUs da família; a gramatura só existe
+dentro da string do nome. O casamento por campos estruturados que a regra exige é hoje impossível
+para gramatura, justamente nesta família.
+
+### 2.2.2. O que a fonte 280 g NÃO resolve — REGRA APROVADA
+
+**Edredom poliéster 180 g e 250 g continuam `A_COTAR`** quando não houver fonte específica.
+A fonte 280 g não os resolve.
+
+**Proibido, sem autorização posterior e explícita:**
+
+- `180 g = extrapolação de 280 g`
+- `250 g = extrapolação de 280 g`
+- qualquer curva que cruze gramaturas
+
+A série 280 g pode, no futuro, servir para: análise de consistência **entre tamanhos da própria
+linha 280 g**; detecção de outliers **da própria linha**; e criação de uma curva 280 g, **se
+explicitamente aprovada**. Para outra gramatura, não serve.
+
+**Pluma × poliéster continuam separados.** Não misturar curvas de edredom de pluma de ganso com
+edredom de fibra de poliéster — são produtos e cadeias de custo diferentes. As classificações já
+auditadas das referências Daune atuais permanecem: CONFIRMADO quando o match direto é
+suficientemente confiável; ESTIMADO quando derivado de curva forte; REVALIDAR quando a referência
+direta tem problema de freshness ou anomalia; A_COTAR quando falta base segura.
+
+**Protetores Daune.** Não fazer match automático entre *"Manta 120 grs impermeável"* e
+construções do catálogo que mencionem *matelassado com alça* ou *matelassado com slip*, sem
+evidência de equivalência técnica. Sem match técnico seguro: `A_COTAR`.
+
+### 2.2.3. Produtos sem método fechado — REGRA APROVADA
+
+**Não inventar engine nem fornecedor para fechar lacuna documental.** Havendo evidência
+documental clara, classificar corretamente; não havendo, o item fica OPEN ou `A_COTAR` conforme a
+natureza. **Nenhuma fórmula fictícia.**
+
+Aplica-se hoje a **Bed Runner (17 SKUs)** e **Cushion Cover (1 SKU)**, que não tinham destino
+declarado em nenhum documento até a Sessão 0.1.
 
 ### 2.3. Tabela da transportadora — RECEBIDA E LIDA
 
@@ -148,7 +413,10 @@ Av. Radial Oeste 563-293, Espinheiros, **Itajaí-SC**, CEP 88311740.
 origem** — não é apenas override da Anara. E `ILHOTA` aparece como cidade atendida pela filial
 Itajaí, o que reconcilia a menção histórica a Ilhota-SC: Ilhota está dentro da região Itajaí.
 
-**Faixas (R$/tonelada sobre peso taxado):**
+**Re-extraída célula a célula na Sessão 0.1.** A extração anterior estava incompleta e com um
+erro de contagem — as correções estão em negrito.
+
+**Faixas (R$/tonelada sobre peso taxado) — linhas 10 a 19 da aba `Tabela de Frete`:**
 
 | Região destino | 1 a 7.000 kg | acima de 7.000 kg | Frete mínimo | Prazo |
 |---|---|---|---|---|
@@ -163,12 +431,46 @@ Itajaí, o que reconcilia a menção histórica a Ilhota-SC: Ilhota está dentro
 | Farroupilha-RS | 632 | 569 | 189 | 48 h |
 | **Passo Fundo-RS** | **vazio** | **vazio** | **vazio** | — |
 
-São **9 regiões/filiais cadastradas, 8 com tarifa preenchida**. Passo Fundo-RS consta sem
-tarifa, mínimo ou prazo → as cidades dependentes dessa região ficam `FRETE_A_COTAR`.
+**CORRIGIDO NA SESSÃO 0.1.** São **10 regiões de destino, 9 com tarifa preenchida**. A contagem
+anterior ("9 regiões, 8 com tarifa") misturava duas coisas: a aba `Cidades Atendidas` tem
+**9 unidades** — matriz Morro da Fumaça + 8 filiais (Cachoeirinha, Guarulhos, Jundiaí, Itajaí,
+Joinville, Colombo, Palhoça, Farroupilha) — e **Passo Fundo não está entre elas**. Quem semear a
+partir da frase antiga cadastra **uma região tarifada a menos**.
 
-ADV 0,20% · GRIS 0,10% · Pedágio R$ 0,0536/kg — uniformes em todas as regiões.
+Passo Fundo-RS consta sem tarifa, sem mínimo e sem prazo, e **nenhuma cidade da aba de cobertura
+aponta para essa região**. Tratamento: `FRETE_A_COTAR`.
 
-**Cobertura:** ~200 cidades em 9 filiais. **São Paulo capital está na filial Guarulhos**, o que
+ADV **0,20%** · GRIS **0,10%** · Pedágio **R$ 0,0536/kg taxado** — uniformes nas 9 regiões
+tarifadas.
+
+**Peso taxado (regra aprovada):** `peso_cubado = volume_m³ × 300` · `peso_taxado = max(peso_real,
+peso_cubado)`. O fator 300 é confirmado pela própria tabela: *"MERCADORIA VOLUMOSA 300KG/M3"*.
+
+**Adicionais — bloco integral da célula A21, não extraído antes:**
+
+| Adicional | Valor conforme o documento | Constava? |
+|---|---|---|
+| TDE — dificuldade de entrega | Limite 2 h; após, **R$ 272,00/hora excedida** em horário comercial; **+50%** fora dele | sim |
+| TDC — dificuldade de coleta | Mesma regra | sim |
+| **Fiel depositário** | **0,5% do valor da nota fiscal** | **NÃO** |
+| Paletização | **R$ 91,00 por pallet PBR** | sem valor |
+| Sábados, domingos e feriados | **30% do frete original, mínimo R$ 1.431,00** | **NÃO** |
+| Agendamento | Por veículo: VUC / 3-4 / Toco **R$ 1.000,00** · Truck **R$ 1.431,00** · Carreta **R$ 2.144,00** | sem valor |
+| Reentrega | **50% do frete** | sem valor |
+| Devolução | **100% do frete** | **NÃO** |
+| ICMS | *"ICMS CONFORME LEGISLAÇÃO"* | **NÃO** |
+| Cubagem | *"MERCADORIA VOLUMOSA 300KG/M3"* | como decisão, não como citação |
+| **Validade da tabela** | **31/12/2026** | **NÃO** |
+| Cláusulas de reajuste | Revisão conforme política de preços de combustível da Petrobras; reavaliação se a volumetria cair | **NÃO** |
+| SASSMAQ | Vigência março/2027 | não relevante |
+
+> **O fiel depositário de 0,5% é FATO — a sua aplicabilidade universal NÃO é.** Não fixar
+> `RV = 0,80%` nem somar automaticamente o fiel depositário a ADV/GRIS. A composição do rate
+> variável fica **indefinida** até C-NEW-06 ser resolvida.
+
+**Cobertura:** **~238 cidades** em 9 unidades (recontagem da Sessão 0.1; o documento não numera,
+a contagem é por separador). Cidade fora da cobertura → `FRETE_A_COTAR`, **sem aproximar por
+região vizinha**. **São Paulo capital está na filial Guarulhos**, o que
 confirma o §24. Jundiaí cobre Campinas, Sorocaba, Osasco, Barueri; Palhoça cobre Florianópolis;
 Colombo cobre Curitiba; Cachoeirinha cobre Porto Alegre.
 
@@ -183,7 +485,14 @@ Colombo cobre Curitiba; Cachoeirinha cobre Porto Alegre.
 |---|---|---|
 | Q-01 | Tabela da transportadora | **Recebida.** TRANSAL, origem Itajaí-SC, **9 regiões/filiais cadastradas, das quais 8 com tarifa preenchida**; Passo Fundo-RS sem tarifa. ~200 cidades, TDE/TDC R$ 272/h. Origem editável, versionada, sobrescrevível por perfil |
 | Q-02 | NCM do roupão | **6208.91.00** (100% algodão) e **6208.92.00** (sintéticas/artificiais). 6309 proibido para mercadoria nova. I.I. 3,5% permanece como override de família versionado, imune a troca de NCM |
+| Q-15 | KTC importada interestadual = 4% é constante universal? | **NÃO. Encerrada.** A formulação correta é: mercadoria KTC importada em operação interestadual → **4% quando a regra legal aplicável à mercadoria importada efetivamente se aplicar**. O modelo tem de admitir vigência, origem, produto/NCM, exceção e **override autorizado e rastreado**. Nunca uma constante impossível de sobrescrever |
 | Q-03 | 200TC/230TC na tabela de materiais | Mantida a precedência do §15: existência de US$/m² **não** habilita cálculo automático |
+| Q-09 | REVALIDAR existe? | **SIM — regra aprovada na Sessão 0.1.** Cinco estados canônicos, definidos em 1.0. REVALIDAR é referência direta que envelheceu ou tem anomalia; não é proxy (ESTIMADO), não é ausência de número (A_COTAR) e não é erro de cálculo (REVIEW_REQUIRED) |
+| Q-10 | Condição de pagamento desconhecida | **ENCERRADA — não interpolar.** Nem por barras, nem por 1,6% por parcela, nem devolvendo como confirmada. Exige condição cadastrada ou override autorizado. O comportamento atual é o **B-15** |
+| Q-11 | Existe uma "origem fiscal da Anara"? | **NÃO. Encerrada.** Origem fiscal é atributo da **operação/item/NF**, resolvida por item, auditável, snapshotada e sobrescrevível com autorização. Separada da origem logística. Sem evidência → `REVIEW_REQUIRED` |
+| Q-12 | Margem-alvo Daune | **14%**, confirmada |
+| Q-13 | Fórmula econômica Daune | **Encerrada** — ver 2.2. Fator ≈ 0,7986 aplicado ao **bruto da fonte**, nunca ao custo atual |
+| Q-14 | Gramatura da nova linha de edredom Daune | **280 g**, linha própria. Os nove valores são **preço bruto do fornecedor**, não preço final Anara |
 | Q-04 | UFs por faixa interestadual nacional | **7%:** AC, AL, AP, AM, BA, CE, DF, ES, GO, MA, MT, MS, PA, PB, PE, PI, RN, RO, RR, SE, TO. **12%:** MG, PR, RJ, RS, SC. SP→SP interna (18%). Importada KTC segue 4% |
 | Q-05 | Finalidade padrão | `USO_CONSUMO` para hotel, editável por cliente/unidade, sobrescrevível na cotação, snapshotada. Enum: REVENDA, INDUSTRIALIZACAO, USO_CONSUMO, ATIVO_IMOBILIZADO. **Consumidor final é derivado**, não é valor do enum |
 | Q-06 | Cubagem e faixas | Confirmados: 300 kg/m³, faixas 1–7.000 e >7.000, tarifas agora conhecidas |
@@ -194,20 +503,29 @@ Colombo cobre Curitiba; Cachoeirinha cobre Porto Alegre.
 
 ## 4. NOVAS contradições encontradas
 
-### C-NEW-01 — ICMS do frete — **RESOLVIDO em 03/09** (era P0, ALTO)
+### C-NEW-01 — ICMS do frete — **REABERTO na Sessão 0.1** (P0, ALTO)
 
-**Regra vigente:** a confirmação escrita e posterior da transportadora — *"ICMS já está incluso
-no cadastro das tabelas"* — é a regra operacional. Para a versão atual da tabela TRANSAL:
+**Estava marcado RESOLVIDO. Volta a OPEN, e bloqueia a implementação definitiva da Onda 3A.**
+
+Motivo da reabertura: existem **três evidências que não se reconciliam**, e a que sustentava o
+"resolvido" não está no repositório.
+
+| | Evidência | Diz | Está no repositório? |
+|---|---|---|---|
+| **A** | Texto da própria tabela | *"ICMS CONFORME LEGISLAÇÃO"* — ambíguo | **sim**, verificado |
+| **B** | Informação posterior da transportadora | ICMS já estaria incluso | **não** — existe apenas como afirmação neste documento |
+| **C** | Exemplo numérico da própria tabela | executa gross-up de 12% | **sim**, verificado em 13 casas |
+
+Enquanto B não for anexado com data e autoria, não há como uma auditoria independente verificar a
+decisão. **Não escolher solução aqui.**
+
+**O exemplo, reconstituído integralmente na Sessão 0.1** (células G1:G5 da aba `Tabela de Frete`):
 
 ```
-icms_incluso = true
-Frete Total = frete-peso final + ADV + GRIS + pedágio + adicionais aplicáveis
+peso taxado    500 kg          ← 26,80 ÷ 0,0536
+destino        Cachoeirinha-RS ← 299,00 = 0,5 t × R$ 598/t, faixa 1 a 7.000 kg
+valor da NF    R$ 13.350,00    ← 26,70 ÷ 0,002
 ```
-
-**Sem** gross-up de 12%. **Sem** divisão por 0,88.
-
-**Inconsistência do documento, registrada e não aplicada:** o exemplo de cálculo nas células
-G1:G5 da aba `Tabela de Frete` faz gross-up de 12%:
 
 ```
 frete 299,00 + ADV 26,70 + pedágio 26,80 = 352,50
@@ -215,28 +533,64 @@ frete 299,00 + ADV 26,70 + pedágio 26,80 = 352,50
 célula "Frete Total" (G5)                 = 400,5681818181818   ← confere em 10 casas
 ```
 
-Esse exemplo **não prevalece** sobre a confirmação escrita posterior. Fica documentado como
-inconsistência do documento/exemplo, para que ninguém no futuro "corrija" o motor com base nele.
+**Dois componentes que a própria tabela define não aparecem no exemplo:**
+
+```
+GRIS              0,1% × 13.350 = 13,35    ← ausente
+fiel depositário  0,5% × 13.350 = 66,75    ← ausente
+```
+
+Isso enfraquece o exemplo como fonte, mas **não o anula** — e não autoriza ninguém a decidir
+sozinho. **Questão em aberto, bloqueadora da Onda 3A.**
 
 **O modelo preserva `icms_incluso` e `icms_pct`** por tabela/transportadora, porque tabelas
 futuras podem ter tratamento diferente.
 
-### C-NEW-02 — GRIS — **RESOLVIDO em 03/09** (era P1, MÉDIO)
+### C-NEW-02 — GRIS — **REABERTO na Sessão 0.1** (P1, MÉDIO)
 
-**Regra vigente**, confirmada pela transportadora:
+O que é **fato**: a coluna GRIS existe e vale **0,10%** nas 9 regiões tarifadas.
 
 ```
 ADV  = valor total da NF × 0,002   (0,20%)
 GRIS = valor total da NF × 0,001   (0,10%)
 ```
 
-Os dois se aplicam. O exemplo da planilha, que soma ADV e pedágio mas **omite o GRIS** (seriam
-R$ 13,35 sobre a NF de R$ 13.350), fica documentado como exemplo incompleto — não como regra.
+O que **não** é fato: que o GRIS incida sempre. O exemplo da própria tabela soma ADV e pedágio e
+**omite o GRIS**.
+
+Portanto: **não remover o GRIS do modelo** e **não assumir que sempre incide**. A aplicabilidade
+fica OPEN e precisa ser resolvida antes da Onda 3A.
+
+### C-NEW-06 — Fiel depositário de 0,5% sobre a NF (P0, ALTO) — **NOVO na Sessão 0.1**
+
+**Fato:** a tabela cobra *"TAXA DE FIEL DEPOSITÁRIO, SERÁ COBRADO 0,5% DO VALOR DA NOTA FISCAL"*.
+
+**Não é fato:** que se aplique a toda carga.
+
+**Por que é P0:** o plano define o rate variável do waterfall como `RV = ADV + GRIS = 0,30%`. Se
+o fiel depositário incidir sempre, `RV = 0,80%` — quase o triplo, dentro de uma fórmula de forma
+fechada que resolve a circularidade comissão × markup. Não é detalhe de cadastro, é um **termo da
+equação**.
+
+**Enquanto não for resolvido: não fixar RV.** O modelo deve tratar cada componente como uma linha
+de adicional com aplicabilidade própria, não como uma constante somada.
+
+### C-NEW-07 — Validade da tabela TRANSAL: 31/12/2026 (P1, MÉDIO) — **NOVO na Sessão 0.1**
+
+A tabela declara **validade até 31/12/2026**, mais duas cláusulas de revisão: por política de
+preços de combustível da Petrobras e por queda de volumetria.
+
+**Consequência para a modelagem:** a tabela de frete precisa de vigência, como as demais
+premissas versionadas. **Uma tabela vencida não pode continuar sendo usada em silêncio.** Vencida
+e sem versão válida no lugar → `FRETE_REVIEW_REQUIRED` ou `FRETE_A_COTAR`, conforme a modelagem
+da Onda 3A definir.
 
 ### C-NEW-03 — Região Passo Fundo-RS sem tarifa (P1, BAIXO)
 
-A linha existe na tabela mas sem tarifa, mínimo ou prazo. Tratamento proposto:
-`FRETE_A_COTAR` para as cidades dessa região, sem aproximar por região vizinha (§24).
+A linha existe na tabela mas sem tarifa, mínimo ou prazo, e **nenhuma cidade da aba de cobertura
+aponta para ela** (verificado na Sessão 0.1). **Regra conservadora aprovada:** `FRETE_A_COTAR`
+para a região, e `FRETE_A_COTAR` para qualquer cidade fora da cobertura — **sem aproximar por
+cidade ou região vizinha** sem regra autorizada (§24).
 
 ### C-NEW-04 — Volume/cubagem — **RESOLVIDO conceitualmente em 03/09** (era P0, ALTO)
 
@@ -298,8 +652,15 @@ Revisão dos 173 testes atuais contra a Base Mestra:
 | `test_fiscal.py` (paramétrico de carga final) | Correto, mas não cobre finalidade | Ampliar com a matriz contribuinte × finalidade |
 | `test_calculadora.py::test_familia_sem_formula_nao_inventa` | Inclui `Pillow Case` como não calculável | Remover fronha da lista; manter Fitted |
 | `test_motor_comercial.py` | Não cobre CF/RV | Ampliar com frete e ADV/GRIS |
+| `test_motor_comercial::test_condicao_nao_cadastrada_usa_regua_antiga_com_aviso` | **Protege a interpolação proibida** (B-15): afirma que `"30/60/90/120/150/180"` devolve 9,6% pela régua legada | **Reescrever na Onda 1** — a condição desconhecida tem de exigir cadastro ou override, não devolver número |
+| `test_fiscal::test_cenario_desconhecido_cai_no_fallback_com_aviso` | Protege o fallback de 18% (B-06) | **Substituir na Onda 1** — cenário irresolvível vira `REVIEW_REQUIRED` |
+| `test_fundacao::test_baseline_registra_o_estado_atual_com_os_bugs_conhecidos` | Afirma que MG e BA a contribuinte são 4% | **Reescrever junto com a Onda 1** — foi escrito para mudar, por desenho |
 | Testes de valor (preço/margem) | Escritos com `float` | Reescrever com tolerância explícita após `Decimal` |
 | Toda a suíte | Nenhum teste de papel/permissão/aprovação | Criar (Ondas 4 e 6) |
 
 Nenhum teste atual está *errado de propósito*; eles refletem a base anterior. Todos serão
 reconciliados com a Base Mestra na onda correspondente.
+
+**Consequência que precisa estar dita:** a suíte verde **não** prova que o sistema está correto.
+Três testes hoje passam justamente porque protegem comportamento que a regra aprovada condena
+(B-01, B-06 e B-15). Nenhum teste precisa ser **removido**; nove são reescritos ou ampliados.
