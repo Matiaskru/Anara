@@ -17,6 +17,8 @@ Classes esperadas:
                           de regra não é 0%, então o cenário bloqueia em vez de subestimar
 * `PAGAMENTO_BLOQUEADO` — condição de pagamento sem premissa (B-15)
 * `CUSTO_DAUNE`         — CNET recalculado a partir do preço BRUTO da fonte correspondente
+* `PRECO_DE_VENDA_RETIRADO` — B-17: o campo de custo guardava preço de venda; sem base de
+                          custo, o SKU vira A_COTAR e para de formar preço
 * `SKU_NOVO_280G`       — SKU da linha nova de edredom 280 g, ausente do baseline por natureza
 * `IGUAL`               — nenhuma diferença
 
@@ -94,6 +96,10 @@ def classificar_custo(antes_sku: dict, depois_sku: dict):
         return None
     if a is not None and d is not None and abs(a - d) <= 1e-9:
         return None
+    if a is not None and d is None:
+        # B-17: o campo guardava PREÇO DE VENDA, não custo. Retirado; sem base, o SKU é
+        # A_COTAR e deixa de formar preço automático.
+        return "PRECO_DE_VENDA_RETIRADO"
     return "CUSTO_DAUNE"
 
 

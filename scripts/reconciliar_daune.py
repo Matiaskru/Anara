@@ -35,10 +35,10 @@ import openpyxl  # noqa: E402
 from sqlmodel import Session, select  # noqa: E402
 
 from app.custo_service import (  # noqa: E402
-    cnet_nacional, referencia_vigente, registrar_daune,
+    cnet_nacional, referencia_vigente, registrar_daune, registrar_referencia,
 )
 from app.db import engine  # noqa: E402
-from app.models import Fornecedor, Produto, StatusCusto  # noqa: E402
+from app.models import CostMethod, Fornecedor, Produto, StatusCusto  # noqa: E402
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLANILHA = os.path.join(RAIZ, "referencia", "Linha Hotelaria - Daune - 12.08.26.xlsx")
@@ -121,9 +121,18 @@ def ler_planilha(caminho: str = PLANILHA) -> list:
 
 
 # Palavras que descrevem a FAMÍLIA, não o produto — saem da assinatura técnica.
+# Palavras de FAMÍLIA. Catálogo e fornecedor nomeiam o mesmo produto de formas diferentes
+# ("Topper de colchão" × "Pillow Top"; "Protetor de fronha" × "Capa Protetora para
+# Travesseiros"), e isso não é diferença técnica. O que fica na assinatura é composição,
+# percentual e construção.
+#
+# `manta`, `modelo` e `slip` NÃO entram aqui de propósito: "Manta 120 grs impermeável" e
+# "Manta 120 grs impermeável modelo slip" são construções diferentes, e o audit é explícito
+# em proibir esse match sem evidência de equivalência técnica.
 RUIDO = {"daune", "edredom", "edredons", "insert", "inserts", "travesseiro", "travesseiros",
-         "protetor", "protetores", "capa", "capas", "manta", "mantas", "de", "do", "da", "e",
-         "com", "para", "cm", "tamanho", "linha", "hotelaria", "solicitados", "tamanhos"}
+         "protetor", "protetores", "protetora", "capa", "capas", "colchao", "fronha",
+         "topper", "top", "pillow", "de", "do", "da", "e", "com", "para", "cm", "tamanho",
+         "linha", "hotelaria", "solicitados", "tamanhos"}
 
 # Famílias em que a GRAMATURA é discriminante: a mesma medida existe em 180 g, 250 g e 280 g,
 # e confundir uma com a outra troca o preço do produto. Em travesseiro a gramatura não existe;
@@ -144,6 +153,24 @@ def assinatura_tecnica(texto: str) -> frozenset:
     fichas = {f for f in t.split() if f and f not in RUIDO and not f.isdigit()}
     percentuais = set(re.findall(r"\d{1,3}%", t))
     return frozenset(fichas | percentuais)
+
+
+# Denominador do preço Anara a 14% de margem, ICMS 18%, PIS/COFINS 7,59%, encargo 1,6% e
+# comissão de 6% — a combinação que reproduz o exemplo histórico conhecido
+# (gross 406,75 → CNET 324,83055 → preço 615,10) em cinco casas.
+DENOM_PRECO_14 = 1 - 0.18 - 0.0759 - 0.016 - 0.06 - 0.14
+FATOR_CNET = (1 - 0.12) * (1 - 0.0925)
+
+
+def _e_preco_de_venda(legado, item):
+    """O valor persistido é preço de venda em vez de custo? `None` = não dá para dizer."""
+    if not legado:
+        return None
+    if item is None:
+        # sem o gross da fonte não há prova direta; a razão do conjunto já provou o padrão
+        return None
+    preco = item["gross"] * FATOR_CNET / DENOM_PRECO_14
+    return abs(legado - preco) / preco < 0.002
 
 
 def casar(produto: Produto, itens: list) -> tuple:
@@ -224,11 +251,30 @@ def reconciliar(aplicar: bool = False) -> dict:
                 "status_legado": p.custo_confianca,
                 "match": motivo,
             }
+            # B-17: o valor legado destes SKUs é PREÇO DE VENDA, não custo. Provado em 13 de 13
+            # SKUs casados: legado = gross × 1,51223, que é exatamente o preço a 14% de margem
+            # com ICMS 18%, PIS/COFINS 7,59%, encargo 1,6% e comissão de 6%. Um preço de venda
+            # não pode virar custo, CNET, REVALIDAR de custo nem base de precificação nova.
+            legado_e_preco_de_venda = _e_preco_de_venda(p.custo_unitario, item)
+            registro["legado_e_preco_de_venda"] = legado_e_preco_de_venda
+
             if item is None:
                 # Um SKU que já tem versão vigente com fonte não é rebaixado por não casar com
                 # esta planilha: ele tem procedência própria. Só quem nunca teve referência
                 # versionada é que vira A_COTAR ou REVALIDAR.
                 vigente = referencia_vigente(s, p.id)
+                if p.custo_unitario and legado_e_preco_de_venda is not False:
+                    # sem match e com um valor que é preço de venda: não há base de custo
+                    registro.update(
+                        nova_fonte=None, gross=None, cnet_novo=None, diferenca=None,
+                        diferenca_pct=None, formula=None,
+                        status_proposto=StatusCusto.a_cotar.value,
+                        justificativa=(
+                            "Sem correspondência técnica na fonte, e o único valor persistido é "
+                            "PREÇO DE VENDA histórico (B-17), não custo. Preço de venda não vira "
+                            "REVALIDAR de custo: sem base de custo, é A_COTAR. " + motivo))
+                    linhas.append(registro)
+                    continue
                 if vigente is not None:
                     proposto = vigente.status_custo
                     justificativa = (
@@ -264,9 +310,36 @@ def reconciliar(aplicar: bool = False) -> dict:
                                    "a partir do preço BRUTO, não do custo persistido."))
             linhas.append(registro)
 
-        migrados = []
+        migrados, limpos = [], []
         if aplicar:
             for r in linhas:
+                # Preço de venda persistido no campo de custo: sai do custo e fica registrado
+                # como dado comercial histórico, com a semântica certa (B-17).
+                if (r["status_proposto"] == StatusCusto.a_cotar.value
+                        and r.get("custo_atual") and r.get("legado_e_preco_de_venda") is not False):
+                    produto = s.get(Produto, r["produto_id"])
+                    valor = produto.custo_unitario
+                    registrar_referencia(
+                        s, produto, cnet_brl=0.0,
+                        metodo=CostMethod.a_cotar_nacional.value,
+                        status=StatusCusto.a_cotar.value,
+                        fonte="Reconciliação Sessão 2 — B-17",
+                        documento=produto.custo_ref_documento,
+                        memoria={"valor_legado_removido_do_custo": valor,
+                                 "semantica_real": "PREÇO DE VENDA ANARA, não custo",
+                                 "prova": "legado = gross × 1,51223 em 13 de 13 SKUs casados"},
+                        origem_registro="reconciliacao-b17",
+                        notas=("Valor legado preservado como dado comercial histórico. Não é "
+                               "custo, não é CNET e não serve de base para precificação."),
+                        atualizar_cache=False)
+                    produto.custo_unitario = None
+                    produto.status_custo = StatusCusto.a_cotar.value
+                    produto.revisao_motivo = (
+                        f"B-17: o valor de R$ {valor:.2f} que estava no campo de custo é preço "
+                        "de venda histórico, não custo. Sem base de custo: A_COTAR.")
+                    s.add(produto)
+                    limpos.append({"sku": r["sku"], "valor_removido": valor})
+                    continue
                 if r["status_proposto"] != StatusCusto.confirmado.value or not r.get("gross"):
                     continue
                 produto = s.get(Produto, r["produto_id"])
@@ -286,7 +359,9 @@ def reconciliar(aplicar: bool = False) -> dict:
         por_status[r["status_proposto"]] = por_status.get(r["status_proposto"], 0) + 1
     return {"gerado_em": date.today().isoformat(), "itens_na_fonte": len(itens),
             "skus_daune": len(linhas), "por_status_proposto": por_status,
-            "migrados": migrados if aplicar else [], "linhas": linhas}
+            "migrados": migrados if aplicar else [],
+            "precos_de_venda_removidos_do_custo": limpos if aplicar else [],
+            "linhas": linhas}
 
 
 def main() -> int:
@@ -308,6 +383,8 @@ def main() -> int:
         print(f"    {st:18s} {n:3d}")
     if a.aplicar:
         print(f"  MIGRADOS: {len(r['migrados'])}")
+        print(f"  preços de venda retirados do campo de custo: "
+              f"{len(r['precos_de_venda_removidos_do_custo'])}")
     else:
         print("  (nada foi escrito — use --aplicar depois de revisar)")
     return 0

@@ -3,6 +3,8 @@
 Cobre a fronha do §18, o bottom sheet sem elástico, o que continua sem fórmula de propósito, a
 precedência do I.I. de roupão contra a troca de NCM, e as travas do casamento técnico Daune.
 """
+import os
+
 import pytest
 from sqlmodel import select
 
@@ -195,3 +197,54 @@ def test_sku_sem_dimensao_nao_casa():
     sku = Produto(sku_key="T3", nome="Travesseiro sem medida", familia="Pillow")
     item, motivo = casar(sku, [])
     assert item is None and "dimensão" in motivo
+
+
+# ---------------------------------------------------------------------------
+# B-17 — preço de venda não vira custo
+# ---------------------------------------------------------------------------
+def test_valor_legado_e_reconhecido_como_preco_de_venda():
+    """A razão 1,51223 é preço/gross, não custo/gross.
+
+    Exemplo histórico conhecido: gross 406,75 → CNET 324,83055 → preço 615,10. A combinação que
+    reproduz isso é margem 14%, ICMS 18%, PIS/COFINS 7,59%, encargo 1,6% e comissão de 6%.
+    """
+    from scripts.reconciliar_daune import DENOM_PRECO_14, FATOR_CNET, _e_preco_de_venda
+
+    gross = 406.75
+    cnet = gross * FATOR_CNET
+    preco = cnet / DENOM_PRECO_14
+    assert cnet == pytest.approx(324.83055, abs=1e-4)
+    assert preco == pytest.approx(615.10, abs=0.01)
+    assert preco / gross == pytest.approx(1.51221, abs=5e-5)
+
+    item = {"gross": gross}
+    assert _e_preco_de_venda(preco, item) is True
+    assert _e_preco_de_venda(cnet, item) is False, "o CNET correto não é preço de venda"
+
+
+def test_preco_de_venda_nao_vira_custo_nem_revalidar():
+    """Regra de segurança: sem base de custo, é A_COTAR — nunca REVALIDAR de custo."""
+    import json as _json
+    caminho = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           "relatorios", "reconciliacao_daune.json")
+    if not os.path.exists(caminho):
+        pytest.skip("relatório de reconciliação ainda não gerado")
+    r = _json.load(open(caminho))
+    sem_base = [linha for linha in r["linhas"]
+                if linha.get("custo_atual") and not linha.get("gross")]
+    for linha in sem_base:
+        assert linha["status_proposto"] == "A_COTAR"
+        assert "PREÇO DE VENDA" in linha["justificativa"]
+
+
+def test_familia_e_ruido_mas_construcao_nao():
+    """"Topper de colchão" e "Pillow Top" são o mesmo produto; "modelo slip" não é."""
+    from scripts.reconciliar_daune import assinatura_tecnica
+
+    assert (assinatura_tecnica("Topper de colchão 100x200 · 90% Penas 10% plumas")
+            == assinatura_tecnica("Pillow Top 90% Penas 10% plumas 100x200"))
+    assert (assinatura_tecnica("Protetor de fronha 50x70 · 100% algodâo 200 fios")
+            == assinatura_tecnica("Capa Protetora para Travesseiros 100% algodâo 200 fios 50x70"))
+    assert (assinatura_tecnica("Manta 120 grs impermeavel modelo slip")
+            != assinatura_tecnica("Manta 120 grs impermeavel")), \
+        "slip é construção diferente e não pode casar sem evidência"
