@@ -21,7 +21,8 @@ from app.fiscal_rules import (
     consumidor_final_de, linha_estado, normalizar_uf, resolver_fiscal_item,
 )
 from app.ktc_engine import (
-    CALCULATED, REVIEW_REQUIRED, ParametrosKTC, calcular_duvet_cover, calcular_flat_sheet,
+    CALCULATED, REVIEW_REQUIRED, ParametrosKTC, calcular_bottom_sheet, calcular_duvet_cover,
+    calcular_flat_sheet, calcular_fronha,
     calcular_toalha, shrinkage_por_composicao,
 )
 from app.margin_rules import MargemResolvida, resolver_margem
@@ -35,11 +36,13 @@ from app.payment_terms import resolver_encargo
 from app.peso import PesoResolvido, resolver_peso
 from app.pricing_engine import TaxRuleSet
 
-# Famílias com fórmula industrial demonstrada e validada pela KTC. Fronha, lençol com
-# elástico, roupão, chinelo e afins NÃO entram aqui: sem geometria confirmada, não se inventa
-# fórmula — esses continuam pelo último preço KTC válido.
-FAMILIAS_CALCULAVEIS_PLANO = {"flat sheet", "top sheet"}
-FAMILIAS_TECIDO_PLANO = FAMILIAS_CALCULAVEIS_PLANO | {"duvet cover"}
+# Famílias com fórmula industrial demonstrada e validada pela KTC. A fronha entrou na Sessão 2
+# com a geometria do §18; o bottom sheet SEM elástico usa o motor do lençol plano. Lençol com
+# elástico, roupão e chinelo continuam fora: sem geometria confirmada, não se inventa fórmula —
+# esses vão por KTC_SPECIAL_QUOTED ou pelo último preço KTC válido.
+FAMILIAS_CALCULAVEIS_PLANO = {"flat sheet", "top sheet", "bottom sheet"}
+FAMILIAS_FRONHA = {"pillow case", "pillowcase", "fronha"}
+FAMILIAS_TECIDO_PLANO = FAMILIAS_CALCULAVEIS_PLANO | {"duvet cover"} | FAMILIAS_FRONHA
 FAMILIAS_TOALHA = {"bath towel", "hand towel", "face towel", "pool towel", "beach towel",
                    "bath mat", "wash cloth", "towel"}   # terry: custo por peso
 
@@ -233,6 +236,28 @@ def _familia_normalizada(produto: Produto) -> str:
     return (produto.familia or "").strip().lower()
 
 
+def _num_do_texto(texto, padrao: float) -> float:
+    """Primeiro número de um campo de cadastro. Ausente → o padrão do §18, não zero."""
+    import re
+    m = re.search(r"(\d+(?:[.,]\d+)?)", texto or "")
+    return float(m.group(1).replace(",", ".")) if m else padrao
+
+
+def _abas_do_produto(produto: Produto) -> int:
+    """Número de abas da fronha, a partir do cadastro estruturado.
+
+    Construções aprovadas no §18: 0, 2, 3 e 4 abas. Oxford é a de 4. Qualquer outra coisa
+    devolve 0 (standard) — e se o cadastro disser um número fora da lista, o motor bloqueia
+    em vez de arredondar para o vizinho.
+    """
+    import re
+    texto = f"{produto.construcao or ''} {produto.acabamento or ''}".lower()
+    if "oxford" in texto:
+        return 4
+    m = re.search(r"(\d)\s*abas?", texto)
+    return int(m.group(1)) if m else 0
+
+
 def parametros_ktc_do_produto(session: Session, produto: Produto) -> Tuple[ParametrosKTC, list]:
     """Monta os parâmetros do motor industrial. O que não estiver cadastrado volta como falta."""
     familia = produto.familia or ""
@@ -300,8 +325,23 @@ def calcular_exw(session: Session, produto: Produto):
         resultado = calcular_toalha(produto.largura_cm, produto.comprimento_cm, produto.gsm, p)
     elif familia == "duvet cover":
         resultado = calcular_duvet_cover(produto.largura_cm, produto.comprimento_cm, p)
+    elif familia in FAMILIAS_FRONHA:
+        # A construção decide o corte e o CMT. Ela vem do cadastro estruturado — número de
+        # abas e flap —, nunca do nome. Sem construção declarada, vale o standard do §18.
+        resultado = calcular_fronha(
+            produto.largura_cm, produto.comprimento_cm, p,
+            flap_cm=_num_do_texto(produto.fechamento, padrao=20.0),
+            abas=_abas_do_produto(produto),
+            festone="feston" in (produto.acabamento or "").lower(),
+            bordado_especial=any(x in (produto.acabamento or "").lower()
+                                 for x in ("bordado", "logotipo", "logo")))
     elif familia in FAMILIAS_CALCULAVEIS_PLANO:
-        resultado = calcular_flat_sheet(produto.largura_cm, produto.comprimento_cm, p)
+        com_elastico = any(x in f"{produto.construcao or ''} {produto.nome}".lower()
+                           for x in ("elástico", "elastico", "fitted"))
+        resultado = calcular_bottom_sheet(produto.largura_cm, produto.comprimento_cm, p,
+                                          com_elastico=com_elastico) \
+            if familia == "bottom sheet" \
+            else calcular_flat_sheet(produto.largura_cm, produto.comprimento_cm, p)
     else:
         from app.ktc_engine import ResultadoKTC
         return ResultadoKTC(None, REVIEW_REQUIRED, faltando=["familia não calculável"],

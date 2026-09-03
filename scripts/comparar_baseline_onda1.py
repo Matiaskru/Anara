@@ -16,6 +16,8 @@ Classes esperadas:
 * `FCP_REVIEW`          — FCP/FECP ou semântica da alíquota interna não resolvidos: ausência
                           de regra não é 0%, então o cenário bloqueia em vez de subestimar
 * `PAGAMENTO_BLOQUEADO` — condição de pagamento sem premissa (B-15)
+* `CUSTO_DAUNE`         — CNET recalculado a partir do preço BRUTO da fonte correspondente
+* `SKU_NOVO_280G`       — SKU da linha nova de edredom 280 g, ausente do baseline por natureza
 * `IGUAL`               — nenhuma diferença
 
 Uso:
@@ -85,6 +87,16 @@ def classificar(antes, depois, natureza, cenario):
     return "DIFAL_CORRIGIDO"
 
 
+def classificar_custo(antes_sku: dict, depois_sku: dict):
+    """Diferença de CUSTO do SKU, que muda todas as células dele de uma vez."""
+    a, d = antes_sku.get("custo_unitario"), depois_sku.get("custo_unitario")
+    if a is None and d is None:
+        return None
+    if a is not None and d is not None and abs(a - d) <= 1e-9:
+        return None
+    return "CUSTO_DAUNE"
+
+
 def comparar(baseline_path: str = BASELINE) -> dict:
     with open(baseline_path) as f:
         antes = json.load(f)
@@ -98,12 +110,20 @@ def comparar(baseline_path: str = BASELINE) -> dict:
     for p in depois["produtos"]:
         a = grade_antes.get(p["sku"])
         if a is None:
-            resumo["sku_novo"] += 1
+            # SKU que não existia no baseline — a linha 280 g da Sessão 2. Não é diferença de
+            # preço: é produto novo, e o baseline pré-Onda 1 não poderia contê-lo.
+            resumo["SKU_NOVO_280G" if " 280 g " in p["sku"] else "SKU_NOVO"] += 1
             continue
         natureza = "IMPORTADA" if p["fornecedor_id"] == 1 else "NACIONAL"
+        classe_custo = classificar_custo(a, p)
         for chave, cel_depois in p["grade"].items():
             cel_antes = a["grade"].get(chave)
             classe = classificar(cel_antes, cel_depois, natureza, chave)
+            # Custo novo explica a diferença antes de qualquer regra fiscal: o CNET mudou, e
+            # com ele toda a grade daquele SKU.
+            if classe not in (None, "FCP_REVIEW", "FISCAL_REVIEW", "PAGAMENTO_BLOQUEADO") \
+                    and classe_custo:
+                classe = classe_custo
             if classe is None:
                 resumo["IGUAL"] += 1
                 continue

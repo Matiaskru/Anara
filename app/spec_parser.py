@@ -46,6 +46,10 @@ FAMILIA_POR_CATEGORIA = {
 
 # famílias com fórmula industrial confirmada pela KTC
 FAMILIAS_CALCULAVEIS = {"Flat Sheet", "Top Sheet", "Duvet Cover",
+                        # Sessão 2: a fronha ganhou fórmula (§18, cinco backtests com desvio
+                        # ≤0,002%) e o bottom sheet SEM elástico usa o mesmo motor do lençol
+                        # plano. Fitted/com elástico continua fora — não há fórmula aprovada.
+                        "Pillow Case", "Bottom Sheet",
                         # toalhas passam a ser calculáveis: custo por peso, com preço/kg por
                         # construção derivado da PI 23/08/2026
                         "Bath Towel", "Hand Towel", "Bath Mat", "Pool Towel", "Wash Cloth"}

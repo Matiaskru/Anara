@@ -256,7 +256,7 @@ NCMS = [
     dict(familia="Chinelos", descricao_ncm="Footwear", ncm="6404.19.00", ii_original=0.35,
          reducao_preferencial=0.90, ii_preferencial=0.035, prioridade=100),
     # Regra de família com prioridade sobre o NCM — vigente e explícita, como o Matias pediu.
-    dict(familia="Roupão", descricao_ncm="Roupões — regra de família Anara", ncm="6309.00.10",
+    dict(familia="Roupão", descricao_ncm="Roupões de algodão — 6208.91.00", ncm="6208.91.00",
          ii_original=0.35, reducao_preferencial=0.90, ii_preferencial=0.035, prioridade=10,
          confiavel=False,
          notas="II de 3,5% aplicado por regra de família (configuração explícita). O NCM cadastrado "
@@ -279,7 +279,7 @@ NCM_POR_FAMILIA = [
     (["Duvet Insert"], "9404.40.00", None, None, None, False,
      "Fora da tabela preferencial Egito e sem II confiável. O sistema antigo usava 7% por "
      "fallback, sem documento. Validar antes de cotar."),
-    (["Bathrobe"], "6309.00.10", 0.35, 0.90, 0.035, False,
+    (["Bathrobe"], "6208.91.00", 0.35, 0.90, 0.035, True,
      "II de 3,5% por regra de família (configuração explícita). O NCM cadastrado é de artigos "
      "usados e parece erro de cadastro — marcado para validação, não corrigido por hipótese."),
 ]

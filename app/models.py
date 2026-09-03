@@ -38,19 +38,53 @@ class CostMethod(str, enum.Enum):
     """Como o CUSTO NET desse produto é formado."""
     ktc_calculated = "KTC_CALCULATED"      # motor industrial KTC → EXW calculado → nacionalização
     ktc_quoted = "KTC_QUOTED"              # EXW cotado pela KTC → nacionalização
-    national_supplier = "NATIONAL_SUPPLIER"  # custo de fornecedor nacional
+    ktc_special_quoted = "KTC_SPECIAL_QUOTED"        # EXW cotado direto, cadastrado à mão
+    ktc_estimated_from_quotes = "KTC_ESTIMATED_FROM_QUOTES"   # derivado de âncoras, com buffer
+    daune_direct = "DAUNE_DIRECT"          # preço bruto Daune → créditos → CNET
+    decor_direct = "DECOR_DIRECT"          # idem, Decor Tricot
+    national_supplier = "NATIONAL_SUPPLIER"  # custo de fornecedor nacional, origem genérica
+    a_cotar_ktc = "A_COTAR_KTC"            # sem base: precisa de cotação da KTC
+    a_cotar_nacional = "A_COTAR_NACIONAL"  # sem base: precisa de cotação do fornecedor nacional
     manual = "MANUAL"                      # custo digitado à mão
     legacy_excel = "LEGACY_EXCEL"          # veio da planilha antiga, origem não rastreada
 
 
 class CostConfidence(str, enum.Enum):
-    """Quanto se confia no custo — nunca deixar preço antigo passar por atual."""
+    """Rótulo LEGADO de confiança do custo. Preservado para não reescrever os 339 SKUs.
+
+    O vocabulário canônico é o `StatusCusto` abaixo. Estes valores continuam onde estão até a
+    reconciliação SKU a SKU dizer o que cada um vira — `legacy REVIEW_REQUIRED` **não** é o
+    `REVIEW_REQUIRED` canônico, e converter por atalho derrubaria 36% do catálogo.
+    """
     calculated = "CALCULATED"
     quoted = "QUOTED"
     estimated = "ESTIMATED"
     manual = "MANUAL"
     legacy = "LEGACY"
     review_required = "REVIEW_REQUIRED"
+
+
+class StatusCusto(str, enum.Enum):
+    """Os cinco estados canônicos. A diferença é **de onde veio o número**.
+
+    * `CONFIRMADO`      — referência direta, atual e confiável;
+    * `ESTIMADO`        — proxy: curva, análogo forte, interpolação documentada. Vai a proposta
+                          com `confirmation_pending`, e não vira PO/WON sem confirmação humana;
+    * `REVALIDAR`       — referência **direta** que envelheceu, venceu ou tem anomalia. Continua
+                          utilizável, com alerta;
+    * `A_COTAR`         — não existe base segura. Não forma preço automático;
+    * `REVIEW_REQUIRED` — problema crítico de premissa, rastreabilidade ou configuração.
+    """
+    confirmado = "CONFIRMADO"
+    estimado = "ESTIMADO"
+    revalidar = "REVALIDAR"
+    a_cotar = "A_COTAR"
+    review_required = "REVIEW_REQUIRED"
+
+
+# Estados que permitem formar preço automaticamente.
+STATUS_QUE_PRECIFICAM = {StatusCusto.confirmado.value, StatusCusto.estimado.value,
+                         StatusCusto.revalidar.value}
 
 
 class OrigemFiscal(str, enum.Enum):
@@ -517,6 +551,9 @@ class Produto(SQLModel, table=True):
 
     # --- comercial ---
     margem_padrao_pct: Optional[float] = None    # cache da regra resolvida (informativo)
+    # Cache do status canônico da versão vigente de custo. A fonte da verdade é
+    # `CustoReferencia.status_custo`; `custo_confianca` acima é o rótulo LEGADO e não se mistura.
+    status_custo: Optional[str] = Field(default=None, index=True)
 
 
 class CustoReferencia(SQLModel, table=True):
@@ -535,6 +572,27 @@ class CustoReferencia(SQLModel, table=True):
     aplicado: bool = False                      # virou o custo vigente do produto?
     notas: Optional[str] = None
     criado_em: datetime = Field(default_factory=datetime.utcnow)
+
+    # --- versionamento (Sessão 2) ---
+    # Atualizar o custo de um SKU é criar uma VERSÃO NOVA e fechar a vigência da anterior. A
+    # linha antiga fica no banco, auditável, com fonte e data. Duas consequências garantidas
+    # pela arquitetura: mexer no SKU X não toca no SKU Y, e cotação emitida não muda, porque ela
+    # guarda o próprio snapshot em `CotacaoItem.memoria_json` e não relê a referência.
+    #
+    # Nas 105 linhas herdadas estas colunas são NULAS: são observações do modelo antigo, e serão
+    # classificadas na reconciliação — não convertidas por adivinhação.
+    versao: Optional[int] = Field(default=None, index=True)   # 1, 2, 3... por SKU
+    valid_from: Optional[date] = None
+    valid_to: Optional[date] = None             # preenchido quando uma versão nova entra
+    vigente: Optional[bool] = Field(default=None, index=True)
+    metodo_custo: Optional[str] = None          # CostMethod
+    status_custo: Optional[str] = Field(default=None, index=True)   # StatusCusto
+    confirmation_pending: Optional[bool] = None  # ESTIMADO não vira PO/WON até confirmar
+    valor_bruto: Optional[float] = None         # preço do fornecedor, antes dos créditos
+    cnet_brl: Optional[float] = None            # CUSTO NET resultante desta versão
+    memoria_calculo: Optional[str] = None       # JSON: drivers e passos que produziram o CNET
+    origem_registro: Optional[str] = None       # quem/o quê criou a versão
+    substitui_versao: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------

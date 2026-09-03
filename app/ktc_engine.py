@@ -175,6 +175,91 @@ def calcular_duvet_cover(largura_cm: float, comprimento_cm: float, p: Parametros
     return calcular_tecido_plano(largura_cm, comprimento_cm, p)
 
 
+def calcular_bottom_sheet(largura_cm: float, comprimento_cm: float, p: ParametrosKTC,
+                          com_elastico: bool = False) -> ResultadoKTC:
+    """Bottom sheet **sem elástico**: painel único, mesma geometria do lençol plano.
+
+    Com elástico é outra coisa — muda o corte, entra elastano e a costura é diferente. Não há
+    fórmula aprovada para isso, e inventar uma seria pior do que não calcular. Nesse caso o
+    resultado é `REVIEW_REQUIRED` e o item segue por `KTC_SPECIAL_QUOTED` ou `A_COTAR_KTC`.
+    """
+    if com_elastico:
+        return ResultadoKTC(
+            None, REVIEW_REQUIRED, faltando=["formula_fitted"],
+            avisos=["Bottom/fitted sheet COM elástico não tem fórmula industrial aprovada. "
+                    "Usar KTC_SPECIAL_QUOTED com EXW cotado, ou A_COTAR_KTC."])
+    p.paineis = 1
+    return calcular_tecido_plano(largura_cm, comprimento_cm, p)
+
+
+# ---------------------------------------------------------------------------
+# Fronhas — geometria própria (§18)
+# ---------------------------------------------------------------------------
+# O corte da fronha não é "medida + bainha": é o envelope dobrado, com flap e abas. As
+# fórmulas abaixo são as do §18, e os cinco backtests de referência (50×70, flap 20, 250TC CVC
+# a US$ 1,25/m²) foram reproduzidos com desvio máximo de 0,002%.
+CMT_FRONHA_STANDARD = 0.50
+CMT_FRONHA_COM_ABAS = 0.75
+FESTONE_USD = 0.10
+ABA_PADRAO_CM = 5.0
+ABAS_VALIDAS = (0, 2, 3, 4)
+
+
+def corte_fronha(largura_cm: float, comprimento_cm: float, flap_cm: float,
+                 abas: int = 0, aba_cm: float = ABA_PADRAO_CM):
+    """(W_cut, L_cut) do §18. `abas` ∈ {0, 2, 3, 4} — 1 aba não é construção aprovada."""
+    w, l, f, a = largura_cm, comprimento_cm, flap_cm, aba_cm
+    l_cut = 2 * l + f + 5 + (4 * a if abas else 0)
+    if abas == 0:
+        return w + 4, l_cut
+    if abas == 2:
+        return w + 4, l_cut
+    if abas == 3:
+        return w + 4 + a, l_cut
+    return w + 4 + 2 * a, l_cut
+
+
+def calcular_fronha(largura_cm: float, comprimento_cm: float, p: ParametrosKTC,
+                    flap_cm: float = 20.0, abas: int = 0, aba_cm: float = ABA_PADRAO_CM,
+                    festone: bool = False, bordado_especial: bool = False) -> ResultadoKTC:
+    """Fronha pelo §18. Bordado ou logotipo extraordinário **não** é calculável.
+
+    O CMT vem da construção, não do cadastro genérico da família: 0,50 no standard sem abas e
+    0,75 quando há abas. O festonê entra como +US$ 0,10 **antes** da perda de 2ª qualidade e da
+    margem KTC — é por isso que ele viaja em `other_costs_usd`, e não somado no fim.
+    """
+    if bordado_especial:
+        return ResultadoKTC(
+            None, REVIEW_REQUIRED, faltando=["bordado_extraordinario"],
+            avisos=["Bordado ou logotipo extraordinário não tem custo industrial aprovado. "
+                    "Usar KTC_SPECIAL_QUOTED com EXW cotado pela KTC."])
+    if abas not in ABAS_VALIDAS:
+        return ResultadoKTC(
+            None, REVIEW_REQUIRED, faltando=["numero_de_abas"],
+            avisos=[f"Construção com {abas} aba(s) não está no §18. Aprovadas: "
+                    f"{', '.join(str(x) for x in ABAS_VALIDAS)}."])
+    if not largura_cm or not comprimento_cm:
+        return ResultadoKTC(None, REVIEW_REQUIRED, faltando=["dimensoes"],
+                            avisos=["Fronha sem dimensão nominal não é calculável."])
+
+    w_cut, l_cut = corte_fronha(largura_cm, comprimento_cm, flap_cm, abas, aba_cm)
+
+    # O corte já embute todas as sobras da construção — a bainha genérica da família não entra
+    # de novo, senão o tecido seria contado duas vezes.
+    p.hem_width_total_cm = 0.0
+    p.hem_length_total_cm = 0.0
+    p.paineis = 1
+    p.cmt_usd = CMT_FRONHA_STANDARD if abas == 0 else CMT_FRONHA_COM_ABAS
+    p.other_costs_usd = (p.other_costs_usd or 0.0) + (FESTONE_USD if festone else 0.0)
+
+    resultado = calcular_tecido_plano(w_cut, l_cut, p)
+    if resultado.detalhes is not None:
+        resultado.detalhes.update({"corte_cm": f"{w_cut:g}x{l_cut:g}", "abas": abas,
+                                   "flap_cm": flap_cm, "festone": festone,
+                                   "cmt_construcao_usd": p.cmt_usd})
+    return resultado
+
+
 # ---------------------------------------------------------------------------
 # Toalhas — custo por peso
 # ---------------------------------------------------------------------------
