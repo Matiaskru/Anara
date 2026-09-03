@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Clientes — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Clientes</h1>
+    <div class="subtitle">{{ clientes|length }} cadastrado(s)</div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    {% if mostrar_arquivados %}
+    <a href="/clientes" class="btn btn-ghost">Ver ativos</a>
+    {% else %}
+    <a href="/clientes?arquivados=sim" class="btn btn-ghost">Arquivados ({{ total_arquivados }})</a>
+    {% endif %}
+    <button class="btn btn-copper" onclick="const el=document.getElementById('novo-cliente'); el.style.display = el.style.display==='none' ? 'block' : 'none';">+ Novo cliente</button>
+  </div>
+</div>
+
+<div id="novo-cliente" class="card" style="display:none;">
+  <form method="post" action="/clientes" class="grid-2">
+    <div class="field"><label>Nome *</label><input name="nome" required></div>
+    <div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div>
+    <div class="field"><label>Cidade/UF</label><input name="cidade_uf"></div>
+    <div class="field"><label>Telefone</label><input name="telefone"></div>
+    <div class="field" style="grid-column: span 2;"><label>E-mail</label><input name="email" type="email"></div>
+    <div style="grid-column: span 2;"><button class="btn btn-copper" type="submit">Salvar cliente</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <form method="get" style="margin-bottom:14px;">
+    <input type="text" name="q" placeholder="Buscar por nome..." value="{{ q }}">
+  </form>
+  {% if clientes %}
+  <table>
+    <thead><tr><th>Nome</th><th>Cidade/UF</th><th>Telefone</th><th>E-mail</th><th></th></tr></thead>
+    <tbody>
+      {% for c in clientes %}
+      <tr onclick="window.location='/clientes/{{ c.id }}'" style="cursor:pointer;">
+        <td><strong>{{ c.nome }}</strong></td>
+        <td>{{ c.cidade_uf or '—' }}</td>
+        <td>{{ c.telefone or '—' }}</td>
+        <td>{{ c.email or '—' }}</td>
+        <td style="white-space:nowrap;" onclick="event.stopPropagation();">
+          {% if mostrar_arquivados %}
+          <form method="post" action="/clientes/{{ c.id }}/restaurar" style="display:inline;">
+            <button class="btn btn-ghost btn-sm" type="submit">Restaurar</button>
+          </form>
+          {% else %}
+          <form method="post" action="/clientes/{{ c.id }}/arquivar" style="display:inline;"
+                onsubmit="return confirm('Arquivar {{ c.nome }}? Ele sai da lista; as cotações dele continuam.');">
+            <button class="btn btn-ghost btn-sm" type="submit">Arquivar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><h3>Nenhum cliente ainda</h3><p>Cadastre o primeiro cliente pra começar.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

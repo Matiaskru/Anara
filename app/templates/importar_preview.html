@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Preview da importação — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Preview da importação</h1>
+    <div class="subtitle">{{ nome_arquivo }}</div>
+  </div>
+</div>
+
+{% if aviso %}
+<div class="card" style="border-left:4px solid var(--danger);">
+  <p style="color:var(--danger);">{{ aviso }}</p>
+</div>
+{% endif %}
+
+<div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="kpi"><div class="label">Novos</div><div class="value" style="color:var(--success);">{{ novos }}</div></div>
+  <div class="kpi"><div class="label">Alterados</div><div class="value copper">{{ alterados }}</div></div>
+  <div class="kpi"><div class="label">Removidos</div><div class="value" style="color:var(--danger);">{{ removidos }}</div></div>
+  <div class="kpi"><div class="label">Sem mudança</div><div class="value">{{ iguais }}</div></div>
+</div>
+
+<div class="card">
+  <form method="post" action="/importar/confirmar" style="margin-bottom:16px;">
+    <input type="hidden" name="token" value="{{ token }}">
+    <input type="hidden" name="nome_arquivo" value="{{ nome_arquivo }}">
+    <button class="btn btn-copper" type="submit">Confirmar e atualizar base</button>
+    <a href="/importar" class="btn btn-ghost">Cancelar</a>
+  </form>
+
+  <table>
+    <thead><tr><th>Situação</th><th>Produto</th><th>Especificação</th><th class="num">Custo (antes → depois)</th><th class="num">Preço-base (antes → depois)</th></tr></thead>
+    <tbody>
+      {% for d in diffs %}
+      {% if d.tipo != 'igual' %}
+      <tr>
+        <td><span class="diff-{{ d.tipo }}">{{ d.tipo }}</span></td>
+        <td>{{ d.nome }}</td>
+        <td style="color:var(--gray); font-size:12px;">{{ d.especificacao or '' }}</td>
+        <td class="num">
+          {% if d.custo_antigo is not none %}{{ d.custo_antigo|brl }}{% else %}—{% endif %}
+          {% if d.custo_novo is not none %} → {{ d.custo_novo|brl }}{% endif %}
+        </td>
+        <td class="num">
+          {% if d.preco_base_antigo is not none %}{{ d.preco_base_antigo|brl }}{% else %}—{% endif %}
+          {% if d.preco_base_novo is not none %} → {{ d.preco_base_novo|brl }}{% endif %}
+        </td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if novos == 0 and alterados == 0 and removidos == 0 %}
+  <div class="empty-state"><h3>Nenhuma mudança encontrada</h3><p>A base já está igual ao arquivo enviado.</p></div>
+  {% endif %}
+</div>
+{% endblock %}

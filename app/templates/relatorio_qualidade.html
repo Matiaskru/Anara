@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Qualidade da base — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Qualidade da base</h1>
+    <div class="subtitle">{{ d.total }} SKUs ativos · qualidade de dado vale mais que cobertura: o que não tem fonte aparece marcado, não maquiado.</div>
+  </div>
+  <a href="/relatorios/qualidade.json" class="btn btn-ghost" target="_blank">JSON</a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-bottom:10px;">Por fornecedor</h3>
+    <table class="compacta">
+      {% for nome, n in d.por_fornecedor.items() %}<tr><td>{{ nome }}</td><td class="num"><strong>{{ n }}</strong></td></tr>{% endfor %}
+    </table>
+    <h3 style="margin:16px 0 10px;">Por método de custo</h3>
+    <table class="compacta">
+      {% for nome, n in d.por_metodo.items() %}<tr><td>{{ nome }}</td><td class="num"><strong>{{ n }}</strong></td></tr>{% endfor %}
+    </table>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:10px;">Por confiança do custo</h3>
+    <table class="compacta">
+      {% for nome, n in d.por_confianca.items() %}<tr><td>{{ nome }}</td><td class="num"><strong>{{ n }}</strong></td></tr>{% endfor %}
+    </table>
+    <h3 style="margin:16px 0 10px;">Frescor do preço de referência</h3>
+    <table class="compacta">
+      {% for nome, n in d.por_frescor.items() %}
+      <tr><td><span class="tag tag-{{ 'fresh' if nome == 'FRESH' else ('aging' if nome == 'AGING' else 'stale') }}">{{ nome }}</span></td><td class="num"><strong>{{ n }}</strong></td></tr>
+      {% endfor %}
+    </table>
+    <p style="font-size:11px; color:var(--gray); margin-top:10px;">
+      {{ d.referencias_registradas }} preços de referência registrados no histórico,
+      {{ d.referencias_nao_aplicadas }} guardados sem aplicar (documento de outro cliente ou divergência técnica).
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="abas">
+    {% for chave, rotulo in listas_disponiveis %}
+    <a href="/relatorios/qualidade?lista={{ chave }}" class="{{ 'ativa' if chave == lista_atual else '' }}">
+      {{ rotulo }} ({{ d.listas.get(chave, [])|length }})
+    </a>
+    {% endfor %}
+  </div>
+
+  <table class="compacta">
+    <thead>
+      <tr><th>Produto</th><th>Fornecedor</th><th>Método</th><th class="num">Custo</th>
+      <th class="num">Preço-base</th><th class="num">Margem</th><th>Referência</th><th>Situação</th></tr>
+    </thead>
+    <tbody>
+      {% for p in itens %}
+      <tr>
+        <td><strong>{{ p.nome }}</strong><br><span style="font-size:10.5px; color:var(--gray);">{{ p.categoria or '' }}{% if p.familia %} · {{ p.familia }}{% endif %}</span></td>
+        <td style="font-size:11px;">{{ p.fornecedor }}</td>
+        <td><span class="tag {{ 'tag-calc' if p.cost_method == 'KTC_CALCULATED' else ('tag-legacy' if p.cost_method == 'LEGACY_EXCEL' else 'tag-quoted') }}">{{ p.cost_method or '—' }}</span></td>
+        <td class="num">{{ p.custo|brl if p.custo else '—' }}</td>
+        <td class="num">{{ p.preco_base|brl if p.preco_base else '—' }}</td>
+        <td class="num">{{ p.margem_padrao|pct }}</td>
+        <td style="font-size:10.5px; color:var(--gray);">
+          {{ p.custo_ref_documento or '—' }}
+          {% if p.custo_ref_data %}<br>{{ p.custo_ref_data|data }} · <span class="tag tag-{{ 'fresh' if p.frescor == 'FRESH' else ('aging' if p.frescor == 'AGING' else 'stale') }}">{{ p.frescor }}</span>{% endif %}
+          {% if p.exw_cotado and p.exw_calculado %}<br>EXW cotado US$ {{ '%.2f'|format(p.exw_cotado) }} · calculado US$ {{ '%.2f'|format(p.exw_calculado) }} ({{ p.diferenca_pct|pct }}){% endif %}
+        </td>
+        <td style="font-size:10.5px; max-width:320px;">{{ p.motivo or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not itens %}<div class="empty-state"><h3>Nada nessa lista</h3></div>{% endif %}
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:10px;">Indicadores de acompanhamento</h3>
+  <p style="font-size:11.5px; color:var(--gray); margin-bottom:10px;">
+    Algodão, petróleo e idade das tabelas de material servem para decidir <strong>quando pedir
+    preço novo</strong> — nenhum deles entra em fórmula de custo nem atualiza preço sozinho.
+  </p>
+  <table class="compacta">
+    {% for i in indicadores %}
+    <tr>
+      <td>{{ i.rotulo }}</td>
+      <td class="num">{{ i.valor }}</td>
+      <td style="font-size:10.5px; color:var(--gray);">{{ i.detalhe }}</td>
+      <td style="font-size:10.5px; color:var(--gray);">{{ i.nota }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:10px;">O que ainda precisamos pedir à KTC</h3>
+  {% for p in perguntas %}
+  <div style="padding:10px 0; border-bottom:1px solid var(--row-alt);">
+    <strong>{{ p.assunto }}</strong>{% if p.quantos %} <span class="tag tag-review">{{ p.quantos }} SKUs</span>{% endif %}
+    <div style="font-size:11.5px; color:var(--gray); margin-top:4px;">{{ p.pedido }}</div>
+    {% if p.exemplos %}<div style="font-size:10.5px; color:var(--gray); margin-top:4px;">ex.: {{ p.exemplos|join(' · ') }}</div>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

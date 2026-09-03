@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}Configurações — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Configurações</h1>
+    <div class="subtitle">Tudo que forma preço mora aqui. Alteração crítica pede confirmação e abre uma versão nova — cotação já emitida não muda.</div>
+  </div>
+</div>
+
+{% if request.query_params.get('ok') %}<div class="card" style="background:#E7F0E9;">Alteração salva.</div>{% endif %}
+{% if request.query_params.get('erro') == 'confirmacao' %}<div class="card" style="background:#F6E2D8;">Alteração não aplicada: marque a confirmação antes de salvar.</div>{% endif %}
+
+<div class="abas">
+  {% for chave, rotulo in [('premissas','Premissas gerais'), ('ktc','Motor industrial KTC'), ('fiscal','Fiscal'), ('margens','Margens padrão'), ('pagamento','Pagamento'), ('ncm','NCM e I.I.'), ('peso','Estimativa de peso')] %}
+  <a href="/configuracoes?aba={{ chave }}" class="{{ 'ativa' if aba == chave else '' }}">{{ rotulo }}</a>
+  {% endfor %}
+</div>
+
+{% if aba == 'premissas' %}
+<div class="card">
+  <h3 style="margin-bottom:10px;">Premissas gerais</h3>
+  <p style="font-size:11.5px; color:var(--gray); margin-bottom:12px;">
+    Câmbio, frete internacional, despesas de nacionalização, PIS/COFINS, validade e termos.
+    Os índices de algodão e petróleo são <strong>indicadores</strong>: não entram em nenhuma fórmula
+    de custo e não atualizam preço sozinhos.
+  </p>
+  <table class="compacta">
+    <thead><tr><th>Premissa</th><th>Valor</th><th>Fonte</th><th style="width:280px;">Alterar</th></tr></thead>
+    <tbody>
+      {% for p in premissas %}
+      <tr>
+        <td><strong>{{ p.chave }}</strong><br><span style="font-size:10.5px; color:var(--gray);">{{ p.descricao or '' }}</span></td>
+        <td>{% if p.valor_num is not none %}{{ p.valor_num }}{% if p.unidade %} {{ p.unidade }}{% endif %}{% else %}<span style="font-size:10.5px;">{{ (p.valor_txt or '')[:70] }}{% if (p.valor_txt or '')|length > 70 %}…{% endif %}</span>{% endif %}</td>
+        <td style="font-size:10.5px; color:var(--gray);">{{ p.fonte or '—' }}<br>desde {{ p.valid_from|data }}</td>
+        <td>
+          <form method="post" action="/configuracoes/premissa" style="display:flex; gap:6px; align-items:center;">
+            <input type="hidden" name="chave" value="{{ p.chave }}">
+            <input name="valor" value="{{ p.valor_num if p.valor_num is not none else (p.valor_txt or '') }}" style="width:120px;">
+            <label style="font-size:10px; display:flex; gap:3px; align-items:center;"><input type="checkbox" name="confirmar" value="sim"> confirmo</label>
+            <button class="btn btn-ghost btn-sm" type="submit">Salvar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if aba == 'ktc' %}
+<div class="card">
+  <h3 style="margin-bottom:10px;">Preço de material (US$/m²)</h3>
+  <table class="compacta">
+    <thead><tr><th>Material</th><th>Liso/listrado</th><th class="num">US$/m²</th><th>Fonte</th><th style="width:250px;"></th></tr></thead>
+    <tbody>
+      {% for m in materiais %}
+      <tr>
+        <td>{{ m.material }}</td><td>{{ m.plain_or_stripe }}</td><td class="num">{{ m.price_usd_m2 }}</td>
+        <td style="font-size:10.5px; color:var(--gray);">{{ m.fonte or '—' }} · desde {{ m.valid_from|data }}</td>
+        <td>
+          <form method="post" action="/configuracoes/material" style="display:flex; gap:6px; align-items:center;">
+            <input type="hidden" name="material_id" value="{{ m.id }}">
+            <input name="price_usd_m2" value="{{ m.price_usd_m2 }}" style="width:80px;" step="0.01" type="number">
+            <label style="font-size:10px;"><input type="checkbox" name="confirmar" value="sim"> confirmo</label>
+            <button class="btn btn-ghost btn-sm" type="submit">Salvar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-bottom:10px;">CMT por item (US$)</h3>
+    <table class="compacta">
+      {% for c in cmts %}
+      <tr>
+        <td>{{ c.familia }}{% if c.construcao %} · {{ c.construcao }}{% endif %}</td>
+        <td class="num">{{ c.cmt_usd }}</td>
+        <td>
+          <form method="post" action="/configuracoes/cmt" style="display:flex; gap:6px;">
+            <input type="hidden" name="cmt_id" value="{{ c.id }}">
+            <input name="cmt_usd" value="{{ c.cmt_usd }}" style="width:70px;" step="0.01" type="number">
+            <label style="font-size:10px;"><input type="checkbox" name="confirmar" value="sim"> ok</label>
+            <button class="btn btn-ghost btn-sm" type="submit">Salvar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:10px;">Parâmetros do cálculo</h3>
+    <p style="font-size:11px; color:var(--gray); margin-bottom:8px;">
+      <strong>quality_allowance</strong> é a perda de 2ª qualidade (o "II 1%" da planilha da KTC) —
+      não tem relação com Imposto de Importação. <strong>ktc_margin</strong> é a margem da fábrica,
+      não a margem da Anara.
+    </p>
+    <table class="compacta">
+      {% for p in parametros %}
+      <tr>
+        <td>{{ p.chave }}{% if p.escopo %} · {{ p.escopo }}{% endif %}</td>
+        <td class="num">{{ p.valor }}</td>
+        <td>
+          <form method="post" action="/configuracoes/parametro" style="display:flex; gap:6px;">
+            <input type="hidden" name="parametro_id" value="{{ p.id }}">
+            <input name="valor" value="{{ p.valor }}" style="width:70px;" step="0.001" type="number">
+            <label style="font-size:10px;"><input type="checkbox" name="confirmar" value="sim"> ok</label>
+            <button class="btn btn-ghost btn-sm" type="submit">Salvar</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:10px;">Preço por kg — toalhas</h3>
+  <p style="font-size:11.5px; color:var(--gray); margin-bottom:8px;">
+    A KTC informou dois valores genéricos (fio simples e retorcido) e avisou que o preço varia por
+    construção. Enquanto não houver linha específica para a construção da toalha, o sistema não
+    calcula: usa o último preço KTC válido e marca para revisão.
+  </p>
+  <table class="compacta">
+    <thead><tr><th>Subcategoria</th><th>Composição</th><th>GSM</th><th>Fio</th><th class="num">US$/kg</th><th>Nota</th></tr></thead>
+    {% for t in toalhas %}
+    <tr><td>{{ t.subcategoria or '— genérico —' }}</td><td>{{ t.composicao or '—' }}</td><td>{{ t.gsm or '—' }}</td>
+      <td>{{ t.yarn_type or '—' }}</td><td class="num">{{ t.price_usd_kg }}</td>
+      <td style="font-size:10.5px; color:var(--gray);">{{ t.notas or '' }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if aba == 'fiscal' %}
+<div class="card">
+  <h3 style="margin-bottom:10px;">Regras explícitas de ICMS</h3>
+  <table class="compacta">
+    <thead><tr><th>Origem</th><th>Destino</th><th>Contribuinte</th><th class="num">ICMS</th><th>Regra</th></tr></thead>
+    {% for r in regras_fiscais %}
+    <tr><td>{{ r.origem }}</td><td>{{ r.destino }}</td><td>{{ 'SIM' if r.contribuinte else 'NÃO' }}</td>
+      <td class="num">{{ r.icms_venda|pct }}</td><td style="font-size:10.5px;">{{ r.regra }}</td></tr>
+    {% endfor %}
+  </table>
+  <p style="font-size:11.5px; color:var(--gray); margin-top:10px;">
+    Fora dessas regras: mesmo estado usa a alíquota interna do destino; interestadual com
+    contribuinte usa 4%; interestadual com não contribuinte usa a <strong>carga final</strong> da
+    tabela abaixo, como está — o sistema não recalcula a carga por Base Simples/Base Dupla/FEM.
+  </p>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:10px;">Estados</h3>
+  <table class="compacta">
+    <thead><tr><th>Estado</th><th class="num">Interestadual</th><th class="num">Interna</th><th class="num">Base simples</th>
+      <th class="num">Base dupla</th><th class="num">FEM</th><th class="num">Carga final</th><th style="width:280px;">Alterar</th></tr></thead>
+    {% for e in estados %}
+    <tr>
+      <td>{{ e.estado }} ({{ e.uf }})</td>
+      <td class="num">{{ e.aliquota_interestadual|pct }}</td>
+      <td class="num">{{ e.aliquota_interna|pct }}</td>
+      <td class="num" style="color:var(--gray);">{{ e.base_simples|pct }}</td>
+      <td class="num" style="color:var(--gray);">{{ e.base_dupla|pct }}</td>
+      <td class="num" style="color:var(--gray);">{{ e.fem|pct }}</td>
+      <td class="num"><strong>{{ e.carga_final|pct(2) }}</strong></td>
+      <td>
+        <form method="post" action="/configuracoes/fiscal" style="display:flex; gap:5px;">
+          <input type="hidden" name="estado_id" value="{{ e.id }}">
+          <input name="carga_final" value="{{ (e.carga_final*100)|round(2) }}" style="width:62px;" step="0.01" type="number" title="carga final %">
+          <input name="aliquota_interna" value="{{ (e.aliquota_interna*100)|round(2) }}" style="width:62px;" step="0.01" type="number" title="alíquota interna %">
+          <label style="font-size:10px;"><input type="checkbox" name="confirmar" value="sim"> ok</label>
+          <button class="btn btn-ghost btn-sm" type="submit">Salvar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if aba == 'margens' %}
+<div class="card">
+  <h3 style="margin-bottom:10px;">Margens líquidas-alvo padrão</h3>
+  <p style="font-size:11.5px; color:var(--gray); margin-bottom:12px;">
+    Margem líquida = lucro ÷ faturamento, depois de custo, ICMS, PIS/COFINS, encargo financeiro e
+    comissão. Não é markup. A regra de menor prioridade ganha; fornecedor vence família.
+    Mudar aqui afeta preço-base e cotações novas — <strong>cotação já emitida continua com a margem
+    que usou</strong>.
+  </p>
+  <table class="compacta">
+    <thead><tr><th>Regra</th><th>Fornecedor</th><th>Família</th><th>Faixa de fios</th><th class="num">Prioridade</th><th class="num">Margem</th><th style="width:220px;"></th></tr></thead>
+    {% for m in margens %}
+    <tr>
+      <td>{{ m.nome }}<br><span style="font-size:10px; color:var(--gray);">{{ m.notas or '' }}</span></td>
+      <td>{{ fornecedor_por_id[m.fornecedor_id].nome if m.fornecedor_id in fornecedor_por_id else '—' }}</td>
+      <td>{{ m.familia or '—' }}</td>
+      <td>{% if m.min_thread_count %}≥ {{ m.min_thread_count }}{% endif %}{% if m.max_thread_count %}&lt; {{ m.max_thread_count }}{% endif %}{% if not m.min_thread_count and not m.max_thread_count %}—{% endif %}</td>
+      <td class="num">{{ m.prioridade }}</td>
+      <td class="num"><strong>{{ m.margem_pct|pct }}</strong></td>
+      <td>
+        <form method="post" action="/configuracoes/margem" style="display:flex; gap:6px;">
+          <input type="hidden" name="regra_id" value="{{ m.id }}">
+          <input name="margem_pct" value="{{ (m.margem_pct*100)|round(2) }}" style="width:70px;" step="0.1" type="number">
+          <button class="btn btn-ghost btn-sm" type="submit">Salvar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if aba == 'pagamento' %}
+<div class="card">
+  <h3 style="margin-bottom:10px;">Condições de pagamento e encargo financeiro</h3>
+  <p style="font-size:11.5px; color:var(--gray); margin-bottom:12px;">
+    O encargo é cobrado uma vez só, aqui. Condição sem taxa confirmada fica em branco: o sistema
+    avisa em vez de estimar.
+  </p>
+  <table class="compacta">
+    <thead><tr><th>Condição</th><th class="num">Encargo</th><th>Confirmado</th><th>Ativa</th><th>Nota</th><th style="width:250px;"></th></tr></thead>
+    {% for c in condicoes %}
+    <tr>
+      <td><strong>{{ c.label }}</strong><br><span style="font-size:10px; color:var(--gray);">{{ c.codigo }}</span></td>
+      <td class="num">{{ c.encargo_pct|pct if c.encargo_pct is not none else '—' }}</td>
+      <td>{{ 'sim' if c.encargo_confirmado else 'não' }}</td>
+      <td>{{ 'sim' if c.ativo else 'não' }}</td>
+      <td style="font-size:10.5px; color:var(--gray);">{{ c.notas or '' }}</td>
+      <td>
+        <form method="post" action="/configuracoes/condicao" style="display:flex; gap:6px;">
+          <input type="hidden" name="condicao_id" value="{{ c.id }}">
+          <input name="encargo_pct" value="{{ (c.encargo_pct*100)|round(3) if c.encargo_pct is not none else '' }}" style="width:70px;" step="0.01" type="number" placeholder="%">
+          <select name="ativo" style="width:70px;"><option value="sim" {{ 'selected' if c.ativo else '' }}>ativa</option><option value="nao" {{ '' if c.ativo else 'selected' }}>inativa</option></select>
+          <button class="btn btn-ghost btn-sm" type="submit">Salvar</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <h3 style="margin:16px 0 8px;">Comissão por faixa de markup</h3>
+  <table class="compacta">
+    <tr><th>Markup mínimo</th><th class="num">Comissão</th></tr>
+    {% for markup, comissao in comissao %}<tr><td>{{ markup|pct }}</td><td class="num">{{ comissao|pct }}</td></tr>{% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if aba == 'ncm' %}
+<div class="card">
+  <h3 style="margin-bottom:10px;">NCM e Imposto de Importação</h3>
+  <table class="compacta">
+    <thead><tr><th>Família</th><th>NCM</th><th class="num">I.I. original</th><th class="num">Redução</th><th class="num">I.I. preferencial</th><th class="num">Prioridade</th><th>Situação</th></tr></thead>
+    {% for n in ncms %}
+    <tr>
+      <td>{{ n.familia }}</td><td>{{ n.ncm }}</td>
+      <td class="num">{{ n.ii_original|pct if n.ii_original is not none else '—' }}</td>
+      <td class="num">{{ n.reducao_preferencial|pct if n.reducao_preferencial is not none else '—' }}</td>
+      <td class="num"><strong>{{ n.ii_preferencial|pct(2) if n.ii_preferencial is not none else '—' }}</strong></td>
+      <td class="num">{{ n.prioridade }}</td>
+      <td style="font-size:10.5px;">{% if not n.confiavel %}<span class="tag tag-review">validar</span> {% endif %}{{ n.notas or '' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+{% if aba == 'peso' %}
+<div class="card">
+  <h3 style="margin-bottom:10px;">Estimativa de peso</h3>
+  <p style="font-size:11.5px; color:var(--gray); margin-bottom:12px;">
+    Peso real informado pela KTC sempre ganha. Estas tabelas só entram quando não há peso real:
+    área × GSM, com o GSM vindo dos fios ou da família; e, sem dimensão, o peso técnico da família.
+  </p>
+  <table class="compacta">
+    <thead><tr><th>Tabela</th><th>Escopo</th><th class="num">Valor</th><th>Fonte</th></tr></thead>
+    {% for p in tabelas_peso %}
+    <tr><td>{{ p.chave }}</td><td>{{ p.escopo }}</td><td class="num">{{ p.valor }}</td>
+      <td style="font-size:10.5px; color:var(--gray);">{{ p.fonte or '' }}</td></tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endblock %}

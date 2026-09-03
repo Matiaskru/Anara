@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="subtitle">Visão geral das cotações</div>
+  </div>
+  <a href="/cotacoes/nova" class="btn btn-copper">+ Nova cotação</a>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi"><div class="label">Valor total cotado</div><div class="value">{{ valor_total|brl }}</div></div>
+  <div class="kpi"><div class="label">Lucro potencial</div><div class="value copper">{{ lucro_total|brl }}</div></div>
+  <div class="kpi"><div class="label">Margem líquida média ponderada</div><div class="value">{{ margem_media_ponderada|pct }}</div></div>
+  <div class="kpi"><div class="label">Ticket médio</div><div class="value">{{ ticket_medio|brl }}</div></div>
+  <div class="kpi"><div class="label">Cotações</div><div class="value">{{ num_cotacoes }}</div></div>
+  <div class="kpi"><div class="label">Diferença média vs preço-base</div><div class="value">{{ diferenca_media|pct }}</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-bottom:14px;">Cotações por status</h3>
+    {% if por_status %}
+      {% for status, qtd in por_status.items() %}
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
+        <span class="badge badge-{{ status }}">{{ status }}</span>
+        <span>{{ qtd }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state"><h3>Nada por aqui ainda</h3><p>Crie sua primeira cotação.</p></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:14px;">Principais clientes</h3>
+    {% if principais_clientes %}
+      {% for nome, valor in principais_clientes %}
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
+        <span>{{ nome }}</span>
+        <span class="num">{{ valor|brl }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state"><h3>Sem dados ainda</h3></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-bottom:14px;">Produtos mais cotados</h3>
+    {% if produtos_mais_cotados %}
+      {% for nome, qtd in produtos_mais_cotados %}
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
+        <span>{{ nome }}</span>
+        <span class="num">{{ qtd|num }} un.</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state"><h3>Sem dados ainda</h3></div>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <h3 style="margin-bottom:14px;">Comparação mensal (valor cotado)</h3>
+    {% if comparacao_mensal %}
+      {% for mes, valor in comparacao_mensal %}
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
+        <span>{{ mes }}</span>
+        <span class="num">{{ valor|brl }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state"><h3>Sem dados ainda</h3></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

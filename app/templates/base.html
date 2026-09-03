@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Anara Cotações{% endblock %}</title>
+  <link rel="stylesheet" href="/static/css/anara.css">
+  <link rel="icon" href="/static/img/anara_mark_copper.png">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/static/img/anara_mark_copper.png" alt="Anara">
+        <span class="word">ANARA</span>
+      </div>
+      <nav>
+        <a href="/" class="{{ 'active' if active == 'dashboard' else '' }}">Dashboard</a>
+        <a href="/clientes" class="{{ 'active' if active == 'clientes' else '' }}">Clientes</a>
+        <a href="/cotacoes" class="{{ 'active' if active == 'cotacoes' else '' }}">Histórico de cotações</a>
+        <a href="/cotacoes/nova" class="{{ 'active' if active == 'nova_cotacao' else '' }}">Nova cotação</a>
+        <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">Produtos e preços</a>
+        <a href="/calculadora" class="{{ 'active' if active == 'calculadora' else '' }}">Calculadora KTC</a>
+        <a href="/importar" class="{{ 'active' if active == 'importar' else '' }}">Importar Excel</a>
+        <div class="nav-sep">Administração</div>
+        <a href="/relatorios/qualidade" class="{{ 'active' if active == 'relatorios' else '' }}">Qualidade da base</a>
+        <a href="/configuracoes" class="{{ 'active' if active == 'configuracoes' else '' }}">Configurações</a>
+      </nav>
+      <a href="/logout" class="logout">Sair</a>
+    </aside>
+    <main class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/static/js/toast.js"></script>
+  {% block extra_scripts %}{% endblock %}
+</body>
+</html>

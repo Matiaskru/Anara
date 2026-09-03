@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Produtos e preços — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Produtos e preços</h1>
+    <div class="subtitle">
+      {{ produtos|length }} SKU(s) · catálogo único: KTC, Daune e Decor Tricot lado a lado
+      {% if ultima_importacao %} · última importação de planilha em {{ ultima_importacao.importado_em|data }}{% endif %}
+    </div>
+  </div>
+  <a href="/relatorios/qualidade" class="btn btn-ghost">Qualidade da base</a>
+</div>
+
+<div class="card">
+  <form method="get" class="grid-4" style="margin-bottom:14px;">
+    <div class="field"><label>Buscar</label><input name="q" value="{{ q }}" placeholder="nome, família, categoria"></div>
+    <div class="field">
+      <label>Fornecedor</label>
+      <select name="fornecedor" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for f in fornecedores %}
+        <option value="{{ f.codigo }}" {{ 'selected' if f.codigo == fornecedor_filtro else '' }}>{{ f.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Método de custo</label>
+      <select name="metodo" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for m in metodos %}
+        <option value="{{ m }}" {{ 'selected' if m == metodo_filtro else '' }}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Situação</label>
+      <select name="revisao" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        <option value="sim" {{ 'selected' if revisao_filtro == 'sim' else '' }}>Só as que precisam de revisão</option>
+        <option value="sem_custo" {{ 'selected' if revisao_filtro == 'sem_custo' else '' }}>Só as que faltam cotar (sem custo)</option>
+      </select>
+    </div>
+  </form>
+
+  <table class="compacta">
+    <thead>
+      <tr>
+        <th>Produto</th><th>Fornecedor</th><th>Método</th><th class="num">Custo NET</th>
+        <th class="num">Preço-base</th><th class="num">Margem padrão</th><th>Origem do custo</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in produtos %}
+      {% set f = fornecedor_por_id.get(p.fornecedor_id) %}
+      <tr>
+        <td>
+          <strong>{{ p.nome }}</strong>
+          {% if p.precisa_revisao %}<span class="tag tag-review">revisar</span>{% endif %}
+          <br><span style="color:var(--gray); font-size:10.5px;">{{ p.especificacao or '' }}</span>
+        </td>
+        <td>
+          {% if f %}
+          <span class="tag {{ 'tag-ktc' if f.codigo == 'KTC' else ('tag-daune' if f.codigo == 'DAUNE' else 'tag-decor') }}">{{ f.nome.split(' ')[0] }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td><span class="tag {{ 'tag-calc' if p.cost_method == 'KTC_CALCULATED' else ('tag-legacy' if p.cost_method == 'LEGACY_EXCEL' else 'tag-quoted') }}">{{ p.cost_method or '—' }}</span></td>
+        <td class="num">{{ p.custo_unitario|brl if p.custo_unitario else '<span class="tag tag-review">a cotar</span>'|safe }}</td>
+        <td class="num">{{ p.preco_base|brl if p.preco_base else '—' }}</td>
+        <td class="num">{{ p.margem_padrao_pct|pct }}</td>
+        <td style="font-size:10.5px; color:var(--gray);">
+          {{ p.custo_ref_documento or '—' }}{% if p.custo_ref_data %}<br>{{ p.custo_ref_data|data }}{% endif %}
+          {% if p.custo_ref_cliente and p.custo_ref_cliente != 'ANARA' %}<br>cliente do documento: {{ p.custo_ref_cliente }}{% endif %}
+        </td>
+        <td><button class="btn btn-ghost btn-sm" onclick="abrirMemoriaProduto({{ p.id }})">Memória</button></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% if not produtos %}<div class="empty-state"><h3>Nenhum produto encontrado</h3></div>{% endif %}
+</div>
+
+<div class="drawer-fundo" id="drawer-fundo" onclick="fecharMemoria()"></div>
+<div class="drawer" id="drawer-memoria">
+  <button class="fechar" onclick="fecharMemoria()">×</button>
+  <div id="conteudo-memoria"></div>
+</div>
+{% endblock %}
+{% block extra_scripts %}<script src="/static/js/memoria.js"></script>{% endblock %}

@@ -1,0 +1,77 @@
+# ===========================================================================
+# Anara — o que NUNCA entra no Git
+#
+# Regra do projeto: o Git guarda CÓDIGO e DOCUMENTAÇÃO. Dado de produção tem
+# rollback por backup de arquivo (ver BACKUP.md), não por commit.
+# ===========================================================================
+
+# --- banco de produção e seus backups -------------------------------------
+data/anara.db
+data/anara.db-journal
+data/anara.db-wal
+data/anara.db-shm
+data/backups/
+*.db
+*.sqlite
+*.sqlite3
+# dumps de produção, em qualquer formato
+*.dump
+*.sql.gz
+*.bak
+
+# --- credenciais e segredos ------------------------------------------------
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+secrets.*
+credentials.*
+*_secret*
+*_credentials*
+
+# --- uploads, logs e temporários da operação -------------------------------
+data/tmp_uploads/
+data/server.log
+data/backup.log
+*.log
+
+# --- saídas geradas pela operação (não são código-fonte) -------------------
+# PDFs de cotação saem para ~/Desktop e para o tempdir; se algum dia caírem
+# aqui dentro, não entram no repositório.
+/*.pdf
+Cotação Anara*.pdf
+Cotacao Anara*.pdf
+# arquivos de bloqueio do Excel quando a planilha está aberta
+~$*.xls*
+
+# --- cache e artefatos do Python -------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# --- ambientes virtuais ----------------------------------------------------
+.venv/
+venv/
+env/
+ENV/
+
+# --- sistema operacional e editores ----------------------------------------
+.DS_Store
+._*
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/

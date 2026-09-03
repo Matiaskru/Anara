@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Nova cotação — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Nova cotação</h1>
+    <div class="subtitle">Cliente, condição comercial e cenário fiscal. Os produtos entram na tela seguinte — de qualquer fornecedor.</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:760px;">
+  <div class="mode-toggle" style="margin-bottom:18px;">
+    <button type="button" id="tab-existente" class="active" onclick="mostrarAba('existente')">Cliente existente</button>
+    <button type="button" id="tab-novo" onclick="mostrarAba('novo')">Cadastrar cliente</button>
+  </div>
+
+  <div id="painel-existente">
+    <form method="post" action="/cotacoes">
+      <div class="grid-2">
+        <div class="field">
+          <label>Cliente</label>
+          <select name="cliente_id" required>
+            <option value="">Selecione...</option>
+            {% for c in clientes %}
+            <option value="{{ c.id }}" {{ 'selected' if cliente_selecionado and cliente_selecionado.id == c.id else '' }}>{{ c.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Vendedor</label><input name="vendedor"></div>
+        <div class="field"><label>Contato</label><input name="contato_nome" placeholder="Quem está pedindo"></div>
+        <div class="field">
+          <label>Departamento do contato</label>
+          <input name="departamento_contato" list="departamentos" placeholder="Compras, Governança, ...">
+          <datalist id="departamentos">
+            <option>Compras</option><option>Governança</option><option>Operações</option>
+            <option>Financeiro</option><option>Diretoria</option>
+          </datalist>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Condição de pagamento</label>
+          <select name="condicao_pagamento">
+            {% for c in condicoes %}
+            <option value="{{ c.codigo }}" {{ 'selected' if c.codigo == '30' else '' }}>
+              {{ c.label }}{% if c.encargo_pct is not none %} · encargo {{ c.encargo_pct|pct }}{% else %} · encargo a confirmar{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Prazo de entrega</label><input name="prazo_entrega" placeholder="ex.: 30 dias após confirmação"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Origem da venda</label>
+          <select name="estado_origem">
+            {% for uf in estados_difal %}
+            <option value="{{ uf }}" {{ 'selected' if uf == 'São Paulo' else '' }}>{{ uf }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Destino da venda</label>
+          <select name="estado_destino">
+            <option value="">Usar ICMS padrão</option>
+            {% for uf in estados_difal %}
+            <option value="{{ uf }}">{{ uf }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Cliente é contribuinte de ICMS?</label>
+          <div class="mode-toggle">
+            <button type="button" class="active" data-contribuinte="sim" onclick="setContribuinte(this,'sim')">SIM</button>
+            <button type="button" data-contribuinte="nao" onclick="setContribuinte(this,'nao')">NÃO</button>
+          </div>
+          <input type="hidden" name="contribuinte_icms" id="contribuinte_icms_input" value="sim">
+        </div>
+        <div class="field">
+          <label>Validade da proposta (dias)</label>
+          <input type="number" name="validade_dias" min="1" value="{{ validade_padrao }}">
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div class="field">
+          <label>Tipo de frete</label>
+          <select name="freight_type">
+            {% for t in tipos_frete %}
+            <option value="{{ t }}" {{ 'selected' if t == 'CIF' else '' }}>{{ t }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field"><label>Frete (texto na proposta)</label><input name="frete" placeholder="Incluso / A combinar"></div>
+      </div>
+
+      <div class="field"><label>Observações</label><textarea name="observacoes" rows="2"></textarea></div>
+      <button class="btn btn-copper" type="submit">Iniciar cotação</button>
+    </form>
+  </div>
+
+  <div id="painel-novo" style="display:none;">
+    <form method="post" action="/clientes">
+      <input type="hidden" name="voltar_para" value="nova_cotacao">
+      <div class="grid-2">
+        <div class="field"><label>Nome *</label><input name="nome" required></div>
+        <div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div>
+        <div class="field"><label>Cidade/UF</label><input name="cidade_uf"></div>
+        <div class="field"><label>Telefone</label><input name="telefone"></div>
+        <div class="field" style="grid-column: span 2;"><label>E-mail</label><input name="email" type="email"></div>
+      </div>
+      <button class="btn btn-copper" type="submit">Cadastrar e iniciar cotação</button>
+    </form>
+  </div>
+</div>
+
+<script>
+function mostrarAba(qual) {
+  document.getElementById('painel-existente').style.display = qual === 'existente' ? 'block' : 'none';
+  document.getElementById('painel-novo').style.display = qual === 'novo' ? 'block' : 'none';
+  document.getElementById('tab-existente').classList.toggle('active', qual === 'existente');
+  document.getElementById('tab-novo').classList.toggle('active', qual === 'novo');
+}
+function setContribuinte(btn, valor) {
+  document.getElementById('contribuinte_icms_input').value = valor;
+  btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+{% endblock %}

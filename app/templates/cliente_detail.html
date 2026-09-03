@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ cliente.nome }} — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{{ cliente.nome }}</h1>
+    <div class="subtitle">{{ cliente.cidade_uf or '' }}{% if cliente.cnpj_cpf %} · {{ cliente.cnpj_cpf }}{% endif %}</div>
+  </div>
+  <a href="/cotacoes/nova?cliente_id={{ cliente.id }}" class="btn btn-copper">+ Nova cotação pra este cliente</a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-bottom:10px;">Dados de contato</h3>
+    <p style="margin:4px 0;"><strong>Telefone:</strong> {{ cliente.telefone or '—' }}</p>
+    <p style="margin:4px 0;"><strong>E-mail:</strong> {{ cliente.email or '—' }}</p>
+    <p style="margin:4px 0;"><strong>Cliente desde:</strong> {{ cliente.criado_em|data }}</p>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:10px;">Último preço oferecido</h3>
+    {% if ultimos_precos %}
+      {% for nome, info in ultimos_precos[:8] %}
+      <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--row-alt); font-size:12px;">
+        <span>{{ nome }}</span>
+        <span class="num">{{ info.preco|brl }}</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="color:var(--gray); font-size:13px;">Nenhuma cotação ainda.</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-bottom:14px;">Histórico de cotações</h3>
+  {% if cotacoes %}
+  <table>
+    <thead><tr><th>Data</th><th>Status</th><th>Condição</th><th class="num">Total</th><th></th></tr></thead>
+    <tbody>
+      {% for c in cotacoes %}
+      <tr onclick="window.location='/cotacoes/{{ c.id }}'" style="cursor:pointer;">
+        <td>{{ c.criado_em|data }}</td>
+        <td><span class="badge badge-{{ c.status.value }}">{{ c.status.value }}</span></td>
+        <td>{{ c.condicao_pagamento }}</td>
+        <td class="num">{{ totais.get(c.id)|brl }}</td>
+        <td><a href="/cotacoes/{{ c.id }}" class="btn btn-ghost btn-sm">Abrir</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state"><h3>Nenhuma cotação ainda</h3></div>
+  {% endif %}
+</div>
+{% endblock %}

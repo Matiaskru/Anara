@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Importar Excel — Anara Cotações{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Importar Excel</h1>
+    <div class="subtitle">Traz produtos, custos e preços-base da planilha pra plataforma</div>
+  </div>
+</div>
+
+<div class="card" style="max-width:560px;">
+  {% if erro %}
+  <p class="erro" style="color:var(--danger); margin-bottom:14px;">{{ erro }}</p>
+  {% endif %}
+  <p style="color:var(--gray); font-size:13px; margin-bottom:18px;">
+    Escolha o arquivo <code>.xlsx</code> da Anara. O sistema vai ler a aba
+    "03_Precificação Anara" e mostrar um preview do que vai mudar antes de
+    confirmar — nada é gravado automaticamente.
+  </p>
+  <form method="post" action="/importar/preview" enctype="multipart/form-data">
+    <div class="field">
+      <label>Arquivo Excel (.xlsx)</label>
+      <input type="file" name="arquivo" accept=".xlsx" required>
+    </div>
+    <button class="btn btn-copper" type="submit">Analisar arquivo</button>
+  </form>
+</div>
+{% endblock %}

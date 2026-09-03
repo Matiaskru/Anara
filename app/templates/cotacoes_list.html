@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Histórico de cotações — Anara Cotações<script>
+function marcarTodas(origem) {
+  document.querySelectorAll(".check-cotacao").forEach(c => { c.checked = origem.checked; });
+}
+// "cara de teste" = rascunho, sem PDF e sem aceite. É sugestão: quem decide é você.
+function marcarTestes() {
+  document.querySelectorAll(".check-cotacao").forEach(c => {
+    c.checked = c.dataset.teste === "1";
+  });
+}
+</script>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Histórico de cotações</h1>
+    <div class="subtitle">{{ cotacoes|length }} cotação(ões)</div>
+  </div>
+  <div style="display:flex; gap:8px;">
+    {% if mostrar_arquivadas %}
+    <a href="/cotacoes" class="btn btn-ghost">Ver ativas</a>
+    {% else %}
+    <a href="/cotacoes?arquivadas=sim" class="btn btn-ghost">Arquivadas ({{ total_arquivadas }})</a>
+    {% endif %}
+    <a href="/cotacoes/nova" class="btn btn-copper">+ Nova cotação</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="grid-4" style="margin-bottom:14px;">
+    <div class="field">
+      <label>Status</label>
+      <select name="status" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for s in status_opcoes %}
+        <option value="{{ s }}" {{ 'selected' if s == status_filtro else '' }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Cliente</label>
+      <select name="cliente_id" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for c in todos_clientes %}
+        <option value="{{ c.id }}" {{ 'selected' if cliente_filtro == c.id|string else '' }}>{{ c.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Vendedor</label>
+      <select name="vendedor" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        {% for v in vendedores %}
+        <option value="{{ v }}" {{ 'selected' if v == vendedor_filtro else '' }}>{{ v }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Categoria de produto</label>
+      <select name="categoria" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        {% for c in categorias %}
+        <option value="{{ c }}" {{ 'selected' if c == categoria_filtro else '' }}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </form>
+
+  {% if request.query_params.get('arquivadas_agora') %}
+  <div class="aviso-inline">{{ request.query_params.get('arquivadas_agora') }} cotação(ões) arquivada(s). Elas saíram da lista e dos totais, mas continuam no banco — dá para restaurar em "Arquivadas".</div>
+  {% endif %}
+  {% if request.query_params.get('apagadas') %}
+  <div class="aviso-inline">{{ request.query_params.get('apagadas') }} cotação(ões) apagada(s) de vez. O banco foi copiado antes, em data/backups/.</div>
+  {% endif %}
+
+  {% if cotacoes %}
+  <form method="post" action="/cotacoes/lote" id="form-lote">
+  <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+    <label style="font-size:12px; display:flex; gap:5px; align-items:center;">
+      <input type="checkbox" onclick="marcarTodas(this)"> selecionar todas
+    </label>
+    {% if not mostrar_arquivadas %}
+    <button class="btn btn-ghost btn-sm" name="acao" value="arquivar" type="submit">Arquivar selecionadas</button>
+    {% if sugestoes_teste %}
+    <button class="btn btn-ghost btn-sm" type="button" onclick="marcarTestes()">Marcar as com cara de teste ({{ sugestoes_teste|length }})</button>
+    {% endif %}
+    {% else %}
+    <button class="btn btn-ghost btn-sm" name="acao" value="restaurar" type="submit">Restaurar selecionadas</button>
+    <button class="btn btn-ghost btn-sm" name="acao" value="apagar" type="submit"
+            onclick="return confirm('Apagar de vez as cotações selecionadas? O banco é copiado antes, mas depois disso elas somem da plataforma.');">
+      Apagar de vez
+    </button>
+    {% endif %}
+  </div>
+  <table>
+    <thead><tr><th></th><th>Número</th><th>Data</th><th>Cliente</th><th>Vendedor</th><th>Status</th><th>Condição</th><th class="num">Total</th><th class="num">Margem</th><th></th></tr></thead>
+    <tbody>
+      {% for c in cotacoes %}
+      <tr>
+        <td onclick="event.stopPropagation();"><input type="checkbox" name="ids" value="{{ c.id }}" class="check-cotacao" data-teste="{{ '1' if c.id in sugestoes_teste else '0' }}"></td>
+        <td>
+          <a href="/cotacoes/{{ c.id }}"><strong>{{ c.numero or ('#' ~ c.id) }}</strong></a>
+          {% if c.id in sugestoes_teste and not mostrar_arquivadas %}<br><span class="tag tag-review">cara de teste</span>{% endif %}
+          {% if c.arquivada_em %}<br><span class="tag tag-legacy">arquivada</span>{% endif %}
+        </td>
+        <td>{{ c.criado_em|data }}</td>
+        <td>{{ clientes.get(c.cliente_id).nome if clientes.get(c.cliente_id) else '—' }}</td>
+        <td>{{ c.vendedor or '—' }}</td>
+        <td><span class="badge badge-{{ c.status.value }}">{{ c.status.value }}</span></td>
+        <td>{{ c.condicao_pagamento }}</td>
+        <td class="num">{{ totais.get(c.id, {}).get('faturamento')|brl }}</td>
+        <td class="num">{{ totais.get(c.id, {}).get('margem_liquida')|pct }}</td>
+        <td><a href="/cotacoes/{{ c.id }}" class="btn btn-ghost btn-sm">Abrir</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </form>
+  {% else %}
+  <div class="empty-state"><h3>Nenhuma cotação ainda</h3><p>Crie a primeira cotação pra começar.</p></div>
+  {% endif %}
+</div>
+{% endblock %}
