@@ -273,6 +273,40 @@ def test_backup_e_restore_devolvem_o_banco_identico(copia_do_banco):
                 os.remove(f)
 
 
+def test_poda_de_backup_usa_idade_e_nao_ordem_alfabetica(tmp_path, monkeypatch):
+    """A poda apaga o mais VELHO, não o de nome alfabeticamente menor.
+
+    O nome do backup começa pelo motivo ("exclusao", "migration", "zz-manual"...). Ordenando por
+    nome, o motivo decidia quem morria: um backup recém-criado com motivo de letra baixa era
+    destruído na hora, enquanto um antigo com letra alta sobrevivia. Descoberto em 03/09/2026,
+    quando a suíte apagou o backup que acabara de criar.
+    """
+    import os
+    import time
+
+    import app.migrations as m
+
+    monkeypatch.setattr(m, "BACKUP_DIR", str(tmp_path))
+    monkeypatch.setattr(m, "MAX_BACKUPS", 2)
+    monkeypatch.setattr(m, "DB_PATH", str(tmp_path / "origem.db"))
+    (tmp_path / "origem.db").write_bytes(b"conteudo")
+
+    # 'aaa' é o mais ANTIGO e alfabeticamente o primeiro; 'zzz' é o mais NOVO
+    for nome, idade in (("anara.db.aaa-antigo", 300), ("anara.db.zzz-novo", 10)):
+        alvo = tmp_path / nome
+        alvo.write_bytes(b"x")
+        quando = time.time() - idade
+        os.utime(alvo, (quando, quando))
+
+    m.fazer_backup("mmm-recente")
+    restantes = sorted(p.name for p in tmp_path.iterdir() if p.name.startswith("anara.db."))
+
+    assert "anara.db.aaa-antigo" not in restantes, "o mais velho tinha de sair"
+    assert "anara.db.zzz-novo" in restantes, "o mais novo não pode sair por causa do nome"
+    assert any(n.startswith("anara.db.mmm-recente") for n in restantes), \
+        "o backup recém-criado jamais pode ser apagado pela própria poda"
+
+
 @sem_banco
 def test_restore_recusa_sobrescrever_sem_confirmacao(copia_do_banco):
     """Restore silencioso é como se perde dado — sem --confirmar, não acontece."""

@@ -137,126 +137,167 @@ def test_finalidade_invalida_bloqueia(tabelas):
 
 
 # ---------------------------------------------------------------------------
-# DIFAL
+# DIFAL — todos os percentuais sobre a MESMA base: o preço final
 # ---------------------------------------------------------------------------
-def test_contribuinte_revenda_nao_tem_difal(tabelas):
-    r = resolver(tabelas, "MG", True, origem_fiscal="NACIONAL", finalidade="REVENDA")
-    assert r.difal_pct is None
-    assert r.difal_responsavel == "NAO_APLICAVEL"
+# Fórmula canônica, fechada em 03/09/2026:
+#
+#   ICMS_origem  = preço × interestadual
+#   DIFAL        = preço × (interna_destino − interestadual)      quando o remetente recolhe
+#   total_Anara  = interestadual + DIFAL + FCP aplicável = interna_destino + FCP
+#
+# A coluna `EstadoFiscal.carga_final` NÃO entra: ela é o mesmo diferencial sobre uma base
+# anterior à inclusão do ICMS de destino — (interna − 4%)/(1 − interna) — e somá-la a um
+# percentual da receita mistura denominadores.
 
-
-@pytest.mark.parametrize("finalidade", ["USO_CONSUMO", "ATIVO_IMOBILIZADO"])
-def test_contribuinte_consumidor_final_difal_e_do_destinatario(tabelas, finalidade):
-    """Regra econômica: o DIFAL do destinatário é registrado e NÃO reduz a margem da Anara."""
-    r = resolver(tabelas, "MG", True, origem_fiscal="IMPORTADA", finalidade=finalidade)
-    assert r.difal_responsavel == "DESTINATARIO"
-    assert r.difal_pct is not None and r.difal_pct > 0
-    assert r.difal_entra_na_margem is False
-    # o que reduz a receita da Anara é só a interestadual
-    assert r.icms_pct == pytest.approx(0.04)
-
-
-@pytest.mark.parametrize("finalidade", ["USO_CONSUMO", "ATIVO_IMOBILIZADO"])
-def test_difal_do_destinatario_nao_inventa_valor_de_outra_operacao(tabelas, finalidade):
-    """Nacional a 12%: o preço sai (não depende do DIFAL), mas o valor do DIFAL fica em branco.
-
-    Exibir 5,07% aqui seria mostrar o diferencial de uma operação de 4% como se fosse o desta.
-    """
-    r = resolver(tabelas, "MG", True, origem_fiscal="NACIONAL", finalidade=finalidade)
-    assert r.status == OK
-    assert r.icms_pct == pytest.approx(0.12), "o preço não depende do DIFAL do destinatário"
-    assert r.difal_responsavel == "DESTINATARIO"
-    assert r.difal_pct is None
-    assert any("não informado" in a for a in r.avisos)
-
-
-def test_nao_contribuinte_difal_e_do_remetente_e_entra_na_margem(tabelas):
-    """Mercadoria IMPORTADA: a carga final cadastrada foi apurada para 4%, que é a alíquota
-    desta operação — então ela se aplica e é usada como está."""
-    r = resolver(tabelas, "MG", False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
-    assert r.status == OK
-    assert r.difal_responsavel == "REMETENTE"
-    assert r.difal_entra_na_margem is True
-    assert r.icms_pct == pytest.approx(0.1707)
-    assert r.difal_pct == pytest.approx(0.1707 - 0.04)
-
-
-def test_carga_final_de_4_por_cento_nao_serve_para_operacao_de_12(tabelas):
-    """A correção P0 de 03/09: a carga final NÃO é chaveada só pela UF de destino.
-
-    Cada linha de `EstadoFiscal` foi apurada para uma alíquota interestadual específica —
-    4% em todas as 27 UFs, conferido aritmeticamente. Usar a carga de MG (17,07%, apurada
-    sobre 4%) numa operação nacional de 12% cobraria o DIFAL de outra operação. Como
-    recalcular por base simples/dupla/FEM é proibido, o cenário bloqueia.
-    """
-    r = resolver(tabelas, "MG", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
-    assert r.status == REVIEW_REQUIRED
-    assert r.icms_pct is None, "não pode devolver a carga de uma operação diferente"
-    assert "12.00%" in r.motivo and "4.00%" in r.motivo
-
-
-@pytest.mark.parametrize("uf", ["BA", "RJ", "MG"])
-def test_nacional_nao_contribuinte_bloqueia_em_todos_os_destinos(tabelas, uf):
-    r = resolver(tabelas, uf, False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
-    assert r.status == REVIEW_REQUIRED and r.icms_pct is None
-
-
-@pytest.mark.parametrize("uf", ["BA", "RJ", "MG"])
-def test_importada_nao_contribuinte_continua_resolvendo(tabelas, uf, session):
-    """A operação importada casa com a alíquota que a tabela pressupõe: segue funcionando."""
-    from sqlmodel import select as _select
-    linha = session.exec(_select(EstadoFiscal).where(EstadoFiscal.uf == uf)).first()
-    r = resolver(tabelas, uf, False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
-    assert r.status == OK
-    assert r.icms_pct == pytest.approx(linha.carga_final)
-
-
-def test_mesmo_destino_com_operacao_diferente_nao_da_a_mesma_carga(tabelas):
-    """O ponto central da correção: destino igual, operação diferente, resultado diferente."""
-    importada = resolver(tabelas, "MG", False, origem_fiscal="IMPORTADA",
-                         finalidade="USO_CONSUMO")
-    nacional = resolver(tabelas, "MG", False, origem_fiscal="NACIONAL",
-                        finalidade="USO_CONSUMO")
-    assert importada.icms_pct == pytest.approx(0.1707)
-    assert nacional.icms_pct is None
-    assert importada.status != nacional.status
-
-
-def test_sp_para_sp_nao_contribuinte_nao_tem_difal(tabelas):
-    """Intraestadual não passa pela carga final nem pelo DIFAL, em nenhuma natureza."""
-    for natureza in ("IMPORTADA", "NACIONAL"):
-        r = resolver(tabelas, "SP", False, origem_fiscal=natureza, finalidade="USO_CONSUMO")
-        assert r.status == OK
-        assert r.icms_pct == pytest.approx(0.18)
-        assert r.difal_pct is None
+def test_D_contribuinte_revenda_so_paga_a_interestadual(tabelas):
+    """Prova D: KTC 4% e Daune 12%, sem DIFAL de consumidor final."""
+    ktc = resolver(tabelas, "MG", True, origem_fiscal="IMPORTADA", finalidade="REVENDA")
+    daune = resolver(tabelas, "MG", True, origem_fiscal="NACIONAL", finalidade="REVENDA")
+    assert ktc.icms_pct == pytest.approx(0.04) and ktc.difal_pct is None
+    assert daune.icms_pct == pytest.approx(0.12) and daune.difal_pct is None
+    for r in (ktc, daune):
         assert r.difal_responsavel == "NAO_APLICAVEL"
 
 
-def test_responsabilidade_do_destinatario_custa_menos_para_a_anara(tabelas):
-    """Mesmo destino, mercadoria importada: contribuinte suporta 4%; não contribuinte, a carga
-    final inteira. É a diferença entre quem recolhe o DIFAL."""
-    contribuinte = resolver(tabelas, "MG", True, origem_fiscal="IMPORTADA",
-                            finalidade="USO_CONSUMO")
-    nao = resolver(tabelas, "MG", False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
-    assert contribuinte.icms_pct == pytest.approx(0.04)
-    assert nao.icms_pct == pytest.approx(0.1707)
-    assert contribuinte.icms_pct < nao.icms_pct
+@pytest.mark.parametrize("finalidade", ["USO_CONSUMO", "ATIVO_IMOBILIZADO"])
+@pytest.mark.parametrize("natureza,inter", [("IMPORTADA", 0.04), ("NACIONAL", 0.12)])
+def test_E_contribuinte_consumidor_final_difal_e_do_destinatario(tabelas, finalidade,
+                                                                 natureza, inter):
+    """Prova E: DIFAL registrado como responsabilidade do destinatário, fora da margem Anara."""
+    r = resolver(tabelas, "MG", True, origem_fiscal=natureza, finalidade=finalidade)
+    assert r.status == OK
+    assert r.icms_pct == pytest.approx(inter), "só a interestadual reduz a receita da Anara"
+    assert r.difal_pct == pytest.approx(0.18 - inter)
+    assert r.difal_responsavel == "DESTINATARIO"
+    assert r.difal_entra_na_margem is False
+    assert r.fcp_pct == 0.0
 
 
-def test_carga_final_nao_e_recalculada(tabelas, session):
-    """OK-13 preservado: quando se aplica, a Carga Final entra como está.
+def test_A_ktc_importada_mg_nao_contribuinte(tabelas):
+    """Prova A: origem 4% + DIFAL 14% = 18% de carga total sobre a receita."""
+    r = resolver(tabelas, "MG", False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
+    assert r.status == OK
+    assert r.aliquota_interestadual == pytest.approx(0.04)
+    assert r.difal_pct == pytest.approx(0.14)
+    assert r.icms_pct == pytest.approx(0.18)
+    assert r.difal_responsavel == "REMETENTE" and r.difal_entra_na_margem is True
 
-    O motor não deriva a carga de base simples, base dupla ou FEM — nem para consertar o
-    cenário nacional. Ou a carga cadastrada serve à operação, ou o cenário bloqueia.
-    """
+
+def test_B_daune_nacional_mg_nao_contribuinte(tabelas):
+    """Prova B: origem 12% + DIFAL 6% = 18%."""
+    r = resolver(tabelas, "MG", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    assert r.status == OK
+    assert r.aliquota_interestadual == pytest.approx(0.12)
+    assert r.difal_pct == pytest.approx(0.06)
+    assert r.icms_pct == pytest.approx(0.18)
+
+
+def test_C_mesmo_destino_divisao_diferente_carga_igual(tabelas):
+    """Prova C: KTC e Daune repartem origem/destino de formas diferentes e somam o mesmo."""
+    ktc = resolver(tabelas, "MG", False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
+    daune = resolver(tabelas, "MG", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    assert ktc.aliquota_interestadual != daune.aliquota_interestadual
+    assert ktc.difal_pct != daune.difal_pct
+    assert ktc.icms_pct == pytest.approx(daune.icms_pct) == pytest.approx(0.18)
+
+
+def test_o_1707_nao_aparece_mais_em_lugar_nenhum(tabelas, session):
+    """A carga final legada saiu do motor. Nem como total, nem somada à interestadual."""
+    mg = session.exec(select(EstadoFiscal).where(EstadoFiscal.uf == "MG")).first()
+    assert mg.carga_final == pytest.approx(0.1707), "a coluna continua na tabela, para histórico"
+    for natureza in ("IMPORTADA", "NACIONAL"):
+        r = resolver(tabelas, "MG", False, origem_fiscal=natureza, finalidade="USO_CONSUMO")
+        assert r.icms_pct != pytest.approx(mg.carga_final)
+        assert r.icms_pct != pytest.approx(0.04 + mg.carga_final)
+        assert r.icms_pct == pytest.approx(mg.aliquota_interna)
+
+
+@pytest.mark.parametrize("uf,interna", [("BA", 0.205), ("RJ", 0.22), ("MG", 0.18)])
+@pytest.mark.parametrize("natureza", ["IMPORTADA", "NACIONAL"])
+def test_carga_total_e_a_interna_do_destino(tabelas, uf, interna, natureza):
+    """Sem FCP configurado, a carga total do não contribuinte é a alíquota interna do destino."""
+    r = resolver(tabelas, uf, False, origem_fiscal=natureza, finalidade="USO_CONSUMO")
+    assert r.status == OK
+    assert r.icms_pct == pytest.approx(interna)
+    assert r.aliquota_interestadual + r.difal_pct == pytest.approx(interna)
+
+
+def test_F_sp_para_sp_nao_tem_difal(tabelas):
+    """Prova F: intraestadual é 18%, sem DIFAL, em qualquer natureza."""
+    for natureza in ("IMPORTADA", "NACIONAL"):
+        for contribuinte in (True, False):
+            r = resolver(tabelas, "SP", contribuinte, origem_fiscal=natureza,
+                         finalidade="USO_CONSUMO")
+            assert r.status == OK and r.icms_pct == pytest.approx(0.18)
+            assert r.difal_pct is None
+            assert r.difal_responsavel == "NAO_APLICAVEL"
+
+
+# --- FCP: configurado, nunca inferido pela UF ---------------------------------
+def test_G_fcp_nao_e_inferido_da_coluna_fem(tabelas, session):
+    """A BA tem `fem = 2%` na tabela legada. Sem regra cadastrada, o FCP é zero."""
     ba = session.exec(select(EstadoFiscal).where(EstadoFiscal.uf == "BA")).first()
-    r = resolver(tabelas, "BA", False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
-    assert r.icms_pct == pytest.approx(ba.carga_final)
-    # e o cenário nacional não vira uma carga derivada por conta própria
-    n = resolver(tabelas, "BA", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
-    assert n.icms_pct is None
-    for derivado in (ba.base_simples, ba.base_dupla, ba.aliquota_interna - 0.12):
-        assert n.icms_pct != derivado
+    assert ba.fem == pytest.approx(0.02), "a coluna legada continua lá"
+    r = resolver(tabelas, "BA", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    assert r.fcp_pct == 0.0
+    assert r.icms_pct == pytest.approx(0.205), "sem FCP configurado, é só a interna"
+
+
+def test_G_fcp_entra_separado_quando_configurado(tabelas):
+    """Prova G: o FCP soma por fora da diferença interna − interestadual."""
+    from app.models import RegraFcp
+    regras, estados, aliquotas = tabelas
+    fcp = RegraFcp(uf_destino="BA", fcp_pct=0.02, prioridade=10,
+                   regra="FCP-BA de teste, aplicável a este item")
+    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
+                             origem_fiscal="NACIONAL", contribuinte=False,
+                             finalidade="USO_CONSUMO", regras_fcp=[fcp])
+    assert r.aliquota_interestadual == pytest.approx(0.07)
+    assert r.difal_pct == pytest.approx(0.205 - 0.07)
+    assert r.fcp_pct == pytest.approx(0.02)
+    assert r.icms_pct == pytest.approx(0.205 + 0.02)
+
+
+def test_G_fcp_so_alcanca_o_item_que_a_regra_cobre(tabelas):
+    """Regra por NCM não pega item de outro NCM — FCP não se generaliza pela UF."""
+    from app.models import RegraFcp
+    regras, estados, aliquotas = tabelas
+    fcp = RegraFcp(uf_destino="BA", ncm="9999.99.99", fcp_pct=0.02, prioridade=10,
+                   regra="FCP-BA só para este NCM")
+    alcancado = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
+                                     origem_fiscal="NACIONAL", contribuinte=False,
+                                     finalidade="USO_CONSUMO", ncm="9999.99.99",
+                                     regras_fcp=[fcp])
+    outro = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
+                                 origem_fiscal="NACIONAL", contribuinte=False,
+                                 finalidade="USO_CONSUMO", ncm="6302.21.00", regras_fcp=[fcp])
+    assert alcancado.fcp_pct == pytest.approx(0.02)
+    assert outro.fcp_pct == 0.0
+
+
+def test_G_fcp_sem_aliquota_confirmada_bloqueia(tabelas):
+    """Quando o FCP é materialmente necessário e a alíquota não foi levantada: bloqueia."""
+    from app.models import RegraFcp
+    regras, estados, aliquotas = tabelas
+    fcp = RegraFcp(uf_destino="BA", fcp_pct=0.0, exige_confirmacao=True, prioridade=10,
+                   regra="FCP-BA aplicável, alíquota a levantar")
+    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
+                             origem_fiscal="NACIONAL", contribuinte=False,
+                             finalidade="USO_CONSUMO", regras_fcp=[fcp])
+    assert r.status == REVIEW_REQUIRED and r.icms_pct is None
+    assert "não está confirmada" in r.motivo
+
+
+def test_fcp_do_destinatario_nao_pesa_na_anara(tabelas):
+    """Contribuinte consumidor final: DIFAL e FCP são do destinatário."""
+    from app.models import RegraFcp
+    regras, estados, aliquotas = tabelas
+    fcp = RegraFcp(uf_destino="BA", fcp_pct=0.02, prioridade=10, regra="FCP-BA")
+    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
+                             origem_fiscal="NACIONAL", contribuinte=True,
+                             finalidade="USO_CONSUMO", regras_fcp=[fcp])
+    assert r.icms_pct == pytest.approx(0.07)
+    assert r.fcp_pct == 0.0
 
 
 # ---------------------------------------------------------------------------

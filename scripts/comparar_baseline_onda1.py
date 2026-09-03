@@ -10,7 +10,10 @@ Classes esperadas:
 
 * `NACIONAL_4_PARA_7`   — mercadoria nacional interestadual que saía a 4% e agora vai a 7% (B-01)
 * `NACIONAL_4_PARA_12`  — o mesmo, faixa de 12% (B-01)
+* `DIFAL_CORRIGIDO`     — não contribuinte: carga total virou interestadual + DIFAL sobre a
+                          receita final, em vez da coluna `carga_final` (base diferente)
 * `FISCAL_REVIEW`       — cenário que não se resolve e passou a bloquear (B-06/B-14)
+* `FCP_REVIEW`          — FCP aplicável com alíquota não confirmada
 * `PAGAMENTO_BLOQUEADO` — condição de pagamento sem premissa (B-15)
 * `IGUAL`               — nenhuma diferença
 
@@ -49,6 +52,8 @@ def classificar(antes, depois, natureza, cenario):
         motivo = (depois.get("motivo") or "").lower()
         if "condição de pagamento" in motivo:
             return "PAGAMENTO_BLOQUEADO"
+        if "fcp" in motivo:
+            return "FCP_REVIEW"
         return "FISCAL_REVIEW"
     if antes is None or depois is None:
         return "NAO_EXPLICADA"
@@ -62,12 +67,21 @@ def classificar(antes, depois, natureza, cenario):
     origem, destino, resto = cenario.split("|", 2)
     contribuinte = resto.startswith("SIM")
     intraestadual = origem == destino
-    if natureza == "NACIONAL" and contribuinte and not intraestadual:
-        if destino in FAIXA_12:
-            return "NACIONAL_4_PARA_12"
-        if destino in FAIXA_7:
-            return "NACIONAL_4_PARA_7"
-    return "NAO_EXPLICADA"
+    if intraestadual:
+        return "NAO_EXPLICADA"          # SP→SP não muda em nenhuma das correções
+
+    if contribuinte:
+        # única mudança prevista para contribuinte: a faixa nacional do B-01
+        if natureza == "NACIONAL":
+            if destino in FAIXA_12:
+                return "NACIONAL_4_PARA_12"
+            if destino in FAIXA_7:
+                return "NACIONAL_4_PARA_7"
+        return "NAO_EXPLICADA"
+
+    # Não contribuinte: a carga total deixou de vir da coluna `carga_final` (que expressa o
+    # diferencial sobre outra base) e passou a ser interestadual + DIFAL sobre a receita.
+    return "DIFAL_CORRIGIDO"
 
 
 def comparar(baseline_path: str = BASELINE) -> dict:

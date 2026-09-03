@@ -307,6 +307,37 @@ class AliquotaInterestadual(SQLModel, table=True):
     notas: Optional[str] = None
 
 
+class RegraFcp(SQLModel, table=True):
+    """FCP/FEM aplicável a uma operação — **configurado**, nunca inferido pela UF.
+
+    O adicional de Fundo de Combate à Pobreza não incide sobre tudo que entra num estado: a
+    incidência depende do produto, e a lista varia por UF e por vigência. Por isso ele não é
+    lido de uma coluna por estado — exige linha cadastrada dizendo a que se aplica.
+
+    Sem linha que cubra a operação, o FCP é **zero e a memória registra que nenhuma regra foi
+    encontrada**. Não é bloqueio: ausência de regra de FCP não impede formar preço. Vira
+    bloqueio só se alguém marcar `exige_confirmacao`, para o caso de uma UF onde a operação
+    notoriamente tem FCP e a alíquota ainda não foi levantada.
+
+    A coluna `EstadoFiscal.fem` continua existindo para rastreabilidade da tabela histórica,
+    mas **não alimenta o motor**.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    uf_destino: str = Field(index=True)
+    ncm: Optional[str] = Field(default=None, index=True)
+    produto_id: Optional[int] = Field(default=None, foreign_key="produto.id")
+    familia: Optional[str] = None
+    fcp_pct: float = 0.0
+    exige_confirmacao: bool = False      # True = sem alíquota confirmada → REVIEW_REQUIRED
+    prioridade: int = 100                # menor ganha
+    regra: str = ""
+    valid_from: date = Field(default_factory=date.today)
+    valid_to: Optional[date] = None
+    ativo: bool = True
+    fonte: Optional[str] = None
+    notas: Optional[str] = None
+
+
 class MargemRegra(SQLModel, table=True):
     """Margem líquida-alvo padrão. Resolvida por prioridade — nunca por `if` espalhado no código."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -595,7 +626,10 @@ class CotacaoItem(SQLModel, table=True):
     uf_destino_fiscal: Optional[str] = None
     finalidade: Optional[str] = None            # Finalidade
     consumidor_final: Optional[bool] = None     # DERIVADO da finalidade
-    icms_pct: Optional[float] = None            # o que efetivamente reduz a receita da Anara
+    icms_pct: Optional[float] = None            # TOTAL que reduz a receita da Anara
+    aliquota_interestadual: Optional[float] = None   # parcela devida à origem
+    aliquota_interna_destino: Optional[float] = None
+    fcp_pct: Optional[float] = None
     icms_regra: Optional[str] = None
     icms_fonte: Optional[str] = None            # de qual tabela/linha veio a alíquota
     difal_pct: Optional[float] = None           # diferencial apurado, exista ou não ônus Anara

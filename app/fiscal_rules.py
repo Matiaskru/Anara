@@ -11,12 +11,17 @@ Reescrito na Onda 1. Duas mudanças estruturais em relação ao motor anterior:
    quando a UF não estava na tabela. Isso produzia número plausível e errado. Agora, cenário que
    não se resolve devolve `REVIEW_REQUIRED` com o motivo escrito — e quem chama tem que tratar.
 
+3. **Todo percentual está sobre a MESMA base: o preço final.** É o que o waterfall resolve.
+   A coluna `EstadoFiscal.carga_final` **saiu do motor**: ela é o DIFAL convertido para uma base
+   anterior à inclusão do ICMS de destino — `(interna − 4%)/(1 − interna)` — e portanto não é um
+   percentual da receita final nem pode ser somado a um. Ela fica na tabela para rastreabilidade
+   da apuração histórica, e nada mais.
+
 O que **não** mudou, de propósito:
 
-* a **carga final** do DIFAL continua sendo usada como está, sem recálculo por base simples,
-  base dupla ou FEM;
 * **contribuinte nunca se infere do estado**;
-* origem **fiscal** é atributo da operação e não se confunde com origem logística.
+* origem **fiscal** é atributo da operação e não se confunde com origem logística;
+* FCP/FEM **não se infere pela UF** — exige regra cadastrada por produto/NCM/operação.
 
 As funções aqui são puras: recebem as linhas já lidas do banco e devolvem um resultado. Não
 conhecem sessão, FastAPI nem Jinja.
@@ -45,7 +50,10 @@ class ResultadoFiscal:
     para a memória interna, mas **não** está somado em `icms_pct`.
     """
     status: str = OK
-    icms_pct: Optional[float] = None
+    icms_pct: Optional[float] = None            # TOTAL suportado pela Anara sobre a receita
+    aliquota_interestadual: Optional[float] = None
+    aliquota_interna_destino: Optional[float] = None
+    fcp_pct: Optional[float] = None
     regra: str = ""
     fonte: Optional[str] = None
     origem_fiscal: Optional[str] = None
@@ -66,7 +74,10 @@ class ResultadoFiscal:
 
     def como_dict(self) -> dict:
         return {
-            "status": self.status, "icms_pct": self.icms_pct, "regra": self.regra,
+            "status": self.status, "icms_pct": self.icms_pct,
+            "aliquota_interestadual": self.aliquota_interestadual,
+            "aliquota_interna_destino": self.aliquota_interna_destino,
+            "fcp_pct": self.fcp_pct, "regra": self.regra,
             "fonte": self.fonte, "origem_fiscal": self.origem_fiscal,
             "uf_origem": self.uf_origem, "uf_destino": self.uf_destino,
             "contribuinte": self.contribuinte, "finalidade": self.finalidade,
@@ -160,6 +171,43 @@ def resolver_aliquota_interestadual(linhas: Sequence, uf_origem: str, uf_destino
     return sorted(escolhidas, key=lambda r: (r.prioridade, r.id or 0))[0], None
 
 
+def resolver_fcp(regras_fcp: Sequence, uf_destino: str, ncm: Optional[str] = None,
+                 produto_id: Optional[int] = None, familia: Optional[str] = None,
+                 ref_data=None):
+    """FCP/FEM da operação. Devolve `(pct, motivo_ou_None, texto)`.
+
+    **Configurado, nunca inferido pela UF.** Sem linha que cubra a operação, o FCP é zero e o
+    texto diz que nenhuma regra foi encontrada — ausência de regra de FCP não impede formar
+    preço. Só bloqueia quando a linha encontrada está marcada `exige_confirmacao`, que é o caso
+    de uma UF onde a operação notoriamente tem FCP mas a alíquota ainda não foi levantada.
+    """
+    candidatas = [r for r in regras_fcp
+                  if _vigente(r, ref_data)
+                  and (r.uf_destino or "").strip().upper() == (uf_destino or "").strip().upper()]
+    if not candidatas:
+        return 0.0, None, f"Nenhuma regra de FCP cadastrada para {uf_destino}"
+
+    def cobre(r):
+        if r.produto_id:
+            return r.produto_id == produto_id
+        if r.ncm:
+            return (r.ncm or "").strip() == (ncm or "").strip()
+        if r.familia:
+            return (r.familia or "").strip().lower() == (familia or "").strip().lower()
+        return True          # linha geral da UF, cadastrada deliberadamente
+
+    aplicaveis = [r for r in candidatas if cobre(r)]
+    if not aplicaveis:
+        return 0.0, None, (f"Há regra de FCP para {uf_destino}, mas nenhuma alcança este item")
+
+    escolhida = sorted(aplicaveis, key=lambda r: (r.prioridade, r.id or 0))[0]
+    if escolhida.exige_confirmacao:
+        return None, (f"O FCP de {uf_destino} se aplica a este item mas a alíquota não está "
+                      f"confirmada ({escolhida.regra or 'sem detalhe'})."), ""
+    return float(escolhida.fcp_pct), None, (
+        f"FCP de {uf_destino}: {float(escolhida.fcp_pct):.2%} ({escolhida.regra or 'cadastrado'})")
+
+
 # ---------------------------------------------------------------------------
 # Resolução principal — por item
 # ---------------------------------------------------------------------------
@@ -168,7 +216,8 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
                          uf_origem: Optional[str], uf_destino: Optional[str],
                          origem_fiscal: Optional[str], contribuinte: Optional[bool],
                          finalidade: Optional[str], ncm: Optional[str] = None,
-                         produto_id: Optional[int] = None, ref_data=None) -> ResultadoFiscal:
+                         produto_id: Optional[int] = None, familia: Optional[str] = None,
+                         regras_fcp: Sequence = (), ref_data=None) -> ResultadoFiscal:
     """Resolve a carga de ICMS de **um item**. Sem fallback: o que não resolve, bloqueia.
 
     Ordem:
@@ -224,13 +273,16 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
         melhor = sorted(explicitas, key=lambda r: (getattr(r, "prioridade", 100), r.id or 0))[0]
         return ResultadoFiscal(
             icms_pct=float(melhor.icms_venda), regra=melhor.regra,
+            aliquota_interna_destino=float(destino.aliquota_interna), fcp_pct=0.0,
             fonte=f"RegraFiscalVenda#{melhor.id}", difal_responsavel=NAO_APLICAVEL, **base)
 
     # --- 3. mesmo estado ---
     if uf_origem == uf_destino:
         return ResultadoFiscal(
             icms_pct=float(destino.aliquota_interna),
-            regra=f"Intraestadual {uf_destino} — alíquota interna, sem DIFAL",
+            aliquota_interna_destino=float(destino.aliquota_interna), fcp_pct=0.0,
+            regra=f"Intraestadual {uf_destino} — alíquota interna {destino.aliquota_interna:.2%}, "
+                  "sem DIFAL interestadual",
             fonte=f"EstadoFiscal#{destino.id}.aliquota_interna",
             difal_responsavel=NAO_APLICAVEL, **base)
 
@@ -241,83 +293,65 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
         return _bloqueio(motivo, **base)
 
     interestadual = float(linha.aliquota)
-    carga_final = float(destino.carga_final)
-    difal = max(carga_final - interestadual, 0.0)
+    interna = float(destino.aliquota_interna)
+
+    # O DIFAL sobre a RECEITA FINAL é a diferença entre a alíquota interna do destino e a
+    # interestadual da operação. Não vem de `carga_final`: aquela coluna expressa o mesmo
+    # diferencial sobre uma base anterior à inclusão do ICMS de destino, e misturar as duas
+    # bases produz número sem significado.
+    difal = max(interna - interestadual, 0.0)
+
+    fcp, motivo_fcp, texto_fcp = resolver_fcp(regras_fcp, uf_destino, ncm, produto_id,
+                                              familia, ref_data)
+    comum = dict(aliquota_interestadual=interestadual, aliquota_interna_destino=interna)
+
+    if contribuinte and not consumidor_final:
+        # Revenda ou industrialização: o destinatário credita e segue a cadeia. Sem DIFAL de
+        # consumidor final, e o FCP dele não é ônus da Anara.
+        return ResultadoFiscal(
+            icms_pct=interestadual, fcp_pct=0.0,
+            regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria {origem_fiscal.lower()}, "
+                   f"contribuinte para {finalidade.lower().replace('_', '/')} — "
+                   f"{interestadual:.2%}, sem DIFAL"),
+            fonte=f"AliquotaInterestadual#{linha.id}",
+            difal_pct=None, difal_responsavel=NAO_APLICAVEL, **comum, **base)
 
     if contribuinte:
-        if not consumidor_final:
-            # Revenda ou industrialização: o destinatário credita e segue a cadeia.
-            return ResultadoFiscal(
-                icms_pct=interestadual,
-                regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria {origem_fiscal.lower()}, "
-                       f"contribuinte para {finalidade.lower().replace('_', '/')} — "
-                       f"{interestadual:.2%}, sem DIFAL"),
-                fonte=f"AliquotaInterestadual#{linha.id}",
-                difal_pct=None, difal_responsavel=NAO_APLICAVEL, **base)
-        # Contribuinte que consome: há DIFAL, e quem recolhe é o destinatário. O preço não
-        # depende dele — o que reduz a receita da Anara é só a interestadual destacada.
-        #
-        # Mas o VALOR do DIFAL só pode ser informado se a carga final cadastrada corresponder
-        # a esta operação (mesma guarda do caso não contribuinte). Não correspondendo, o preço
-        # continua correto e o DIFAL fica **em branco, com o motivo** — em vez de exibir o
-        # diferencial de uma operação de 4% como se fosse o desta.
-        inter_da_tabela = getattr(destino, "aliquota_interestadual", None)
-        carga_aplicavel = (inter_da_tabela is not None
-                           and abs(float(inter_da_tabela) - interestadual) <= 1e-9)
-        if carga_aplicavel:
-            return ResultadoFiscal(
-                icms_pct=interestadual,
-                regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria "
-                       f"{origem_fiscal.lower()}, contribuinte consumidor final — "
-                       f"{interestadual:.2%} destacado; DIFAL de {difal:.2%} recolhido pelo "
-                       "destinatário"),
-                fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}.carga_final",
-                difal_pct=difal, difal_responsavel=DESTINATARIO, difal_entra_na_margem=False,
-                **base)
-        resultado = ResultadoFiscal(
-            icms_pct=interestadual,
+        # Contribuinte que consome: há DIFAL, e quem recolhe é o destinatário. Fica registrado
+        # na memória; o que reduz a receita da Anara é só a interestadual destacada. O FCP,
+        # pela mesma razão, também é do destinatário.
+        r = ResultadoFiscal(
+            icms_pct=interestadual, fcp_pct=0.0,
             regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria {origem_fiscal.lower()}, "
-                   f"contribuinte consumidor final — {interestadual:.2%} destacado; DIFAL "
-                   "recolhido pelo destinatário, valor não determinável"),
-            fonte=f"AliquotaInterestadual#{linha.id}",
-            difal_pct=None, difal_responsavel=DESTINATARIO, difal_entra_na_margem=False, **base)
-        resultado.avisos.append(
-            f"DIFAL não informado: a carga final de {uf_destino} foi apurada para "
-            f"{float(inter_da_tabela or 0):.2%} e esta operação é {interestadual:.2%}. O preço "
-            "não depende desse valor, porque quem recolhe é o destinatário.")
-        return resultado
+                   f"contribuinte consumidor final — {interestadual:.2%} destacado; DIFAL de "
+                   f"{difal:.2%} ({interna:.2%} − {interestadual:.2%}) recolhido pelo "
+                   "destinatário"),
+            fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}."
+                  "aliquota_interna",
+            difal_pct=difal, difal_responsavel=DESTINATARIO, difal_entra_na_margem=False,
+            **comum, **base)
+        r.avisos.append("DIFAL e FCP são do destinatário — não reduzem a margem da Anara.")
+        return r
 
-    # Não contribuinte: consumidor final por natureza; o remetente recolhe o DIFAL, e ele
-    # entra no waterfall.
-    #
-    # GUARDA CRÍTICA. A coluna `carga_final` da tabela de DIFAL da Anara **não é chaveada só
-    # pela UF de destino**: cada linha foi apurada para uma alíquota interestadual específica,
-    # que está gravada na própria linha (`EstadoFiscal.aliquota_interestadual`). Conferido em
-    # 03/09/2026: as 27 UFs têm 4% ali, e `base_simples`, `base_dupla` e `carga_final`
-    # reproduzem exatamente `interna − 4%` e `(interna − 4%)/(1 − interna)`, mais FEM.
-    #
-    # Usar essa carga numa operação cujo interestadual é 12% ou 7% seria cobrar o DIFAL de
-    # uma operação de 4% — número errado, com aparência de certo. E recalcular a carga por
-    # base simples/dupla/FEM é proibido pela regra do projeto. Logo: quando a alíquota da
-    # operação não é a que a linha pressupõe, o cenário **bloqueia**.
-    inter_da_tabela = getattr(destino, "aliquota_interestadual", None)
-    if inter_da_tabela is None or abs(float(inter_da_tabela) - interestadual) > 1e-9:
-        return _bloqueio(
-            f"A carga final de {uf_destino} ({carga_final:.4%}) foi apurada para operação com "
-            f"alíquota interestadual de {float(inter_da_tabela or 0):.2%}, mas esta operação é "
-            f"{origem_fiscal.lower()} a {interestadual:.2%}. Não há carga final cadastrada para "
-            f"este cenário, e recalcular por base simples/dupla/FEM é proibido. Cadastrar a "
-            f"carga final de {uf_destino} para {interestadual:.2%} antes de cotar.",
-            **base)
+    # Não contribuinte: consumidor final por natureza. O remetente recolhe o DIFAL, e ele entra
+    # no waterfall. Todos os percentuais sobre a mesma base — o preço final.
+    if fcp is None:
+        return _bloqueio(motivo_fcp, **comum, **base)
 
-    return ResultadoFiscal(
-        icms_pct=carga_final,
-        regra=(f"Interestadual {uf_origem}→{uf_destino} para não contribuinte — carga final de "
-               f"{uf_destino} ({carga_final:.2%}) apurada para interestadual de "
-               f"{interestadual:.2%}, usada como está; DIFAL de {difal:.2%} recolhido pelo "
-               f"remetente"),
-        fonte=f"EstadoFiscal#{destino.id}.carga_final (apurada para {interestadual:.2%})",
-        difal_pct=difal, difal_responsavel=REMETENTE, difal_entra_na_margem=True, **base)
+    total = interestadual + difal + fcp
+    r = ResultadoFiscal(
+        icms_pct=total, fcp_pct=fcp,
+        regra=(f"Interestadual {uf_origem}→{uf_destino} para não contribuinte — "
+               f"{interestadual:.2%} de ICMS de origem + {difal:.2%} de DIFAL "
+               f"({interna:.2%} − {interestadual:.2%}) recolhido pelo remetente"
+               + (f" + {fcp:.2%} de FCP" if fcp else "")
+               + f" = {total:.2%} sobre a receita"),
+        fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}.aliquota_interna",
+        difal_pct=difal, difal_responsavel=REMETENTE, difal_entra_na_margem=True,
+        **comum, **base)
+    if texto_fcp:
+        r.avisos.append(texto_fcp)
+    return r
 
 
 # ---------------------------------------------------------------------------

@@ -248,8 +248,14 @@ def test_snapshot_fiscal_fica_gravado_no_item(s):
     add_item(s, cotacao_id, 1)
 
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
-    assert item.icms_pct == pytest.approx(0.2587)
-    assert "carga final" in (item.icms_regra or "").lower()
+    # PI: interna 22,5%. Não contribuinte importado = 4% de origem + 18,5% de DIFAL = 22,5%.
+    # O 25,87% do baseline antigo era a carga_final legada — base dupla + FEM sobre outra base.
+    assert item.aliquota_interna_destino == pytest.approx(0.225)
+    assert item.aliquota_interestadual == pytest.approx(0.04)
+    assert item.difal_pct == pytest.approx(0.185)
+    assert item.icms_pct == pytest.approx(0.225)
+    assert item.fcp_pct == 0.0
+    assert "DIFAL" in (item.icms_regra or "")
     assert item.uf_origem_fiscal == "SP" and item.uf_destino_fiscal == "PI"
     assert item.origem_fiscal in ("IMPORTADA", "NACIONAL")
     assert item.consumidor_final is True          # não contribuinte → consumidor final

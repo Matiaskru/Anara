@@ -27,8 +27,8 @@ from app.ktc_engine import (
 from app.margin_rules import MargemResolvida, resolver_margem
 from app.models import (
     AliquotaInterestadual, CondicaoPagamento, CostConfidence, CostMethod, Cotacao, EstadoFiscal,
-    Finalidade, Fornecedor, MargemRegra, NcmRegra, OrigemFiscal, Produto, RegraFiscalVenda,
-    TipoFornecedor,
+    Finalidade, Fornecedor, MargemRegra, NcmRegra, OrigemFiscal, Produto, RegraFcp,
+    RegraFiscalVenda, TipoFornecedor,
 )
 from app.nationalization import PremissasNacionalizacao, nacionalizar
 from app.payment_terms import resolver_encargo
@@ -115,6 +115,7 @@ def fiscal_do_item(session: Session, cotacao: Cotacao, produto: Optional[Produto
     estados = session.exec(select(EstadoFiscal)).all()
     explicitas = session.exec(select(RegraFiscalVenda)).all()
     aliquotas = session.exec(select(AliquotaInterestadual)).all()
+    regras_fcp = session.exec(select(RegraFcp)).all()
 
     uf_origem, fonte_origem = uf_origem_fiscal(session, cotacao, produto)
     uf_destino = normalizar_uf(estados, getattr(cotacao, "estado_destino", None))
@@ -127,7 +128,9 @@ def fiscal_do_item(session: Session, cotacao: Cotacao, produto: Optional[Produto
         contribuinte=getattr(cotacao, "contribuinte_icms", None),
         finalidade=finalidade,
         ncm=getattr(produto, "ncm", None),
-        produto_id=getattr(produto, "id", None))
+        produto_id=getattr(produto, "id", None),
+        familia=getattr(produto, "familia", None),
+        regras_fcp=regras_fcp)
     resultado.avisos.append(f"origem fiscal: {fonte_origem}")
     resultado.avisos.append(f"natureza da mercadoria: {fonte_natureza}")
     resultado.avisos.append(f"finalidade: {fonte_finalidade}")
@@ -150,6 +153,9 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     contexto = {
         "fiscal": fiscal,
         "icms_pct": fiscal.icms_pct, "icms_regra": fiscal.regra, "icms_fonte": fiscal.fonte,
+        "aliquota_interestadual": fiscal.aliquota_interestadual,
+        "aliquota_interna_destino": fiscal.aliquota_interna_destino,
+        "fcp_pct": fiscal.fcp_pct,
         "status_fiscal": fiscal.status, "motivo_fiscal": fiscal.motivo,
         "origem_fiscal": fiscal.origem_fiscal, "uf_origem_fiscal": fiscal.uf_origem,
         "uf_destino_fiscal": fiscal.uf_destino, "finalidade": fiscal.finalidade,
