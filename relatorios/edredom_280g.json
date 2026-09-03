@@ -29,22 +29,22 @@
    "skus_de_outra_gramatura_na_mesma_medida": [
     {
      "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
-     "gramatura": null,
+     "gramatura": 180,
      "nome": "Edredom 190x260 · 180 g · 100% plumas de ganso"
     },
     {
      "sku": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 190x260",
-     "gramatura": null,
+     "gramatura": 180,
      "nome": "Edredom 190x260 · 180 g · 100% fibras de poliéster"
     },
     {
      "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
-     "gramatura": null,
+     "gramatura": 250,
      "nome": "Edredom 190x260 · 250 g · 100% plumas de ganso"
     },
     {
      "sku": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 190x260",
-     "gramatura": null,
+     "gramatura": 250,
      "nome": "Edredom 190x260 · 250 g · 100% fibras de poliéster"
     }
    ],
@@ -115,22 +115,22 @@
    "skus_de_outra_gramatura_na_mesma_medida": [
     {
      "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
-     "gramatura": null,
+     "gramatura": 180,
      "nome": "Edredom 285x265 · 180 g · 100% plumas de ganso"
     },
     {
      "sku": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 285x265",
-     "gramatura": null,
+     "gramatura": 180,
      "nome": "Edredom 285x265 · 180 g · 100% fibras de poliéster"
     },
     {
      "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
-     "gramatura": null,
+     "gramatura": 250,
      "nome": "Edredom 285x265 · 250 g · 100% plumas de ganso"
     },
     {
      "sku": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 285x265",
-     "gramatura": null,
+     "gramatura": 250,
      "nome": "Edredom 285x265 · 250 g · 100% fibras de poliéster"
     }
    ],
@@ -162,22 +162,22 @@
    "skus_de_outra_gramatura_na_mesma_medida": [
     {
      "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
-     "gramatura": null,
+     "gramatura": 180,
      "nome": "Edredom 290x260 · 180 g · 100% plumas de ganso"
     },
     {
      "sku": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 290x260",
-     "gramatura": null,
+     "gramatura": 180,
      "nome": "Edredom 290x260 · 180 g · 100% fibras de poliéster"
     },
     {
      "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
-     "gramatura": null,
+     "gramatura": 250,
      "nome": "Edredom 290x260 · 250 g · 100% plumas de ganso"
     },
     {
      "sku": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 290x260",
-     "gramatura": null,
+     "gramatura": 250,
      "nome": "Edredom 290x260 · 250 g · 100% fibras de poliéster"
     }
    ],

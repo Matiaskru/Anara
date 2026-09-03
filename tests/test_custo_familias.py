@@ -248,3 +248,79 @@ def test_familia_e_ruido_mas_construcao_nao():
     assert (assinatura_tecnica("Manta 120 grs impermeavel modelo slip")
             != assinatura_tecnica("Manta 120 grs impermeavel")), \
         "slip é construção diferente e não pode casar sem evidência"
+
+
+# ---------------------------------------------------------------------------
+# Gramatura estruturada dos edredons
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("texto,esperado", [
+    ("Edredom 190x260 · 180 g · 100% plumas de ganso", 180),
+    ("Edredom 250x260 · 250 g · 100% fibras de poliéster", 250),
+    ("Edredom 100% plumas de ganso 180GRS", 180),
+    ("Edredom 100% plumas de ganso 250 GRS", 250),
+    ("Edredom 285x265 · 280 g · 100% fibras de poliéster", 280),
+])
+def test_gramatura_e_extraida_da_descricao(texto, esperado):
+    """Campo `gsm` nulo não é ausência de dado quando a descrição declara a gramatura."""
+    from scripts.reconciliar_daune import extrair_gramatura
+    assert extrair_gramatura(texto) == esperado
+
+
+@pytest.mark.parametrize("texto", [
+    "Edredom 156x230 · 100% plumas de ganso",
+    "Edredom 220x240 · 100% fibras de Poliester",
+    "Travesseiro 50x70 · 100% plumas de ganso",
+])
+def test_sem_gramatura_nao_se_infere(texto):
+    from scripts.reconciliar_daune import extrair_gramatura
+    assert extrair_gramatura(texto) is None, "não se atribui 180/250/280 por chute"
+
+
+def test_gramatura_nao_polui_a_assinatura_tecnica():
+    """"180 g" e "180GRS" são o mesmo produto; a gramatura é comparada como campo à parte."""
+    from scripts.reconciliar_daune import assinatura_tecnica
+    assert (assinatura_tecnica("Edredom 190x260 · 180 g · 100% plumas de ganso")
+            == assinatura_tecnica("Edredom 100% plumas de ganso 180GRS 190x260"))
+
+
+def test_280g_nao_casa_com_180_nem_250():
+    from scripts.reconciliar_daune import casar
+    fonte = [{"aba": "12.08.26", "descricao": "Edredom 100% fibras de Poliester",
+              "gross": 469.30, "largura": 190, "comprimento": 260, "gramatura": 280,
+              "composicao": "POLIESTER"}]
+    for gsm in (180, 250):
+        sku = Produto(sku_key=f"P{gsm}", nome=f"Edredom 190x260 · {gsm} g · 100% poliéster",
+                      familia="Duvet Insert", largura_cm=190, comprimento_cm=260, gsm=gsm)
+        item, _ = casar(sku, fonte)
+        assert item is None, f"poliéster {gsm} g não pode receber o preço de 280 g"
+
+
+def test_pluma_nao_casa_com_poliester():
+    from scripts.reconciliar_daune import casar
+    fonte = [{"aba": "12.08.26", "descricao": "Edredom 100% fibras de Poliester",
+              "gross": 469.30, "largura": 190, "comprimento": 260, "gramatura": 180,
+              "composicao": "POLIESTER"}]
+    sku = Produto(sku_key="PL", nome="Edredom 190x260 · 180 g · 100% plumas de ganso",
+                  familia="Duvet Insert", largura_cm=190, comprimento_cm=260, gsm=180)
+    item, _ = casar(sku, fonte)
+    assert item is None
+
+
+def test_legado_generico_fica_inativo_mas_preservado(session):
+    """SKU ambíguo sai da seleção comercial; não é apagado, e o histórico continua íntegro."""
+    from app.models import Fornecedor
+    daune = session.exec(select(Fornecedor).where(Fornecedor.codigo == "DAUNE")).first()
+    p = Produto(sku_key="LEGADO-AMB", nome="Edredom 156x230 · 100% plumas de ganso",
+                familia="Duvet Insert", fornecedor_id=daune.id, largura_cm=156,
+                comprimento_cm=230, ativo=True)
+    session.add(p)
+    session.commit()
+
+    from scripts.reconciliar_daune import extrair_gramatura
+    assert extrair_gramatura(p.nome) is None
+    p.ativo = False          # o que o normalizador faz
+    session.add(p)
+    session.commit()
+
+    assert session.get(Produto, p.id) is not None, "inativar não é apagar"
+    assert session.get(Produto, p.id).ativo is False

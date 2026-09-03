@@ -1,11 +1,11 @@
 {
  "baseline": "baseline_fase0.json",
  "resumo": {
-  "IGUAL": 6480,
-  "FCP_REVIEW": 2800,
+  "IGUAL": 6300,
+  "FCP_REVIEW": 2860,
   "PRECO_DE_VENDA_RETIRADO": 270,
   "SKU_NOVO_280G": 9,
-  "CUSTO_DAUNE": 460,
+  "CUSTO_DAUNE": 580,
   "NACIONAL_4_PARA_12": 80,
   "NACIONAL_4_PARA_7": 80
  },
@@ -3057,7 +3057,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30",
@@ -3065,7 +3065,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60",
@@ -3073,7 +3073,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90",
@@ -3081,7 +3081,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120",
@@ -3089,7 +3089,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120/150",
@@ -3097,7 +3097,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30",
@@ -3105,7 +3105,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60",
@@ -3113,7 +3113,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90",
@@ -3121,7 +3121,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120",
@@ -3129,7 +3129,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120/150",
@@ -3137,7 +3137,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30",
@@ -3145,7 +3145,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60",
@@ -3153,7 +3153,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90",
@@ -3161,7 +3161,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120",
@@ -3169,7 +3169,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120/150",
@@ -3177,7 +3177,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30",
@@ -3185,7 +3185,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60",
@@ -3193,7 +3193,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90",
@@ -3201,7 +3201,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120",
@@ -3209,7 +3209,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 160x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120/150",
@@ -3217,7 +3217,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30",
@@ -3225,7 +3225,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60",
@@ -3233,7 +3233,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90",
@@ -3241,7 +3241,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120",
@@ -3249,7 +3249,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120/150",
@@ -3257,7 +3257,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30",
@@ -3265,7 +3265,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60",
@@ -3273,7 +3273,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90",
@@ -3281,7 +3281,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120",
@@ -3289,7 +3289,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 200x200",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120/150",
@@ -3297,7 +3297,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30",
@@ -3305,7 +3305,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60",
@@ -3313,7 +3313,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90",
@@ -3321,7 +3321,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120",
@@ -3329,7 +3329,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120/150",
@@ -3337,7 +3337,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30",
@@ -3345,7 +3345,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60",
@@ -3353,7 +3353,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90",
@@ -3361,7 +3361,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120",
@@ -3369,7 +3369,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120/150",
@@ -3377,7 +3377,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30",
@@ -3385,7 +3385,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60",
@@ -3393,7 +3393,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90",
@@ -3401,7 +3401,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120",
@@ -3409,7 +3409,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Minas Gerais|NAO#30/60/90/120/150",
@@ -3417,7 +3417,7 @@
     "motivo": "A alíquota interna de MG (18.00%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30",
@@ -3425,7 +3425,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60",
@@ -3433,7 +3433,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90",
@@ -3441,7 +3441,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120",
@@ -3449,7 +3449,7 @@
     "motivo": "A alíquota interna de BA (20.50%) não tem semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar `icms_interno_base` antes de cotar este destino."
    },
    {
-    "sku": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
     "fornecedor_id": 2,
     "natureza": "NACIONAL",
     "cenario": "São Paulo|Bahia|NAO#30/60/90/120/150",
@@ -5620,6 +5620,966 @@
    }
   ],
   "CUSTO_DAUNE": [
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
+   {
+    "sku": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+    "fornecedor_id": 2,
+    "natureza": "NACIONAL",
+    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
+    "classe": "CUSTO_DAUNE",
+    "motivo": null
+   },
    {
     "sku": "DAUNE · Protetor Colchão · Manta 120 grs impermeavel · 140x200",
     "fornecedor_id": 2,
@@ -8979,1446 +9939,6 @@
     "variacao": -0.44478990583604383,
     "margem_antes": 0.1399999999999999,
     "margem_depois": 0.13999999999999987
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1020.9626463482626,
-    "preco_depois": 539.1625980301061,
-    "variacao": -0.4719076158578761,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1052.2505267190195,
-    "preco_depois": 555.6854893698526,
-    "variacao": -0.4719076158578762,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.13999999999999996
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1085.5166963050783,
-    "preco_depois": 573.2531001778307,
-    "variacao": -0.4719076158578761,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1120.9549071618042,
-    "preco_depois": 591.9677494388902,
-    "variacao": -0.4719076158578762,
-    "margem_antes": 0.14000000000000024,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1158.7850664416792,
-    "preco_depois": 611.9455684454758,
-    "variacao": -0.4719076158578761,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1020.9626463482626,
-    "preco_depois": 539.1625980301061,
-    "variacao": -0.4719076158578761,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1052.2505267190195,
-    "preco_depois": 555.6854893698526,
-    "variacao": -0.4719076158578762,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.13999999999999996
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1085.5166963050783,
-    "preco_depois": 573.2531001778307,
-    "variacao": -0.4719076158578761,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1120.9549071618042,
-    "preco_depois": 591.9677494388902,
-    "variacao": -0.4719076158578762,
-    "margem_antes": 0.14000000000000024,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 1158.7850664416792,
-    "preco_depois": 611.9455684454758,
-    "variacao": -0.4719076158578761,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 810.1754903406578,
-    "preco_depois": 485.07506102658425,
-    "variacao": -0.4012716173101919,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 829.7538136233198,
-    "preco_depois": 498.40816698161836,
-    "variacao": -0.39933006778818037,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 850.3018108651911,
-    "preco_depois": 512.494954954955,
-    "variacao": -0.39727876807237894,
-    "margem_antes": 0.1399999999999999,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 871.8933502618631,
-    "preco_depois": 527.4011888747501,
-    "variacao": -0.39510814170523123,
-    "margem_antes": 0.13999999999999985,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 894.6099983716007,
-    "preco_depois": 543.2005130125445,
-    "variacao": -0.3928074647038414,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 810.1754903406578,
-    "preco_depois": 447.6522049066503,
-    "variacao": -0.4474626667385061,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 829.7538136233198,
-    "preco_depois": 458.98337921215006,
-    "variacao": -0.44684390517244077,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 850.3018108651911,
-    "preco_depois": 470.90309040740146,
-    "variacao": -0.44619300536564477,
-    "margem_antes": 0.1399999999999999,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 871.8933502618631,
-    "preco_depois": 483.45841359773374,
-    "variacao": -0.44550739668729833,
-    "margem_antes": 0.13999999999999985,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 894.6099983716007,
-    "preco_depois": 496.70158192090395,
-    "variacao": -0.44478422684184515,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.1399999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 129.6413306076938,
-    "preco_depois": 68.46202936257203,
-    "variacao": -0.47191201261467897,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 133.61425014365068,
-    "preco_depois": 70.56008044435933,
-    "variacao": -0.47191201261467897,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 137.83837186326818,
-    "preco_depois": 72.79078838174277,
-    "variacao": -0.47191201261467886,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000024
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 142.33829830646812,
-    "preco_depois": 75.16714548051421,
-    "variacao": -0.47191201261467886,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 147.1419531744358,
-    "preco_depois": 77.70389791183297,
-    "variacao": -0.47191201261467886,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 129.6413306076938,
-    "preco_depois": 68.46202936257203,
-    "variacao": -0.47191201261467897,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 133.61425014365068,
-    "preco_depois": 70.56008044435933,
-    "variacao": -0.47191201261467897,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 137.83837186326818,
-    "preco_depois": 72.79078838174277,
-    "variacao": -0.47191201261467886,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000024
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 142.33829830646812,
-    "preco_depois": 75.16714548051421,
-    "variacao": -0.47191201261467886,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 147.1419531744358,
-    "preco_depois": 77.70389791183297,
-    "variacao": -0.47191201261467886,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 102.8756820527946,
-    "preco_depois": 61.594077913392425,
-    "variacao": -0.4012766021635408,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 105.3617278356744,
-    "preco_depois": 63.28709500085897,
-    "variacao": -0.3993350688063545,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 107.97090233709955,
-    "preco_depois": 65.07581346051934,
-    "variacao": -0.3972837861691293,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.13999999999999996
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 110.71258530392002,
-    "preco_depois": 66.96858389383749,
-    "variacao": -0.39511317787403955,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 113.59713401726103,
-    "preco_depois": 68.97475753604196,
-    "variacao": -0.3928125200274746,
-    "margem_antes": 0.1399999999999998,
-    "margem_depois": 0.1400000000000002
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 102.8756820527946,
-    "preco_depois": 56.84218176207376,
-    "variacao": -0.447467267017457,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 105.3617278356744,
-    "preco_depois": 58.280996677740866,
-    "variacao": -0.4468485106030359,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 107.97090233709955,
-    "preco_depois": 59.79454309365364,
-    "variacao": -0.4461976162154586,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 110.71258530392002,
-    "preco_depois": 61.38879853357774,
-    "variacao": -0.44551201324530776,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.13999999999999996
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 113.59713401726103,
-    "preco_depois": 63.07039548022599,
-    "variacao": -0.44478884942077435,
-    "margem_antes": 0.1399999999999998,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 175.04181378925855,
-    "preco_depois": 92.43041813789262,
-    "variacao": -0.47195235162968463,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 180.40605248036775,
-    "preco_depois": 95.26299176402989,
-    "variacao": -0.47195235162968463,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 186.10946453270108,
-    "preco_depois": 98.27466508595143,
-    "variacao": -0.47195235162968463,
-    "margem_antes": 0.14000000000000012,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 192.1852683125893,
-    "preco_depois": 101.48297898388088,
-    "variacao": -0.4719523516296845,
-    "margem_antes": 0.14,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 198.67116642058642,
-    "preco_depois": 104.90784222737821,
-    "variacao": -0.47195235162968474,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999993
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 175.04181378925855,
-    "preco_depois": 92.43041813789262,
-    "variacao": -0.47195235162968463,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 180.40605248036775,
-    "preco_depois": 95.26299176402989,
-    "variacao": -0.47195235162968463,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 186.10946453270108,
-    "preco_depois": 98.27466508595143,
-    "variacao": -0.47195235162968463,
-    "margem_antes": 0.14000000000000012,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 192.1852683125893,
-    "preco_depois": 101.48297898388088,
-    "variacao": -0.4719523516296845,
-    "margem_antes": 0.14,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 198.67116642058642,
-    "preco_depois": 104.90784222737821,
-    "variacao": -0.47195235162968474,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999993
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 138.90281669370302,
-    "preco_depois": 83.15801371008193,
-    "variacao": -0.4013223368000154,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.13999999999999993
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 142.25947742032926,
-    "preco_depois": 85.44375193265763,
-    "variacao": -0.39938095175058264,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 145.78238662745704,
-    "preco_depois": 87.85869634340224,
-    "variacao": -0.3973298258045207,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 149.48420885573717,
-    "preco_depois": 90.41412106889658,
-    "variacao": -0.3951593833155139,
-    "margem_antes": 0.14,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 153.37892851327143,
-    "preco_depois": 93.12265118891597,
-    "variacao": -0.3928589012091166,
-    "margem_antes": 0.13999999999999985,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 138.90281669370302,
-    "preco_depois": 76.74249035642649,
-    "variacao": -0.4475094732912964,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 142.25947742032926,
-    "preco_depois": 78.68503084954914,
-    "variacao": -0.4468907641417722,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 145.78238662745704,
-    "preco_depois": 80.72846615809122,
-    "variacao": -0.44623991947401276,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.13999999999999987
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 149.48420885573717,
-    "preco_depois": 82.8808665222463,
-    "variacao": -0.44555436887496125,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999996
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 153.37892851327143,
-    "preco_depois": 85.15118644067798,
-    "variacao": -0.4448312602906853,
-    "margem_antes": 0.13999999999999985,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 430.96078795762884,
-    "preco_depois": 227.58838505853936,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 444.16778394943503,
-    "preco_depois": 234.56293813445706,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 458.2098399525787,
-    "preco_depois": 241.97848251333735,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 473.1687410732505,
-    "preco_depois": 249.87820852887177,
-    "variacao": -0.4719046571798188,
-    "margem_antes": 0.14000000000000012,
-    "margem_depois": 0.14000000000000018
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 489.13731280320616,
-    "preco_depois": 258.31113689095133,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 430.96078795762884,
-    "preco_depois": 227.58838505853936,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 444.16778394943503,
-    "preco_depois": 234.56293813445706,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 458.2098399525787,
-    "preco_depois": 241.97848251333735,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 473.1687410732505,
-    "preco_depois": 249.87820852887177,
-    "variacao": -0.4719046571798188,
-    "margem_antes": 0.14000000000000012,
-    "margem_depois": 0.14000000000000018
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 489.13731280320616,
-    "preco_depois": 258.31113689095133,
-    "variacao": -0.4719046571798189,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 341.98495797080085,
-    "preco_depois": 204.75724795184755,
-    "variacao": -0.4012682628885391,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 350.24920706841874,
-    "preco_depois": 210.38534616045357,
-    "variacao": -0.3993267024888475,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 358.92276737347163,
-    "preco_depois": 216.3315845257022,
-    "variacao": -0.39727539128048217,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 368.036819552452,
-    "preco_depois": 222.62372295946196,
-    "variacao": -0.3951047527522339,
-    "margem_antes": 0.14,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 377.6257938446507,
-    "preco_depois": 229.2928477813144,
-    "variacao": -0.3928040628611247,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 341.98495797080085,
-    "preco_depois": 188.96051535256908,
-    "variacao": -0.44745957110574797,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 350.24920706841874,
-    "preco_depois": 193.7435690555292,
-    "variacao": -0.44684080607302346,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 358.92276737347163,
-    "preco_depois": 198.7750527511768,
-    "variacao": -0.4461899026195114,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 368.036819552452,
-    "preco_depois": 204.0748375270788,
-    "variacao": -0.4455042900999898,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999996
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 377.6257938446507,
-    "preco_depois": 209.66497175141242,
-    "variacao": -0.44478111620292204,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 581.8249396023045,
-    "preco_depois": 307.25545065972875,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 599.6552384600651,
-    "preco_depois": 316.67143842175835,
-    "variacao": -0.4719108279034111,
-    "margem_antes": 0.14,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 618.6129223473623,
-    "preco_depois": 326.68278601066993,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000015,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 638.808406447664,
-    "preco_depois": 337.34780248928803,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000012,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 660.3670111790763,
-    "preco_depois": 348.73266821345715,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 581.8249396023045,
-    "preco_depois": 307.25545065972875,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 599.6552384600651,
-    "preco_depois": 316.67143842175835,
-    "variacao": -0.4719108279034111,
-    "margem_antes": 0.14,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 618.6129223473623,
-    "preco_depois": 326.68278601066993,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000015,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 638.808406447664,
-    "preco_depois": 337.34780248928803,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000012,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 660.3670111790763,
-    "preco_depois": 348.73266821345715,
-    "variacao": -0.4719108279034112,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 461.70181389175644,
-    "preco_depois": 276.43229894666445,
-    "variacao": -0.40127525898897043,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 472.85908473040337,
-    "preco_depois": 284.0305067857757,
-    "variacao": -0.39933372127615296,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 484.56895217458595,
-    "preco_depois": 292.0582193958665,
-    "variacao": -0.3972824340370852,
-    "margem_antes": 0.14,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 496.87351214093,
-    "preco_depois": 300.5529140156335,
-    "variacao": -0.39511182087245855,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 509.819247679531,
-    "preco_depois": 309.5565586968733,
-    "variacao": -0.3928111578646035,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 461.70181389175644,
-    "preco_depois": 255.1059373553464,
-    "variacao": -0.4474660274669082,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 472.85908473040337,
-    "preco_depois": 261.56329378262933,
-    "variacao": -0.4468472696643706,
-    "margem_antes": 0.14000000000000018,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 484.56895217458595,
-    "preco_depois": 268.35604285018667,
-    "variacao": -0.4461963738165785,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999993
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 496.87351214093,
-    "preco_depois": 275.51101149808363,
-    "variacao": -0.44551076930834776,
-    "margem_antes": 0.14000000000000004,
-    "margem_depois": 0.13999999999999996
-   },
-   {
-    "sku": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 509.819247679531,
-    "preco_depois": 283.05796610169494,
-    "variacao": -0.4447876038614703,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 533.1165210927338,
-    "preco_depois": 281.5358111875117,
-    "variacao": -0.4719056715585457,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 549.4541275617698,
-    "preco_depois": 290.16360850411803,
-    "variacao": -0.4719056715585457,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 566.824738194033,
-    "preco_depois": 299.33692946058096,
-    "variacao": -0.4719056715585458,
-    "margem_antes": 0.1400000000000002,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 585.3295245868192,
-    "preco_depois": 309.109202203632,
-    "variacao": -0.4719056715585457,
-    "margem_antes": 0.14,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 605.0833157561698,
-    "preco_depois": 319.5410672853829,
-    "variacao": -0.4719056715585458,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 533.1165210927338,
-    "preco_depois": 281.5358111875117,
-    "variacao": -0.4719056715585457,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 549.4541275617698,
-    "preco_depois": 290.16360850411803,
-    "variacao": -0.4719056715585457,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 566.824738194033,
-    "preco_depois": 299.33692946058096,
-    "variacao": -0.4719056715585458,
-    "margem_antes": 0.1400000000000002,
-    "margem_depois": 0.14000000000000015
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 585.3295245868192,
-    "preco_depois": 309.109202203632,
-    "variacao": -0.4719056715585457,
-    "margem_antes": 0.14,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|São Paulo|NAO#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 605.0833157561698,
-    "preco_depois": 319.5410672853829,
-    "variacao": -0.4719056715585458,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 423.0496976847073,
-    "preco_depois": 253.29279384718276,
-    "variacao": -0.4012694129474166,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 433.2729194985653,
-    "preco_depois": 260.25497337227284,
-    "variacao": -0.39932785627712275,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.14000000000000004
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 444.0024763968426,
-    "preco_depois": 267.61070482246953,
-    "variacao": -0.39727654900896725,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.14
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 455.27694016822727,
-    "preco_depois": 275.39432830394475,
-    "variacao": -0.39510591465013567,
-    "margem_antes": 0.14,
-    "margem_depois": 0.1400000000000001
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Minas Gerais|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 467.1389024588829,
-    "preco_depois": 283.64429882044567,
-    "variacao": -0.3928052291782491,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.14000000000000012
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 423.0496976847073,
-    "preco_depois": 233.75161240549298,
-    "variacao": -0.44746063243920675,
-    "margem_antes": 0.13999999999999996,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 433.2729194985653,
-    "preco_depois": 239.66843853820595,
-    "variacao": -0.44684186859502173,
-    "margem_antes": 0.1400000000000001,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 444.0024763968426,
-    "preco_depois": 245.89258237299143,
-    "variacao": -0.44619096639178113,
-    "margem_antes": 0.13999999999999999,
-    "margem_depois": 0.14000000000000007
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 455.27694016822727,
-    "preco_depois": 252.44862522912848,
-    "variacao": -0.4455053551892012,
-    "margem_antes": 0.14,
-    "margem_depois": 0.13999999999999999
-   },
-   {
-    "sku": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
-    "fornecedor_id": 2,
-    "natureza": "NACIONAL",
-    "cenario": "São Paulo|Bahia|SIM#30/60/90/120/150",
-    "classe": "CUSTO_DAUNE",
-    "preco_antes": 467.1389024588829,
-    "preco_depois": 259.3638418079096,
-    "variacao": -0.44478218268122394,
-    "margem_antes": 0.14000000000000007,
-    "margem_depois": 0.13999999999999996
    }
   ],
   "NACIONAL_4_PARA_12": [

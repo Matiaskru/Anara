@@ -60,9 +60,20 @@ def extrair_dimensao(texto: str):
 
 
 def extrair_gramatura(texto: str):
-    """Gramatura em g. Só aceita o padrão explícito — não adivinha por faixa de preço."""
-    m = re.search(r"(\d{2,4})\s*(?:g|gr|gramas?)\b", _sem_acento(texto))
+    """Gramatura em g. Só aceita o padrão explícito — não adivinha por faixa de preço.
+
+    Aceita as grafias que as duas fontes realmente usam: "180 g", "250GRS", "180 GRS". Um
+    campo `gsm` nulo não é ausência de informação quando a descrição do produto traz o dado
+    de forma inequívoca — era isso que estava deixando 20 SKUs estruturados sem casar.
+    """
+    m = re.search(r"(\d{2,4})\s*(?:grs|gramas?|gr|g)\b", _sem_acento(texto))
     return int(m.group(1)) if m else None
+
+
+# Regra aprovada em 03/09/2026: os nove edredons de poliéster da aba 12.08 são de 280 g. A
+# planilha não declara a gramatura nessas linhas; a atribuição vem do responsável do projeto e
+# fica registrada aqui, não espalhada pelo código.
+GRAMATURA_POLIESTER_12_08 = 280
 
 
 def extrair_composicao(texto: str):
@@ -111,11 +122,17 @@ def ler_planilha(caminho: str = PLANILHA) -> list:
                 continue
             texto = " ".join(str(x) for x in (item, espec, dimensao) if isinstance(x, str))
             larg, comp = extrair_dimensao(str(dimensao or "") or texto)
+            gramatura = extrair_gramatura(texto)
+            composicao = extrair_composicao(texto)
+            atribuida = False
+            if (gramatura is None and rotulo == "12.08.26"
+                    and composicao == "POLIESTER" and "edredom" in _sem_acento(texto)):
+                gramatura, atribuida = GRAMATURA_POLIESTER_12_08, True
             itens.append({
                 "aba": rotulo, "descricao": texto.strip()[:120],
                 "gross": gross, "largura": larg, "comprimento": comp,
-                "gramatura": extrair_gramatura(texto),
-                "composicao": extrair_composicao(texto),
+                "gramatura": gramatura, "gramatura_atribuida": atribuida,
+                "composicao": composicao,
             })
     return itens
 
@@ -149,6 +166,9 @@ def assinatura_tecnica(texto: str) -> frozenset:
     """
     t = _sem_acento(texto)
     t = re.sub(r"\d{2,3}\s*[x×]\s*\d{2,3}", " ", t)        # tira a dimensão
+    # e tira a gramatura: ela é comparada à parte, como campo estruturado. Deixá-la aqui faria
+    # "180 g" (catálogo) e "180GRS" (fornecedor) parecerem produtos diferentes.
+    t = re.sub(r"\d{2,4}\s*(?:grs|gramas?|gr|g)\b", " ", t)
     t = re.sub(r"[^a-z0-9%]+", " ", t)
     fichas = {f for f in t.split() if f and f not in RUIDO and not f.isdigit()}
     percentuais = set(re.findall(r"\d{1,3}%", t))
@@ -263,7 +283,9 @@ def reconciliar(aplicar: bool = False) -> dict:
                 # esta planilha: ele tem procedência própria. Só quem nunca teve referência
                 # versionada é que vira A_COTAR ou REVALIDAR.
                 vigente = referencia_vigente(s, p.id)
-                if p.custo_unitario and legado_e_preco_de_venda is not False:
+                legado_da_trousseau = "trousseau" in (p.custo_ref_documento or "").lower()
+                if (p.custo_unitario and vigente is None and legado_da_trousseau
+                        and legado_e_preco_de_venda is not False):
                     # sem match e com um valor que é preço de venda: não há base de custo
                     registro.update(
                         nova_fonte=None, gross=None, cnet_novo=None, diferenca=None,
