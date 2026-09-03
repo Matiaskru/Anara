@@ -253,7 +253,12 @@ class EstadoFiscal(SQLModel, table=True):
     estado: str = Field(index=True)
     uf: str = Field(index=True)
     aliquota_interestadual: float = 0.04
+    # `aliquota_interna` é a carga interna do destino **como cadastrada** — e a auditoria de
+    # 03/09/2026 mostrou que ela nem sempre significa a mesma coisa: para o RJ ela vale 22%,
+    # que é a base de 20% MAIS o FECP de 2%. Por isso a base passou a ter coluna própria.
     aliquota_interna: float = 0.18
+    icms_interno_base: Optional[float] = None    # interna SEM FCP. NULO = não determinado
+    interna_inclui_fcp: Optional[bool] = None    # NULO = não se sabe o que a coluna significa
     base_simples: Optional[float] = None
     base_dupla: Optional[float] = None
     fem: Optional[float] = None
@@ -328,7 +333,11 @@ class RegraFcp(SQLModel, table=True):
     produto_id: Optional[int] = Field(default=None, foreign_key="produto.id")
     familia: Optional[str] = None
     fcp_pct: float = 0.0
-    exige_confirmacao: bool = False      # True = sem alíquota confirmada → REVIEW_REQUIRED
+    # Três situações, e "sem linha" não é nenhuma delas: ausência de regra é DESCONHECIDO.
+    #   APLICA        — incide, com a alíquota de `fcp_pct`
+    #   NAO_APLICA    — comprovadamente não incide (fonte obrigatória)
+    #   DESCONHECIDO  — pode incidir e ninguém levantou → bloqueia quando muda preço
+    situacao: str = "DESCONHECIDO"
     prioridade: int = 100                # menor ganha
     regra: str = ""
     valid_from: date = Field(default_factory=date.today)

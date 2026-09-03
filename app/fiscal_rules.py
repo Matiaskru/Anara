@@ -174,18 +174,22 @@ def resolver_aliquota_interestadual(linhas: Sequence, uf_origem: str, uf_destino
 def resolver_fcp(regras_fcp: Sequence, uf_destino: str, ncm: Optional[str] = None,
                  produto_id: Optional[int] = None, familia: Optional[str] = None,
                  ref_data=None):
-    """FCP/FEM da operação. Devolve `(pct, motivo_ou_None, texto)`.
+    """FCP/FECP da operação. Devolve `(pct_ou_None, motivo_ou_None, texto)`.
 
-    **Configurado, nunca inferido pela UF.** Sem linha que cubra a operação, o FCP é zero e o
-    texto diz que nenhuma regra foi encontrada — ausência de regra de FCP não impede formar
-    preço. Só bloqueia quando a linha encontrada está marcada `exige_confirmacao`, que é o caso
-    de uma UF onde a operação notoriamente tem FCP mas a alíquota ainda não foi levantada.
+    **Ausência de regra NÃO é zero.** Zero é uma afirmação — "esta operação não sofre FCP" — e
+    afirmar isso sem fonte subestima o preço em 2 pontos numa UF que cobra. Por isso a regra tem
+    três situações, e a falta de linha cai em DESCONHECIDO:
+
+    * `APLICA`       → incide, com a alíquota da linha;
+    * `NAO_APLICA`   → comprovadamente não incide; devolve 0,0 com a fonte;
+    * `DESCONHECIDO` → devolve `None`, e quem chama decide se bloqueia.
+
+    Só o chamador sabe se o FCP é material para aquele cenário: quando o DIFAL é do
+    destinatário, um FCP não resolvido não afeta a margem da Anara e não precisa bloquear.
     """
     candidatas = [r for r in regras_fcp
                   if _vigente(r, ref_data)
                   and (r.uf_destino or "").strip().upper() == (uf_destino or "").strip().upper()]
-    if not candidatas:
-        return 0.0, None, f"Nenhuma regra de FCP cadastrada para {uf_destino}"
 
     def cobre(r):
         if r.produto_id:
@@ -198,14 +202,38 @@ def resolver_fcp(regras_fcp: Sequence, uf_destino: str, ncm: Optional[str] = Non
 
     aplicaveis = [r for r in candidatas if cobre(r)]
     if not aplicaveis:
-        return 0.0, None, (f"Há regra de FCP para {uf_destino}, mas nenhuma alcança este item")
+        return None, (f"A aplicabilidade do FCP/FECP em {uf_destino} não está resolvida para "
+                      "este item. Ausência de regra não é 0% — cadastrar a linha de FCP "
+                      f"(APLICA ou NAO_APLICA) para {uf_destino} antes de cotar."), ""
 
     escolhida = sorted(aplicaveis, key=lambda r: (r.prioridade, r.id or 0))[0]
-    if escolhida.exige_confirmacao:
-        return None, (f"O FCP de {uf_destino} se aplica a este item mas a alíquota não está "
-                      f"confirmada ({escolhida.regra or 'sem detalhe'})."), ""
-    return float(escolhida.fcp_pct), None, (
-        f"FCP de {uf_destino}: {float(escolhida.fcp_pct):.2%} ({escolhida.regra or 'cadastrado'})")
+    situacao = (getattr(escolhida, "situacao", "") or "DESCONHECIDO").strip().upper()
+    if situacao == "NAO_APLICA":
+        return 0.0, None, (f"FCP de {uf_destino}: não se aplica a este item "
+                           f"({escolhida.fonte or escolhida.regra or 'fonte não registrada'})")
+    if situacao == "APLICA":
+        return float(escolhida.fcp_pct), None, (
+            f"FCP de {uf_destino}: {float(escolhida.fcp_pct):.2%} "
+            f"({escolhida.regra or 'cadastrado'})")
+    return None, (f"A regra de FCP de {uf_destino} que alcança este item está marcada "
+                  f"DESCONHECIDO ({escolhida.regra or 'sem detalhe'}). Não se assume 0%."), ""
+
+
+def icms_interno_base_de(destino):
+    """Base interna do destino, SEM FCP. Devolve `(pct_ou_None, motivo_ou_None)`.
+
+    A coluna `aliquota_interna` não tem significado único entre as UFs: para o RJ ela guarda
+    22%, que é a base de 20% **mais** o FECP de 2%. Somar FCP sobre ela produziria 24%. Por
+    isso a base tem coluna própria, e o que não foi determinado bloqueia.
+    """
+    base = getattr(destino, "icms_interno_base", None)
+    if base is not None:
+        return float(base), None
+    if getattr(destino, "interna_inclui_fcp", None) is False:
+        return float(destino.aliquota_interna), None
+    return None, (f"A alíquota interna de {destino.uf} ({destino.aliquota_interna:.2%}) não tem "
+                  "semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar "
+                  "`icms_interno_base` antes de cotar este destino.")
 
 
 # ---------------------------------------------------------------------------
@@ -293,17 +321,15 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
         return _bloqueio(motivo, **base)
 
     interestadual = float(linha.aliquota)
-    interna = float(destino.aliquota_interna)
 
-    # O DIFAL sobre a RECEITA FINAL é a diferença entre a alíquota interna do destino e a
-    # interestadual da operação. Não vem de `carga_final`: aquela coluna expressa o mesmo
-    # diferencial sobre uma base anterior à inclusão do ICMS de destino, e misturar as duas
-    # bases produz número sem significado.
-    difal = max(interna - interestadual, 0.0)
-
+    # A base interna do destino é o ICMS **sem** FCP. O DIFAL sobre a receita final é a
+    # diferença entre ela e a interestadual da operação; o FCP soma por fora. Usar a coluna
+    # `aliquota_interna` aqui contaria o FECP duas vezes onde ela já o embute (RJ: 22%).
+    base_interna, motivo_base = icms_interno_base_de(destino)
     fcp, motivo_fcp, texto_fcp = resolver_fcp(regras_fcp, uf_destino, ncm, produto_id,
                                               familia, ref_data)
-    comum = dict(aliquota_interestadual=interestadual, aliquota_interna_destino=interna)
+    difal = max(base_interna - interestadual, 0.0) if base_interna is not None else None
+    comum = dict(aliquota_interestadual=interestadual, aliquota_interna_destino=base_interna)
 
     if contribuinte and not consumidor_final:
         # Revenda ou industrialização: o destinatário credita e segue a cadeia. Sem DIFAL de
@@ -317,24 +343,30 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
             difal_pct=None, difal_responsavel=NAO_APLICAVEL, **comum, **base)
 
     if contribuinte:
-        # Contribuinte que consome: há DIFAL, e quem recolhe é o destinatário. Fica registrado
-        # na memória; o que reduz a receita da Anara é só a interestadual destacada. O FCP,
-        # pela mesma razão, também é do destinatário.
+        # Contribuinte que consome: há DIFAL, e quem recolhe é o destinatário. O preço da Anara
+        # não depende dele nem do FCP — então base interna ou FCP não resolvidos **não
+        # bloqueiam**: o DIFAL fica em branco, com o motivo, e o preço sai.
+        detalhe = (f"DIFAL de {difal:.2%} ({base_interna:.2%} − {interestadual:.2%})"
+                   if difal is not None else "DIFAL de valor não determinável")
         r = ResultadoFiscal(
             icms_pct=interestadual, fcp_pct=0.0,
             regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria {origem_fiscal.lower()}, "
-                   f"contribuinte consumidor final — {interestadual:.2%} destacado; DIFAL de "
-                   f"{difal:.2%} ({interna:.2%} − {interestadual:.2%}) recolhido pelo "
-                   "destinatário"),
-            fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}."
-                  "aliquota_interna",
+                   f"contribuinte consumidor final — {interestadual:.2%} destacado; {detalhe} "
+                   "recolhido pelo destinatário"),
+            fonte=f"AliquotaInterestadual#{linha.id}",
             difal_pct=difal, difal_responsavel=DESTINATARIO, difal_entra_na_margem=False,
             **comum, **base)
         r.avisos.append("DIFAL e FCP são do destinatário — não reduzem a margem da Anara.")
+        for m in (motivo_base, motivo_fcp):
+            if m:
+                r.avisos.append(m)
         return r
 
-    # Não contribuinte: consumidor final por natureza. O remetente recolhe o DIFAL, e ele entra
-    # no waterfall. Todos os percentuais sobre a mesma base — o preço final.
+    # Não contribuinte: consumidor final por natureza. O remetente recolhe o DIFAL e o FCP, e
+    # os dois entram no waterfall. Aqui ambos são materiais para o preço — então base interna
+    # não determinada ou FCP desconhecido **bloqueiam**. Zero por omissão subestimaria a carga.
+    if base_interna is None:
+        return _bloqueio(motivo_base, **comum, **base)
     if fcp is None:
         return _bloqueio(motivo_fcp, **comum, **base)
 
@@ -343,10 +375,10 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
         icms_pct=total, fcp_pct=fcp,
         regra=(f"Interestadual {uf_origem}→{uf_destino} para não contribuinte — "
                f"{interestadual:.2%} de ICMS de origem + {difal:.2%} de DIFAL "
-               f"({interna:.2%} − {interestadual:.2%}) recolhido pelo remetente"
+               f"({base_interna:.2%} − {interestadual:.2%}) recolhido pelo remetente"
                + (f" + {fcp:.2%} de FCP" if fcp else "")
                + f" = {total:.2%} sobre a receita"),
-        fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}.aliquota_interna",
+        fonte=f"AliquotaInterestadual#{linha.id} + EstadoFiscal#{destino.id}.icms_interno_base",
         difal_pct=difal, difal_responsavel=REMETENTE, difal_entra_na_margem=True,
         **comum, **base)
     if texto_fcp:

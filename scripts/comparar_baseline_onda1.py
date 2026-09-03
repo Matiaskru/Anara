@@ -13,7 +13,8 @@ Classes esperadas:
 * `DIFAL_CORRIGIDO`     — não contribuinte: carga total virou interestadual + DIFAL sobre a
                           receita final, em vez da coluna `carga_final` (base diferente)
 * `FISCAL_REVIEW`       — cenário que não se resolve e passou a bloquear (B-06/B-14)
-* `FCP_REVIEW`          — FCP aplicável com alíquota não confirmada
+* `FCP_REVIEW`          — FCP/FECP ou semântica da alíquota interna não resolvidos: ausência
+                          de regra não é 0%, então o cenário bloqueia em vez de subestimar
 * `PAGAMENTO_BLOQUEADO` — condição de pagamento sem premissa (B-15)
 * `IGUAL`               — nenhuma diferença
 
@@ -52,7 +53,7 @@ def classificar(antes, depois, natureza, cenario):
         motivo = (depois.get("motivo") or "").lower()
         if "condição de pagamento" in motivo:
             return "PAGAMENTO_BLOQUEADO"
-        if "fcp" in motivo:
+        if "fcp" in motivo or "fecp" in motivo or "semântica determinada" in motivo:
             return "FCP_REVIEW"
         return "FISCAL_REVIEW"
     if antes is None or depois is None:

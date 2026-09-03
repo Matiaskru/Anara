@@ -211,16 +211,38 @@ def test_estado_origem_logistico_nao_mexe_mais_no_fiscal(s):
 
 
 def test_contribuinte_muda_o_preco_quando_a_venda_e_interestadual(s):
+    """RJ é a UF com composição resolvida: base 20% + FECP 2%.
+
+    Contribuinte revenda suporta só os 4% de origem. Não contribuinte suporta 4% + 16% de
+    DIFAL + 2% de FECP = 22%. O preço tem de subir.
+    """
     from app.models import CotacaoItem
     from app.routers.cotacoes import atualizar_cabecalho
-    cotacao_id = criar_cotacao(s, estado_destino="Bahia")
+    cotacao_id = criar_cotacao(s, estado_destino="Rio de Janeiro")
     preco_contribuinte = add_item(s, cotacao_id, 1)["preco_negociado"]
     chamar(atualizar_cabecalho, cotacao_id=cotacao_id, session=s, condicao_pagamento="30",
-           estado_origem="São Paulo", estado_destino="Bahia", contribuinte_icms="nao",
-           freight_type="CIF")
+           estado_origem="São Paulo", estado_destino="Rio de Janeiro",
+           contribuinte_icms="nao", freight_type="CIF")
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     s.refresh(item)
-    assert item.preco_negociado > preco_contribuinte     # 4% → carga final de 22,75%
+    assert item.icms_pct == pytest.approx(0.22)
+    assert item.fcp_pct == pytest.approx(0.02)
+    assert item.preco_negociado > preco_contribuinte
+
+
+def test_destino_com_fcp_nao_resolvido_bloqueia_a_cotacao(s):
+    """BA tem `fem` na tabela legada mas composição não determinada: não forma preço.
+
+    É a regra de que ausência de regra de FCP não é 0% — chegando até o item da cotação.
+    """
+    from app.models import CotacaoItem
+    from app.routers.cotacoes import bloqueios_fiscais
+    cotacao_id = criar_cotacao(s, estado_destino="Bahia", contribuinte_icms="nao")
+    add_item(s, cotacao_id, 1)
+    item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
+    assert item.status_fiscal == "REVIEW_REQUIRED"
+    assert item.preco_negociado == 0.0, "não se forma preço com FCP indeterminado"
+    assert bloqueios_fiscais([item]), "e o PDF fica bloqueado"
 
 
 def test_dentro_de_sp_o_contribuinte_nao_muda_o_preco(s):
@@ -244,19 +266,18 @@ def test_snapshot_fiscal_fica_gravado_no_item(s):
     com o item quando todos concordam, e diz "cotação mista" quando não concordam.
     """
     from app.models import Cotacao, CotacaoItem
-    cotacao_id = criar_cotacao(s, estado_destino="Piauí", contribuinte_icms="nao")
+    cotacao_id = criar_cotacao(s, estado_destino="Rio de Janeiro", contribuinte_icms="nao")
     add_item(s, cotacao_id, 1)
 
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
-    # PI: interna 22,5%. Não contribuinte importado = 4% de origem + 18,5% de DIFAL = 22,5%.
-    # O 25,87% do baseline antigo era a carga_final legada — base dupla + FEM sobre outra base.
-    assert item.aliquota_interna_destino == pytest.approx(0.225)
+    # RJ: base 20% + FECP 2% = 22%. Importada = 4% de origem + 16% de DIFAL + 2% de FECP.
+    assert item.aliquota_interna_destino == pytest.approx(0.20), "a BASE, não os 22% da coluna"
     assert item.aliquota_interestadual == pytest.approx(0.04)
-    assert item.difal_pct == pytest.approx(0.185)
-    assert item.icms_pct == pytest.approx(0.225)
-    assert item.fcp_pct == 0.0
+    assert item.difal_pct == pytest.approx(0.16)
+    assert item.fcp_pct == pytest.approx(0.02)
+    assert item.icms_pct == pytest.approx(0.22)
     assert "DIFAL" in (item.icms_regra or "")
-    assert item.uf_origem_fiscal == "SP" and item.uf_destino_fiscal == "PI"
+    assert item.uf_origem_fiscal == "SP" and item.uf_destino_fiscal == "RJ"
     assert item.origem_fiscal in ("IMPORTADA", "NACIONAL")
     assert item.consumidor_final is True          # não contribuinte → consumidor final
     assert item.difal_responsavel == "REMETENTE"  # e o remetente recolhe

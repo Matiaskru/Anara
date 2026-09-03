@@ -23,14 +23,17 @@ from app.models import AliquotaInterestadual, EstadoFiscal, RegraFiscalVenda
 
 @pytest.fixture
 def tabelas(session):
+    from app.models import RegraFcp
     return (session.exec(select(RegraFiscalVenda)).all(),
             session.exec(select(EstadoFiscal)).all(),
-            session.exec(select(AliquotaInterestadual)).all())
+            session.exec(select(AliquotaInterestadual)).all(),
+            session.exec(select(RegraFcp)).all())
 
 
 def resolver(tabelas, destino, contribuinte, origem_fiscal="IMPORTADA",
              finalidade="REVENDA", origem="SP", **kw):
-    regras, estados, aliquotas = tabelas
+    regras, estados, aliquotas, fcp = tabelas
+    kw.setdefault("regras_fcp", fcp)
     return resolver_fiscal_item(regras, estados, aliquotas, uf_origem=origem,
                                 uf_destino=destino, origem_fiscal=origem_fiscal,
                                 contribuinte=contribuinte, finalidade=finalidade, **kw)
@@ -92,7 +95,7 @@ def test_os_4_por_cento_nao_sao_constante_universal(session, tabelas):
     Uma linha de prioridade menor, por NCM, sobrepõe o par de UF — é assim que uma mercadoria
     importada que não se enquadre nos 4% é tratada.
     """
-    regras, estados, aliquotas = tabelas
+    regras, estados, aliquotas, _fcp_cadastrado = tabelas
     excecao = AliquotaInterestadual(
         uf_origem="SP", uf_destino="MG", origem_fiscal="IMPORTADA", aliquota=0.12,
         ncm="9999.99.99", prioridade=10, regra="Exceção de teste — sem similar nacional")
@@ -136,6 +139,12 @@ def test_finalidade_invalida_bloqueia(tabelas):
     assert "não é válida" in r.motivo
 
 
+def _fcp(uf, situacao, pct=0.0, **kw):
+    from app.models import RegraFcp
+    return RegraFcp(uf_destino=uf, fcp_pct=pct, situacao=situacao, prioridade=10,
+                    regra=f"FCP {uf} de teste", **kw)
+
+
 # ---------------------------------------------------------------------------
 # DIFAL — todos os percentuais sobre a MESMA base: o preço final
 # ---------------------------------------------------------------------------
@@ -161,10 +170,10 @@ def test_D_contribuinte_revenda_so_paga_a_interestadual(tabelas):
 
 @pytest.mark.parametrize("finalidade", ["USO_CONSUMO", "ATIVO_IMOBILIZADO"])
 @pytest.mark.parametrize("natureza,inter", [("IMPORTADA", 0.04), ("NACIONAL", 0.12)])
-def test_E_contribuinte_consumidor_final_difal_e_do_destinatario(tabelas, finalidade,
+def test_E_contribuinte_consumidor_final_difal_e_do_destinatario(mg_resolvido, finalidade,
                                                                  natureza, inter):
     """Prova E: DIFAL registrado como responsabilidade do destinatário, fora da margem Anara."""
-    r = resolver(tabelas, "MG", True, origem_fiscal=natureza, finalidade=finalidade)
+    r = _mg(mg_resolvido, natureza, contribuinte=True, finalidade=finalidade)
     assert r.status == OK
     assert r.icms_pct == pytest.approx(inter), "só a interestadual reduz a receita da Anara"
     assert r.difal_pct == pytest.approx(0.18 - inter)
@@ -173,9 +182,32 @@ def test_E_contribuinte_consumidor_final_difal_e_do_destinatario(tabelas, finali
     assert r.fcp_pct == 0.0
 
 
-def test_A_ktc_importada_mg_nao_contribuinte(tabelas):
+@pytest.fixture
+def mg_resolvido(tabelas, session):
+    """MG com a composição declarada: base 18% e FCP comprovadamente não aplicável.
+
+    Em produção MG está DESCONHECIDO e bloqueia. Aqui a configuração é explícita, que é
+    exatamente a condição para o FCP valer zero.
+    """
+    mg = session.exec(select(EstadoFiscal).where(EstadoFiscal.uf == "MG")).first()
+    original = (mg.icms_interno_base, mg.interna_inclui_fcp)
+    mg.icms_interno_base, mg.interna_inclui_fcp = 0.18, False
+    regras, estados, aliquotas, _cadastrado = tabelas
+    yield (regras, estados, aliquotas,
+           [_fcp("MG", "NAO_APLICA", fonte="RICMS/MG — operação sem FECP")])
+    mg.icms_interno_base, mg.interna_inclui_fcp = original
+
+
+def _mg(mg_resolvido, natureza, contribuinte=False, finalidade="USO_CONSUMO"):
+    regras, estados, aliquotas, fcp = mg_resolvido
+    return resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
+                                origem_fiscal=natureza, contribuinte=contribuinte,
+                                finalidade=finalidade, regras_fcp=fcp)
+
+
+def test_A_ktc_importada_mg_nao_contribuinte(mg_resolvido):
     """Prova A: origem 4% + DIFAL 14% = 18% de carga total sobre a receita."""
-    r = resolver(tabelas, "MG", False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
+    r = _mg(mg_resolvido, "IMPORTADA")
     assert r.status == OK
     assert r.aliquota_interestadual == pytest.approx(0.04)
     assert r.difal_pct == pytest.approx(0.14)
@@ -183,43 +215,42 @@ def test_A_ktc_importada_mg_nao_contribuinte(tabelas):
     assert r.difal_responsavel == "REMETENTE" and r.difal_entra_na_margem is True
 
 
-def test_B_daune_nacional_mg_nao_contribuinte(tabelas):
+def test_B_daune_nacional_mg_nao_contribuinte(mg_resolvido):
     """Prova B: origem 12% + DIFAL 6% = 18%."""
-    r = resolver(tabelas, "MG", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    r = _mg(mg_resolvido, "NACIONAL")
     assert r.status == OK
     assert r.aliquota_interestadual == pytest.approx(0.12)
     assert r.difal_pct == pytest.approx(0.06)
     assert r.icms_pct == pytest.approx(0.18)
 
 
-def test_C_mesmo_destino_divisao_diferente_carga_igual(tabelas):
+def test_C_mesmo_destino_divisao_diferente_carga_igual(mg_resolvido):
     """Prova C: KTC e Daune repartem origem/destino de formas diferentes e somam o mesmo."""
-    ktc = resolver(tabelas, "MG", False, origem_fiscal="IMPORTADA", finalidade="USO_CONSUMO")
-    daune = resolver(tabelas, "MG", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    ktc = _mg(mg_resolvido, "IMPORTADA")
+    daune = _mg(mg_resolvido, "NACIONAL")
     assert ktc.aliquota_interestadual != daune.aliquota_interestadual
     assert ktc.difal_pct != daune.difal_pct
     assert ktc.icms_pct == pytest.approx(daune.icms_pct) == pytest.approx(0.18)
 
 
-def test_o_1707_nao_aparece_mais_em_lugar_nenhum(tabelas, session):
+def test_o_1707_nao_aparece_mais_em_lugar_nenhum(mg_resolvido, session):
     """A carga final legada saiu do motor. Nem como total, nem somada à interestadual."""
     mg = session.exec(select(EstadoFiscal).where(EstadoFiscal.uf == "MG")).first()
     assert mg.carga_final == pytest.approx(0.1707), "a coluna continua na tabela, para histórico"
     for natureza in ("IMPORTADA", "NACIONAL"):
-        r = resolver(tabelas, "MG", False, origem_fiscal=natureza, finalidade="USO_CONSUMO")
+        r = _mg(mg_resolvido, natureza)
         assert r.icms_pct != pytest.approx(mg.carga_final)
         assert r.icms_pct != pytest.approx(0.04 + mg.carga_final)
-        assert r.icms_pct == pytest.approx(mg.aliquota_interna)
+        assert r.icms_pct == pytest.approx(0.18)
 
 
-@pytest.mark.parametrize("uf,interna", [("BA", 0.205), ("RJ", 0.22), ("MG", 0.18)])
 @pytest.mark.parametrize("natureza", ["IMPORTADA", "NACIONAL"])
-def test_carga_total_e_a_interna_do_destino(tabelas, uf, interna, natureza):
-    """Sem FCP configurado, a carga total do não contribuinte é a alíquota interna do destino."""
-    r = resolver(tabelas, uf, False, origem_fiscal=natureza, finalidade="USO_CONSUMO")
+def test_carga_total_e_base_mais_fcp(mg_resolvido, natureza):
+    """A carga total do não contribuinte é base interna + FCP — nunca a coluna legada."""
+    r = _mg(mg_resolvido, natureza)
     assert r.status == OK
-    assert r.icms_pct == pytest.approx(interna)
-    assert r.aliquota_interestadual + r.difal_pct == pytest.approx(interna)
+    assert r.aliquota_interestadual + r.difal_pct + r.fcp_pct == pytest.approx(r.icms_pct)
+    assert r.icms_pct == pytest.approx(0.18)
 
 
 def test_F_sp_para_sp_nao_tem_difal(tabelas):
@@ -233,71 +264,132 @@ def test_F_sp_para_sp_nao_tem_difal(tabelas):
             assert r.difal_responsavel == "NAO_APLICAVEL"
 
 
-# --- FCP: configurado, nunca inferido pela UF ---------------------------------
-def test_G_fcp_nao_e_inferido_da_coluna_fem(tabelas, session):
-    """A BA tem `fem = 2%` na tabela legada. Sem regra cadastrada, o FCP é zero."""
-    ba = session.exec(select(EstadoFiscal).where(EstadoFiscal.uf == "BA")).first()
-    assert ba.fem == pytest.approx(0.02), "a coluna legada continua lá"
-    r = resolver(tabelas, "BA", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
-    assert r.fcp_pct == 0.0
-    assert r.icms_pct == pytest.approx(0.205), "sem FCP configurado, é só a interna"
+# --- FCP/FECP: configurado, e ausência de regra NÃO é zero -------------------
+def _estado(session, uf):
+    return session.exec(select(EstadoFiscal).where(EstadoFiscal.uf == uf)).first()
 
 
-def test_G_fcp_entra_separado_quando_configurado(tabelas):
-    """Prova G: o FCP soma por fora da diferença interna − interestadual."""
-    from app.models import RegraFcp
-    regras, estados, aliquotas = tabelas
-    fcp = RegraFcp(uf_destino="BA", fcp_pct=0.02, prioridade=10,
-                   regra="FCP-BA de teste, aplicável a este item")
-    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
-                             origem_fiscal="NACIONAL", contribuinte=False,
-                             finalidade="USO_CONSUMO", regras_fcp=[fcp])
-    assert r.aliquota_interestadual == pytest.approx(0.07)
-    assert r.difal_pct == pytest.approx(0.205 - 0.07)
+@pytest.mark.parametrize("natureza,inter,difal", [("IMPORTADA", 0.04, 0.16),
+                                                  ("NACIONAL", 0.12, 0.08)])
+def test_RJ_sem_dupla_contagem_do_fecp(tabelas, natureza, inter, difal):
+    """RJ: base 20% + FECP 2% = 22%. Nunca 24%.
+
+    A coluna `aliquota_interna` do RJ vale 22% — já com o FECP dentro. Somar o FCP sobre ela
+    daria 24%. A base tem coluna própria justamente para isso.
+    """
+    r = resolver(tabelas, "RJ", False, origem_fiscal=natureza, finalidade="USO_CONSUMO")
+    assert r.status == OK
+    assert r.aliquota_interna_destino == pytest.approx(0.20), "a BASE, não os 22%"
+    assert r.aliquota_interestadual == pytest.approx(inter)
+    assert r.difal_pct == pytest.approx(difal)
     assert r.fcp_pct == pytest.approx(0.02)
-    assert r.icms_pct == pytest.approx(0.205 + 0.02)
+    assert r.icms_pct == pytest.approx(0.22)
+    assert r.icms_pct != pytest.approx(0.24), "dupla contagem do FECP"
 
 
-def test_G_fcp_so_alcanca_o_item_que_a_regra_cobre(tabelas):
-    """Regra por NCM não pega item de outro NCM — FCP não se generaliza pela UF."""
-    from app.models import RegraFcp
-    regras, estados, aliquotas = tabelas
-    fcp = RegraFcp(uf_destino="BA", ncm="9999.99.99", fcp_pct=0.02, prioridade=10,
-                   regra="FCP-BA só para este NCM")
-    alcancado = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
+def test_RJ_a_coluna_legada_continua_22_e_o_motor_nao_a_usa(tabelas, session):
+    rj = _estado(session, "RJ")
+    assert rj.aliquota_interna == pytest.approx(0.22) and rj.fem == pytest.approx(0.02)
+    assert rj.icms_interno_base == pytest.approx(0.20)
+    r = resolver(tabelas, "RJ", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    assert r.aliquota_interna_destino == pytest.approx(rj.icms_interno_base)
+
+
+def test_ausencia_de_regra_de_fcp_bloqueia_em_vez_de_assumir_zero(tabelas, session):
+    """MG não tem linha de FCP cadastrada. Isso é DESCONHECIDO, não 0%.
+
+    A base interna é declarada aqui de propósito, para isolar o FCP como único motivo do
+    bloqueio — sem isso, a semântica indeterminada da coluna bloquearia antes.
+    """
+    regras, estados, aliquotas, _cadastrado = tabelas
+    mg = _estado(session, "MG")
+    original = (mg.icms_interno_base, mg.interna_inclui_fcp)
+    mg.icms_interno_base, mg.interna_inclui_fcp = 0.18, False
+    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
+                             origem_fiscal="NACIONAL", contribuinte=False,
+                             finalidade="USO_CONSUMO", regras_fcp=[])
+    mg.icms_interno_base, mg.interna_inclui_fcp = original
+    assert r.status == REVIEW_REQUIRED
+    assert r.icms_pct is None
+    assert "não é 0%" in r.motivo
+
+
+def test_MG_com_nao_aplica_comprovado_resolve_em_18(tabelas, session):
+    """Com fonte dizendo que não incide, o FCP é zero e a carga fecha em 18%."""
+    regras, estados, aliquotas, _fcp_cadastrado = tabelas
+    mg = _estado(session, "MG")
+    original = (mg.icms_interno_base, mg.interna_inclui_fcp)
+    mg.icms_interno_base, mg.interna_inclui_fcp = 0.18, False
+    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
+                             origem_fiscal="NACIONAL", contribuinte=False,
+                             finalidade="USO_CONSUMO",
+                             regras_fcp=[_fcp("MG", "NAO_APLICA", fonte="RICMS/MG — sem FECP")])
+    mg.icms_interno_base, mg.interna_inclui_fcp = original
+    assert r.status == OK
+    assert r.fcp_pct == 0.0 and r.icms_pct == pytest.approx(0.18)
+    assert r.aliquota_interestadual + r.difal_pct == pytest.approx(0.18)
+
+
+def test_BA_nao_assume_2_por_cento_generico(tabelas, session):
+    """A BA tem `fem = 2%` na tabela legada. Isso não vira FCP automático."""
+    ba = _estado(session, "BA")
+    assert ba.fem == pytest.approx(0.02)
+    assert ba.icms_interno_base is None, "a composição da BA não foi determinada"
+    r = resolver(tabelas, "BA", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    assert r.status == REVIEW_REQUIRED
+    assert r.icms_pct is None
+
+
+def test_fcp_desconhecido_explicito_bloqueia(tabelas, session):
+    regras, estados, aliquotas, _fcp_cadastrado = tabelas
+    mg = _estado(session, "MG")
+    original = (mg.icms_interno_base, mg.interna_inclui_fcp)
+    mg.icms_interno_base, mg.interna_inclui_fcp = 0.18, False
+    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
+                             origem_fiscal="NACIONAL", contribuinte=False,
+                             finalidade="USO_CONSUMO", regras_fcp=[_fcp("MG", "DESCONHECIDO")])
+    mg.icms_interno_base, mg.interna_inclui_fcp = original
+    assert r.status == REVIEW_REQUIRED and "DESCONHECIDO" in r.motivo
+
+
+def test_base_interna_sem_semantica_bloqueia(tabelas, session):
+    """Não saber se a coluna inclui FCP é motivo suficiente para não formar preço."""
+    regras, estados, aliquotas, _fcp_cadastrado = tabelas
+    mg = _estado(session, "MG")
+    assert mg.icms_interno_base is None and mg.interna_inclui_fcp is None
+    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
+                             origem_fiscal="NACIONAL", contribuinte=False,
+                             finalidade="USO_CONSUMO",
+                             regras_fcp=[_fcp("MG", "NAO_APLICA", fonte="x")])
+    assert r.status == REVIEW_REQUIRED and "semântica determinada" in r.motivo
+
+
+def test_fcp_por_ncm_nao_alcanca_outro_item(tabelas, session):
+    regras, estados, aliquotas, _fcp_cadastrado = tabelas
+    mg = _estado(session, "MG")
+    original = (mg.icms_interno_base, mg.interna_inclui_fcp)
+    mg.icms_interno_base, mg.interna_inclui_fcp = 0.18, False
+    linhas = [_fcp("MG", "APLICA", 0.02, ncm="9999.99.99")]
+    alcancado = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
                                      origem_fiscal="NACIONAL", contribuinte=False,
                                      finalidade="USO_CONSUMO", ncm="9999.99.99",
-                                     regras_fcp=[fcp])
-    outro = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
+                                     regras_fcp=linhas)
+    outro = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
                                  origem_fiscal="NACIONAL", contribuinte=False,
-                                 finalidade="USO_CONSUMO", ncm="6302.21.00", regras_fcp=[fcp])
+                                 finalidade="USO_CONSUMO", ncm="6302.21.00", regras_fcp=linhas)
+    mg.icms_interno_base, mg.interna_inclui_fcp = original
     assert alcancado.fcp_pct == pytest.approx(0.02)
-    assert outro.fcp_pct == 0.0
+    assert alcancado.icms_pct == pytest.approx(0.20)
+    assert outro.status == REVIEW_REQUIRED, "item fora da regra é DESCONHECIDO, não 0%"
 
 
-def test_G_fcp_sem_aliquota_confirmada_bloqueia(tabelas):
-    """Quando o FCP é materialmente necessário e a alíquota não foi levantada: bloqueia."""
-    from app.models import RegraFcp
-    regras, estados, aliquotas = tabelas
-    fcp = RegraFcp(uf_destino="BA", fcp_pct=0.0, exige_confirmacao=True, prioridade=10,
-                   regra="FCP-BA aplicável, alíquota a levantar")
-    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
-                             origem_fiscal="NACIONAL", contribuinte=False,
-                             finalidade="USO_CONSUMO", regras_fcp=[fcp])
-    assert r.status == REVIEW_REQUIRED and r.icms_pct is None
-    assert "não está confirmada" in r.motivo
-
-
-def test_fcp_do_destinatario_nao_pesa_na_anara(tabelas):
-    """Contribuinte consumidor final: DIFAL e FCP são do destinatário."""
-    from app.models import RegraFcp
-    regras, estados, aliquotas = tabelas
-    fcp = RegraFcp(uf_destino="BA", fcp_pct=0.02, prioridade=10, regra="FCP-BA")
-    r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="BA",
-                             origem_fiscal="NACIONAL", contribuinte=True,
-                             finalidade="USO_CONSUMO", regras_fcp=[fcp])
-    assert r.icms_pct == pytest.approx(0.07)
+def test_contribuinte_nao_bloqueia_por_fcp_desconhecido(tabelas):
+    """O FCP do destinatário não muda a margem da Anara — não pode travar a venda."""
+    r = resolver(tabelas, "MG", True, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
+    assert r.status == OK
+    assert r.icms_pct == pytest.approx(0.12)
     assert r.fcp_pct == 0.0
+    assert any("FCP" in a for a in r.avisos)
 
 
 # ---------------------------------------------------------------------------

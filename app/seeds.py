@@ -11,7 +11,7 @@ from sqlmodel import Session, select
 
 from app.db import engine
 from app.models import (
-    AliquotaInterestadual,
+    AliquotaInterestadual, RegraFcp,
     CmtPreco, CondicaoPagamento, EstadoFiscal, Fornecedor, MargemRegra, MaterialPreco,
     NcmRegra, ParametroKTC, Premissa, RegraFiscalVenda, ToalhaPreco, TipoFornecedor, CostMethod,
 )
@@ -562,6 +562,20 @@ def semear(verbose: bool = True) -> dict:
                 s.add(CondicaoPagamento(codigo=codigo, label=label, encargo_pct=encargo,
                                         encargo_confirmado=confirmado, ordem=ordem, notas=nota)); n += 1
         contagem["condicoes_pagamento"] = n
+
+        # FCP/FECP e semântica da alíquota interna (Onda 1).
+        # Só o RJ tem composição fixada pela regra canônica: base 20% + FECP 2% = 22%. As demais
+        # UFs ficam sem `icms_interno_base` e sem linha de FCP — o que significa DESCONHECIDO,
+        # e bloqueia o cenário em vez de assumir 0%. Generalizar o RJ seria inventar premissa.
+        rj = s.exec(select(EstadoFiscal).where(EstadoFiscal.uf == "RJ")).first()
+        if rj is not None and rj.icms_interno_base is None:
+            rj.icms_interno_base, rj.interna_inclui_fcp = 0.20, True
+            s.add(rj)
+        if not _existe(s, RegraFcp, uf_destino="RJ"):
+            s.add(RegraFcp(uf_destino="RJ", fcp_pct=0.02, situacao="APLICA",
+                           regra="FECP do Rio de Janeiro — regra geral",
+                           fonte="Regra canônica Anara 03/09/2026 — RJ: ICMS 20% + FECP 2%"))
+        contagem["fcp"] = 1
 
         s.commit()
 
