@@ -20,7 +20,10 @@ Nada de regra de produção inventada: família sem parâmetro cadastrado devolv
 `REVIEW_REQUIRED`, e o produto continua cotável pelo último preço KTC válido.
 """
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import List, Optional
+
+from app.dinheiro import D, ZERO, para_float
 
 # status do cálculo industrial
 CALCULATED = "CALCULATED"
@@ -34,37 +37,59 @@ class Etapa:
     ordem: int
     nome: str
     formula: str
-    valor: Optional[float]
+    valor: Optional[Decimal]
     unidade: str = ""
 
     def como_dict(self) -> dict:
         return {"ordem": self.ordem, "nome": self.nome, "formula": self.formula,
-                "valor": self.valor, "unidade": self.unidade}
+                "valor": para_float(self.valor), "unidade": self.unidade}
 
 
 @dataclass
 class ParametrosKTC:
     """Parâmetros do cálculo. Todos vêm de tabela versionada — nenhum default escondido."""
-    material_price_usd_m2: Optional[float] = None
-    cmt_usd: Optional[float] = None
-    shrinkage: Optional[float] = None
-    waste: Optional[float] = None
-    quality_allowance: Optional[float] = None
-    ktc_margin: Optional[float] = None
-    hem_width_total_cm: Optional[float] = None
-    hem_length_total_cm: Optional[float] = None
+    material_price_usd_m2: Optional[Decimal] = None
+    cmt_usd: Optional[Decimal] = None
+    shrinkage: Optional[Decimal] = None
+    waste: Optional[Decimal] = None
+    quality_allowance: Optional[Decimal] = None
+    ktc_margin: Optional[Decimal] = None
+    hem_width_total_cm: Optional[Decimal] = None
+    hem_length_total_cm: Optional[Decimal] = None
     paineis: int = 1
-    other_costs_usd: float = 0.0
+    other_costs_usd: Decimal = ZERO
     material_ref: Optional[str] = None
     cmt_ref: Optional[str] = None
     # preço por kg, só para toalhas
-    price_usd_kg: Optional[float] = None
+    price_usd_kg: Optional[Decimal] = None
     acabamentos_sem_custo: List[str] = field(default_factory=list)
+
+    def normalizar(self) -> "ParametrosKTC":
+        """Fronteira do motor industrial: parâmetro versionado chega float, vira Decimal.
+
+        A cadeia industrial encadeia seis divisões (encolhimento, waste, 2ª qualidade, margem
+        KTC) sobre valores da ordem de US$ 1. Em float, o erro de cada uma sobrevive até o
+        EXW e depois é multiplicado pelo câmbio.
+
+        É chamada na construção **e outra vez na entrada de cada cálculo**, de propósito: o
+        `pricing_service` preenche `material_price_usd_m2` e `price_usd_kg` depois de montar
+        o objeto, e a fronha troca CMT e bainha antes de delegar ao tecido plano. Normalizar
+        só no `__post_init__` deixaria justamente esses campos em float.
+        """
+        for campo in ("material_price_usd_m2", "cmt_usd", "shrinkage", "waste",
+                      "quality_allowance", "ktc_margin", "hem_width_total_cm",
+                      "hem_length_total_cm", "price_usd_kg"):
+            setattr(self, campo, D(getattr(self, campo)))
+        self.other_costs_usd = D(self.other_costs_usd, ZERO)
+        return self
+
+    def __post_init__(self):
+        self.normalizar()
 
 
 @dataclass
 class ResultadoKTC:
-    exw_usd: Optional[float]
+    exw_usd: Optional[Decimal]
     status: str
     etapas: List[Etapa] = field(default_factory=list)
     avisos: List[str] = field(default_factory=list)
@@ -72,10 +97,11 @@ class ResultadoKTC:
     detalhes: dict = field(default_factory=dict)
 
     def como_dict(self) -> dict:
-        return {"exw_usd": self.exw_usd, "status": self.status,
+        return {"exw_usd": para_float(self.exw_usd), "status": self.status,
                 "etapas": [e.como_dict() for e in self.etapas],
                 "avisos": list(self.avisos), "faltando": list(self.faltando),
-                "detalhes": dict(self.detalhes)}
+                "detalhes": {k: (para_float(v) if isinstance(v, Decimal) else v)
+                             for k, v in self.detalhes.items()}}
 
 
 def _falta(p: ParametrosKTC, campos: List[str]) -> List[str]:
@@ -84,7 +110,7 @@ def _falta(p: ParametrosKTC, campos: List[str]) -> List[str]:
 
 def shrinkage_por_composicao(cotton_pct: Optional[float]) -> str:
     """Escopo do parâmetro de encolhimento: 100% algodão encolhe mais que poly/cotton."""
-    if cotton_pct is not None and float(cotton_pct) >= 0.999:
+    if cotton_pct is not None and D(cotton_pct) >= Decimal("0.999"):
         return "COTTON"
     return "CVC"
 
@@ -92,9 +118,9 @@ def shrinkage_por_composicao(cotton_pct: Optional[float]) -> str:
 # ---------------------------------------------------------------------------
 # Tecido plano — lençóis, fronhas, capas duvet
 # ---------------------------------------------------------------------------
-def calcular_tecido_plano(largura_cm: float, comprimento_cm: float,
-                          p: ParametrosKTC) -> ResultadoKTC:
+def calcular_tecido_plano(largura_cm, comprimento_cm, p: ParametrosKTC) -> ResultadoKTC:
     """Waterfall de tecido plano. `paineis` = 1 para lençol, 2 para capa duvet (duas faces)."""
+    p.normalizar()
     obrigatorios = ["material_price_usd_m2", "cmt_usd", "shrinkage", "waste",
                     "quality_allowance", "ktc_margin", "hem_width_total_cm", "hem_length_total_cm"]
     faltando = _falta(p, obrigatorios)
@@ -105,6 +131,7 @@ def calcular_tecido_plano(largura_cm: float, comprimento_cm: float,
                             avisos=["Sem parâmetro suficiente para o cálculo industrial — "
                                     "usar o último preço KTC válido."])
 
+    largura_cm, comprimento_cm = D(largura_cm), D(comprimento_cm)
     etapas: List[Etapa] = []
     n = 0
 
@@ -140,7 +167,7 @@ def calcular_tecido_plano(largura_cm: float, comprimento_cm: float,
                          consumo * p.material_price_usd_m2, "USD")
     custo_producao = passo("Custo de produção",
                            f"{custo_tecido:.6f} + CMT {p.cmt_usd:g} + outros {p.other_costs_usd:g}",
-                           custo_tecido + p.cmt_usd + (p.other_costs_usd or 0.0), "USD")
+                           custo_tecido + p.cmt_usd + D(p.other_costs_usd, ZERO), "USD")
     custo_qualidade = passo("Após perda de 2ª qualidade",
                             f"{custo_producao:.6f} ÷ (1 − {p.quality_allowance:g})",
                             custo_producao / (1 - p.quality_allowance), "USD")
@@ -161,13 +188,13 @@ def calcular_tecido_plano(largura_cm: float, comprimento_cm: float,
                                   "cmt_ref": p.cmt_ref})
 
 
-def calcular_flat_sheet(largura_cm: float, comprimento_cm: float, p: ParametrosKTC) -> ResultadoKTC:
+def calcular_flat_sheet(largura_cm, comprimento_cm, p: ParametrosKTC) -> ResultadoKTC:
     """Lençol: painel único."""
     p.paineis = 1
     return calcular_tecido_plano(largura_cm, comprimento_cm, p)
 
 
-def calcular_duvet_cover(largura_cm: float, comprimento_cm: float, p: ParametrosKTC) -> ResultadoKTC:
+def calcular_duvet_cover(largura_cm, comprimento_cm, p: ParametrosKTC) -> ResultadoKTC:
     """Capa duvet open bag, sem acabamento especial: duas faces do mesmo tecido."""
     p.paineis = p.paineis or 2
     if p.paineis < 2:
@@ -175,7 +202,7 @@ def calcular_duvet_cover(largura_cm: float, comprimento_cm: float, p: Parametros
     return calcular_tecido_plano(largura_cm, comprimento_cm, p)
 
 
-def calcular_bottom_sheet(largura_cm: float, comprimento_cm: float, p: ParametrosKTC,
+def calcular_bottom_sheet(largura_cm, comprimento_cm, p: ParametrosKTC,
                           com_elastico: bool = False) -> ResultadoKTC:
     """Bottom sheet **sem elástico**: painel único, mesma geometria do lençol plano.
 
@@ -198,17 +225,17 @@ def calcular_bottom_sheet(largura_cm: float, comprimento_cm: float, p: Parametro
 # O corte da fronha não é "medida + bainha": é o envelope dobrado, com flap e abas. As
 # fórmulas abaixo são as do §18, e os cinco backtests de referência (50×70, flap 20, 250TC CVC
 # a US$ 1,25/m²) foram reproduzidos com desvio máximo de 0,002%.
-CMT_FRONHA_STANDARD = 0.50
-CMT_FRONHA_COM_ABAS = 0.75
-FESTONE_USD = 0.10
-ABA_PADRAO_CM = 5.0
+CMT_FRONHA_STANDARD = Decimal("0.50")
+CMT_FRONHA_COM_ABAS = Decimal("0.75")
+FESTONE_USD = Decimal("0.10")
+ABA_PADRAO_CM = Decimal("5.0")
 ABAS_VALIDAS = (0, 2, 3, 4)
 
 
-def corte_fronha(largura_cm: float, comprimento_cm: float, flap_cm: float,
-                 abas: int = 0, aba_cm: float = ABA_PADRAO_CM):
+def corte_fronha(largura_cm, comprimento_cm, flap_cm,
+                 abas: int = 0, aba_cm=ABA_PADRAO_CM):
     """(W_cut, L_cut) do §18. `abas` ∈ {0, 2, 3, 4} — 1 aba não é construção aprovada."""
-    w, l, f, a = largura_cm, comprimento_cm, flap_cm, aba_cm
+    w, l, f, a = D(largura_cm), D(comprimento_cm), D(flap_cm), D(aba_cm)
     l_cut = 2 * l + f + 5 + (4 * a if abas else 0)
     if abas == 0:
         return w + 4, l_cut
@@ -219,8 +246,8 @@ def corte_fronha(largura_cm: float, comprimento_cm: float, flap_cm: float,
     return w + 4 + 2 * a, l_cut
 
 
-def calcular_fronha(largura_cm: float, comprimento_cm: float, p: ParametrosKTC,
-                    flap_cm: float = 20.0, abas: int = 0, aba_cm: float = ABA_PADRAO_CM,
+def calcular_fronha(largura_cm, comprimento_cm, p: ParametrosKTC,
+                    flap_cm=Decimal("20.0"), abas: int = 0, aba_cm=ABA_PADRAO_CM,
                     festone: bool = False, bordado_especial: bool = False) -> ResultadoKTC:
     """Fronha pelo §18. Bordado ou logotipo extraordinário **não** é calculável.
 
@@ -246,16 +273,16 @@ def calcular_fronha(largura_cm: float, comprimento_cm: float, p: ParametrosKTC,
 
     # O corte já embute todas as sobras da construção — a bainha genérica da família não entra
     # de novo, senão o tecido seria contado duas vezes.
-    p.hem_width_total_cm = 0.0
-    p.hem_length_total_cm = 0.0
+    p.hem_width_total_cm = ZERO
+    p.hem_length_total_cm = ZERO
     p.paineis = 1
     p.cmt_usd = CMT_FRONHA_STANDARD if abas == 0 else CMT_FRONHA_COM_ABAS
-    p.other_costs_usd = (p.other_costs_usd or 0.0) + (FESTONE_USD if festone else 0.0)
+    p.other_costs_usd = D(p.other_costs_usd, ZERO) + (FESTONE_USD if festone else ZERO)
 
     resultado = calcular_tecido_plano(w_cut, l_cut, p)
     if resultado.detalhes is not None:
         resultado.detalhes.update({"corte_cm": f"{w_cut:g}x{l_cut:g}", "abas": abas,
-                                   "flap_cm": flap_cm, "festone": festone,
+                                   "flap_cm": D(flap_cm), "festone": festone,
                                    "cmt_construcao_usd": p.cmt_usd})
     return resultado
 
@@ -263,19 +290,19 @@ def calcular_fronha(largura_cm: float, comprimento_cm: float, p: ParametrosKTC,
 # ---------------------------------------------------------------------------
 # Toalhas — custo por peso
 # ---------------------------------------------------------------------------
-def peso_toalha_kg(largura_cm: float, comprimento_cm: float, gsm: float) -> float:
+def peso_toalha_kg(largura_cm, comprimento_cm, gsm) -> Decimal:
     """Peso teórico da toalha: W × L × GSM ÷ 10.000.000 (fórmula da própria KTC)."""
-    return largura_cm * comprimento_cm * gsm / 10_000_000
+    return D(largura_cm) * D(comprimento_cm) * D(gsm) / 10_000_000
 
 
-def calcular_toalha(largura_cm: float, comprimento_cm: float, gsm: float,
-                    p: ParametrosKTC) -> ResultadoKTC:
+def calcular_toalha(largura_cm, comprimento_cm, gsm, p: ParametrosKTC) -> ResultadoKTC:
     """Custo de toalha por peso.
 
     A planilha da KTC calcula `peso × preço/kg` e para por aí — não há CMT, perda de segunda
     qualidade nem margem declarados para terry. Aqui esses três entram só se estiverem
     cadastrados para a construção; sem cadastro, ficam fora (e não são inventados).
     """
+    p.normalizar()
     if not (largura_cm and comprimento_cm and gsm):
         return ResultadoKTC(None, REVIEW_REQUIRED, faltando=["dimensoes_ou_gsm"],
                             avisos=["Toalha sem largura/comprimento/GSM estruturados."])
@@ -285,6 +312,7 @@ def calcular_toalha(largura_cm: float, comprimento_cm: float, gsm: float,
                                     "Usar o último preço KTC válido ou marcar para revisão — "
                                     "os preços por kg variam por construção."])
 
+    largura_cm, comprimento_cm, gsm = D(largura_cm), D(comprimento_cm), D(gsm)
     etapas: List[Etapa] = []
     n = 0
 

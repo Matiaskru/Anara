@@ -1,13 +1,22 @@
 from fastapi.templating import Jinja2Templates
 
+from app.dinheiro import D, dinheiro
+
 templates = Jinja2Templates(directory="app/templates")
 
 
 def fmt_brl(v):
+    """Quantia na tela. Passa pela MESMA régua do motor — não pela do `format`.
+
+    `f"{v:,.2f}"` arredonda o binário: 2,675 vira "2,67", porque o float 2,675 é
+    2,67499999999999982236431605997495353221893310546875. A política do sistema é
+    `ROUND_HALF_UP` sobre o decimal, e ela vale também aqui — senão a tela contradiz o preço
+    que o motor formou. Aceita `Decimal` e `float`.
+    """
     if v in (None, ""):
         return "—"
     try:
-        v = float(v)
+        v = dinheiro(v)
     except (TypeError, ValueError):
         return str(v)
     s = f"{v:,.2f}"
@@ -19,10 +28,10 @@ def fmt_pct(v, casas=1):
     if v in (None, ""):
         return "—"
     try:
-        v = float(v)
+        v = D(v)
     except (TypeError, ValueError):
         return str(v)
-    return f"{v*100:.{casas}f}%"
+    return f"{v * 100:.{casas}f}%"
 
 
 def fmt_data(v):
@@ -38,12 +47,12 @@ def fmt_num(v):
     if v in (None, ""):
         return "—"
     try:
-        v = float(v)
+        v = D(v)
     except (TypeError, ValueError):
         return str(v)
     if v == int(v):
         return f"{int(v):,}".replace(",", ".")
-    s = f"{v:,.2f}".replace(",", "§").replace(".", ",").replace("§", ".")
+    s = f"{dinheiro(v):,.2f}".replace(",", "§").replace(".", ",").replace("§", ".")
     return s
 
 

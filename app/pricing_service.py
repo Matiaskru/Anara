@@ -31,6 +31,7 @@ from app.models import (
     Finalidade, Fornecedor, MargemRegra, NcmRegra, OrigemFiscal, Produto, RegraFcp,
     RegraFiscalVenda, TipoFornecedor,
 )
+from app.dinheiro import D, para_float
 from app.nationalization import PremissasNacionalizacao, nacionalizar
 from app.payment_terms import resolver_encargo
 from app.peso import PesoResolvido, resolver_peso
@@ -368,6 +369,12 @@ def custo_net(session: Session, produto: Produto) -> dict:
     """Devolve o CUSTO NET em R$ do produto e como se chegou nele.
 
     Cada fornecedor tem seu caminho; o motor comercial daqui pra frente é o mesmo para todos.
+
+    **Representação externa.** O dicionário devolvido aqui é memória: vai para JSON, para o
+    snapshot do item e para o baseline. Por isso sai em `float`, não em `Decimal` — se saísse
+    em Decimal, `json.dumps(default=str)` transformaria dinheiro em string e mudaria o
+    formato dos snapshots já emitidos. Os motores calculam em Decimal; a conversão acontece
+    uma vez, na saída desta função.
     """
     fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
     metodo = produto.cost_method or (fornecedor.cost_method_padrao.value if fornecedor else None)
@@ -394,7 +401,7 @@ def custo_net(session: Session, produto: Produto) -> dict:
     ii = None
     if ncm:
         ii = ncm.ii_preferencial
-        memoria["ncm"] = {"ncm": ncm.ncm, "familia": ncm.familia, "ii": ii,
+        memoria["ncm"] = {"ncm": ncm.ncm, "familia": ncm.familia, "ii": para_float(D(ii)),
                           "confiavel": ncm.confiavel, "notas": ncm.notas}
         if not ncm.confiavel:
             memoria["avisos"].append(f"NCM/II da família '{ncm.familia}' marcado para validação: "
@@ -425,7 +432,7 @@ def custo_net(session: Session, produto: Produto) -> dict:
         if exw is not None:
             origem_exw = f"Preço KTC histórico do catálogo ({produto.cotacao_origem or 'origem não registrada'})"
 
-    memoria["exw_usd"] = exw
+    memoria["exw_usd"] = para_float(exw)
     memoria["exw_origem"] = origem_exw
     memoria["exw_calculado_usd"] = produto.exw_calculado_usd
     memoria["exw_cotado_usd"] = produto.exw_cotado_usd
@@ -443,13 +450,14 @@ def custo_net(session: Session, produto: Produto) -> dict:
         estimado = peso_do_produto(session, produto)
         peso_kg = estimado.peso_kg
         if peso_kg:
-            memoria["peso"] = {"peso_kg": peso_kg, "tipo": estimado.tipo, "fonte": estimado.fonte}
+            memoria["peso"] = {"peso_kg": para_float(peso_kg), "tipo": estimado.tipo,
+                               "fonte": estimado.fonte}
 
     nac = nacionalizar(exw, peso_kg, ii, premissas_nacionalizacao(session))
     memoria["nacionalizacao"] = nac.como_dict()
     memoria["avisos"].extend(nac.avisos)
-    memoria["net_brl"] = nac.net_brl
-    memoria["net_usd"] = nac.net_usd
+    memoria["net_brl"] = para_float(nac.net_brl)
+    memoria["net_usd"] = para_float(nac.net_usd)
     memoria["caminho"] = ("Especificação → motor industrial KTC → EXW → nacionalização → NET"
                           if metodo == CostMethod.ktc_calculated.value
                           else "Último preço KTC válido → nacionalização → NET")
@@ -550,7 +558,10 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
         "fiscal": {**{k: v for k, v in contexto.items() if k != "fiscal"},
                    "memoria_fiscal": contexto["fiscal"].como_dict()},
         "margem": margem.como_dict(),
-        "comercial": (asdict(resultado) if resultado else None),
+        # `como_dict()`, não `asdict()`: a memória é JSON, e o núcleo é Decimal. A conversão
+        # para float é explícita e acontece uma vez, na fronteira — nunca por `default=str`,
+        # que transformaria dinheiro em string e mudaria o formato do snapshot.
+        "comercial": (resultado.como_dict() if resultado else None),
         "cenario": {"origem_logistica": cot.estado_origem,
                     "uf_origem_fiscal": contexto.get("uf_origem_fiscal"),
                     "destino": cot.estado_destino,

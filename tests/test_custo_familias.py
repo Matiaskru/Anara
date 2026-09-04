@@ -13,6 +13,7 @@ from app.ktc_engine import (
     calcular_fronha, corte_fronha,
 )
 from app.models import NcmRegra, Produto
+from decimais import MEIO_CENTAVO, aprox  # noqa: E402
 
 
 def parametros(**kw):
@@ -44,7 +45,7 @@ def test_os_cinco_backtests_da_fronha(nome, abas, festone, alvo):
     """50×70, flap 20, 250TC CVC a US$ 1,25/m². Desvio máximo aceito: 0,01%."""
     r = calcular_fronha(50, 70, parametros(), flap_cm=20, abas=abas, festone=festone)
     assert r.status == CALCULATED
-    assert r.exw_usd == pytest.approx(alvo, rel=1e-4), f"{nome} fora do alvo do §18"
+    assert r.exw_usd == aprox(alvo, rel=1e-4), f"{nome} fora do alvo do §18"
 
 
 def test_cmt_da_fronha_vem_da_construcao():
@@ -62,7 +63,7 @@ def test_festone_entra_antes_da_qualidade_e_da_margem():
     com = calcular_fronha(50, 70, parametros(), abas=4, festone=True)
     delta = com.exw_usd - sem.exw_usd
     assert delta > 0.10, "se o festonê entrasse no fim, o delta seria exatamente 0,10"
-    assert delta == pytest.approx(0.10 / (1 - 0.01) / (1 - 0.15), rel=1e-9)
+    assert delta == aprox(0.10 / (1 - 0.01) / (1 - 0.15), rel=1e-9)
 
 
 def test_bordado_extraordinario_nao_e_calculavel():
@@ -92,7 +93,7 @@ def test_bottom_sheet_sem_elastico_usa_o_motor_do_lencol():
     bottom = calcular_bottom_sheet(160, 200, p1, com_elastico=False)
     flat = calcular_flat_sheet(160, 200, p2)
     assert bottom.status == CALCULATED
-    assert bottom.exw_usd == pytest.approx(flat.exw_usd)
+    assert bottom.exw_usd == aprox(flat.exw_usd)
 
 
 def test_bottom_sheet_com_elastico_nao_inventa_formula():
@@ -120,7 +121,7 @@ def test_ii_de_roupao_sobrevive_a_troca_de_ncm(session):
     from app import pricing_service as ps
 
     roupao = session.exec(select(NcmRegra).where(NcmRegra.familia == "Roupão")).first()
-    assert roupao.ii_preferencial == pytest.approx(0.035)
+    assert roupao.ii_preferencial == aprox(0.035)
     assert roupao.prioridade == 10
 
     p = Produto(sku_key="ROUPAO-II", nome="Roupão de teste", familia="Roupão",
@@ -130,7 +131,7 @@ def test_ii_de_roupao_sobrevive_a_troca_de_ncm(session):
 
     regra = ps.regra_ncm(session, p)
     assert regra is not None
-    assert regra.ii_preferencial == pytest.approx(0.035), \
+    assert regra.ii_preferencial == aprox(0.035), \
         "a regra de família tem de vencer o lookup por NCM"
     assert regra.familia == "Roupão"
 
@@ -213,9 +214,9 @@ def test_valor_legado_e_reconhecido_como_preco_de_venda():
     gross = 406.75
     cnet = gross * FATOR_CNET
     preco = cnet / DENOM_PRECO_14
-    assert cnet == pytest.approx(324.83055, abs=1e-4)
-    assert preco == pytest.approx(615.10, abs=0.01)
-    assert preco / gross == pytest.approx(1.51221, abs=5e-5)
+    assert cnet == aprox(324.83055, abs=1e-4)
+    assert preco == aprox(615.10, abs=0.01)
+    assert preco / gross == aprox(1.51221, abs=5e-5)
 
     item = {"gross": gross}
     assert _e_preco_de_venda(preco, item) is True

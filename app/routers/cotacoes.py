@@ -9,6 +9,7 @@ from app import arquivamento
 from app import config_service as cfg
 from app import pricing_service as ps
 from app.db import get_session
+from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
 from app.models import (
     Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Produto,
     StatusCotacao, TipoFrete,
@@ -63,9 +64,9 @@ def _resultado_bloqueado(qtd: float, custo: float):
     """Resultado neutro para item cujo cenário não se resolve. Não inventa preço."""
     from app.pricing_engine import ResultadoPrecificacao
     return ResultadoPrecificacao(
-        preco_negociado=0.0, quantidade=qtd or 0.0, faturamento=0.0,
-        custo_total=(custo or 0.0) * (qtd or 0.0), impostos=0.0, comissao=0.0,
-        lucro=0.0, margem_liquida=0.0, markup_implicito=0.0, diferenca_pct_vs_base=None)
+        preco_negociado=ZERO, quantidade=D0(qtd), faturamento=ZERO,
+        custo_total=dinheiro(D0(custo) * D0(qtd)), impostos=ZERO, comissao=ZERO,
+        lucro=ZERO, margem_liquida=ZERO, markup_implicito=ZERO, diferenca_pct_vs_base=None)
 
 
 def _calcular(modo: str, custo: float, qtd: float, valor: float,
@@ -101,11 +102,17 @@ def _item_para_json(it: CotacaoItem) -> dict:
 
 
 def _totais(itens: list) -> dict:
-    faturamento = sum(i.faturamento for i in itens)
-    custo = sum(i.custo_total for i in itens)
-    lucro = sum(i.lucro for i in itens)
-    return {"faturamento": faturamento, "custo_total": custo, "lucro": lucro,
-            "margem_liquida": (lucro / faturamento) if faturamento else 0.0,
+    """Total da cotação = soma exata das linhas.
+
+    A soma é em `Decimal`: somar 45 floats de 2 casas acumula erro binário e o total da
+    cotação deixa de bater com a soma que o cliente confere no PDF.
+    """
+    faturamento = soma(i.faturamento for i in itens)
+    custo = soma(i.custo_total for i in itens)
+    lucro = soma(i.lucro for i in itens)
+    return {"faturamento": para_float(faturamento), "custo_total": para_float(custo),
+            "lucro": para_float(lucro),
+            "margem_liquida": para_float(divide(lucro, faturamento) or ZERO),
             "num_itens": len(itens)}
 
 
@@ -301,17 +308,23 @@ def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
 
 
 def _aplicar_resultado(it: CotacaoItem, res, regras: TaxRuleSet = None, contexto: dict = None):
-    it.preco_negociado = res.preco_negociado
-    it.margem_liquida = res.margem_liquida
-    it.faturamento = res.faturamento
-    it.custo_total = res.custo_total
-    it.lucro = res.lucro
-    it.diferenca_pct_vs_base = res.diferenca_pct_vs_base
-    it.impostos = res.impostos
-    it.comissao_valor = res.comissao
-    it.markup_implicito = res.markup_implicito
+    """Grava o resultado no item.
+
+    **Fronteira de saída do núcleo econômico**: as colunas do banco são REAL, e é aqui que o
+    `Decimal` vira `float`. Os valores monetários já estão quantizados em 2 casas, então a
+    conversão é exata — e a leitura de volta, via `D()`, devolve o mesmo centavo.
+    """
+    it.preco_negociado = para_float(res.preco_negociado)
+    it.margem_liquida = para_float(res.margem_liquida)
+    it.faturamento = para_float(res.faturamento)
+    it.custo_total = para_float(res.custo_total)
+    it.lucro = para_float(res.lucro)
+    it.diferenca_pct_vs_base = para_float(res.diferenca_pct_vs_base)
+    it.impostos = para_float(res.impostos)
+    it.comissao_valor = para_float(res.comissao)
+    it.markup_implicito = para_float(res.markup_implicito)
     if regras:
-        it.comissao_pct = regras.comissao_para_markup(res.markup_implicito)
+        it.comissao_pct = para_float(regras.comissao_para_markup(res.markup_implicito))
     if contexto:
         _gravar_fiscal_no_item(it, contexto, res)
 
@@ -339,7 +352,7 @@ def _gravar_fiscal_no_item(it: CotacaoItem, contexto: dict, res=None):
     # O DIFAL só vira dinheiro na conta da Anara quando o remetente é quem recolhe. Quando é do
     # destinatário, fica registrado com valor nulo — aparece na memória, não na margem.
     if contexto.get("difal_entra_na_margem") and res is not None and contexto.get("difal_pct"):
-        it.difal_valor = (res.faturamento or 0.0) * float(contexto["difal_pct"])
+        it.difal_valor = para_float(dinheiro(D0(res.faturamento) * D0(contexto["difal_pct"])))
     else:
         it.difal_valor = None
     it.status_fiscal = contexto.get("status_fiscal")
@@ -364,25 +377,35 @@ def calc(cotacao_id: int, produto_id: int = Form(...), quantidade: float = Form(
     regras, _regra, ctx = montar_regras(cotacao, session, produto)
     margem = ps.margem_padrao(session, produto)
     if not produto.custo_unitario:
+        # Sem custo não há margem, mas o preço exibido continua sendo quantia comercial.
+        preco = dinheiro(valor if modo == "preco" else (produto.preco_base or 0))
         return JSONResponse({
             "sem_custo": True, "preco_base": produto.preco_base,
-            "margem_padrao_pct": margem.margem_pct, "margem_regra": margem.regra,
+            "margem_padrao_pct": para_float(margem.margem_pct), "margem_regra": margem.regra,
             "aviso": ("Produto sem custo cadastrado. Dá para cotar pelo preço, mas margem e "
                       "lucro não podem ser calculados até o custo entrar."),
-            "preco_negociado": valor if modo == "preco" else (produto.preco_base or 0),
-            "faturamento": (valor if modo == "preco" else (produto.preco_base or 0)) * quantidade,
+            "preco_negociado": para_float(preco),
+            "faturamento": para_float(dinheiro(preco * D0(quantidade))),
             "custo_total": 0, "lucro": 0, "margem_liquida": 0,
             "diferenca_pct_vs_base": None,
         })
 
     res = _calcular(modo, produto.custo_unitario, quantidade, valor, regras, produto.preco_base)
+    # Fronteira da API: `como_dict()` já entrega tudo em float, com o dinheiro em centavos.
+    # Serializar Decimal aqui quebraria o JSON (ou, com `default=str`, mandaria dinheiro como
+    # string para o JavaScript da tela).
+    comercial = res.como_dict()
     return JSONResponse({
-        "preco_negociado": res.preco_negociado, "faturamento": res.faturamento,
-        "custo_total": res.custo_total, "lucro": res.lucro, "margem_liquida": res.margem_liquida,
-        "diferenca_pct_vs_base": res.diferenca_pct_vs_base, "preco_base": produto.preco_base,
-        "markup_implicito": res.markup_implicito,
-        "comissao_pct": regras.comissao_para_markup(res.markup_implicito),
-        "margem_padrao_pct": margem.margem_pct, "margem_regra": margem.regra,
+        "preco_negociado": comercial["preco_negociado"], "faturamento": comercial["faturamento"],
+        "custo_total": comercial["custo_total"], "lucro": comercial["lucro"],
+        "margem_liquida": comercial["margem_liquida"],
+        "diferenca_pct_vs_base": comercial["diferenca_pct_vs_base"],
+        "preco_base": produto.preco_base,
+        "markup_implicito": comercial["markup_implicito"],
+        "preco_preciso": comercial["preco_preciso"],
+        "margem_alvo": comercial["margem_alvo"],
+        "comissao_pct": para_float(regras.comissao_para_markup(res.markup_implicito)),
+        "margem_padrao_pct": para_float(margem.margem_pct), "margem_regra": margem.regra,
         "sem_custo": False,
     })
 

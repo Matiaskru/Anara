@@ -13,46 +13,63 @@ versionada) e o caminho fica registrado etapa por etapa.
 Só vale para fornecedor importado (KTC/Egito). Fornecedor nacional não passa por aqui.
 """
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import List, Optional
 
+from app.dinheiro import D, ZERO, para_float
 from app.ktc_engine import Etapa
 
 
 @dataclass
 class PremissasNacionalizacao:
-    frete_usd_kg: float
-    outras_desp_usd_un: float
-    fx_usd_brl: float
+    frete_usd_kg: Decimal
+    outras_desp_usd_un: Decimal
+    fx_usd_brl: Decimal
     fonte: Optional[str] = None
+
+    def __post_init__(self):
+        """Fronteira: a premissa versionada chega como float do banco e vira Decimal aqui.
+
+        O câmbio é o caso que mais importa. `D(5.11)` é `Decimal("5.11")` — e não
+        `5.1100000000000000976996261670137755572795867919921875`, que é o que
+        `Decimal(5.11)` produziria e o que multiplicaria o custo NET de 289 SKUs.
+        """
+        self.frete_usd_kg = D(self.frete_usd_kg, ZERO)
+        self.outras_desp_usd_un = D(self.outras_desp_usd_un, ZERO)
+        self.fx_usd_brl = D(self.fx_usd_brl, ZERO)
 
 
 @dataclass
 class ResultadoNacionalizacao:
-    net_brl: Optional[float]
-    net_usd: Optional[float] = None
-    frete_usd: Optional[float] = None
-    ii_usd: Optional[float] = None
+    net_brl: Optional[Decimal]
+    net_usd: Optional[Decimal] = None
+    frete_usd: Optional[Decimal] = None
+    ii_usd: Optional[Decimal] = None
     etapas: List[Etapa] = field(default_factory=list)
     avisos: List[str] = field(default_factory=list)
 
     def como_dict(self) -> dict:
-        return {"net_brl": self.net_brl, "net_usd": self.net_usd, "frete_usd": self.frete_usd,
-                "ii_usd": self.ii_usd, "etapas": [e.como_dict() for e in self.etapas],
+        return {"net_brl": para_float(self.net_brl), "net_usd": para_float(self.net_usd),
+                "frete_usd": para_float(self.frete_usd), "ii_usd": para_float(self.ii_usd),
+                "etapas": [e.como_dict() for e in self.etapas],
                 "avisos": list(self.avisos)}
 
 
-def nacionalizar(exw_usd: float, peso_kg: Optional[float], ii_pct: Optional[float],
+def nacionalizar(exw_usd, peso_kg, ii_pct,
                  premissas: PremissasNacionalizacao) -> ResultadoNacionalizacao:
     avisos = []
+    exw_usd = D(exw_usd)
+    peso_kg = D(peso_kg)
+    ii_pct = D(ii_pct)
     if exw_usd is None:
         return ResultadoNacionalizacao(None, avisos=["Sem EXW: não dá para nacionalizar."])
     if peso_kg is None:
         avisos.append("Produto sem peso — frete internacional considerado zero. Confirmar peso com a KTC.")
-        peso_kg = 0.0
+        peso_kg = ZERO
     if ii_pct is None:
         avisos.append("Sem alíquota de Imposto de Importação confiável para esse NCM/família — "
                       "considerado zero no cálculo. Validar antes de usar comercialmente.")
-        ii_pct = 0.0
+        ii_pct = ZERO
 
     etapas: List[Etapa] = []
     n = 0

@@ -27,7 +27,10 @@ As funções aqui são puras: recebem as linhas já lidas do banco e devolvem um
 conhecem sessão, FastAPI nem Jinja.
 """
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import List, Optional, Sequence, Tuple
+
+from app.dinheiro import D, ZERO, para_float
 
 # Consumidor final é DERIVADO da finalidade. Não é um valor do enum de finalidade.
 FINALIDADES_CONSUMIDOR_FINAL = {"USO_CONSUMO", "ATIVO_IMOBILIZADO"}
@@ -50,10 +53,10 @@ class ResultadoFiscal:
     para a memória interna, mas **não** está somado em `icms_pct`.
     """
     status: str = OK
-    icms_pct: Optional[float] = None            # TOTAL suportado pela Anara sobre a receita
-    aliquota_interestadual: Optional[float] = None
-    aliquota_interna_destino: Optional[float] = None
-    fcp_pct: Optional[float] = None
+    icms_pct: Optional[Decimal] = None          # TOTAL suportado pela Anara sobre a receita
+    aliquota_interestadual: Optional[Decimal] = None
+    aliquota_interna_destino: Optional[Decimal] = None
+    fcp_pct: Optional[Decimal] = None
     regra: str = ""
     fonte: Optional[str] = None
     origem_fiscal: Optional[str] = None
@@ -62,7 +65,7 @@ class ResultadoFiscal:
     contribuinte: Optional[bool] = None
     finalidade: Optional[str] = None
     consumidor_final: Optional[bool] = None
-    difal_pct: Optional[float] = None
+    difal_pct: Optional[Decimal] = None
     difal_responsavel: str = NAO_APLICAVEL
     difal_entra_na_margem: bool = False
     motivo: Optional[str] = None
@@ -74,14 +77,15 @@ class ResultadoFiscal:
 
     def como_dict(self) -> dict:
         return {
-            "status": self.status, "icms_pct": self.icms_pct,
-            "aliquota_interestadual": self.aliquota_interestadual,
-            "aliquota_interna_destino": self.aliquota_interna_destino,
-            "fcp_pct": self.fcp_pct, "regra": self.regra,
+            "status": self.status, "icms_pct": para_float(self.icms_pct),
+            "aliquota_interestadual": para_float(self.aliquota_interestadual),
+            "aliquota_interna_destino": para_float(self.aliquota_interna_destino),
+            "fcp_pct": para_float(self.fcp_pct), "regra": self.regra,
             "fonte": self.fonte, "origem_fiscal": self.origem_fiscal,
             "uf_origem": self.uf_origem, "uf_destino": self.uf_destino,
             "contribuinte": self.contribuinte, "finalidade": self.finalidade,
-            "consumidor_final": self.consumidor_final, "difal_pct": self.difal_pct,
+            "consumidor_final": self.consumidor_final,
+            "difal_pct": para_float(self.difal_pct),
             "difal_responsavel": self.difal_responsavel,
             "difal_entra_na_margem": self.difal_entra_na_margem,
             "motivo": self.motivo, "avisos": list(self.avisos),
@@ -209,11 +213,11 @@ def resolver_fcp(regras_fcp: Sequence, uf_destino: str, ncm: Optional[str] = Non
     escolhida = sorted(aplicaveis, key=lambda r: (r.prioridade, r.id or 0))[0]
     situacao = (getattr(escolhida, "situacao", "") or "DESCONHECIDO").strip().upper()
     if situacao == "NAO_APLICA":
-        return 0.0, None, (f"FCP de {uf_destino}: não se aplica a este item "
+        return ZERO, None, (f"FCP de {uf_destino}: não se aplica a este item "
                            f"({escolhida.fonte or escolhida.regra or 'fonte não registrada'})")
     if situacao == "APLICA":
-        return float(escolhida.fcp_pct), None, (
-            f"FCP de {uf_destino}: {float(escolhida.fcp_pct):.2%} "
+        return D(escolhida.fcp_pct), None, (
+            f"FCP de {uf_destino}: {D(escolhida.fcp_pct):.2%} "
             f"({escolhida.regra or 'cadastrado'})")
     return None, (f"A regra de FCP de {uf_destino} que alcança este item está marcada "
                   f"DESCONHECIDO ({escolhida.regra or 'sem detalhe'}). Não se assume 0%."), ""
@@ -228,10 +232,10 @@ def icms_interno_base_de(destino):
     """
     base = getattr(destino, "icms_interno_base", None)
     if base is not None:
-        return float(base), None
+        return D(base), None
     if getattr(destino, "interna_inclui_fcp", None) is False:
-        return float(destino.aliquota_interna), None
-    return None, (f"A alíquota interna de {destino.uf} ({destino.aliquota_interna:.2%}) não tem "
+        return D(destino.aliquota_interna), None
+    return None, (f"A alíquota interna de {destino.uf} ({D(destino.aliquota_interna):.2%}) não tem "
                   "semântica determinada: não se sabe se já inclui FCP/FECP. Cadastrar "
                   "`icms_interno_base` antes de cotar este destino.")
 
@@ -300,16 +304,17 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
     if explicitas:
         melhor = sorted(explicitas, key=lambda r: (getattr(r, "prioridade", 100), r.id or 0))[0]
         return ResultadoFiscal(
-            icms_pct=float(melhor.icms_venda), regra=melhor.regra,
-            aliquota_interna_destino=float(destino.aliquota_interna), fcp_pct=0.0,
+            icms_pct=D(melhor.icms_venda), regra=melhor.regra,
+            aliquota_interna_destino=D(destino.aliquota_interna), fcp_pct=ZERO,
             fonte=f"RegraFiscalVenda#{melhor.id}", difal_responsavel=NAO_APLICAVEL, **base)
 
     # --- 3. mesmo estado ---
     if uf_origem == uf_destino:
         return ResultadoFiscal(
-            icms_pct=float(destino.aliquota_interna),
-            aliquota_interna_destino=float(destino.aliquota_interna), fcp_pct=0.0,
-            regra=f"Intraestadual {uf_destino} — alíquota interna {destino.aliquota_interna:.2%}, "
+            icms_pct=D(destino.aliquota_interna),
+            aliquota_interna_destino=D(destino.aliquota_interna), fcp_pct=ZERO,
+            regra=f"Intraestadual {uf_destino} — alíquota interna "
+                  f"{D(destino.aliquota_interna):.2%}, "
                   "sem DIFAL interestadual",
             fonte=f"EstadoFiscal#{destino.id}.aliquota_interna",
             difal_responsavel=NAO_APLICAVEL, **base)
@@ -320,7 +325,7 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
     if linha is None:
         return _bloqueio(motivo, **base)
 
-    interestadual = float(linha.aliquota)
+    interestadual = D(linha.aliquota)
 
     # A base interna do destino é o ICMS **sem** FCP. O DIFAL sobre a receita final é a
     # diferença entre ela e a interestadual da operação; o FCP soma por fora. Usar a coluna
@@ -328,14 +333,14 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
     base_interna, motivo_base = icms_interno_base_de(destino)
     fcp, motivo_fcp, texto_fcp = resolver_fcp(regras_fcp, uf_destino, ncm, produto_id,
                                               familia, ref_data)
-    difal = max(base_interna - interestadual, 0.0) if base_interna is not None else None
+    difal = max(base_interna - interestadual, ZERO) if base_interna is not None else None
     comum = dict(aliquota_interestadual=interestadual, aliquota_interna_destino=base_interna)
 
     if contribuinte and not consumidor_final:
         # Revenda ou industrialização: o destinatário credita e segue a cadeia. Sem DIFAL de
         # consumidor final, e o FCP dele não é ônus da Anara.
         return ResultadoFiscal(
-            icms_pct=interestadual, fcp_pct=0.0,
+            icms_pct=interestadual, fcp_pct=ZERO,
             regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria {origem_fiscal.lower()}, "
                    f"contribuinte para {finalidade.lower().replace('_', '/')} — "
                    f"{interestadual:.2%}, sem DIFAL"),
@@ -349,7 +354,7 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
         detalhe = (f"DIFAL de {difal:.2%} ({base_interna:.2%} − {interestadual:.2%})"
                    if difal is not None else "DIFAL de valor não determinável")
         r = ResultadoFiscal(
-            icms_pct=interestadual, fcp_pct=0.0,
+            icms_pct=interestadual, fcp_pct=ZERO,
             regra=(f"Interestadual {uf_origem}→{uf_destino}, mercadoria {origem_fiscal.lower()}, "
                    f"contribuinte consumidor final — {interestadual:.2%} destacado; {detalhe} "
                    "recolhido pelo destinatário"),
@@ -390,18 +395,19 @@ def resolver_fiscal_item(regras_explicitas: Sequence, estados: Sequence,
 # Legado — preservado para reproduzir cotação histórica
 # ---------------------------------------------------------------------------
 def resolver_icms(cenarios: List[dict], origem: str, destino: str, contribuinte: bool,
-                  fallback: float = 0.18) -> Tuple[float, str]:
+                  fallback=0.18) -> Tuple[Decimal, str]:
     """Resolução pelo snapshot antigo (lista de dicts salva em `BaseImportacao`).
 
     **Só existe para reproduzir cotação já emitida exatamente como foi emitida.** Cotação nova
     passa por `resolver_fiscal_item`. O fallback aqui é parte do retrato histórico — não é
     comportamento aceitável para cálculo novo.
     """
+    fallback = D(fallback)
     if not origem or not destino:
         return fallback, "Origem/destino não informados — ICMS padrão aplicado (snapshot legado)"
     for cen in cenarios:
         if (cen.get("origem") == origem and cen.get("destino") == destino
                 and bool(cen.get("contribuinte")) == bool(contribuinte)):
-            return float(cen["icms_venda"]), cen.get("regra", "")
+            return D(cen["icms_venda"]), cen.get("regra", "")
     return fallback, ("Cenário não encontrado no snapshot da base — ICMS padrão aplicado "
                       "(snapshot legado)")

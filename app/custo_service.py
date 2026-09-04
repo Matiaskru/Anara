@@ -26,11 +26,13 @@ este módulo.
 """
 import json
 from dataclasses import dataclass
+from decimal import Decimal
 from datetime import date, datetime
 from typing import List, Optional
 
 from sqlmodel import Session, select
 
+from app.dinheiro import D, para_float
 from app.models import (
     CostMethod, CustoReferencia, Fornecedor, Produto, StatusCusto, STATUS_QUE_PRECIFICAM,
 )
@@ -38,32 +40,33 @@ from app.models import (
 # --- Daune: créditos de ENTRADA aprovados -----------------------------------------------
 # Atenção: este é o crédito da COMPRA. Não tem relação com o ICMS da VENDA, que a Sessão 1
 # resolve por operação. Misturar os dois foi o erro que o B-09 registrou.
-DAUNE_ICMS_CREDITO = 0.12
-DAUNE_PIS_COFINS_CREDITO = 0.0925
+DAUNE_ICMS_CREDITO = Decimal("0.12")
+DAUNE_PIS_COFINS_CREDITO = Decimal("0.0925")
 
 
 @dataclass
 class CustoNacional:
     """CNET de fornecedor nacional a partir do preço BRUTO, com a conta aberta."""
-    gross: float
-    icms_credito: float
-    base_pis_cofins: float
-    pis_cofins_credito: float
-    cnet: float
-    fator: float
+    gross: Decimal
+    icms_credito: Decimal
+    base_pis_cofins: Decimal
+    pis_cofins_credito: Decimal
+    cnet: Decimal
+    fator: Decimal
 
     def como_dict(self) -> dict:
+        # Memória: vai para JSON e para o snapshot da referência, então sai em float.
         return {
-            "gross": self.gross, "icms_credito": self.icms_credito,
-            "base_pis_cofins": self.base_pis_cofins,
-            "pis_cofins_credito": self.pis_cofins_credito,
-            "cnet": self.cnet, "fator_efetivo": self.fator,
+            "gross": para_float(self.gross), "icms_credito": para_float(self.icms_credito),
+            "base_pis_cofins": para_float(self.base_pis_cofins),
+            "pis_cofins_credito": para_float(self.pis_cofins_credito),
+            "cnet": para_float(self.cnet), "fator_efetivo": para_float(self.fator),
             "formula": ("CNET = gross − gross×12% − (gross − gross×12%)×9,25%"),
         }
 
 
-def cnet_nacional(gross: float, icms_pct: float = DAUNE_ICMS_CREDITO,
-                  pis_cofins_pct: float = DAUNE_PIS_COFINS_CREDITO) -> CustoNacional:
+def cnet_nacional(gross, icms_pct=DAUNE_ICMS_CREDITO,
+                  pis_cofins_pct=DAUNE_PIS_COFINS_CREDITO) -> CustoNacional:
     """CUSTO NET a partir do preço bruto do fornecedor nacional.
 
     Calculado **pelos componentes**, não pelo fator arredondado de 0,7986 — o fator é
@@ -71,8 +74,10 @@ def cnet_nacional(gross: float, icms_pct: float = DAUNE_ICMS_CREDITO,
     persistido produziria um número sem significado, porque esse custo pode ter vindo de outro
     documento.
     """
+    gross = D(gross)
     if gross is None or gross <= 0:
         raise ValueError("preço bruto do fornecedor precisa ser positivo")
+    icms_pct, pis_cofins_pct = D(icms_pct), D(pis_cofins_pct)
     icms = gross * icms_pct
     base = gross - icms
     pis_cofins = base * pis_cofins_pct
@@ -193,11 +198,14 @@ def registrar_daune(session: Session, produto: Produto, gross: float, *, fonte: 
                     notas: Optional[str] = None) -> CustoReferencia:
     """Registra uma referência Daune partindo do preço BRUTO do fornecedor."""
     conta = cnet_nacional(gross)
+    # Fronteira de persistência: a coluna é REAL. O CNET NÃO é quantizado em centavos aqui —
+    # é custo interno, e arredondá-lo mudaria o preço de venda de 32 SKUs sem que ninguém
+    # tivesse pedido. Só o preço COMERCIAL vira centavo.
     return registrar_referencia(
-        session, produto, cnet_brl=conta.cnet, metodo=CostMethod.daune_direct.value,
+        session, produto, cnet_brl=para_float(conta.cnet), metodo=CostMethod.daune_direct.value,
         status=status, fonte=fonte, documento=documento, data_ref=data_ref,
-        valor_bruto=gross, memoria=conta.como_dict(), origem_registro=origem_registro,
-        notas=notas)
+        valor_bruto=para_float(D(gross)), memoria=conta.como_dict(),
+        origem_registro=origem_registro, notas=notas)
 
 
 def registrar_special_quoted(session: Session, produto: Produto, *, exw_usd: float,

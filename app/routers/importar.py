@@ -151,9 +151,10 @@ def confirmar(request: Request, token: str = Form(...), nome_arquivo: str = Form
             # cenário fiscal resolvido COM o produto — a natureza da mercadoria entra na conta
             regras, _ctx = ps.regras_da_cotacao(session, cenario, produto)
             if regras is not None:
-                produto.preco_base = calcular_por_margem(produto.custo_unitario, 1,
-                                                         margem.margem_pct,
-                                                         regras).preco_negociado
+                from app.dinheiro import para_float
+                produto.preco_base = para_float(
+                    calcular_por_margem(produto.custo_unitario, 1, margem.margem_pct,
+                                        regras).preco_negociado)
         session.add(produto)
         session.flush()
 

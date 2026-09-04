@@ -44,6 +44,7 @@ from sqlmodel import Session, select  # noqa: E402
 
 from app import config_service as cfg  # noqa: E402
 from app import pricing_service as ps  # noqa: E402
+from app.dinheiro import ZERO, divide, para_float  # noqa: E402
 from app.fiscal_rules import resolver_fiscal_item  # noqa: E402
 from app.models import (  # noqa: E402
     BaseImportacao, CmtPreco, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal,
@@ -132,9 +133,10 @@ def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True
                     contribuinte=contrib, finalidade=finalidade_padrao)
                 cenarios[f"{chave_cenario(origem, destino, contrib)}|{natureza}"] = {
                     "origem": origem, "destino": destino, "contribuinte": contrib,
-                    "natureza": natureza, "icms": r.icms_pct, "regra": r.regra,
+                    "natureza": natureza, "icms": para_float(r.icms_pct), "regra": r.regra,
                     "status": r.status, "motivo": r.motivo,
-                    "difal_pct": r.difal_pct, "difal_responsavel": r.difal_responsavel,
+                    "difal_pct": para_float(r.difal_pct),
+                    "difal_responsavel": r.difal_responsavel,
                     "consumidor_final": r.consumidor_final,
                 }
 
@@ -176,9 +178,12 @@ def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True
                     continue
                 r = calcular_por_margem(p.custo_unitario, 1.0, margem.margem_pct,
                                         regras, preco_base=p.preco_base)
-                comissao_pct = (r.comissao / r.faturamento) if r.faturamento else 0.0
-                grade[chave] = [r.preco_negociado, r.margem_liquida, r.markup_implicito,
-                                comissao_pct, r.impostos, r.lucro]
+                comissao_pct = divide(r.comissao, r.faturamento) or ZERO
+                # O baseline é representação EXTERNA: continua em float, na mesma forma da
+                # Fase 0, senão a comparação com o arquivo congelado não seria possível.
+                grade[chave] = [para_float(v) for v in
+                                (r.preco_negociado, r.margem_liquida, r.markup_implicito,
+                                 comissao_pct, r.impostos, r.lucro)]
 
             linhas.append({
                 "id": p.id,
@@ -192,9 +197,10 @@ def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True
                 "precisa_revisao": bool(p.precisa_revisao),
                 "custo_unitario": p.custo_unitario,
                 "preco_base": p.preco_base,
-                "custo_net_recalculado": custo_recalculado,
-                "custo_delta_pct": ((custo_recalculado / p.custo_unitario - 1)
-                                    if p.custo_unitario and custo_recalculado else None),
+                "custo_net_recalculado": para_float(custo_recalculado),
+                "custo_delta_pct": para_float(
+                    (divide(custo_recalculado, p.custo_unitario) - 1)
+                    if p.custo_unitario and custo_recalculado else None),
                 "custo_avisos": custo_memoria.get("avisos", []),
                 "exw_usd": custo_memoria.get("exw_usd"),
                 "exw_origem": custo_memoria.get("exw_origem"),
@@ -202,7 +208,7 @@ def gerar(db_path: str = DB_PATH, limite: int = 0, com_estado_banco: bool = True
                 "ii_aplicado": p.ii_aplicado,
                 "peso_kg": p.peso_kg,
                 "peso_tipo": p.peso_tipo,
-                "margem_alvo": margem.margem_pct,
+                "margem_alvo": para_float(margem.margem_pct),
                 "margem_regra": margem.regra,
                 "grade": grade,
             })

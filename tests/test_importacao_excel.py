@@ -5,6 +5,7 @@ from datetime import date
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine, select
+from decimais import MARGEM_DO_CENTAVO, MEIO_CENTAVO, aprox  # noqa: E402
 
 
 @pytest.fixture
@@ -64,8 +65,8 @@ def test_custo_calculado_nao_e_sobrescrito_pela_planilha(ambiente):
         s.commit()
 
         produto = s.exec(select(Produto).where(Produto.sku_key == "X1")).first()
-        assert produto.custo_unitario == pytest.approx(100.0)   # não foi sobrescrito
-        assert produto.preco_base != pytest.approx(150.0)       # preço-base é recalculado
+        assert produto.custo_unitario == aprox(100.0)   # não foi sobrescrito
+        assert produto.preco_base != aprox(150.0)       # preço-base é recalculado
         referencias = s.exec(select(CustoReferencia)
                              .where(CustoReferencia.sku_key == "X1")).all()
         assert referencias and referencias[0].aplicado is False
@@ -86,7 +87,7 @@ def test_preco_base_da_planilha_nao_e_copiado(ambiente):
         s.commit()
 
         margem = ps.margem_padrao(s, produto)
-        assert margem.margem_pct == pytest.approx(0.12)
+        assert margem.margem_pct == aprox(0.12)
         cenario = ps.cenario_padrao_catalogo(s)
         regras, _ = ps.regras_da_cotacao(s, cenario, produto)
         produto.preco_base = calcular_por_margem(40.0, 1, margem.margem_pct, regras).preco_negociado
@@ -94,7 +95,7 @@ def test_preco_base_da_planilha_nao_e_copiado(ambiente):
         s.commit()
 
         conferido = calcular_por_preco(40.0, 1, produto.preco_base, regras)
-        assert conferido.margem_liquida == pytest.approx(0.12, abs=1e-9)
+        assert conferido.margem_liquida == aprox(0.12, abs=MARGEM_DO_CENTAVO)
 
 
 def test_produto_de_fornecedor_nacional_nao_e_desativado_pela_planilha(ambiente):

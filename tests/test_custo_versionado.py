@@ -14,6 +14,7 @@ from app import custo_service as cs
 from app.models import (
     CostMethod, CustoReferencia, Fornecedor, Produto, StatusCusto, STATUS_QUE_PRECIFICAM,
 )
+from decimais import MEIO_CENTAVO, aprox  # noqa: E402
 
 
 @pytest.fixture
@@ -36,11 +37,11 @@ def novo_produto(session, sku, fornecedor, **kw):
 def test_cnet_daune_pelos_componentes():
     """A conta é feita pelos componentes; o fator 0,7986 é conferência, não fórmula."""
     c = cs.cnet_nacional(1000.0)
-    assert c.icms_credito == pytest.approx(120.0)
-    assert c.base_pis_cofins == pytest.approx(880.0)
-    assert c.pis_cofins_credito == pytest.approx(81.40)
-    assert c.cnet == pytest.approx(798.60)
-    assert c.fator == pytest.approx(0.7986, abs=1e-6)
+    assert c.icms_credito == aprox(120.0)
+    assert c.base_pis_cofins == aprox(880.0)
+    assert c.pis_cofins_credito == aprox(81.40)
+    assert c.cnet == aprox(798.60)
+    assert c.fator == aprox(0.7986, abs=1e-6)
 
 
 @pytest.mark.parametrize("gross,cnet", [
@@ -48,7 +49,7 @@ def test_cnet_daune_pelos_componentes():
 ])
 def test_cnet_dos_edredons_280g(gross, cnet):
     """Os nove preços da linha nova são BRUTOS; o CNET sai da fórmula, não da tabela."""
-    assert cs.cnet_nacional(gross).cnet == pytest.approx(cnet, abs=1e-4)
+    assert cs.cnet_nacional(gross).cnet == aprox(cnet, abs=1e-4)
 
 
 def test_gross_invalido_nao_produz_custo():
@@ -66,8 +67,8 @@ def test_fator_nunca_e_aplicado_sobre_custo_persistido(session, daune):
     p = novo_produto(session, "FATOR-1", daune, custo_unitario=500.0)
     ref = cs.registrar_daune(session, p, 1000.0, fonte="fonte nova", documento="doc",
                              data_ref=date(2026, 8, 12))
-    assert ref.cnet_brl == pytest.approx(798.60)
-    assert ref.cnet_brl != pytest.approx(500.0 * 0.7986)
+    assert ref.cnet_brl == aprox(798.60)
+    assert ref.cnet_brl != aprox(500.0 * 0.7986)
     assert ref.valor_bruto == 1000.0
 
 
@@ -87,7 +88,7 @@ def test_versionamento_isola_sku_e_preserva_historico(session, daune):
     session.commit()
     assert v1.versao == 1 and v1.vigente is True
     cnet_v1 = v1.cnet_brl
-    assert x.custo_unitario == pytest.approx(cnet_v1)
+    assert x.custo_unitario == aprox(cnet_v1)
 
     # 2) a cotação A congela o número do momento — é o snapshot, não uma leitura futura
     cotacao_a = {"sku": x.sku_key, "cnet_no_momento": x.custo_unitario,
@@ -107,11 +108,11 @@ def test_versionamento_isola_sku_e_preserva_historico(session, daune):
     # 4) cotação nova pega a vigente
     vigente = cs.referencia_vigente(session, x.id)
     assert vigente.versao == 2
-    assert x.custo_unitario == pytest.approx(v2.cnet_brl)
-    assert v2.cnet_brl != pytest.approx(cnet_v1)
+    assert x.custo_unitario == aprox(v2.cnet_brl)
+    assert v2.cnet_brl != aprox(cnet_v1)
 
     # 5) a cotação A não mudou — o snapshot dela é dela
-    assert cotacao_a["cnet_no_momento"] == pytest.approx(cnet_v1)
+    assert cotacao_a["cnet_no_momento"] == aprox(cnet_v1)
 
     # 6) o SKU Y não foi tocado
     assert y.custo_unitario == custo_y_antes
@@ -121,7 +122,7 @@ def test_versionamento_isola_sku_e_preserva_historico(session, daune):
     session.refresh(v1)
     assert v1.vigente is False
     assert v1.valid_to is not None
-    assert v1.cnet_brl == pytest.approx(cnet_v1)
+    assert v1.cnet_brl == aprox(cnet_v1)
 
     # 8) as duas fontes continuam disponíveis, com data
     todas = cs.versoes(session, x.id)
@@ -132,7 +133,7 @@ def test_versionamento_isola_sku_e_preserva_historico(session, daune):
     # e a memória do cálculo de cada uma é legível
     for r in todas:
         memoria = json.loads(r.memoria_calculo)
-        assert memoria["gross"] > 0 and memoria["cnet"] == pytest.approx(r.cnet_brl)
+        assert memoria["gross"] > 0 and memoria["cnet"] == aprox(r.cnet_brl)
 
 
 def test_referencia_em_uma_data_devolve_a_versao_daquela_epoca(session, daune):
@@ -268,5 +269,5 @@ def test_special_quoted_grava_procedencia_completa(session):
                   "observacao", "validade"):
         assert memoria[campo] is not None
     # e o EXW cotado fica no produto, para o motor de nacionalização de sempre
-    assert p.exw_cotado_usd == pytest.approx(12.5)
+    assert p.exw_cotado_usd == aprox(12.5)
     assert p.exw_cotado_data == date(2026, 8, 25)

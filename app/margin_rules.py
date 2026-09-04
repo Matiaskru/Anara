@@ -12,22 +12,25 @@ Precedência (a de menor `prioridade` ganha; empate desempata pela regra mais es
 5. regra geral.
 """
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Optional, Sequence
+
+from app.dinheiro import D, para_float
 
 
 @dataclass
 class MargemResolvida:
-    margem_pct: float
+    margem_pct: Decimal
     regra: str
     regra_id: Optional[int] = None
     origem: str = "tabela"
 
     def como_dict(self) -> dict:
-        return {"margem_pct": self.margem_pct, "regra": self.regra,
+        return {"margem_pct": para_float(self.margem_pct), "regra": self.regra,
                 "regra_id": self.regra_id, "origem": self.origem}
 
 
-MARGEM_ULTIMO_RECURSO = 0.15
+MARGEM_ULTIMO_RECURSO = Decimal("0.15")
 
 
 def _bate(regra, fornecedor_id, familia, thread_count, sku_key) -> bool:
@@ -68,7 +71,7 @@ def resolver_margem(regras: Sequence, fornecedor_id: Optional[int] = None,
                     sku_key: Optional[str] = None,
                     override_pct: Optional[float] = None) -> MargemResolvida:
     if override_pct is not None:
-        return MargemResolvida(float(override_pct), "Margem definida manualmente nesta cotação",
+        return MargemResolvida(D(override_pct), "Margem definida manualmente nesta cotação",
                                origem="override")
 
     candidatas = [r for r in regras if _bate(r, fornecedor_id, familia, thread_count, sku_key)]
@@ -79,4 +82,4 @@ def resolver_margem(regras: Sequence, fornecedor_id: Optional[int] = None,
 
     candidatas.sort(key=lambda r: (getattr(r, "prioridade", 100), -_especificidade(r), r.id or 0))
     escolhida = candidatas[0]
-    return MargemResolvida(float(escolhida.margem_pct), escolhida.nome, escolhida.id)
+    return MargemResolvida(D(escolhida.margem_pct), escolhida.nome, escolhida.id)

@@ -14,7 +14,10 @@ Condições canônicas (todas cadastradas em `CondicaoPagamento`):
     30 DD 1,6% · 30/60 3,2% · 30/60/90 4,8% · 30/60/90/120 6,4% · 30/60/90/120/150 8,0%
 """
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Optional, Sequence
+
+from app.dinheiro import D, ZERO
 
 OK = "OK"
 REVIEW_REQUIRED = "REVIEW_REQUIRED"
@@ -22,7 +25,7 @@ REVIEW_REQUIRED = "REVIEW_REQUIRED"
 
 @dataclass
 class EncargoResolvido:
-    pct: float
+    pct: Decimal
     confirmado: bool
     label: str
     origem: str                 # "tabela" | "override" | "bloqueado"
@@ -36,7 +39,7 @@ class EncargoResolvido:
 
 
 def _bloqueio(label: str, motivo: str) -> EncargoResolvido:
-    return EncargoResolvido(pct=0.0, confirmado=False, label=label, origem="bloqueado",
+    return EncargoResolvido(pct=ZERO, confirmado=False, label=label, origem="bloqueado",
                             status=REVIEW_REQUIRED, aviso=motivo, motivo=motivo)
 
 
@@ -54,7 +57,7 @@ def resolver_encargo(condicoes: Sequence, codigo: str,
         if not override_motivo:
             return _bloqueio(codigo or "(sem condição)",
                              "Override de encargo financeiro exige motivo registrado.")
-        return EncargoResolvido(float(override_pct), True, codigo or "(override)", "override",
+        return EncargoResolvido(D(override_pct), True, codigo or "(override)", "override",
                                 aviso=f"Encargo por override autorizado: {override_motivo}")
 
     if not codigo:
@@ -70,7 +73,7 @@ def resolver_encargo(condicoes: Sequence, codigo: str,
                 c.label,
                 f"A condição '{c.label}' está cadastrada mas não tem encargo financeiro "
                 "confirmado. Cadastrar a taxa no painel antes de usar comercialmente.")
-        return EncargoResolvido(float(c.encargo_pct), bool(c.encargo_confirmado), c.label,
+        return EncargoResolvido(D(c.encargo_pct), bool(c.encargo_confirmado), c.label,
                                 "tabela")
 
     return _bloqueio(

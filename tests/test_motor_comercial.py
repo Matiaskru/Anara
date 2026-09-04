@@ -7,6 +7,8 @@ from app.payment_terms import resolver_encargo
 from app.pricing_engine import (
     TaxRuleSet, calcular_por_margem, calcular_por_markup, calcular_por_preco,
 )
+from app.dinheiro import D, dinheiro, divide  # noqa: E402
+from decimais import MEIO_CENTAVO, aprox  # noqa: E402
 
 REGRAS = TaxRuleSet(icms_pct=0.18, pis_cofins_pct=0.0759, encargo_financeiro_pct=0.016,
                     comissao_tabela=[(0.0, 0.05), (0.6, 0.06), (0.7, 0.07), (0.8, 0.08),
@@ -14,51 +16,95 @@ REGRAS = TaxRuleSet(icms_pct=0.18, pis_cofins_pct=0.0759, encargo_financeiro_pct
 
 
 def test_margem_alvo_entrega_a_margem_pedida():
+    """A margem-alvo é atingida no preço PRECISO; o preço comercial fica a meio centavo dela.
+
+    Reescrito na Sessão 3B. Antes, `margem_liquida` era a margem do preço não arredondado —
+    dava 0,18 redondo porque o preço com 14 casas decimais fecha a conta perfeitamente. Só
+    que ninguém cobra R$ 92,7692307692…: cobra-se R$ 92,77, e a margem desse preço é
+    0,1799960… A asserção agora é sobre a margem REAL, com a tolerância do centavo — que é
+    a única diferença que o arredondamento pode introduzir.
+    """
     r = calcular_por_margem(50.0, 10, 0.18, REGRAS)
-    assert r.margem_liquida == pytest.approx(0.18, abs=1e-9)
+    assert r.margem_alvo == D("0.18")
+    assert r.preco_negociado == dinheiro(r.preco_preciso)
+    assert abs(r.ajuste_arredondamento) <= MEIO_CENTAVO
+    assert r.margem_liquida == divide(r.lucro, r.faturamento)     # é a margem do que se cobra
+    assert r.margem_liquida == aprox(0.18, abs="0.0005")
 
 
 @pytest.mark.parametrize("alvo", [0.12, 0.14, 0.15, 0.16, 0.18])
 def test_margem_alvo_bate_em_varias_faixas(alvo):
     r = calcular_por_margem(50.0, 1, alvo, REGRAS)
-    assert r.margem_liquida == pytest.approx(alvo, abs=1e-9)
+    assert r.margem_alvo == D(str(alvo))
+    assert r.margem_liquida == aprox(alvo, abs="0.0005")
+    assert abs(r.ajuste_arredondamento) <= MEIO_CENTAVO
+
+
+def test_margem_alvo_exata_no_preco_preciso():
+    """Prova de que a margem-alvo continua matematicamente exata antes do centavo.
+
+    É a garantia de que o arredondamento é a ÚNICA fonte de desvio: recompondo o waterfall
+    sobre o preço preciso, a margem volta a ser exatamente a pedida.
+    """
+    for alvo in ("0.12", "0.14", "0.15", "0.16", "0.18"):
+        r = calcular_por_margem(50.0, 1, D(alvo), REGRAS)
+        receita = r.preco_preciso
+        comissao_pct = REGRAS.comissao_para_markup(r.markup_implicito)
+        lucro = (receita - receita * REGRAS.taxa_fixa() - receita * comissao_pct
+                 - D(50) - receita * REGRAS.frete_rv_pct)
+        assert abs(lucro / receita - D(alvo)) < D("1e-25")
 
 
 def test_margem_e_lucro_sobre_faturamento_nao_markup():
     r = calcular_por_margem(100.0, 1, 0.18, REGRAS)
-    assert r.lucro == pytest.approx(r.faturamento * 0.18)
-    assert r.markup_implicito > 0.18          # markup é sempre maior que a margem líquida
-    assert r.lucro == pytest.approx(r.custo_total * r.markup_implicito, abs=1e-6)
+    assert r.lucro == aprox(r.faturamento * D("0.18"), abs="0.01")
+    assert r.markup_implicito > D("0.18")     # markup é sempre maior que a margem líquida
+    assert r.lucro == aprox(r.custo_total * r.markup_implicito, abs="0.01")
 
 
 def test_modo_preco_e_modo_margem_sao_o_mesmo_ponto():
+    """Ida e volta pelo mesmo ponto: o preço comercial recomposto devolve tudo idêntico.
+
+    Com o arredondamento dentro do motor, esta igualdade passou a ser **exata** — não
+    aproximada. É a prova de idempotência do §33 na sua forma mais curta.
+    """
     alvo = calcular_por_margem(50.0, 3, 0.16, REGRAS)
     volta = calcular_por_preco(50.0, 3, alvo.preco_negociado, REGRAS)
-    assert volta.margem_liquida == pytest.approx(0.16, abs=1e-9)
+    assert volta.preco_negociado == alvo.preco_negociado
+    assert volta.faturamento == alvo.faturamento
+    assert volta.lucro == alvo.lucro
+    assert volta.margem_liquida == alvo.margem_liquida
 
 
 def test_modo_markup_reproduz_a_formula_da_planilha():
-    markup = 0.45
+    markup = D("0.45")
     r = calcular_por_markup(50.0, 1, markup, REGRAS)
     comissao = REGRAS.comissao_para_markup(markup)
-    esperado = 50.0 * (1 + markup) / (1 - REGRAS.taxa_fixa() - comissao)
-    assert r.preco_negociado == pytest.approx(esperado)
+    esperado = D(50) * (1 + markup) / (1 - REGRAS.taxa_fixa() - comissao)
+    assert r.preco_preciso == esperado                 # a fórmula, sem perda
+    assert r.preco_negociado == dinheiro(esperado)     # e o centavo cobrado
 
 
 def test_comissao_sobe_por_faixa_de_markup():
-    assert REGRAS.comissao_para_markup(0.30) == pytest.approx(0.05)
-    assert REGRAS.comissao_para_markup(0.65) == pytest.approx(0.06)
-    assert REGRAS.comissao_para_markup(0.95) == pytest.approx(0.09)
-    assert REGRAS.comissao_para_markup(1.40) == pytest.approx(0.10)
+    assert REGRAS.comissao_para_markup(0.30) == aprox(0.05)
+    assert REGRAS.comissao_para_markup(0.65) == aprox(0.06)
+    assert REGRAS.comissao_para_markup(0.95) == aprox(0.09)
+    assert REGRAS.comissao_para_markup(1.40) == aprox(0.10)
 
 
 def test_circularidade_da_comissao_fecha_na_propria_faixa():
-    """O markup resolvido tem de ser consistente com a faixa de comissão usada."""
-    for alvo in [0.05, 0.12, 0.18, 0.25, 0.30]:
-        r = calcular_por_margem(50.0, 1, alvo, REGRAS)
+    """O markup resolvido tem de ser consistente com a faixa de comissão usada.
+
+    Desde a Sessão 3B o `markup_implicito` é o markup do preço **cobrado**, não o do preço
+    teórico: `calcular_por_margem` forma o preço, arredonda e recompõe tudo sobre o centavo.
+    Por isso recompor a fórmula a partir dele devolve o preço comercial de volta, exatamente
+    — e é justamente essa igualdade que torna o markup exibido verificável pelo usuário.
+    """
+    for alvo in ("0.05", "0.12", "0.18", "0.25", "0.30"):
+        r = calcular_por_margem(50.0, 1, D(alvo), REGRAS)
         comissao = REGRAS.comissao_para_markup(r.markup_implicito)
-        recomposto = 50.0 * (1 + r.markup_implicito) / (1 - REGRAS.taxa_fixa() - comissao)
-        assert recomposto == pytest.approx(r.preco_negociado, rel=1e-6)
+        recomposto = D(50) * (1 + r.markup_implicito) / (1 - REGRAS.taxa_fixa() - comissao)
+        assert recomposto == r.preco_negociado
 
 
 def test_sem_custo_nao_inventa_margem():
@@ -72,7 +118,7 @@ def test_sem_custo_nao_inventa_margem():
 ])
 def test_encargo_financeiro_vem_da_tabela(session, codigo, esperado):
     condicoes = session.exec(select(CondicaoPagamento)).all()
-    assert resolver_encargo(condicoes, codigo).pct == pytest.approx(esperado)
+    assert resolver_encargo(condicoes, codigo).pct == aprox(esperado)
 
 
 def test_condicao_sem_taxa_confirmada_avisa_em_vez_de_estimar(session):
@@ -121,7 +167,7 @@ def test_override_autorizado_funciona_mas_exige_motivo(session):
     com_motivo = resolver_encargo(condicoes, "45 DD", override_pct=0.024,
                                   override_motivo="Aprovado pela diretoria em 03/09")
     assert not com_motivo.bloqueado
-    assert com_motivo.pct == pytest.approx(0.024)
+    assert com_motivo.pct == aprox(0.024)
     assert com_motivo.origem == "override"
 
 

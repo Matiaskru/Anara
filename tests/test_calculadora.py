@@ -4,6 +4,7 @@ import tempfile
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine, select
+from decimais import MARGEM_DO_CENTAVO, MEIO_CENTAVO, aprox  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -40,10 +41,10 @@ def test_calcula_lencol_que_nao_esta_no_catalogo(s):
     m = material(s, "300TC Sateen 100% Cotton")
     r = calcular(s, "Flat Sheet", 240, 260, material_id=m.id)
     assert r["calculavel"] is True
-    assert r["custo"]["industrial"]["exw_usd"] == pytest.approx(13.07, abs=0.01)
-    assert r["custo"]["net_brl"] == pytest.approx(73.09, abs=0.05)
-    assert r["margem"]["margem_pct"] == pytest.approx(0.18)      # lençol ≥ 300TC
-    assert r["comercial"]["preco_negociado"] == pytest.approx(146.73, abs=0.1)
+    assert r["custo"]["industrial"]["exw_usd"] == aprox(13.07, abs=0.01)
+    assert r["custo"]["net_brl"] == aprox(73.09, abs=0.05)
+    assert r["margem"]["margem_pct"] == aprox(0.18)      # lençol ≥ 300TC
+    assert r["comercial"]["preco_negociado"] == aprox(146.73, abs=0.1)
 
 
 def test_o_preco_da_calculadora_e_o_mesmo_da_cotacao(s):
@@ -54,7 +55,7 @@ def test_o_preco_da_calculadora_e_o_mesmo_da_cotacao(s):
     r = calcular(s, "Flat Sheet", 190, 250, material_id=m.id)
     produto = produto_simulado(s, "Flat Sheet", 190, 250, material_id=m.id)
     memoria = ps.memoria_do_preco(s, produto)
-    assert r["comercial"]["preco_negociado"] == pytest.approx(
+    assert r["comercial"]["preco_negociado"] == aprox(
         memoria["comercial"]["preco_negociado"])
 
 
@@ -62,14 +63,14 @@ def test_calcula_toalha_pela_taxa_por_kg(s):
     from app.calculadora import calcular
     r = calcular(s, "Bath Towel", 70, 140, gsm=500)
     assert r["calculavel"] is True
-    assert r["custo"]["industrial"]["exw_usd"] == pytest.approx(4.165, abs=0.01)  # 0,49 kg × 8,50
-    assert r["margem"]["margem_pct"] == pytest.approx(0.12)
+    assert r["custo"]["industrial"]["exw_usd"] == aprox(4.165, abs=0.01)  # 0,49 kg × 8,50
+    assert r["margem"]["margem_pct"] == aprox(0.12)
 
 
 def test_toalha_listrada_usa_a_taxa_de_piscina(s):
     from app.calculadora import calcular
     r = calcular(s, "Pool Towel", 90, 170, gsm=550, plain_or_stripe="stripe")
-    assert r["custo"]["industrial"]["exw_usd"] == pytest.approx(11.781, abs=0.01)
+    assert r["custo"]["industrial"]["exw_usd"] == aprox(11.781, abs=0.01)
 
 
 def test_familia_sem_formula_nao_inventa(s):
@@ -84,7 +85,7 @@ def test_margem_pode_ser_forcada(s):
     from app.calculadora import calcular
     m = material(s, "300TC Sateen 100% Cotton")
     r = calcular(s, "Flat Sheet", 240, 260, material_id=m.id, margem_override=0.25)
-    assert r["comercial"]["margem_liquida"] == pytest.approx(0.25, abs=1e-6)
+    assert r["comercial"]["margem_liquida"] == aprox(0.25, abs=MARGEM_DO_CENTAVO)
 
 
 def test_quantidade_multiplica_o_faturamento(s):
@@ -92,7 +93,7 @@ def test_quantidade_multiplica_o_faturamento(s):
     m = material(s, "300TC Sateen 100% Cotton")
     um = calcular(s, "Flat Sheet", 240, 260, material_id=m.id, quantidade=1)
     cem = calcular(s, "Flat Sheet", 240, 260, material_id=m.id, quantidade=100)
-    assert cem["comercial"]["faturamento"] == pytest.approx(
+    assert cem["comercial"]["faturamento"] == aprox(
         um["comercial"]["faturamento"] * 100, rel=1e-9)
 
 

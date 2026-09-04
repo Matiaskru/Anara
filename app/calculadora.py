@@ -192,8 +192,10 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
         # em abstrato. Sem cenário resolvido, o produto fica sem preço-base — não se inventa.
         regras, ctx = ps.regras_da_cotacao(session, ps.cenario_padrao_catalogo(session), produto)
         if regras is not None:
-            produto.preco_base = calcular_por_margem(produto.custo_unitario, 1,
-                                                     margem.margem_pct, regras).preco_negociado
+            from app.dinheiro import para_float
+            produto.preco_base = para_float(
+                calcular_por_margem(produto.custo_unitario, 1,
+                                    margem.margem_pct, regras).preco_negociado)
         else:
             produto.preco_base = None
             produto.precisa_revisao = True

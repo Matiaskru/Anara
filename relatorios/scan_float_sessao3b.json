@@ -1,0 +1,1872 @@
+{
+ "textual": [
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 75,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 113,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 113,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 72,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 73,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 110,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 111,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 114,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 139,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 140,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/config_service.py",
+   "modulo": "config_service.py",
+   "linha": 49,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/config_service.py",
+   "modulo": "config_service.py",
+   "linha": 179,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/config_service.py",
+   "modulo": "config_service.py",
+   "linha": 48,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/config_service.py",
+   "modulo": "config_service.py",
+   "linha": 64,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/config_service.py",
+   "modulo": "config_service.py",
+   "linha": 179,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/custo_service.py",
+   "modulo": "custo_service.py",
+   "linha": 125,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/custo_service.py",
+   "modulo": "custo_service.py",
+   "linha": 194,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/custo_service.py",
+   "modulo": "custo_service.py",
+   "linha": 211,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/custo_service.py",
+   "modulo": "custo_service.py",
+   "linha": 127,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/custo_service.py",
+   "modulo": "custo_service.py",
+   "linha": 212,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/custo_service.py",
+   "modulo": "custo_service.py",
+   "linha": 216,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 132,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 128,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 83,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 107,
+   "tipo": "Decimal(variável)",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 108,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 111,
+   "tipo": "Decimal(variável)",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 132,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 207,
+   "tipo": "Decimal(variável)",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 117,
+   "tipo": "Decimal(variável)",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 209,
+   "tipo": "Decimal(variável)",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 109,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 109,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 220,
+   "tipo": "Decimal(variável)",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 109,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/dinheiro.py",
+   "modulo": "dinheiro.py",
+   "linha": 109,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 39,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 40,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 56,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 57,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 58,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 43,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 44,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 47,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 48,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 49,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 64,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 65,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 66,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 200,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 201,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 202,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 203,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 93,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 154,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 167,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 93,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 123,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 124,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 154,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 167,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 93,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 123,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 124,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 149,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 149,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 150,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 150,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 154,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 166,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 178,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 182,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 150,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 150,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/excel_import.py",
+   "modulo": "excel_import.py",
+   "linha": 182,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/frete_engine.py",
+   "modulo": "frete_engine.py",
+   "linha": 305,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/frete_engine.py",
+   "modulo": "frete_engine.py",
+   "linha": 305,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/frete_engine.py",
+   "modulo": "frete_engine.py",
+   "linha": 182,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/frete_service.py",
+   "modulo": "frete_service.py",
+   "linha": 38,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/frete_service.py",
+   "modulo": "frete_service.py",
+   "linha": 39,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/frete_service.py",
+   "modulo": "frete_service.py",
+   "linha": 40,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/frete_service.py",
+   "modulo": "frete_service.py",
+   "linha": 41,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/frete_service.py",
+   "modulo": "frete_service.py",
+   "linha": 102,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/ktc_engine.py",
+   "modulo": "ktc_engine.py",
+   "linha": 111,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/margin_rules.py",
+   "modulo": "margin_rules.py",
+   "linha": 72,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/matching.py",
+   "modulo": "matching.py",
+   "linha": 31,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/matching.py",
+   "modulo": "matching.py",
+   "linha": 31,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/matching.py",
+   "modulo": "matching.py",
+   "linha": 31,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/matching.py",
+   "modulo": "matching.py",
+   "linha": 31,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/migrations.py",
+   "modulo": "migrations.py",
+   "linha": 68,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 228,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 242,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 260,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 283,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 319,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 323,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 329,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 343,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 367,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 430,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 533,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 557,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 595,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 596,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 597,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 730,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 828,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 829,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 830,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 831,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 832,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 833,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 834,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 835,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 838,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 206,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 225,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 226,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 297,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 298,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 299,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 324,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 326,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 327,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 328,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 415,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 420,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 431,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 432,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 433,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 463,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 494,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 495,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 496,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 497,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 499,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 501,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 502,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 503,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 504,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 505,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 570,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 602,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 603,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 604,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 632,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 636,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 652,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 653,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 667,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 676,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 678,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 682,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 683,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 687,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 688,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 693,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 694,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 695,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 703,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 704,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 705,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 706,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 717,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 755,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 756,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 797,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 813,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 815,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 816,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 836,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 844,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 846,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 847,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 848,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 849,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 854,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 855,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 856,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 857,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 869,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 870,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 871,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 872,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 875,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 877,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/models.py",
+   "modulo": "models.py",
+   "linha": 882,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/nomes.py",
+   "modulo": "nomes.py",
+   "linha": 168,
+   "tipo": "round()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/nomes.py",
+   "modulo": "nomes.py",
+   "linha": 168,
+   "tipo": "round()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/payment_terms.py",
+   "modulo": "payment_terms.py",
+   "linha": 47,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/peso.py",
+   "modulo": "peso.py",
+   "linha": 35,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/peso.py",
+   "modulo": "peso.py",
+   "linha": 35,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/peso.py",
+   "modulo": "peso.py",
+   "linha": 36,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/peso.py",
+   "modulo": "peso.py",
+   "linha": 36,
+   "tipo": "anotação float",
+   "classe": "A"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 240,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 240,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 244,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 517,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 208,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 244,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 517,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/pricing_service.py",
+   "modulo": "pricing_service.py",
+   "linha": 518,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 494,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 499,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 503,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 509,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 494,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 499,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 503,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/seeds.py",
+   "modulo": "seeds.py",
+   "linha": 509,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 76,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 77,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 76,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 77,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 78,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 79,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 78,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 79,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/spec_parser.py",
+   "modulo": "spec_parser.py",
+   "linha": 115,
+   "tipo": "round()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/routers/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 33,
+   "tipo": "float()",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/routers/calculadora.py",
+   "modulo": "calculadora.py",
+   "linha": 33,
+   "tipo": "anotação float",
+   "classe": "C"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 80,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 110,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 131,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 148,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 165,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 166,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 70,
+   "tipo": "float()",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 100,
+   "tipo": "float()",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 70,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/configuracoes.py",
+   "modulo": "configuracoes.py",
+   "linha": 100,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 470,
+   "tipo": "float()",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 472,
+   "tipo": "float()",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 63,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 63,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 72,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 72,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 72,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 276,
+   "tipo": "float()",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 369,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 370,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 426,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 427,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 470,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 472,
+   "tipo": "anotação float",
+   "classe": "B"
+  },
+  {
+   "arquivo": "app/routers/cotacoes.py",
+   "modulo": "cotacoes.py",
+   "linha": 276,
+   "tipo": "anotação float",
+   "classe": "B"
+  }
+ ],
+ "dinamica": [
+  {
+   "ponto": "fiscal_rules.icms_pct",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "fiscal_rules.aliquota_interna_destino",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "fiscal_rules.fcp_pct",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "payment_terms.pct",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "nationalization.fx_usd_brl",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "nationalization.net_brl",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "nationalization.net_usd",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "ktc_engine.exw_usd",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "ktc_engine.etapa.valor",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "custo_service.cnet_nacional.cnet",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.taxa_fixa",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.preco_negociado",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.faturamento",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.custo_total",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.impostos",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.comissao",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.lucro",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.margem_liquida",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.markup_implicito",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.frete_cf",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.frete_rv",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.preco_preciso",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.margem_alvo",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "dinheiro.ratear_centavos[0]",
+   "tipo": "Decimal",
+   "classe": "A"
+  },
+  {
+   "ponto": "pricing_engine.como_dict['preco_negociado'] (fronteira)",
+   "tipo": "float",
+   "classe": "C"
+  },
+  {
+   "ponto": "pricing_engine.como_dict['faturamento'] (fronteira)",
+   "tipo": "float",
+   "classe": "C"
+  },
+  {
+   "ponto": "pricing_engine.como_dict['lucro'] (fronteira)",
+   "tipo": "float",
+   "classe": "C"
+  }
+ ],
+ "resumo_textual": {
+  "C": 205,
+  "A": 16,
+  "B": 25
+ },
+ "resumo_dinamico": {
+  "A": 24,
+  "C": 3
+ }
+}

@@ -7,6 +7,7 @@ percentual sobre um preço preliminar faria a margem-alvo não fechar — e há 
 ela fecha.
 """
 from datetime import date
+from decimal import Decimal
 
 import pytest
 from sqlmodel import select
@@ -18,6 +19,8 @@ from app.models import (
     Transportadora,
 )
 from app.pricing_engine import TaxRuleSet, calcular_por_margem
+from app.dinheiro import D  # noqa: E402
+from decimais import CENTAVO, MEIO_CENTAVO, aprox  # noqa: E402
 
 FATOR_CUBAGEM = 300.0
 
@@ -94,13 +97,13 @@ def calcular(tabela, session, componentes, regiao="REGIAO CACHOEIRINHA - RS",
 def test_1_peso_real_maior_que_cubado_usa_real(tabela, session, componentes):
     r = calcular(tabela, session, componentes, peso=1000.0, volume=1.0)   # cubado 300
     assert r.status == fe.OK
-    assert r.peso_taxado_kg == pytest.approx(1000.0)
+    assert r.peso_taxado_kg == aprox(1000.0)
     assert r.peso_taxado_fonte == "PESO_REAL"
 
 
 def test_2_cubado_maior_que_real_usa_cubado(tabela, session, componentes):
     r = calcular(tabela, session, componentes, peso=100.0, volume=2.0)    # cubado 600
-    assert r.peso_taxado_kg == pytest.approx(600.0)
+    assert r.peso_taxado_kg == aprox(600.0)
     assert r.peso_taxado_fonte == "SHIPMENT_VOLUME"
 
 
@@ -118,9 +121,9 @@ def test_4_minimo_substitui_apenas_o_frete_peso(tabela, session, componentes):
     """100 kg → 0,1 t × 598 = R$ 59,80, abaixo do mínimo de R$ 179. Pedágio soma por fora."""
     r = calcular(tabela, session, componentes, peso=100.0, volume=0.1)
     assert r.minimo_aplicado is True
-    assert r.frete_peso == pytest.approx(179.0)
-    assert r.componentes_fixos["PEDAGIO"] == pytest.approx(100.0 * 0.0536)
-    assert r.cf_logistico == pytest.approx(179.0 + 5.36)
+    assert r.frete_peso == aprox(179.0)
+    assert r.componentes_fixos["PEDAGIO"] == aprox(100.0 * 0.0536)
+    assert r.cf_logistico == aprox(179.0 + 5.36)
     assert r.cf_logistico > 179.0, "o mínimo não substitui o frete TOTAL"
 
 
@@ -129,8 +132,8 @@ def test_4_minimo_substitui_apenas_o_frete_peso(tabela, session, componentes):
 # ---------------------------------------------------------------------------
 def test_5_adv_e_percentual_da_nf(tabela, session, componentes):
     r = calcular(tabela, session, componentes, peso=500.0, volume=1.0, nf=13350.0)
-    assert r.componentes_percentuais["ADV"] == pytest.approx(0.002)
-    assert r.valor_rv(13350.0) == pytest.approx(26.70), "o exemplo da própria planilha"
+    assert r.componentes_percentuais["ADV"] == aprox(0.002)
+    assert r.valor_rv(13350.0) == aprox(26.70), "o exemplo da própria planilha"
 
 
 def test_6_adv_entra_no_denominador_e_a_margem_fecha(tabela, session, componentes):
@@ -142,7 +145,13 @@ def test_6_adv_entra_no_denominador_e_a_margem_fecha(tabela, session, componente
     res = calcular_por_margem(1000.0, 1, 0.14, regras)
     lucro = (res.faturamento - res.impostos - res.comissao - res.custo_total
              - res.frete_cf - res.frete_rv)
-    assert lucro / res.faturamento == pytest.approx(0.14, abs=1e-12)
+    # O lucro recomposto É o lucro do resultado: a linha reconcilia por construção.
+    assert lucro == res.lucro
+    assert res.reconcilia()
+    # A margem-alvo fecha exata no preço preciso (era o teste de 1e-12 da Sessão 3A) e fica a
+    # meio centavo dela no preço cobrado — a única diferença que o arredondamento introduz.
+    assert abs(res.ajuste_arredondamento) <= MEIO_CENTAVO
+    assert lucro / res.faturamento == aprox(0.14, abs="0.00001")
 
 
 def test_7_gris_so_entra_quando_aplicavel(tabela, session):
@@ -152,7 +161,7 @@ def test_7_gris_so_entra_quando_aplicavel(tabela, session):
                                situacao=fe.NAO_APLICA)],
                    peso=500.0, volume=1.0)
     assert "GRIS" not in sem.componentes_percentuais
-    assert sem.rv_logistico_pct == pytest.approx(0.002)
+    assert sem.rv_logistico_pct == aprox(0.002)
 
 
 def test_7b_gris_desconhecido_bloqueia_em_vez_de_virar_zero(tabela, session):
@@ -169,22 +178,22 @@ def test_8_gris_aplicavel_entra_no_rv(tabela, session):
                  [componente(tabela.id, "ADV", fe.PERCENTUAL_NF, 0.002),
                   componente(tabela.id, "GRIS", fe.PERCENTUAL_NF, 0.001)],
                  peso=500.0, volume=1.0)
-    assert r.rv_logistico_pct == pytest.approx(0.003)
-    assert r.valor_rv(13350.0) == pytest.approx(13350.0 * 0.003)
+    assert r.rv_logistico_pct == aprox(0.003)
+    assert r.valor_rv(13350.0) == aprox(13350.0 * 0.003)
 
 
 def test_9_mudar_o_preco_muda_adv_deterministicamente(tabela, session, componentes):
     r = calcular(tabela, session, componentes, peso=500.0, volume=1.0)
-    assert r.valor_rv(10000.0) == pytest.approx(20.0)
-    assert r.valor_rv(20000.0) == pytest.approx(40.0)
-    assert r.valor_rv(20000.0) == pytest.approx(2 * r.valor_rv(10000.0))
+    assert r.valor_rv(10000.0) == aprox(20.0)
+    assert r.valor_rv(20000.0) == aprox(40.0)
+    assert r.valor_rv(20000.0) == aprox(2 * r.valor_rv(10000.0))
 
 
 def test_25_percentual_da_nf_nunca_e_congelado_num_preco_preliminar(tabela, session,
                                                                     componentes):
     """O RV é uma fração até o preço existir; nunca um R$ calculado antes."""
     r = calcular(tabela, session, componentes, peso=500.0, volume=1.0)
-    assert isinstance(r.rv_logistico_pct, float) and 0 < r.rv_logistico_pct < 1
+    assert isinstance(r.rv_logistico_pct, Decimal) and 0 < r.rv_logistico_pct < 1
     assert "ADV" not in r.componentes_fixos, "ADV não pode virar componente fixo"
 
 
@@ -193,7 +202,7 @@ def test_25_percentual_da_nf_nunca_e_congelado_num_preco_preliminar(tabela, sess
 # ---------------------------------------------------------------------------
 def test_10_pedagio_usa_a_base_declarada(tabela, session, componentes):
     r = calcular(tabela, session, componentes, peso=100.0, volume=2.0)   # taxado = 600
-    assert r.componentes_fixos["PEDAGIO"] == pytest.approx(600.0 * 0.0536)
+    assert r.componentes_fixos["PEDAGIO"] == aprox(600.0 * 0.0536)
 
 
 def test_10b_base_do_pedagio_desconhecida_bloqueia_quando_muda_o_numero(tabela, session,
@@ -293,10 +302,10 @@ def test_18_dois_grupos_nao_duplicam_adv_sobre_a_receita_total(tabela, session, 
     a = calcular(tabela, session, componentes, peso=500.0, volume=1.0, nf=60000.0)
     b = calcular(tabela, session, componentes, peso=500.0, volume=1.0, nf=40000.0)
     adv_a, adv_b = a.valor_rv(60000.0), b.valor_rv(40000.0)
-    assert adv_a == pytest.approx(120.0)
-    assert adv_b == pytest.approx(80.0)
-    assert adv_a + adv_b == pytest.approx(200.0)
-    assert adv_a + adv_b == pytest.approx(0.002 * 100000.0), "uma vez sobre o total, não duas"
+    assert adv_a == aprox(120.0)
+    assert adv_b == aprox(80.0)
+    assert adv_a + adv_b == aprox(200.0)
+    assert adv_a + adv_b == aprox(0.002 * 100000.0), "uma vez sobre o total, não duas"
     assert adv_a + adv_b < 2 * 0.002 * 100000.0
 
 
@@ -309,7 +318,7 @@ def test_19_rateio_soma_exatamente_ao_frete_do_grupo(tabela, session, componente
              fs.ItemDoGrupo(2, 11, 7, 700.0, 1.0, None),
              fs.ItemDoGrupo(3, 12, 1, 100.0, 0.3, None)]
     parcelas = fs.ratear_para_itens(r, itens)
-    assert sum(p["cf"] for p in parcelas) == pytest.approx(r.cf_logistico, abs=1e-12)
+    assert sum(p["cf"] for p in parcelas) == aprox(r.cf_logistico, abs=1e-12)
     assert {p["criterio"] for p in parcelas} == {"peso_taxado_atribuivel"}
 
 
@@ -319,7 +328,7 @@ def test_19b_sem_peso_individual_o_criterio_muda_e_fica_registrado(tabela, sessi
     itens = [fs.ItemDoGrupo(1, 10, 3, 300.0, None, None),
              fs.ItemDoGrupo(2, 11, 7, 700.0, None, None)]
     parcelas = fs.ratear_para_itens(r, itens)
-    assert sum(p["cf"] for p in parcelas) == pytest.approx(r.cf_logistico, abs=1e-12)
+    assert sum(p["cf"] for p in parcelas) == aprox(r.cf_logistico, abs=1e-12)
     assert {p["criterio"] for p in parcelas} == {"valor_de_mercadoria"}
 
 
@@ -328,12 +337,12 @@ def test_20_soma_dos_grupos_bate_com_o_frete_da_cotacao(tabela, session, compone
     b = calcular(tabela, session, componentes, peso=800.0, volume=2.0, nf=40000.0)
     total_cf = a.cf_logistico + b.cf_logistico
     total_rv = a.valor_rv(60000.0) + b.valor_rv(40000.0)
-    assert a.total(60000.0) + b.total(40000.0) == pytest.approx(total_cf + total_rv)
+    assert a.total(60000.0) + b.total(40000.0) == aprox(total_cf + total_rv)
 
 
 def test_ratear_devolve_soma_exata():
     parcelas = fe.ratear(100.0, [1, 1, 1])
-    assert sum(parcelas) == pytest.approx(100.0, abs=1e-12)
+    assert sum(parcelas) == aprox(100.0, abs=1e-12)
     assert fe.ratear(0.0, []) == []
 
 
@@ -378,15 +387,15 @@ def test_23_adicional_nao_pedido_nao_aparece(tabela, session):
 
     com = calcular(tabela, session, comps, peso=500.0, volume=1.0,
                    adicionais_pedidos={"PALETIZACAO": 3, "TDE": 2})
-    assert com.componentes_fixos["PALETIZACAO"] == pytest.approx(273.0)
-    assert com.componentes_fixos["TDE"] == pytest.approx(544.0)
+    assert com.componentes_fixos["PALETIZACAO"] == aprox(273.0)
+    assert com.componentes_fixos["TDE"] == aprox(544.0)
 
 
 def test_24_unidade_da_tarifa_vem_da_tabela(tabela, session, componentes):
     """500 kg × R$ 598/t = R$ 299,00 — o valor do exemplo da própria planilha."""
     assert tabela.tarifa_unidade == "BRL_POR_TONELADA"
-    assert fe.frete_peso_de(598.0, 500.0, "BRL_POR_TONELADA") == pytest.approx(299.0)
-    assert fe.frete_peso_de(598.0, 500.0, "BRL_POR_KG") == pytest.approx(299000.0)
+    assert fe.frete_peso_de(598.0, 500.0, "BRL_POR_TONELADA") == aprox(299.0)
+    assert fe.frete_peso_de(598.0, 500.0, "BRL_POR_KG") == aprox(299000.0)
     with pytest.raises(ValueError):
         fe.frete_peso_de(598.0, 500.0, "CHUTE")
 
@@ -394,8 +403,8 @@ def test_24_unidade_da_tarifa_vem_da_tabela(tabela, session, componentes):
 def test_faixa_acima_de_7000_usa_a_outra_tarifa(tabela, session, componentes):
     abaixo = calcular(tabela, session, componentes, peso=6000.0, volume=20.0)
     acima = calcular(tabela, session, componentes, peso=8000.0, volume=26.0)
-    assert abaixo.tarifa_aplicada == pytest.approx(598.0)
-    assert acima.tarifa_aplicada == pytest.approx(538.0)
+    assert abaixo.tarifa_aplicada == aprox(598.0)
+    assert acima.tarifa_aplicada == aprox(538.0)
 
 
 # ---------------------------------------------------------------------------
@@ -417,13 +426,17 @@ def test_gross_up_usa_a_aliquota_cadastrada_e_nao_12_hardcoded(tabela, session, 
     session.add(tabela)
     r = calcular(tabela, session, componentes, peso=500.0, volume=1.0)
     assert r.status == fe.OK
-    esperado = (299.0 + 500.0 * 0.0536) / (1 - 0.12)
-    assert r.cf_logistico == pytest.approx(esperado)
+    # O CF é a quantia que o pricing usa e que a Anara paga: sai do motor em centavos.
+    # R$ 370,2272… não é um valor cobrável; R$ 370,23 é.
+    esperado = (D("299.0") + D("500.0") * D("0.0536")) / (1 - D("0.12"))
+    assert r.cf_logistico == aprox(esperado, abs=MEIO_CENTAVO)
+    assert r.cf_logistico == D("370.23")
 
     tabela.icms_pct = 0.07          # outra alíquota → outro gross-up, nada hardcoded
     session.add(tabela)
     r7 = calcular(tabela, session, componentes, peso=500.0, volume=1.0)
-    assert r7.cf_logistico == pytest.approx((299.0 + 26.80) / (1 - 0.07))
+    assert r7.cf_logistico == aprox((D("299.0") + D("26.80")) / (1 - D("0.07")),
+                                    abs=MEIO_CENTAVO)
     tabela.icms_situacao, tabela.icms_pct = "NAO_APLICA", None
     session.add(tabela)
 
@@ -436,7 +449,7 @@ def test_o_exemplo_da_planilha_e_reproduzido(tabela, session):
     comps = [componente(tabela.id, "ADV", fe.PERCENTUAL_NF, 0.002),
              componente(tabela.id, "PEDAGIO", fe.POR_PESO, 0.0536)]
     r = calcular(tabela, session, comps, peso=500.0, volume=1.0, nf=13350.0)
-    assert r.frete_peso == pytest.approx(299.0)
-    assert r.componentes_fixos["PEDAGIO"] == pytest.approx(26.80)
-    assert r.valor_rv(13350.0) == pytest.approx(26.70)
-    assert r.cf_logistico + r.valor_rv(13350.0) == pytest.approx(352.50)
+    assert r.frete_peso == aprox(299.0)
+    assert r.componentes_fixos["PEDAGIO"] == aprox(26.80)
+    assert r.valor_rv(13350.0) == aprox(26.70)
+    assert r.cf_logistico + r.valor_rv(13350.0) == aprox(352.50)

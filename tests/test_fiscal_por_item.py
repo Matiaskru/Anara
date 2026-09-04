@@ -16,6 +16,7 @@ from app.models import (
     TipoFornecedor,
 )
 from app import pricing_service as ps
+from decimais import MEIO_CENTAVO, aprox  # noqa: E402
 
 
 @pytest.fixture
@@ -54,9 +55,9 @@ def test_cotacao_mista_resolve_tres_aliquotas_no_mesmo_documento(session, fornec
     r_daune = ps.fiscal_do_item(session, cot, daune)
     r_decor = ps.fiscal_do_item(session, cot, decor)
 
-    assert r_ktc.origem_fiscal == "IMPORTADA" and r_ktc.icms_pct == pytest.approx(0.04)
-    assert r_daune.origem_fiscal == "NACIONAL" and r_daune.icms_pct == pytest.approx(0.12)
-    assert r_decor.origem_fiscal == "NACIONAL" and r_decor.icms_pct == pytest.approx(0.12)
+    assert r_ktc.origem_fiscal == "IMPORTADA" and r_ktc.icms_pct == aprox(0.04)
+    assert r_daune.origem_fiscal == "NACIONAL" and r_daune.icms_pct == aprox(0.12)
+    assert r_decor.origem_fiscal == "NACIONAL" and r_decor.icms_pct == aprox(0.12)
 
 
 def test_cotacao_mista_muda_o_preco_de_cada_item(session, fornecedores):
@@ -81,8 +82,8 @@ def test_a_faixa_de_7_e_a_de_12_dao_precos_diferentes(session, fornecedores):
 
     regras_ba, _ = ps.regras_da_cotacao(session, cotacao_para("Bahia"), daune)
     regras_mg, _ = ps.regras_da_cotacao(session, cotacao_para("Minas Gerais"), daune)
-    assert regras_ba.icms_pct == pytest.approx(0.07)
-    assert regras_mg.icms_pct == pytest.approx(0.12)
+    assert regras_ba.icms_pct == aprox(0.07)
+    assert regras_mg.icms_pct == aprox(0.12)
     assert (calcular_por_margem(100.0, 1, 0.14, regras_mg).preco_negociado
             > calcular_por_margem(100.0, 1, 0.14, regras_ba).preco_negociado)
 
@@ -147,12 +148,12 @@ def test_produto_sem_fornecedor_bloqueia(session):
 def test_override_de_origem_fiscal_no_produto(session, fornecedores):
     """Um SKU nacionalizado pode ser marcado NACIONAL mesmo vindo do fornecedor importador."""
     p = produto_de(session, fornecedores["KTC"], "OVR-1", custo=100.0)
-    assert ps.fiscal_do_item(session, cotacao_para("Bahia"), p).icms_pct == pytest.approx(0.04)
+    assert ps.fiscal_do_item(session, cotacao_para("Bahia"), p).icms_pct == aprox(0.04)
     p.origem_fiscal = "NACIONAL"
     session.add(p)
     session.commit()
     r = ps.fiscal_do_item(session, cotacao_para("Bahia"), p)
-    assert r.icms_pct == pytest.approx(0.07)
+    assert r.icms_pct == aprox(0.07)
     assert any("override do SKU" in a for a in r.avisos)
 
 
@@ -213,7 +214,7 @@ def test_review_required_legado_de_custo_nao_bloqueia_o_fiscal(session, forneced
     assert regras is not None, "confiança legada de CUSTO não pode bloquear o cálculo fiscal"
     assert ctx["status_fiscal"] == "OK"
     assert ctx["bloqueado"] is False
-    assert regras.icms_pct == pytest.approx(0.07)
+    assert regras.icms_pct == aprox(0.07)
 
 
 def test_bloqueio_do_pdf_ignora_a_confianca_de_custo():
@@ -247,4 +248,4 @@ def test_as_cinco_condicoes_canonicas_chegam_ao_taxruleset(session, fornecedores
     p = produto_de(session, fornecedores["DAUNE"], f"PAG-{codigo.replace('/', '-')}",
                    custo=100.0)
     regras, _ = ps.regras_da_cotacao(session, cotacao_para("Bahia", condicao=codigo), p)
-    assert regras.encargo_financeiro_pct == pytest.approx(esperado)
+    assert regras.encargo_financeiro_pct == aprox(esperado)

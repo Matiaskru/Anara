@@ -7,6 +7,8 @@ import importlib.util
 import os
 import tempfile
 
+from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # ~/Anara-Cotacao
 GERAR_COTACAO_PATH = os.path.join(BASE_DIR, "gerar_cotacao.py")
 
@@ -54,24 +56,30 @@ def gerar_pdf_para_cotacao(cotacao, cliente, itens) -> str:
         # menor que o preço-base; quando o vendedor negociou um preço IGUAL ou
         # ACIMA do preço-base (comum agora que o preço é livre), não existe
         # desconto — mostra o preço negociado puro, sem sugerir desconto negativo.
-        if it.preco_base and it.preco_negociado < it.preco_base:
-            preco_unit = it.preco_base
-            desc = (it.preco_base - it.preco_negociado) / it.preco_base
+        # O documento comercial só mostra quantia em centavos. Um `preco_base` histórico
+        # gravado com 14 casas (havia isso antes da Sessão 3B) é quantizado aqui — o cliente
+        # não recebe R$ 34,71540940423179.
+        base = dinheiro(it.preco_base) if it.preco_base else None
+        negociado = dinheiro(it.preco_negociado)
+        if base and negociado < base:
+            preco_unit = base
+            desc = divide(base - negociado, base) or ZERO
         else:
-            preco_unit = it.preco_negociado
-            desc = 0.0
+            preco_unit = negociado
+            desc = ZERO
         items.append({
             "n": i,
             "produto": it.nome_produto,
             "spec": it.especificacao,
             "qtd": qtd,
-            "preco_unit": preco_unit,
-            "desc": desc,
-            "preco_final": it.preco_negociado,
-            "total": it.faturamento,
+            "preco_unit": para_float(preco_unit),
+            "desc": para_float(desc),
+            "preco_final": para_float(negociado),
+            "total": para_float(dinheiro(it.faturamento)),
         })
 
-    subtotal = sum(i["total"] for i in items)
+    # Soma em Decimal: o total do PDF é o que o cliente confere somando as linhas na mão.
+    subtotal = para_float(soma(i["total"] for i in items))
     totals = {"subtotal": subtotal, "frete": 0, "total_geral": subtotal, "total_itens": len(items)}
 
     nome_arquivo = (cotacao.numero or f"cotacao_{cotacao.id}").replace("/", "-")

@@ -11,6 +11,7 @@ from datetime import date
 
 import pytest
 from sqlmodel import Session, SQLModel, create_engine, select
+from decimais import MARGEM_DO_CENTAVO, MEIO_CENTAVO, aprox  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -142,19 +143,19 @@ def test_mesma_cotacao_aceita_tres_fornecedores(s):
 def test_item_entra_com_a_margem_padrao_do_produto(s):
     cotacao_id = criar_cotacao(s)
     ktc = add_item(s, cotacao_id, 1)
-    assert ktc["margem_padrao_pct"] == pytest.approx(0.16)
-    assert ktc["margem_liquida"] == pytest.approx(0.16, abs=1e-6)
+    assert ktc["margem_padrao_pct"] == aprox(0.16)
+    assert ktc["margem_liquida"] == aprox(0.16, abs=MARGEM_DO_CENTAVO)
 
     decor = add_item(s, cotacao_id, 3, quantidade=5)
-    assert decor["margem_padrao_pct"] == pytest.approx(0.14)
-    assert decor["margem_liquida"] == pytest.approx(0.14, abs=1e-6)
+    assert decor["margem_padrao_pct"] == aprox(0.14)
+    assert decor["margem_liquida"] == aprox(0.14, abs=1e-6)
 
 
 def test_override_de_margem_guarda_padrao_e_negociada(s):
     cotacao_id = criar_cotacao(s)
     item = add_item(s, cotacao_id, 1, valor=0.12)
-    assert item["margem_padrao_pct"] == pytest.approx(0.16)
-    assert item["margem_liquida"] == pytest.approx(0.12, abs=1e-6)
+    assert item["margem_padrao_pct"] == aprox(0.16)
+    assert item["margem_liquida"] == aprox(0.12, abs=MARGEM_DO_CENTAVO)
 
 
 def test_produto_sem_custo_continua_cotavel(s):
@@ -164,8 +165,8 @@ def test_produto_sem_custo_continua_cotavel(s):
                           modo="preco", valor=200.0, session=s))
     assert previa["sem_custo"] is True and previa["aviso"]
     item = add_item(s, cotacao_id, 4, quantidade=2, modo="preco", valor=200.0)
-    assert item["preco_negociado"] == pytest.approx(200.0)
-    assert item["faturamento"] == pytest.approx(400.0)
+    assert item["preco_negociado"] == aprox(200.0)
+    assert item["faturamento"] == aprox(400.0)
 
 
 @pytest.mark.parametrize("campo,valor", [
@@ -184,8 +185,8 @@ def test_mudanca_no_cabecalho_recalcula_os_itens(s, campo, valor):
 
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     s.refresh(item)
-    assert item.preco_negociado != pytest.approx(preco_antes)
-    assert item.margem_liquida == pytest.approx(0.16, abs=1e-6)
+    assert item.preco_negociado != aprox(preco_antes)
+    assert item.margem_liquida == aprox(0.16, abs=MARGEM_DO_CENTAVO)
 
 
 def test_estado_origem_logistico_nao_mexe_mais_no_fiscal(s):
@@ -206,7 +207,7 @@ def test_estado_origem_logistico_nao_mexe_mais_no_fiscal(s):
 
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     s.refresh(item)
-    assert item.preco_negociado == pytest.approx(preco_antes)
+    assert item.preco_negociado == aprox(preco_antes)
     assert item.uf_origem_fiscal == "SP", "a origem FISCAL continua vindo da premissa"
 
 
@@ -225,8 +226,8 @@ def test_contribuinte_muda_o_preco_quando_a_venda_e_interestadual(s):
            contribuinte_icms="nao", freight_type="CIF")
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     s.refresh(item)
-    assert item.icms_pct == pytest.approx(0.22)
-    assert item.fcp_pct == pytest.approx(0.02)
+    assert item.icms_pct == aprox(0.22)
+    assert item.fcp_pct == aprox(0.02)
     assert item.preco_negociado > preco_contribuinte
 
 
@@ -256,7 +257,7 @@ def test_dentro_de_sp_o_contribuinte_nao_muda_o_preco(s):
            freight_type="CIF")
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     s.refresh(item)
-    assert item.preco_negociado == pytest.approx(preco_antes)
+    assert item.preco_negociado == aprox(preco_antes)
 
 
 def test_snapshot_fiscal_fica_gravado_no_item(s):
@@ -271,11 +272,11 @@ def test_snapshot_fiscal_fica_gravado_no_item(s):
 
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     # RJ: base 20% + FECP 2% = 22%. Importada = 4% de origem + 16% de DIFAL + 2% de FECP.
-    assert item.aliquota_interna_destino == pytest.approx(0.20), "a BASE, não os 22% da coluna"
-    assert item.aliquota_interestadual == pytest.approx(0.04)
-    assert item.difal_pct == pytest.approx(0.16)
-    assert item.fcp_pct == pytest.approx(0.02)
-    assert item.icms_pct == pytest.approx(0.22)
+    assert item.aliquota_interna_destino == aprox(0.20), "a BASE, não os 22% da coluna"
+    assert item.aliquota_interestadual == aprox(0.04)
+    assert item.difal_pct == aprox(0.16)
+    assert item.fcp_pct == aprox(0.02)
+    assert item.icms_pct == aprox(0.22)
     assert "DIFAL" in (item.icms_regra or "")
     assert item.uf_origem_fiscal == "SP" and item.uf_destino_fiscal == "RJ"
     assert item.origem_fiscal in ("IMPORTADA", "NACIONAL")
@@ -283,11 +284,11 @@ def test_snapshot_fiscal_fica_gravado_no_item(s):
     assert item.difal_responsavel == "REMETENTE"  # e o remetente recolhe
     assert item.difal_valor and item.difal_valor > 0
     assert item.status_fiscal == "OK"
-    assert item.encargo_pct == pytest.approx(0.016)
+    assert item.encargo_pct == aprox(0.016)
 
     c = s.get(Cotacao, cotacao_id)
-    assert c.pis_cofins_pct == pytest.approx(0.0759)
-    assert c.encargo_financeiro_pct == pytest.approx(0.016)
+    assert c.pis_cofins_pct == aprox(0.0759)
+    assert c.encargo_financeiro_pct == aprox(0.016)
 
 
 def test_memoria_do_preco_do_item_tem_o_waterfall(s):
@@ -296,8 +297,8 @@ def test_memoria_do_preco_do_item_tem_o_waterfall(s):
     item = add_item(s, cotacao_id, 1)
     m = corpo(chamar(memoria_item, cotacao_id=cotacao_id, item_id=item["id"], session=s))
     assert m["custo"]["nacionalizacao"]["etapas"]
-    assert m["fiscal"]["icms_pct"] == pytest.approx(0.18)
-    assert m["margem"]["margem_pct"] == pytest.approx(0.16)
+    assert m["fiscal"]["icms_pct"] == aprox(0.18)
+    assert m["margem"]["margem_pct"] == aprox(0.16)
     assert m["comercial"]["preco_negociado"] > 0
 
 
@@ -332,8 +333,8 @@ def test_duplicar_reconfere_custo_e_mantem_preco_negociado(s):
     resposta = chamar(duplicar, cotacao_id=cotacao_id, session=s)
     nova_id = int(resposta.headers["location"].rsplit("/", 1)[1])
     novo = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == nova_id)).first()
-    assert novo.preco_negociado == pytest.approx(original["preco_negociado"])
-    assert novo.custo_unitario == pytest.approx(50.0)
+    assert novo.preco_negociado == aprox(original["preco_negociado"])
+    assert novo.custo_unitario == aprox(50.0)
 
 
 def test_pdf_nao_mostra_informacao_interna(s):
@@ -385,7 +386,7 @@ def test_editar_margem_direto_na_linha_do_item(s):
 
     cotacao_id = criar_cotacao(s)
     item = add_item(s, cotacao_id, 1, quantidade=10)
-    assert item["margem_liquida"] == pytest.approx(0.16, abs=1e-6)
+    assert item["margem_liquida"] == aprox(0.16, abs=MARGEM_DO_CENTAVO)
 
     class FormFalso:
         def __init__(self, dados): self._dados = dados
@@ -399,10 +400,10 @@ def test_editar_margem_direto_na_linha_do_item(s):
                                        RequestFalso({"quantidade": "10", "modo": "margem",
                                                      "valor": "0.11"}), session=s))
     atualizado = corpo(resposta)
-    assert atualizado["margem_liquida"] == pytest.approx(0.11, abs=1e-6)
+    assert atualizado["margem_liquida"] == aprox(0.11, abs=MARGEM_DO_CENTAVO)
     assert atualizado["preco_negociado"] < item["preco_negociado"]
-    assert atualizado["margem_padrao_pct"] == pytest.approx(0.16)   # padrão continua registrado
+    assert atualizado["margem_padrao_pct"] == aprox(0.16)   # padrão continua registrado
 
     gravado = s.get(CotacaoItem, item["id"])
     s.refresh(gravado)
-    assert gravado.modo_edicao == "margem" and gravado.valor_editado == pytest.approx(0.11)
+    assert gravado.modo_edicao == "margem" and gravado.valor_editado == aprox(0.11)
