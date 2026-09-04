@@ -70,6 +70,31 @@ termo comercial deliberado e **não** bloqueia.
 premissas** — e isso vale na **resposta da API**, não só na tela. Vendedor não edita margem alvo
 nem markup. Permissão é verificada no backend; URL/API sem permissão → **403**.
 
+## Acesso, papéis e confidencialidade (Sessão 4)
+
+**A autorização é do backend. Esconder campo no HTML não é autorização** — quem recebeu o
+payload lê no devtools. Toda decisão mora em `app/permissoes.py` e `app/confidencial.py`, e é
+aplicada **antes** de a resposta ser montada.
+
+- **Autenticação:** e-mail + senha por pessoa, hash **argon2id** em `Usuario.senha_hash`.
+  A senha compartilhada acabou. Bootstrap é `scripts/criar_usuario.py`, com a senha vindo de
+  `ANARA_SENHA_BOOTSTRAP` ou digitada sem eco — **nunca** de argumento nem do código
+- **`ANARA_SECRET_KEY` é obrigatória.** Sem ela e com `ANARA_ENV=producao`, o processo **não
+  sobe**; em desenvolvimento, gera chave aleatória por processo. Nunca um default conhecido
+- **O cookie carrega só `id` e `versao`** — o papel é lido do banco a cada request.
+  `HttpOnly`, `SameSite=lax`, `Secure` em produção, 12 h. `sessao_versao` invalida os cookies
+  abertos quando a senha muda ou a conta é desativada
+- **Endpoint que existe só para expor economia é NEGADO** (403) ao vendedor, não filtrado:
+  memória do preço do item e do produto, configurações, calculadora, importação, relatórios.
+  Endpoint **comercial** é filtrado, não negado — o vendedor precisa dele para cotar
+- **A lista é de permissão, não de bloqueio.** `CAMPOS_ITEM_COMERCIAL` declara o que pode
+  passar; campo novo não vaza por esquecimento
+- **O PDF comercial não leva custo, CNET, margem, lucro, markup, comissão nem fornecedor** —
+  e há teste que falha se levar
+
+Ao criar rota nova: se ela devolve número econômico, o corte é `conforme_papel(...)` ou
+`exigir_economia(request)`. Rota que só um administrador deve abrir usa `exigir_admin(request)`.
+
 ## Aprovação
 
 Qualquer preço negociado **abaixo** do recomendado exige aprovação administrativa, mesmo que a
@@ -152,8 +177,13 @@ Alembic segue em `0009` — nenhuma migration, pelo motivo medido na seção de 
 As pendências de frete (ICMS da prestação, GRIS, fiel depositário, base do pedágio, volume por
 SKU, origem logística de Daune e Decor) continuam **congeladas e fora de escopo**.
 
-O repositório é Git **local**: a senha compartilhada de `app/auth.py:10-11` está no histórico
-desde o commit inicial. Sem remote e sem push até a Onda 4 ou sanitização autorizada.
+**Sessão 4 — segurança, papéis e confidencialidade: EXECUTADA, aguardando auditoria.**
+Alembic em `0010` (tabela `usuario`, aditiva).
+
+O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
+continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o
+histórico ser sanitizado ou haver decisão explícita de que a credencial aposentada é inócua —
+e, de todo modo, `referencia/` versiona tabela de preço de fornecedor. Sem remote, sem push.
 
 Antes de qualquer sessão: o procedimento de `BACKUP.md`. Depois: comparar contra
 `relatorios/baseline_fase0.json`, que continua sendo o baseline imutável.

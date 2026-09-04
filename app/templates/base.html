@@ -21,12 +21,22 @@
         <a href="/cotacoes" class="{{ 'active' if active == 'cotacoes' else '' }}">Histórico de cotações</a>
         <a href="/cotacoes/nova" class="{{ 'active' if active == 'nova_cotacao' else '' }}">Nova cotação</a>
         <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">Produtos e preços</a>
+        {% if administra(request) %}
         <a href="/calculadora" class="{{ 'active' if active == 'calculadora' else '' }}">Calculadora KTC</a>
         <a href="/importar" class="{{ 'active' if active == 'importar' else '' }}">Importar Excel</a>
         <div class="nav-sep">Administração</div>
         <a href="/relatorios/qualidade" class="{{ 'active' if active == 'relatorios' else '' }}">Qualidade da base</a>
         <a href="/configuracoes" class="{{ 'active' if active == 'configuracoes' else '' }}">Configurações</a>
+        {% endif %}
       </nav>
+      {% set eu = usuario_atual(request) %}
+      {% if eu %}
+      <div class="usuario-atual" style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);
+                                        font-size:12px;line-height:1.5;">
+        <div style="font-weight:600;">{{ eu.nome }}</div>
+        <div style="opacity:.6;">{{ eu.papel.replace('_', ' ')|title }}</div>
+      </div>
+      {% endif %}
       <a href="/logout" class="logout">Sair</a>
     </aside>
     <main class="main">

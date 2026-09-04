@@ -11,8 +11,10 @@
 
 <div class="kpi-grid">
   <div class="kpi"><div class="label">Valor total cotado</div><div class="value">{{ valor_total|brl }}</div></div>
+  {% if ve_economia(request) %}
   <div class="kpi"><div class="label">Lucro potencial</div><div class="value copper">{{ lucro_total|brl }}</div></div>
   <div class="kpi"><div class="label">Margem líquida média ponderada</div><div class="value">{{ margem_media_ponderada|pct }}</div></div>
+  {% endif %}
   <div class="kpi"><div class="label">Ticket médio</div><div class="value">{{ ticket_medio|brl }}</div></div>
   <div class="kpi"><div class="label">Cotações</div><div class="value">{{ num_cotacoes }}</div></div>
   <div class="kpi"><div class="label">Diferença média vs preço-base</div><div class="value">{{ diferenca_media|pct }}</div></div>

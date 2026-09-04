@@ -78,14 +78,26 @@ def chamar(funcao, **kwargs):
 
     Chamando direto (sem cliente HTTP), os parâmetros que o FastAPI resolveria chegariam como
     objetos `Form`; aqui eles são trocados pelo valor padrão que o formulário teria.
+
+    **O ator padrão é um ADMIN** (Sessão 4). Estes testes existem desde antes dos papéis e
+    verificam a matemática — custo, margem, lucro, memória —, que é justamente o que só um
+    administrador recebe. Sem o ator, `request.state.usuario` seria `None`, o payload sairia
+    cortado e o teste falharia por falta de permissão, escondendo o que ele quer medir.
+    Quem testa papel passa `request=` explicitamente; a matriz de RBAC vive em
+    `tests/test_seguranca_rbac.py`.
     """
     import inspect
+
+    from conftest import RequestFalsa, _novo_usuario
 
     assinatura = inspect.signature(funcao)
     argumentos = {}
     for nome, parametro in assinatura.parameters.items():
         if nome in kwargs:
             argumentos[nome] = kwargs[nome]
+            continue
+        if nome == "request":
+            argumentos[nome] = RequestFalsa(_novo_usuario("ADMIN"))
             continue
         padrao = parametro.default
         valor = getattr(padrao, "default", padrao)
@@ -392,8 +404,17 @@ def test_editar_margem_direto_na_linha_do_item(s):
         def __init__(self, dados): self._dados = dados
         def get(self, chave, padrao=None): return self._dados.get(chave, padrao)
 
+    from conftest import _novo_usuario
+
     class RequestFalso:
-        def __init__(self, dados): self._dados = dados
+        """Request de formulário. Desde a Sessão 4 carrega também o ator: editar margem é
+        ação de administrador, e é como administradora que esta cotação está sendo mexida."""
+
+        def __init__(self, dados):
+            from types import SimpleNamespace
+            self._dados = dados
+            self.state = SimpleNamespace(usuario=_novo_usuario("ADMIN"))
+
         async def form(self): return FormFalso(self._dados)
 
     resposta = asyncio.run(editar_item(cotacao_id, item["id"],

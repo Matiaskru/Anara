@@ -9,7 +9,9 @@
       {% if ultima_importacao %} · última importação de planilha em {{ ultima_importacao.importado_em|data }}{% endif %}
     </div>
   </div>
+  {% if administra(request) %}
   <a href="/relatorios/qualidade" class="btn btn-ghost">Qualidade da base</a>
+  {% endif %}
 </div>
 
 <div class="card">
@@ -24,6 +26,7 @@
         {% endfor %}
       </select>
     </div>
+    {% if ve_economia(request) %}
     <div class="field">
       <label>Método de custo</label>
       <select name="metodo" onchange="this.form.submit()">
@@ -33,6 +36,7 @@
         {% endfor %}
       </select>
     </div>
+    {% endif %}
     <div class="field">
       <label>Situação</label>
       <select name="revisao" onchange="this.form.submit()">
@@ -46,8 +50,11 @@
   <table class="compacta">
     <thead>
       <tr>
-        <th>Produto</th><th>Fornecedor</th><th>Método</th><th class="num">Custo NET</th>
-        <th class="num">Preço-base</th><th class="num">Margem padrão</th><th>Origem do custo</th><th></th>
+        <th>Produto</th><th>Fornecedor</th>
+        {% if ve_economia(request) %}<th>Método</th><th class="num">Custo NET</th>{% endif %}
+        <th class="num">Preço-base</th>
+        {% if ve_economia(request) %}<th class="num">Margem padrão</th><th>Origem do custo</th>{% endif %}
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -64,14 +71,18 @@
           <span class="tag {{ 'tag-ktc' if f.codigo == 'KTC' else ('tag-daune' if f.codigo == 'DAUNE' else 'tag-decor') }}">{{ f.nome.split(' ')[0] }}</span>
           {% else %}—{% endif %}
         </td>
+        {% if ve_economia(request) %}
         <td><span class="tag {{ 'tag-calc' if p.cost_method == 'KTC_CALCULATED' else ('tag-legacy' if p.cost_method == 'LEGACY_EXCEL' else 'tag-quoted') }}">{{ p.cost_method or '—' }}</span></td>
         <td class="num">{{ p.custo_unitario|brl if p.custo_unitario else '<span class="tag tag-review">a cotar</span>'|safe }}</td>
+        {% endif %}
         <td class="num">{{ p.preco_base|brl if p.preco_base else '—' }}</td>
-        <td class="num">{{ p.margem_padrao_pct|pct }}</td>
+        {% if ve_economia(request) %}<td class="num">{{ p.margem_padrao_pct|pct }}</td>{% endif %}
+        {% if ve_economia(request) %}
         <td style="font-size:10.5px; color:var(--gray);">
           {{ p.custo_ref_documento or '—' }}{% if p.custo_ref_data %}<br>{{ p.custo_ref_data|data }}{% endif %}
           {% if p.custo_ref_cliente and p.custo_ref_cliente != 'ANARA' %}<br>cliente do documento: {{ p.custo_ref_cliente }}{% endif %}
         </td>
+        {% endif %}
         <td><button class="btn btn-ghost btn-sm" onclick="abrirMemoriaProduto({{ p.id }})">Memória</button></td>
       </tr>
       {% endfor %}

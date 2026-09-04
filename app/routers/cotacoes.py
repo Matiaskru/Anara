@@ -8,7 +8,9 @@ from sqlmodel import Session, select
 from app import arquivamento
 from app import config_service as cfg
 from app import pricing_service as ps
+from app.confidencial import item_comercial, sem_confidenciais, totais_comerciais
 from app.db import get_session
+from app.permissoes import exigir_economia, ve_economia
 from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
 from app.models import (
     Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Produto,
@@ -85,8 +87,16 @@ def _calcular(modo: str, custo: float, qtd: float, valor: float,
     return calcular_por_preco(custo, qtd, valor, regras, preco_base)
 
 
-def _item_para_json(it: CotacaoItem) -> dict:
-    return {
+def _item_para_json(it: CotacaoItem, pode_ver_economia: bool = True) -> dict:
+    """Item para o JavaScript da tela.
+
+    O default é o payload interno porque quase todo chamador aqui é admin; quem serve
+    vendedor passa `pode_ver_economia=False` e recebe a versão comercial. Deixar o corte
+    explícito no chamador é de propósito: um endpoint novo que esquecer o parâmetro aparece
+    no teste de payload, em vez de silenciosamente herdar a versão permissiva de um default
+    escondido.
+    """
+    completo = {
         "id": it.id, "produto_id": it.produto_id, "ordem": it.ordem,
         "nome_produto": it.nome_produto, "especificacao": it.especificacao,
         "categoria": it.categoria, "quantidade": it.quantidade,
@@ -99,21 +109,26 @@ def _item_para_json(it: CotacaoItem) -> dict:
         "margem_padrao_pct": it.margem_padrao_pct, "margem_regra": it.margem_regra,
         "comissao_pct": it.comissao_pct, "markup_implicito": it.markup_implicito,
     }
+    return completo if pode_ver_economia else item_comercial(completo)
 
 
-def _totais(itens: list) -> dict:
+def _totais(itens: list, pode_ver_economia: bool = True) -> dict:
     """Total da cotação = soma exata das linhas.
 
     A soma é em `Decimal`: somar 45 floats de 2 casas acumula erro binário e o total da
     cotação deixa de bater com a soma que o cliente confere no PDF.
+
+    Para quem não vê economia sobram faturamento e número de itens — o que ele vai cobrar.
+    Custo, lucro e margem do documento inteiro saem do dicionário, não da tela.
     """
     faturamento = soma(i.faturamento for i in itens)
     custo = soma(i.custo_total for i in itens)
     lucro = soma(i.lucro for i in itens)
-    return {"faturamento": para_float(faturamento), "custo_total": para_float(custo),
-            "lucro": para_float(lucro),
-            "margem_liquida": para_float(divide(lucro, faturamento) or ZERO),
-            "num_itens": len(itens)}
+    completo = {"faturamento": para_float(faturamento), "custo_total": para_float(custo),
+                "lucro": para_float(lucro),
+                "margem_liquida": para_float(divide(lucro, faturamento) or ZERO),
+                "num_itens": len(itens)}
+    return completo if pode_ver_economia else totais_comerciais(completo)
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +158,8 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
                     if any((i.categoria or "") == categoria for i in itens_por_cotacao.get(c.id, []))]
 
     clientes = {c.id: c for c in session.exec(select(Cliente)).all()}
-    totais = {c.id: _totais(itens_por_cotacao.get(c.id, [])) for c in cotacoes}
+    economia = ve_economia(request)
+    totais = {c.id: _totais(itens_por_cotacao.get(c.id, []), economia) for c in cotacoes}
     categorias = sorted({i.categoria for i in session.exec(select(CotacaoItem)).all() if i.categoria})
     vendedores = sorted({c.vendedor for c in session.exec(select(Cotacao)).all() if c.vendedor})
 
@@ -239,7 +255,8 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
     _regras, regra_icms, contexto = montar_regras(cotacao, session)
     return templates.TemplateResponse(request, "cotacao_detail.html", {
         "active": "cotacoes", "cotacao": cotacao, "cliente": cliente, "itens": itens,
-        "totais": _totais(itens), "status_opcoes": [s.value for s in StatusCotacao],
+        "totais": _totais(itens, ve_economia(request)),
+        "status_opcoes": [s.value for s in StatusCotacao],
         "estados_difal": estados(session), "regra_icms_atual": regra_icms,
         "contexto_fiscal": contexto, "condicoes": cfg.condicoes_pagamento(session),
         "tipos_frete": [t.value for t in TipoFrete],
@@ -366,8 +383,8 @@ def _gravar_fiscal_no_item(it: CotacaoItem, contexto: dict, res=None):
 # Cálculo ao vivo
 # ---------------------------------------------------------------------------
 @router.post("/cotacoes/{cotacao_id}/calc")
-def calc(cotacao_id: int, produto_id: int = Form(...), quantidade: float = Form(...),
-         modo: str = Form(...), valor: float = Form(...),
+def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
+         quantidade: float = Form(...), modo: str = Form(...), valor: float = Form(...),
          session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
     produto = session.get(Produto, produto_id)
@@ -379,7 +396,7 @@ def calc(cotacao_id: int, produto_id: int = Form(...), quantidade: float = Form(
     if not produto.custo_unitario:
         # Sem custo não há margem, mas o preço exibido continua sendo quantia comercial.
         preco = dinheiro(valor if modo == "preco" else (produto.preco_base or 0))
-        return JSONResponse({
+        sem_custo = {
             "sem_custo": True, "preco_base": produto.preco_base,
             "margem_padrao_pct": para_float(margem.margem_pct), "margem_regra": margem.regra,
             "aviso": ("Produto sem custo cadastrado. Dá para cotar pelo preço, mas margem e "
@@ -388,14 +405,16 @@ def calc(cotacao_id: int, produto_id: int = Form(...), quantidade: float = Form(
             "faturamento": para_float(dinheiro(preco * D0(quantidade))),
             "custo_total": 0, "lucro": 0, "margem_liquida": 0,
             "diferenca_pct_vs_base": None,
-        })
+        }
+        return JSONResponse(sem_custo if ve_economia(request)
+                            else sem_confidenciais(sem_custo))
 
     res = _calcular(modo, produto.custo_unitario, quantidade, valor, regras, produto.preco_base)
     # Fronteira da API: `como_dict()` já entrega tudo em float, com o dinheiro em centavos.
     # Serializar Decimal aqui quebraria o JSON (ou, com `default=str`, mandaria dinheiro como
     # string para o JavaScript da tela).
     comercial = res.como_dict()
-    return JSONResponse({
+    payload = {
         "preco_negociado": comercial["preco_negociado"], "faturamento": comercial["faturamento"],
         "custo_total": comercial["custo_total"], "lucro": comercial["lucro"],
         "margem_liquida": comercial["margem_liquida"],
@@ -407,7 +426,11 @@ def calc(cotacao_id: int, produto_id: int = Form(...), quantidade: float = Form(
         "comissao_pct": para_float(regras.comissao_para_markup(res.markup_implicito)),
         "margem_padrao_pct": para_float(margem.margem_pct), "margem_regra": margem.regra,
         "sem_custo": False,
-    })
+    }
+    # O vendedor precisa do preço e do total para negociar; o resto do payload é o motor.
+    # `sem_confidenciais` corta por nome de campo, então um campo novo que alguém adicione
+    # aqui já nasce cortado se o nome estiver na política.
+    return JSONResponse(payload if ve_economia(request) else sem_confidenciais(payload))
 
 
 # ---------------------------------------------------------------------------
@@ -423,9 +446,9 @@ def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, marge
 
 
 @router.post("/cotacoes/{cotacao_id}/itens")
-def adicionar_item(cotacao_id: int, produto_id: int = Form(...), quantidade: float = Form(...),
-                   modo: str = Form("margem"), valor: float = Form(None),
-                   session: Session = Depends(get_session)):
+def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...),
+                   quantidade: float = Form(...), modo: str = Form("margem"),
+                   valor: float = Form(None), session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
     produto = session.get(Produto, produto_id)
     if not cotacao or not produto:
@@ -460,7 +483,7 @@ def adicionar_item(cotacao_id: int, produto_id: int = Form(...), quantidade: flo
     session.add(item)
     session.commit()
     session.refresh(item)
-    return JSONResponse(_item_para_json(item))
+    return JSONResponse(_item_para_json(item, ve_economia(request)))
 
 
 @router.put("/cotacoes/{cotacao_id}/itens/{item_id}")
@@ -491,12 +514,19 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
     session.add(item)
     session.commit()
     session.refresh(item)
-    return JSONResponse(_item_para_json(item))
+    return JSONResponse(_item_para_json(item, ve_economia(request)))
 
 
 @router.get("/cotacoes/{cotacao_id}/itens/{item_id}/memoria")
-def memoria_item(cotacao_id: int, item_id: int, session: Session = Depends(get_session)):
-    """Memória do preço congelada no item — como aquele preço foi formado."""
+def memoria_item(request: Request, cotacao_id: int, item_id: int,
+                 session: Session = Depends(get_session)):
+    """Memória do preço congelada no item — como aquele preço foi formado.
+
+    Negado ao vendedor. Esta é a superfície mais sensível do sistema: traz EXW, CMT, consumo
+    de tecido, nacionalização, I.I., CNET, alíquotas e margem de uma vez só. E é a que mais
+    convida ao acesso por URL direta, porque o `item_id` está no HTML da tela.
+    """
+    exigir_economia(request)
     item = session.get(CotacaoItem, item_id)
     if not item or item.cotacao_id != cotacao_id:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
@@ -512,7 +542,8 @@ def memoria_item(cotacao_id: int, item_id: int, session: Session = Depends(get_s
 
 
 @router.delete("/cotacoes/{cotacao_id}/itens/{item_id}")
-def remover_item(cotacao_id: int, item_id: int, session: Session = Depends(get_session)):
+def remover_item(request: Request, cotacao_id: int, item_id: int,
+                 session: Session = Depends(get_session)):
     item = session.get(CotacaoItem, item_id)
     if item and item.cotacao_id == cotacao_id:
         session.delete(item)

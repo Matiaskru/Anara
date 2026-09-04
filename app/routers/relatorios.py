@@ -7,12 +7,14 @@ from sqlmodel import Session
 from app.db import get_session
 from app.relatorios import indicadores, perguntas_para_ktc, qualidade_da_base
 from app.templating import templates
+from app.permissoes import exigir_admin
 
 router = APIRouter()
 
 
 @router.get("/relatorios/qualidade", response_class=HTMLResponse)
 def qualidade(request: Request, lista: str = "revisao", session: Session = Depends(get_session)):
+    exigir_admin(request)
     dados = qualidade_da_base(session)
     return templates.TemplateResponse(request, "relatorio_qualidade.html", {
         "active": "relatorios", "d": dados, "lista_atual": lista,
@@ -29,8 +31,9 @@ def qualidade(request: Request, lista: str = "revisao", session: Session = Depen
 
 
 @router.get("/relatorios/qualidade.json")
-def qualidade_json(session: Session = Depends(get_session)):
+def qualidade_json(request: Request, session: Session = Depends(get_session)):
     """Mesmo relatório em JSON — datas viram texto ISO para poder ser salvo e comparado."""
+    exigir_admin(request)
     dados = qualidade_da_base(session)
     dados["perguntas_para_ktc"] = perguntas_para_ktc(session)
     dados["indicadores"] = indicadores(session)

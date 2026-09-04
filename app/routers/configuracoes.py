@@ -21,6 +21,7 @@ from app.models import (
     ParametroKTC, Premissa, RegraFiscalVenda, ToalhaPreco,
 )
 from app.templating import templates
+from app.permissoes import exigir_admin
 
 router = APIRouter()
 
@@ -30,6 +31,7 @@ PREMISSAS_CRITICAS = {"fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un", "p
 
 @router.get("/configuracoes", response_class=HTMLResponse)
 def painel(request: Request, aba: str = "premissas", session: Session = Depends(get_session)):
+    exigir_admin(request)
     fornecedores = {f.id: f for f in session.exec(select(Fornecedor)).all()}
     contexto = {
         "active": "configuracoes", "aba": aba,
@@ -60,8 +62,9 @@ def painel(request: Request, aba: str = "premissas", session: Session = Depends(
 
 
 @router.post("/configuracoes/premissa")
-def salvar_premissa(chave: str = Form(...), valor: str = Form(...), confirmar: str = Form(""),
+def salvar_premissa(request: Request, chave: str = Form(...), valor: str = Form(...), confirmar: str = Form(""),
                     fonte: str = Form(""), session: Session = Depends(get_session)):
+    exigir_admin(request)
     if chave in PREMISSAS_CRITICAS and confirmar != "sim":
         return RedirectResponse(url="/configuracoes?aba=premissas&erro=confirmacao", status_code=303)
     atual = cfg.premissa(session, chave)
@@ -77,9 +80,10 @@ def salvar_premissa(chave: str = Form(...), valor: str = Form(...), confirmar: s
 
 
 @router.post("/configuracoes/margem")
-def salvar_margem(regra_id: int = Form(...), margem_pct: float = Form(...),
+def salvar_margem(request: Request, regra_id: int = Form(...), margem_pct: float = Form(...),
                   session: Session = Depends(get_session)):
     """Muda a margem padrão. Preço-base e cotações novas passam a usar; emitidas não mudam."""
+    exigir_admin(request)
     regra = session.get(MargemRegra, regra_id)
     if regra:
         regra.margem_pct = margem_pct / 100 if margem_pct > 1 else margem_pct
@@ -89,8 +93,9 @@ def salvar_margem(regra_id: int = Form(...), margem_pct: float = Form(...),
 
 
 @router.post("/configuracoes/condicao")
-def salvar_condicao(condicao_id: int = Form(...), encargo_pct: str = Form(""),
+def salvar_condicao(request: Request, condicao_id: int = Form(...), encargo_pct: str = Form(""),
                     ativo: str = Form("sim"), session: Session = Depends(get_session)):
+    exigir_admin(request)
     condicao = session.get(CondicaoPagamento, condicao_id)
     if condicao:
         if encargo_pct.strip() == "":
@@ -107,9 +112,10 @@ def salvar_condicao(condicao_id: int = Form(...), encargo_pct: str = Form(""),
 
 
 @router.post("/configuracoes/material")
-def salvar_material(material_id: int = Form(...), price_usd_m2: float = Form(...),
+def salvar_material(request: Request, material_id: int = Form(...), price_usd_m2: float = Form(...),
                     confirmar: str = Form(""), session: Session = Depends(get_session)):
     """Preço de material novo abre uma versão nova; a anterior é fechada, não apagada."""
+    exigir_admin(request)
     if confirmar != "sim":
         return RedirectResponse(url="/configuracoes?aba=ktc&erro=confirmacao", status_code=303)
     atual = session.get(MaterialPreco, material_id)
@@ -128,8 +134,9 @@ def salvar_material(material_id: int = Form(...), price_usd_m2: float = Form(...
 
 
 @router.post("/configuracoes/parametro")
-def salvar_parametro(parametro_id: int = Form(...), valor: float = Form(...),
+def salvar_parametro(request: Request, parametro_id: int = Form(...), valor: float = Form(...),
                      confirmar: str = Form(""), session: Session = Depends(get_session)):
+    exigir_admin(request)
     if confirmar != "sim":
         return RedirectResponse(url="/configuracoes?aba=ktc&erro=confirmacao", status_code=303)
     atual = session.get(ParametroKTC, parametro_id)
@@ -145,8 +152,9 @@ def salvar_parametro(parametro_id: int = Form(...), valor: float = Form(...),
 
 
 @router.post("/configuracoes/cmt")
-def salvar_cmt(cmt_id: int = Form(...), cmt_usd: float = Form(...), confirmar: str = Form(""),
+def salvar_cmt(request: Request, cmt_id: int = Form(...), cmt_usd: float = Form(...), confirmar: str = Form(""),
                session: Session = Depends(get_session)):
+    exigir_admin(request)
     if confirmar != "sim":
         return RedirectResponse(url="/configuracoes?aba=ktc&erro=confirmacao", status_code=303)
     atual = session.get(CmtPreco, cmt_id)
@@ -162,10 +170,11 @@ def salvar_cmt(cmt_id: int = Form(...), cmt_usd: float = Form(...), confirmar: s
 
 
 @router.post("/configuracoes/fiscal")
-def salvar_fiscal(estado_id: int = Form(...), carga_final: float = Form(...),
+def salvar_fiscal(request: Request, estado_id: int = Form(...), carga_final: float = Form(...),
                   aliquota_interna: float = Form(...), confirmar: str = Form(""),
                   session: Session = Depends(get_session)):
     """Carga final e alíquota interna por estado. O sistema usa a carga como está — não recalcula."""
+    exigir_admin(request)
     if confirmar != "sim":
         return RedirectResponse(url="/configuracoes?aba=fiscal&erro=confirmacao", status_code=303)
     estado = session.get(EstadoFiscal, estado_id)

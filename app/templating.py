@@ -60,3 +60,32 @@ templates.env.filters["brl"] = fmt_brl
 templates.env.filters["pct"] = fmt_pct
 templates.env.filters["data"] = fmt_data
 templates.env.filters["num"] = fmt_num
+
+
+# ---------------------------------------------------------------------------
+# Papel do usuário dentro do template (Sessão 4)
+# ---------------------------------------------------------------------------
+# Estes globais existem para o template **não montar** o bloco confidencial — não para
+# escondê-lo com CSS. A diferença é a que importa: o que não é montado não chega ao
+# navegador, e o que não chega não aparece no "ver código-fonte".
+#
+# Continua valendo que a autoridade é o backend: um template que esquecesse o `if` não
+# abriria brecha em endpoint JSON, porque lá o corte é feito em `app.confidencial`.
+def _ve_economia(request) -> bool:
+    from app.permissoes import ve_economia
+    return ve_economia(request)
+
+
+def _administra(request) -> bool:
+    from app.permissoes import administra
+    return administra(request)
+
+
+def _usuario(request):
+    from app.permissoes import usuario_da_request
+    return usuario_da_request(request)
+
+
+templates.env.globals["ve_economia"] = _ve_economia
+templates.env.globals["administra"] = _administra
+templates.env.globals["usuario_atual"] = _usuario

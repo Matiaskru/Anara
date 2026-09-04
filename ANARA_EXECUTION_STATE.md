@@ -2,13 +2,13 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **04/09/2026 — fim da Sessão 3B**
+Última atualização: **04/09/2026 — fim da Sessão 4**
 
 ---
 
 # Estado atual
 
-**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessão 3B EXECUTADA, aguardando auditoria.**
+**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B e 4 EXECUTADAS, aguardando auditoria.**
 
 | Etapa | Situação | Commit |
 |---|---|---|
@@ -18,9 +18,10 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 | **Sessão 2 — custo por SKU, Daune, fronha, 280 g** | **APROVADA** | `7f09652` · `6b913b1` · `7d06036` |
 | **Sessão 3A — frete comercial TRANSAL** | **APROVADA** | `a88eebd` |
 | **Sessão 3B — Decimal e reconciliação monetária** | **EXECUTADA, aguarda auditoria** | `e27e11e` (WIP) + commit final |
-| Ondas 4 a 8 | não autorizadas | — |
+| **Sessão 4 — segurança, papéis, confidencialidade** | **EXECUTADA, aguarda auditoria** | commit da Sessão 4 |
+| Ondas 5 a 8 | não autorizadas | — |
 
-Alembic em `0009` (**nenhuma migration na 3B**, por decisão medida) · **441 testes passando** · árvore limpa · sem remote.
+Alembic em **`0010`** (a 3B não criou migration, por decisão medida; a Sessão 4 criou a tabela `usuario`, aditiva) · **520 testes passando** · árvore limpa · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -236,6 +237,25 @@ seed, nenhuma linha do banco, nenhum byte do baseline.
   emitidas**. As colunas seguem REAL e a ponte é `D()`. **Não reabrir sem refazer a medição**
 - Provado: 10.440 células da grade sem uma única diferença inexplicada; histórico com **zero**
   mudanças econômicas; digest do banco idêntico antes e depois
+
+## Acesso e confidencialidade (Sessão 4)
+- **Papéis canônicos:** OWNER · ADMIN · VENDEDOR_INTERNO · VENDEDOR_COMISSIONADO. Só OWNER e
+  ADMIN veem economia; papel fora da lista é confidencial **por omissão**
+- **Senha por usuário, hash argon2id.** A senha compartilhada acabou. Bootstrap por
+  `scripts/criar_usuario.py`, senha vinda do ambiente ou digitada sem eco — nunca do código
+- **`ANARA_SECRET_KEY` obrigatória em produção**; sem ela o processo não sobe. Em
+  desenvolvimento, chave aleatória por processo. **Nunca** um default conhecido
+- **Cookie carrega identidade, não autorização** (`id` + `sessao_versao`); o papel vem do banco
+  a cada request. `HttpOnly` · `SameSite=lax` · `Secure` em produção · 12 h
+- **Endpoint que só existe para expor economia é negado (403)**, não filtrado. Endpoint
+  comercial é filtrado — o vendedor continua conseguindo cotar
+- **Lista de permissão, não de bloqueio**, em `app/confidencial.py`
+- **CSRF:** mitigado por `SameSite=lax` nas 28 rotas mutáveis, que são todas POST/PUT/DELETE.
+  Sem token próprio — a arquitetura atual já barra o vetor clássico. Exceção registrada: B-20
+- **Publicação remota continua BLOQUEADA.** A credencial saiu do código, mas segue nos commits
+  `413d6bd` e `165d75e`
+- Provado: 79 testes de segurança · regressão econômica idêntica à da 3B · digest sem nenhuma
+  alteração em tabela preexistente
 
 # Blockers conhecidos
 

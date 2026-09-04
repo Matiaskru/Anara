@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:560px;margin:64px auto;text-align:center;">
+  <h2 style="margin-top:0;">Acesso não permitido</h2>
+  <p style="color:var(--gray);">{{ detalhe or "Este conteúdo é restrito." }}</p>
+  <p style="color:var(--gray);font-size:13px;">
+    Se você precisa deste acesso para trabalhar, peça a um administrador.
+  </p>
+  <a class="btn" href="/">Voltar ao início</a>
+</div>
+{% endblock %}

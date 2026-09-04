@@ -9,12 +9,14 @@ from app.db import get_session
 from app.models import Cotacao, CotacaoItem, Fornecedor, Produto
 from app.routers.cotacoes import _aplicar_resultado, _calcular, _preencher_item, montar_regras
 from app.templating import templates
+from app.permissoes import exigir_admin
 
 router = APIRouter()
 
 
 @router.get("/calculadora", response_class=HTMLResponse)
 def pagina(request: Request, cotacao_id: int = 0, session: Session = Depends(get_session)):
+    exigir_admin(request)
     cotacao = session.get(Cotacao, cotacao_id) if cotacao_id else None
     cenario = cotacao or ps.cenario_padrao_catalogo(session)
     _regras, contexto = ps.regras_da_cotacao(session, cenario)
@@ -51,6 +53,7 @@ def _parametros(form) -> dict:
 
 @router.post("/calculadora/calcular")
 async def calcular(request: Request, session: Session = Depends(get_session)):
+    exigir_admin(request)
     form = await request.form()
     dados = _parametros(form)
     cotacao_id = form.get("cotacao_id")
@@ -61,6 +64,7 @@ async def calcular(request: Request, session: Session = Depends(get_session)):
 @router.post("/calculadora/salvar")
 async def salvar(request: Request, session: Session = Depends(get_session)):
     """Grava no catálogo e, se veio de uma cotação, já adiciona o item nela."""
+    exigir_admin(request)
     form = await request.form()
     dados = _parametros(form)
     calculavel = form.get("calculavel", "sim") == "sim"

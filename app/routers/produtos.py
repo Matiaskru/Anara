@@ -4,6 +4,8 @@ from sqlmodel import Session, select
 
 from app import pricing_service as ps
 from app.busca import buscar as buscar_produtos
+from app.confidencial import produto_comercial
+from app.permissoes import exigir_economia, ve_economia
 from app.db import get_session
 from app.models import BaseImportacao, Fornecedor, Produto
 from app.templating import templates
@@ -48,8 +50,15 @@ def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = ""
 
 
 @router.get("/produtos/buscar")
-def buscar(q: str = "", fornecedor: str = "", session: Session = Depends(get_session)):
-    """Busca da tela de cotação: entende português e inglês, vários termos e acentos."""
+def buscar(request: Request, q: str = "", fornecedor: str = "",
+           session: Session = Depends(get_session)):
+    """Busca da tela de cotação: entende português e inglês, vários termos e acentos.
+
+    O vendedor precisa desta busca para montar cotação — então ela **não** é negada a ele; o
+    que muda é o que ela devolve. `custo_unitario`, `margem_padrao_pct` e `cost_method` saem
+    do payload de quem não vê economia. `sem_custo` continua, porque é informação operacional
+    (o item não forma margem) e não revela valor nenhum.
+    """
     produtos = session.exec(select(Produto).where(Produto.ativo == True)).all()  # noqa: E712
     fornecedores = {f.id: f for f in session.exec(select(Fornecedor)).all()}
     if fornecedor:
@@ -57,7 +66,7 @@ def buscar(q: str = "", fornecedor: str = "", session: Session = Depends(get_ses
                     and fornecedores[p.fornecedor_id].codigo == fornecedor]
     produtos = buscar_produtos(produtos, q, {i: f.nome for i, f in fornecedores.items()},
                                limite=40)
-    return JSONResponse([{
+    completo = [{
         "id": p.id, "nome": p.nome, "especificacao": p.especificacao, "categoria": p.categoria,
         "familia": p.familia, "custo_unitario": p.custo_unitario, "preco_base": p.preco_base,
         "fornecedor": (fornecedores[p.fornecedor_id].nome if p.fornecedor_id in fornecedores
@@ -66,12 +75,21 @@ def buscar(q: str = "", fornecedor: str = "", session: Session = Depends(get_ses
         "precisa_revisao": p.precisa_revisao, "revisao_motivo": p.revisao_motivo,
         "sem_custo": not bool(p.custo_unitario),
         "thread_count": p.thread_count, "gsm": p.gsm,
-    } for p in produtos])
+    } for p in produtos]
+    if ve_economia(request):
+        return JSONResponse(completo)
+    return JSONResponse([produto_comercial(x) for x in completo])
 
 
 @router.get("/produtos/{produto_id}/memoria")
-def memoria(produto_id: int, session: Session = Depends(get_session)):
-    """Memória do preço do catálogo: da especificação (ou do custo do fornecedor) ao preço."""
+def memoria(request: Request, produto_id: int, session: Session = Depends(get_session)):
+    """Memória do preço do catálogo: da especificação (ou do custo do fornecedor) ao preço.
+
+    Negado ao vendedor, não filtrado: a memória **é** o motor econômico — EXW, CMT, consumo,
+    nacionalização, alíquotas e margem. Devolvê-la "sem os números" não sobraria nada útil,
+    e sobraria a chance de esquecer um campo.
+    """
+    exigir_economia(request)
     produto = session.get(Produto, produto_id)
     if not produto:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)

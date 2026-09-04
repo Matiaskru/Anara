@@ -94,7 +94,9 @@ function marcarTestes() {
     {% endif %}
   </div>
   <table>
+{% if ve_economia(request) %}
     <thead><tr><th></th><th>Número</th><th>Data</th><th>Cliente</th><th>Vendedor</th><th>Status</th><th>Condição</th><th class="num">Total</th><th class="num">Margem</th><th></th></tr></thead>
+{% endif %}
     <tbody>
       {% for c in cotacoes %}
       <tr>
@@ -110,7 +112,9 @@ function marcarTestes() {
         <td><span class="badge badge-{{ c.status.value }}">{{ c.status.value }}</span></td>
         <td>{{ c.condicao_pagamento }}</td>
         <td class="num">{{ totais.get(c.id, {}).get('faturamento')|brl }}</td>
+        {% if ve_economia(request) %}
         <td class="num">{{ totais.get(c.id, {}).get('margem_liquida')|pct }}</td>
+        {% endif %}
         <td><a href="/cotacoes/{{ c.id }}" class="btn btn-ghost btn-sm">Abrir</a></td>
       </tr>
       {% endfor %}

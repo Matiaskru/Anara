@@ -147,6 +147,27 @@ class TipoComponenteFrete(str, enum.Enum):
     por_hora = "POR_HORA"            # R$/hora excedente (TDE, TDC)
 
 
+class Papel(str, enum.Enum):
+    """Papéis canônicos. Quem pode ver o motor econômico, e quem não pode.
+
+    A fronteira que importa aqui não é "quem manda mais": é **quem pode ver custo, margem e
+    lucro**. OWNER e ADMIN veem; os dois papéis de vendedor não veem — e isso vale na resposta
+    da API, não só na tela.
+    """
+    owner = "OWNER"
+    admin = "ADMIN"
+    vendedor_interno = "VENDEDOR_INTERNO"
+    vendedor_comissionado = "VENDEDOR_COMISSIONADO"
+
+
+#: Papéis que enxergam o motor econômico interno. Qualquer papel novo é confidencial por
+#: omissão: entrar nesta lista é ato deliberado, não consequência de existir.
+PAPEIS_ECONOMICOS = frozenset({Papel.owner.value, Papel.admin.value})
+
+#: Papéis com poder administrativo sobre premissas, custos, fiscal e importação.
+PAPEIS_ADMINISTRATIVOS = frozenset({Papel.owner.value, Papel.admin.value})
+
+
 class TipoFrete(str, enum.Enum):
     cif = "CIF"
     fob = "FOB"
@@ -880,3 +901,49 @@ class CotacaoItem(SQLModel, table=True):
     status_pagamento: Optional[str] = None      # StatusPagamento
     motivo_pagamento: Optional[str] = None
     encargo_pct: Optional[float] = None         # encargo financeiro efetivamente aplicado
+
+
+# ---------------------------------------------------------------------------
+# Usuários e acesso (Sessão 4)
+# ---------------------------------------------------------------------------
+class Usuario(SQLModel, table=True):
+    """Quem entra no sistema, e com qual papel.
+
+    Substitui a senha compartilhada. Três decisões que valem registro:
+
+    * **`senha_hash` nunca guarda a senha.** É um hash argon2id, com salt próprio embutido —
+      duas contas com a mesma senha produzem hashes diferentes, e nenhum deles volta a ser a
+      senha.
+    * **`can_manage_users` é granular dentro de ADMIN** (decisão B do plano): o gerente
+      administra usuários, o administrativo não. Não existe um quinto papel para isso.
+    * **`sessao_versao` invalida sessão sem apagar o usuário.** Trocar a senha, desativar a
+      conta ou forçar logout global incrementa o número, e todo cookie emitido antes deixa de
+      valer — sem precisar de tabela de sessões.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    email: str = Field(index=True, unique=True)
+    nome: str
+    senha_hash: str
+    papel: str = Field(default=Papel.vendedor_interno.value, index=True)
+    ativo: bool = True
+    can_manage_users: bool = False
+    sessao_versao: int = 1
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+    ultimo_login_em: Optional[datetime] = None
+    criado_por: Optional[str] = None
+
+    @property
+    def ve_economia(self) -> bool:
+        """Pode ver custo, CNET, margem, lucro, markup e a memória do preço."""
+        return self.ativo and self.papel in PAPEIS_ECONOMICOS
+
+    @property
+    def administra(self) -> bool:
+        """Pode alterar premissa, custo, fiscal, frete e importar base."""
+        return self.ativo and self.papel in PAPEIS_ADMINISTRATIVOS
+
+    @property
+    def gerencia_usuarios(self) -> bool:
+        # OWNER nunca perde a capacidade de administrar quem entra — senão um sistema com um
+        # único OWNER e a flag desligada ficaria sem ninguém capaz de criar acesso.
+        return self.ativo and (self.papel == Papel.owner.value or bool(self.can_manage_users))

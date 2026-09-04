@@ -10,6 +10,7 @@ from app.db import get_session
 from app.excel_import import comissao_tabela_to_json, ler_excel, montar_diff
 from app.models import BaseImportacao, Produto
 from app.templating import templates
+from app.permissoes import exigir_admin
 
 router = APIRouter()
 
@@ -19,12 +20,14 @@ os.makedirs(TMP_DIR, exist_ok=True)
 
 @router.get("/importar", response_class=HTMLResponse)
 def form(request: Request):
+    exigir_admin(request)
     return templates.TemplateResponse(request, "importar.html", {"active": "importar"})
 
 
 @router.post("/importar/preview", response_class=HTMLResponse)
 async def preview(request: Request, arquivo: UploadFile,
                    session: Session = Depends(get_session)):
+    exigir_admin(request)
     token = uuid.uuid4().hex
     tmp_path = os.path.join(TMP_DIR, f"{token}_{arquivo.filename}")
     with open(tmp_path, "wb") as f:
@@ -57,6 +60,7 @@ async def preview(request: Request, arquivo: UploadFile,
 @router.post("/importar/confirmar")
 def confirmar(request: Request, token: str = Form(...), nome_arquivo: str = Form(...),
               session: Session = Depends(get_session)):
+    exigir_admin(request)
     tmp_path = os.path.join(TMP_DIR, token)
     if not os.path.exists(tmp_path):
         return RedirectResponse(url="/importar", status_code=303)
