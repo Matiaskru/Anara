@@ -107,17 +107,23 @@ anterior. Enquanto aguarda aprovação: salva como rascunho, **não** gera PDF f
 5. Decisão sem impacto econômico/fiscal/comercial: escolha a mais simples e documente. Decisão
    com impacto: registre como pergunta aberta e implemente o resto.
 
-## Estado atual (03/09/2026)
+## Estado atual (04/09/2026)
 
-Auditoria, plano e **Fase 0 — Fundação** concluídos. Nenhuma regra de negócio foi alterada:
-os 173 testes originais continuam passando sem edição, e nenhuma cotação histórica mudou de
-número. As **Ondas 1 a 8 não estão autorizadas** — a Fase 0 ter terminado não autoriza a Onda 1.
+Aprovadas e persistidas: **Fase 0**, **Sessão 0.1**, **Sessão 1** (fiscal por item, DIFAL,
+condições de pagamento), **Sessão 2** (custo versionado por SKU, Daune, fronha, edredom 280 g) e
+**Sessão 3A** (frete comercial TRANSAL, grupos logísticos, CF/RV no waterfall).
 
-O repositório agora é Git, e é **local**: a senha compartilhada de `app/auth.py:10-11` está no
-histórico desde o commit inicial. Sem remote e sem push até a Onda 4 ou até uma sanitização de
-histórico autorizada em separado.
+HEAD `a88eebd` · Alembic em `0009` · 352 testes passando · árvore limpa.
 
-Antes de qualquer onda: o procedimento de `BACKUP.md`. Depois: comparar contra
-`relatorios/baseline_fase0.json`.
+**Próxima: Sessão 3B — Decimal e arredondamento.** Não autorizada ainda. As pendências de frete
+(ICMS da prestação, GRIS, fiel depositário, base do pedágio, volume por SKU, origem logística de
+Daune e Decor) **não são escopo da 3B**: estão bloqueadas de forma segura e resolvê-las de
+passagem misturaria mudanças numéricas de origens diferentes.
+
+O repositório é Git **local**: a senha compartilhada de `app/auth.py:10-11` está no histórico
+desde o commit inicial. Sem remote e sem push até a Onda 4 ou sanitização autorizada.
+
+Antes de qualquer sessão: o procedimento de `BACKUP.md`. Depois: comparar contra
+`relatorios/baseline_fase0.json`, que continua sendo o baseline imutável.
 
 Consulte `ANARA_EXECUTION_STATE.md` antes de agir.

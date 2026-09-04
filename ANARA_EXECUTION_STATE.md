@@ -2,13 +2,25 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **03/09/2026 — fim da Sessão 0.1**
+Última atualização: **04/09/2026 — fim da Sessão 3A**
 
 ---
 
 # Estado atual
 
-**Fase 0 executada e aceita. Sessão 0.1 (documental) concluída. Nenhuma onda iniciada.**
+**Fase 0, Sessões 0.1, 1, 2 e 3A executadas e aprovadas. Sessão 3B é a próxima.**
+
+| Etapa | Situação | Commit |
+|---|---|---|
+| Fase 0 — Fundação | aprovada | `165d75e` |
+| Sessão 0.1 — fechamento documental | aprovada | junto de `9293c28` |
+| **Sessão 1 — P0 fiscal por item, DIFAL, pagamento** | **APROVADA** | `9293c28` · `cd0fbd8` · `1d678ad` · `214f74b` |
+| **Sessão 2 — custo por SKU, Daune, fronha, 280 g** | **APROVADA** | `7f09652` · `6b913b1` · `7d06036` |
+| **Sessão 3A — frete comercial TRANSAL** | **APROVADA** | `a88eebd` |
+| **Sessão 3B — Decimal e arredondamento** | **PRÓXIMA, não autorizada** | — |
+| Ondas 4 a 8 | não autorizadas | — |
+
+HEAD `a88eebd` · árvore limpa · Alembic em `0009` · **352 testes passando** · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -250,7 +262,31 @@ Ponto de rollback do dado, fora da pasta que é podada automaticamente:
 
 # Próxima fase
 
-## ONDA 1 — P0 FISCAL — **NÃO AUTORIZADA, mas pronta**
+## SESSÃO 3B — DECIMAL E ARREDONDAMENTO — **NÃO AUTORIZADA**
+
+Escopo: `Decimal` nos motores financeiros, política central de arredondamento, preço comercial
+em 2 casas, lucro/margem/comissão recalculados sobre o preço arredondado, reconciliação ao
+centavo. Baseline de entrada próprio, relatório de diferenças próprio, checkpoint próprio.
+
+> **As pendências de frete NÃO são escopo da 3B e não devem ser resolvidas nela.** Elas estão
+> bloqueadas de forma segura — nenhuma cotação CIF forma frete hoje, e é assim que tem de
+> continuar até haver decisão. Resolver qualquer uma delas de passagem, dentro de uma sessão de
+> arredondamento, misturaria mudanças numéricas de origens diferentes e destruiria a
+> rastreabilidade que o baseline existe para garantir.
+
+### Pendências de frete — congeladas, aguardando decisão humana
+
+| Pendência | Estado | O que falta |
+|---|---|---|
+| ICMS da prestação (C-NEW-01) | `FRETE_ICMS_REVIEW_REQUIRED` | Decidir entre tarifa com ICMS incluso ou gross-up; a alíquota é cadastrada, nunca hardcoded |
+| GRIS (C-NEW-02) | `DESCONHECIDO` | Confirmar se os 0,10% incidem sempre |
+| Fiel depositário (C-NEW-06) | `DESCONHECIDO` | Confirmar quando os 0,5% da NF incidem |
+| Base do pedágio (C-NEW-08) | `DESCONHECIDO` | Declarar se incide sobre peso real ou taxado |
+| Volume por SKU (C-NEW-04) | ausente | Cadastro; sem ele a cubagem bloqueia |
+| Origem logística de Daune e Decor | NULA | De onde cada uma embarca |
+| Passo Fundo / fora de cobertura (C-NEW-03, C-NEW-05) | `FRETE_A_COTAR` | Limite operacional, não bug |
+
+## ONDA 1 — P0 FISCAL — **CONCLUÍDA na Sessão 1**
 
 Não iniciar sem autorização explícita e nova. Escopo completo em `IMPLEMENTATION_PLAN_ANARA.md`.
 
