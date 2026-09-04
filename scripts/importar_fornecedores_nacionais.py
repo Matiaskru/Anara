@@ -43,6 +43,7 @@ from app.db import engine
 from app.migrations import fazer_backup
 from app.models import CostConfidence, CostMethod, CustoReferencia, Fornecedor, Produto
 from app.pricing_engine import calcular_por_margem
+from app.dinheiro import D, divide, para_float  # noqa: E402
 
 ARQ_DAUNE = os.path.expanduser(
     "~/Anara-Cotacao/referencia/tabela de preços Daune Anara-Trousseau-Fio a Fio.xlsx")
@@ -158,9 +159,9 @@ def importar(dry_run=False):
                                 "ICMS de compra nacional não está cadastrado no sistema. Se a "
                                 "Anara aproveita esse crédito, o custo real é menor.")
             margem = ps.margem_padrao(s, p)
-            p.margem_padrao_pct = margem.margem_pct
+            p.margem_padrao_pct = para_float(margem.margem_pct)
             res = calcular_por_margem(p.custo_unitario, 1, margem.margem_pct, regras)
-            p.preco_base = res.preco_negociado
+            p.preco_base = para_float(res.preco_negociado)
             if not dry_run:
                 s.add(p)
                 s.flush()
@@ -204,9 +205,9 @@ def importar(dry_run=False):
                                     "CUSTO DE COMPRA. Se na verdade for preço de venda, corrigir "
                                     "no cadastro — o preço calculado sai de cima desse número.")
                 margem = ps.margem_padrao(s, p)
-                p.margem_padrao_pct = margem.margem_pct
+                p.margem_padrao_pct = para_float(margem.margem_pct)
                 res = calcular_por_margem(preco, 1, margem.margem_pct, regras)
-                p.preco_base = res.preco_negociado
+                p.preco_base = para_float(res.preco_negociado)
                 if not dry_run:
                     s.add(p)
                     s.flush()

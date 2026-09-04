@@ -19,6 +19,7 @@ from app.db import engine
 from app.models import Cotacao, CotacaoItem, EstadoFiscal, Produto, RegraFiscalVenda
 from app.fiscal_rules import resolver_icms_estruturado
 from app.pricing_engine import calcular_por_margem, calcular_por_preco
+from app.dinheiro import D, divide, para_float  # noqa: E402
 
 BASELINE = os.path.expanduser("~/Anara-Cotacao/relatorios/baseline_regressao.json")
 SAIDA = os.path.expanduser("~/Anara-Cotacao/relatorios/regressao.json")
@@ -53,10 +54,11 @@ def comparar():
                 continue
             depois_margem = None
             if p.custo_unitario and p.preco_base:
-                depois_margem = calcular_por_preco(p.custo_unitario, 1, p.preco_base,
-                                                   regras).margem_liquida
-            preco_18 = (calcular_por_margem(p.custo_unitario, 1, 0.18, regras).preco_negociado
-                        if p.custo_unitario else None)
+                depois_margem = para_float(calcular_por_preco(
+                    p.custo_unitario, 1, p.preco_base, regras).margem_liquida)
+            preco_18 = (para_float(calcular_por_margem(
+                p.custo_unitario, 1, 0.18, regras).preco_negociado)
+                if p.custo_unitario else None)
             linhas.append({
                 "sku": antes["sku"], "nome": p.nome, "cost_method": p.cost_method,
                 "custo_antes": antes["custo"], "custo_depois": p.custo_unitario,

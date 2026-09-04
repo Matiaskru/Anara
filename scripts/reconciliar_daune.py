@@ -39,6 +39,7 @@ from app.custo_service import (  # noqa: E402
 )
 from app.db import engine  # noqa: E402
 from app.models import CostMethod, Fornecedor, Produto, StatusCusto  # noqa: E402
+from app.dinheiro import D, divide, para_float  # noqa: E402
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLANILHA = os.path.join(RAIZ, "referencia", "Linha Hotelaria - Daune - 12.08.26.xlsx")
@@ -317,16 +318,19 @@ def reconciliar(aplicar: bool = False) -> dict:
                     status_proposto=proposto, justificativa=justificativa)
             else:
                 conta = cnet_nacional(item["gross"])
-                dif = (conta.cnet - p.custo_unitario) if p.custo_unitario else None
+                dif = (conta.cnet - D(p.custo_unitario)) if p.custo_unitario else None
                 registro.update(
                     nova_fonte=f"Linha Hotelaria - Daune - {item['aba']}.xlsx · "
                                f"{item['descricao'][:60]}",
-                    gross=item["gross"], cnet_novo=conta.cnet,
-                    icms_credito=conta.icms_credito, base_pis_cofins=conta.base_pis_cofins,
-                    pis_cofins_credito=conta.pis_cofins_credito,
+                    gross=item["gross"], cnet_novo=para_float(conta.cnet),
+                    icms_credito=para_float(conta.icms_credito),
+                    base_pis_cofins=para_float(conta.base_pis_cofins),
+                    pis_cofins_credito=para_float(conta.pis_cofins_credito),
                     formula=conta.como_dict()["formula"],
-                    diferenca=dif,
-                    diferenca_pct=(conta.cnet / p.custo_unitario - 1) if p.custo_unitario else None,
+                    diferenca=para_float(dif),
+                    diferenca_pct=para_float(
+                        (divide(conta.cnet, p.custo_unitario) - 1)
+                        if p.custo_unitario else None),
                     status_proposto=StatusCusto.confirmado.value,
                     justificativa=("Match técnico exato com a fonte mais nova; CNET recalculado "
                                    "a partir do preço BRUTO, não do custo persistido."))

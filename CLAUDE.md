@@ -96,6 +96,39 @@ anterior. Enquanto aguarda aprovação: salva como rascunho, **não** gera PDF f
   fiscal, financeiro, comissão, frete → margem → preço recomendado
 - Taxa por kg de toalha **já é EXW final** — não aplicar CMT, 2ª qualidade nem margem por cima
 - Casamento de produto é por **campos estruturados**, nunca por nome
+- **Não fazer matemática monetária em `float`** e converter no fim: o erro já entrou. E
+  **não usar `round()`** para dinheiro — a régua é `dinheiro()`
+
+## Precisão monetária — uma régua só (Sessão 3B)
+
+**Todo o núcleo econômico é `Decimal`, e a política mora em `app/dinheiro.py`.** Não existe
+segunda régua: `pricing_engine`, `frete_engine`, `ktc_engine`, `nationalization`,
+`fiscal_rules`, `custo_service`, os serviços, os templates e o PDF importam dali.
+
+- **Nunca `Decimal(float)`.** `Decimal(0.1)` congela o erro binário. Use `D()`, que converte
+  pela representação **textual** do float. `D(0.18) == Decimal("0.18")`
+- **Precisão interna de 34 dígitos**, declarada em `PRECISAO_INTERNA`. Nada é quantizado no
+  meio da cadeia: EXW, câmbio, consumo de tecido, taxas e divisões trabalham cheios
+- **Dinheiro comercial: 2 casas, `ROUND_HALF_UP`** — `dinheiro()`. `1,005 → 1,01`. O `round()`
+  do Python faz banker's rounding sobre binário e devolve 1,0; não serve
+- **A quantização acontece UMA vez**, quando o preço vira preço: forma-se o preço preciso,
+  arredonda-se, e **todos os componentes são recompostos sobre o preço arredondado**
+- **`margem_alvo` ≠ `margem_liquida`.** Pedir 14% e cobrar R$ 377,12 entrega 13,9998%, e é
+  isso que a memória registra. Nunca reportar a margem teórica como se fosse a real
+- **Lucro é resíduo** da receita menos os componentes já quantizados — é o que faz a linha
+  fechar ao centavo sem "aproximadamente"
+- **Total da linha = preço unitário comercial × quantidade**, quantizado. Nunca um total
+  teórico próprio, que divergiria do que o cliente confere
+- **Rateio pelo maior resto** (`ratear_centavos`), com desempate pela ordem canônica:
+  R$ 100,00 entre 3 itens dá 33,34 + 33,33 + 33,33, e não 99,99
+- **Custo NET não é quantizado** — é custo interno. Só o preço comercial vira centavo
+
+**Persistência: as colunas continuam `REAL`, e isso foi medido.** No SQLite,
+`Numeric(18,2)` do SQLAlchemy vira afinidade REAL igual a `Float` e ainda **trunca na
+leitura**: `34.71540940423179` volta `34.72` e a alíquota `0.0759` volta `0.08`. Como o
+histórico guarda preços com a precisão cheia do float, migrar reescreveria cotações emitidas.
+A ponte é `D()` na entrada e `para_float()` na saída — exata nos dois sentidos para quantia já
+quantizada. **Não criar migration `Numeric` sem reabrir essa medição.**
 
 ## Como trabalhar neste projeto
 
@@ -113,12 +146,11 @@ Aprovadas e persistidas: **Fase 0**, **Sessão 0.1**, **Sessão 1** (fiscal por 
 condições de pagamento), **Sessão 2** (custo versionado por SKU, Daune, fronha, edredom 280 g) e
 **Sessão 3A** (frete comercial TRANSAL, grupos logísticos, CF/RV no waterfall).
 
-HEAD `a88eebd` · Alembic em `0009` · 352 testes passando · árvore limpa.
+**Sessão 3B — Decimal e reconciliação monetária: EXECUTADA, aguardando auditoria.**
+Alembic segue em `0009` — nenhuma migration, pelo motivo medido na seção de precisão acima.
 
-**Próxima: Sessão 3B — Decimal e arredondamento.** Não autorizada ainda. As pendências de frete
-(ICMS da prestação, GRIS, fiel depositário, base do pedágio, volume por SKU, origem logística de
-Daune e Decor) **não são escopo da 3B**: estão bloqueadas de forma segura e resolvê-las de
-passagem misturaria mudanças numéricas de origens diferentes.
+As pendências de frete (ICMS da prestação, GRIS, fiel depositário, base do pedágio, volume por
+SKU, origem logística de Daune e Decor) continuam **congeladas e fora de escopo**.
 
 O repositório é Git **local**: a senha compartilhada de `app/auth.py:10-11` está no histórico
 desde o commit inicial. Sem remote e sem push até a Onda 4 ou sanitização autorizada.

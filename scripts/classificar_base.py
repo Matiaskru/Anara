@@ -37,6 +37,7 @@ from app.models import (
 )
 from app.pricing_engine import calcular_por_margem
 from app.spec_parser import FAMILIAS_CALCULAVEIS, parse_produto
+from app.dinheiro import D, divide, para_float  # noqa: E402
 
 DATAS_COTACOES_ANTIGAS = {
     "IQA14052026": date(2026, 5, 14),
@@ -170,10 +171,11 @@ def classificar(dry_run: bool = False) -> dict:
             if calculavel:
                 resultado = ps.calcular_exw(s, p)
                 if resultado.exw_usd:
-                    p.exw_calculado_usd = resultado.exw_usd
+                    p.exw_calculado_usd = para_float(resultado.exw_usd)
                     p.exw_calculado_em = datetime.utcnow()
                     if p.exw_cotado_usd:
-                        p.exw_diferenca_usd = p.exw_calculado_usd - p.exw_cotado_usd
+                        p.exw_diferenca_usd = para_float(
+                            D(p.exw_calculado_usd) - D(p.exw_cotado_usd))
                         p.exw_diferenca_pct = (p.exw_calculado_usd / p.exw_cotado_usd) - 1
                     if calculo_parcial:
                         calculavel = False
@@ -237,10 +239,11 @@ def classificar(dry_run: bool = False) -> dict:
                     motivos_revisao.append(aviso)
 
             margem = ps.margem_padrao(s, p)
-            p.margem_padrao_pct = margem.margem_pct
+            p.margem_padrao_pct = para_float(margem.margem_pct)
             if p.custo_unitario:
-                res = calcular_por_margem(p.custo_unitario, 1, margem.margem_pct, regras_comerciais)
-                p.preco_base = res.preco_negociado
+                res = calcular_por_margem(p.custo_unitario, 1, margem.margem_pct,
+                                          regras_comerciais)
+                p.preco_base = para_float(res.preco_negociado)
 
             frescor = ps.frescor(s, p.custo_ref_data)
             if frescor["status"] == "STALE":

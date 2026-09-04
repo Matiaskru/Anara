@@ -2,13 +2,13 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **04/09/2026 — fim da Sessão 3A**
+Última atualização: **04/09/2026 — fim da Sessão 3B**
 
 ---
 
 # Estado atual
 
-**Fase 0, Sessões 0.1, 1, 2 e 3A executadas e aprovadas. Sessão 3B é a próxima.**
+**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessão 3B EXECUTADA, aguardando auditoria.**
 
 | Etapa | Situação | Commit |
 |---|---|---|
@@ -17,10 +17,10 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 | **Sessão 1 — P0 fiscal por item, DIFAL, pagamento** | **APROVADA** | `9293c28` · `cd0fbd8` · `1d678ad` · `214f74b` |
 | **Sessão 2 — custo por SKU, Daune, fronha, 280 g** | **APROVADA** | `7f09652` · `6b913b1` · `7d06036` |
 | **Sessão 3A — frete comercial TRANSAL** | **APROVADA** | `a88eebd` |
-| **Sessão 3B — Decimal e arredondamento** | **PRÓXIMA, não autorizada** | — |
+| **Sessão 3B — Decimal e reconciliação monetária** | **EXECUTADA, aguarda auditoria** | `e27e11e` (WIP) + commit final |
 | Ondas 4 a 8 | não autorizadas | — |
 
-HEAD `a88eebd` · árvore limpa · Alembic em `0009` · **352 testes passando** · sem remote.
+Alembic em `0009` (**nenhuma migration na 3B**, por decisão medida) · **441 testes passando** · árvore limpa · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -217,6 +217,25 @@ seed, nenhuma linha do banco, nenhum byte do baseline.
 - Área administrativa atualizável é **P1**, pré-go-live (Onda 5)
 
 ---
+
+## Precisão monetária (Sessão 3B)
+- **`app/dinheiro.py` é a política única.** Precisão interna de 34 dígitos; `ROUND_HALF_UP`
+  como único arredondamento comercial; `D()` como única entrada; `para_float()` como única saída
+- **Nunca `Decimal(float)`** — a conversão passa pela representação textual
+- **Quantização uma vez só**, quando o preço vira preço; depois **todos** os componentes são
+  recompostos sobre o preço arredondado
+- **`margem_alvo` e `margem_liquida` são campos separados.** A segunda é a margem do dinheiro
+  que entra. Não reportar a teórica como se fosse a real
+- **Lucro é resíduo**; a linha reconcilia ao centavo por construção
+- **Total da linha = unitário comercial × quantidade**, quantizado
+- **Rateio pelo maior resto**, desempate pela ordem canônica: R$ 100,00 ÷ 3 = 33,34 + 33,33 + 33,33
+- **CNET não é quantizado** — é custo interno; só o preço comercial vira centavo
+- **Sem migration `Numeric`, e o motivo foi medido:** no SQLite, `Numeric(18,2)` vira afinidade
+  REAL igual a `Float` e **trunca na leitura** (`34.71540940423179` → `34.72`; `0.0759` → `0.08`).
+  Como o histórico guarda preços com a precisão cheia do float, migrar **reescreveria cotações
+  emitidas**. As colunas seguem REAL e a ponte é `D()`. **Não reabrir sem refazer a medição**
+- Provado: 10.440 células da grade sem uma única diferença inexplicada; histórico com **zero**
+  mudanças econômicas; digest do banco idêntico antes e depois
 
 # Blockers conhecidos
 

@@ -1,10 +1,15 @@
-# SESSÃO 3B — HANDOFF DE CONTINUAÇÃO
+# SESSÃO 3B — RELATÓRIO DA SESSÃO
 
-> **A SESSÃO 3B NÃO ESTÁ CONCLUÍDA.** Este arquivo existe para que outra sessão continue de
-> onde esta parou, sem refazer o que já foi feito e sem repetir as decisões já tomadas.
-> O commit de checkpoint é **WIP**: não é aprovação, não é conclusão, não foi auditado.
+> **Escrito primeiro como handoff de pausa, e fechado depois que a sessão foi retomada e
+> concluída na mesma conversa.** A Sessão 3B está **executada e aguardando auditoria** — o que
+> não é o mesmo que aprovada. O checkpoint WIP `e27e11e` permanece no histórico local; o commit
+> final vem depois dele.
+>
+> O estado corrente do projeto é o de `ANARA_EXECUTION_STATE.md`; este arquivo permanece pelo
+> registro das **medições e decisões** (seção G), que são a justificativa de por que não existe
+> migration `Numeric`.
 
-Escrito em 04/09/2026, ao pausar a execução.
+Escrito em 04/09/2026, ao pausar; fechado no mesmo dia, ao concluir.
 
 ---
 
@@ -74,29 +79,38 @@ reescrita semântica dos testes de margem.
 7. **Comissão exata nas fronteiras** de 60/70/80/90/100%.
 8. **Scan de float** executado, com relatório salvo.
 
-## F. O que AINDA FALTA
+## F. O que faltava na pausa — TUDO FECHADO
 
-Em ordem de importância:
+Todos os itens abaixo foram concluídos depois da retomada. Ficam registrados com o resultado.
 
-1. **§34 — comparação de baseline com classificação.** O baseline de entrada **já existe**
-   (`relatorios/baseline_entrada_sessao3b.json`), mas o **comparador da 3B não foi escrito**.
-   Era o passo em execução quando a sessão foi pausada. Falta:
-   `scripts/comparar_baseline_sessao3b.py`, nos moldes de `comparar_baseline_onda1.py`, com as
-   classes `IGUAL` · `DECIMAL_REPRESENTATION_ONLY` · `ROUNDING_CORRIGIDO` · `RATEIO_CORRIGIDO`,
-   e **`NAO_EXPLICADA` obrigatoriamente zero**.
-2. **§35 — regressão do waterfall** por fornecedor/operação: KTC SP, KTC interestadual,
-   Daune SP, Daune interestadual, operação com CF, operação com RV, preço negociado.
-   Recompor `receita − CNET − impostos − financeiro − comissão − frete − outros = lucro` e
-   provar `lucro / receita = margem_real`. **Não feito.**
-3. **§28 — verificação formal do histórico.** `tests/test_fundacao.py` passa (14 testes), o que
-   já prova que as 18 cotações, os 45 itens e as 4 bases continuam idênticos. Falta o passo 7 do
-   `BACKUP.md`: `backup_banco.py estado --json relatorios/sessao3b_depois.json` e a comparação
-   por digest de coluna contra `relatorios/sessao3b_antes.json`.
-4. **§36 — documentar a política** em `CLAUDE.md` e `ANARA_EXECUTION_STATE.md`
-   (arredondamento, momento da quantização, margem alvo × real, rateio, persistência,
-   bridges). Hoje a política está documentada **apenas** no docstring de `app/dinheiro.py`.
-5. **§42 — checkpoint final** com os 28 itens de resposta.
-6. Atualizar `ANARA_EXECUTION_STATE.md` com o resultado da sessão.
+1. **§34 — comparação de baseline. FEITO.** `scripts/comparar_baseline_sessao3b.py`,
+   resultado em `relatorios/regressao_sessao3b.json`: **10.440 células**, sendo 5.900
+   `ROUNDING_CORRIGIDO` e 4.540 `IGUAL`. **Zero `NAO_EXPLICADA`, zero mudança real de preço.**
+   Maior Δ de preço unitário: **R$ 0,005000** — exatamente o limite do meio centavo, nunca
+   ultrapassado. 104 SKUs tiveram `custo_net_recalculado` classificado como
+   `DECIMAL_REPRESENTATION_ONLY`: Δ máximo **5,7×10⁻¹⁴** absoluto (4,2×10⁻¹⁶ relativo), que é o
+   erro do encadeamento em float sendo removido, não mudança econômica.
+2. **§35 — regressão do waterfall. FEITO.** `tests/test_waterfall_sessao3b.py`, 19 testes.
+   Recompõe o waterfall **de fora**, a partir das alíquotas que o motor fiscal resolveu, para
+   KTC SP · KTC interestadual · Daune SP · Daune interestadual · Decor interestadual · KTC não
+   contribuinte RJ (DIFAL + FECP = 22%) · Daune consumidor final SP · CF logístico · RV
+   logístico · CF+RV juntos · preço comercial arredondado · preço negociado · cotação mista.
+3. **§28 — verificação formal do histórico. FEITO.** `relatorios/sessao3b_depois.json` gerado
+   e comparado com `_antes.json`: **a única diferença entre os dois é o timestamp da própria
+   medição.** Hash do arquivo do banco, integridade, contagens e digest por tabela e por coluna:
+   idênticos. No comparador, os campos econômicos do histórico deram **18 cotações × 3 campos =
+   54 IGUAL** e **45 itens × 17 campos = 765 IGUAL**, com **zero mudanças econômicas** —
+   incluindo o `sha256` da memória de preço congelada em cada item.
+4. **§36 — documentação. FEITO.** Seção "Precisão monetária — uma régua só" em `CLAUDE.md`,
+   bloco "Precisão monetária (Sessão 3B)" em `ANARA_EXECUTION_STATE.md`, e o docstring de
+   `app/dinheiro.py` como referência longa.
+5. **Scripts economicamente relevantes. FEITO.** Seis corrigidos na ponte
+   (`adicionar_skus_do_catalogo`, `cadastrar_edredom_280g`, `classificar_base`,
+   `comparar_regressao`, `importar_fornecedores_nacionais`, `reconciliar_daune`).
+   `reconciliar_daune` e `cadastrar_edredom_280g` rodam em simulação sem erro. Dois deles
+   permanecem quebrados por causa **anterior** à 3B — ver B-19 na seção H.
+6. **API, templates e PDF. FEITO.** Ver seção M.
+7. **§42 — checkpoint final.** Entregue na resposta da sessão.
 
 ## G. Decisões tomadas
 
@@ -227,22 +241,31 @@ só existe dentro de `app/dinheiro.py`, que é a própria ponte.
 - a comparação célula a célula pré-3B × pós-3B, com classificação (item F1);
 - o digest de coluna do banco depois × antes (item F3).
 
-## M. Onde `Decimal` ainda pode estar vazando
+## M. Fronteiras — verificado
 
-Pelo que foi verificado, **nenhum vazamento conhecido permanece**: a varredura dinâmica não
-achou divergência, `json.dumps` do dicionário externo funciona sem `default=str`, e o
-roundtrip de banco é testado (`test_31`, `test_37`).
+**Nenhum vazamento de `Decimal` permanece.** A varredura dinâmica não acha divergência,
+`json.dumps` do dicionário externo funciona sem `default=str`, e o roundtrip de banco é testado.
 
-**Não verificado ainda, e por isso não afirmável:**
-- **templates Jinja** — os filtros `brl`/`pct`/`num` aceitam Decimal e float, mas **nenhuma
-  tela foi aberta no navegador** nesta sessão. Vale abrir a plataforma e conferir
-  cotação, calculadora, produtos e dashboard;
-- **PDF** — `pdf_bridge` foi ajustado, mas **nenhum PDF foi gerado** para conferência visual.
-  `gerar_cotacao.py` **não foi alterado** (o PDF aprovado não se redesenha);
-- **`scripts/` não convertidos** — `classificar_base.py`, `comparar_regressao.py`,
-  `importar_fornecedores_nacionais.py`, `gerar_relatorio.py` e `conferir_calculadora_excel.py`
-  consomem os motores e **podem quebrar em `json.dumps` ou em aritmética mista**. Só
-  `baseline_regressao_v2.py` foi ajustado. **Rodar cada um antes de fechar a sessão.**
+**API `/calc`** — exercitada de verdade, chamando a rota: modo margem devolve `float` em todos
+os campos monetários; `json.dumps` do payload passa sem `default=str`; preço negociado 99,90
+volta e `D(json) == Decimal("99.90")`; e um valor digitado de 1234,567 com quantidade 2,5 sai
+como R$ 1.234,57 unitário e R$ 3.086,43 de total — 3.086,425 arredondado por `ROUND_HALF_UP`.
+
+**PDF** — gerado de verdade, a partir da cotação histórica `ANARA-2026-0002` lida em modo
+somente leitura. O banco guarda `preco_negociado = 34.71540940423179`; o documento imprime
+**R$ 34,72**. Todos os valores saem no formato `R$ x.xxx,xx`, e o total geral (R$ 31.570,72) é
+a soma exata das linhas. `gerar_cotacao.py` **não foi alterado** — o PDF aprovado não se
+redesenha.
+
+**Templates** — os filtros foram exercitados com valores hostis: `0.30000000000000004` →
+"R$ 0,30", `2.675` → "R$ 2,68" (a régua do sistema, não a do `format`), `100.1` → "R$ 100,10".
+Varredura nos 14 templates: as únicas três expressões monetárias sem filtro são atributos
+`data-*` de `cotacao_detail.html`, lidos pelo JavaScript da página — as células visíveis
+passam por `|brl`.
+
+**Scripts** — os seis economicamente relevantes foram corrigidos na ponte. Dois deles
+(`classificar_base`, `importar_fornecedores_nacionais`) e o `comparar_regressao` continuam
+quebrando por causa **anterior à 3B**: ver B-19.
 
 ## N. Próximos passos, em ordem
 

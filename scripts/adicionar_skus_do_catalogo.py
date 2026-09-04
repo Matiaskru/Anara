@@ -33,6 +33,7 @@ from app import pricing_service as ps
 from app.db import engine
 from app.migrations import fazer_backup
 from app.models import CostConfidence, CostMethod, Fornecedor, Produto
+from app.dinheiro import D, divide, para_float  # noqa: E402
 
 CATALOGO = "Catálogo Anara A4 ago/2026"
 PLANILHA_DAUNE = "tabela de preços Daune — bloco 'TAMANHOS DE EDREDOM SOLICITADOS'"
@@ -184,7 +185,8 @@ def adicionar(dry_run=False):
             for _grupo, nome in criados:
                 produto = s.exec(select(Produto).where(Produto.nome == nome)).first()
                 if produto:
-                    produto.margem_padrao_pct = ps.margem_padrao(s, produto).margem_pct
+                    produto.margem_padrao_pct = para_float(
+                        ps.margem_padrao(s, produto).margem_pct)
                     s.add(produto)
             s.commit()
         else:

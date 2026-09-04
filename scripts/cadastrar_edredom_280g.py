@@ -31,6 +31,7 @@ from sqlmodel import Session, select  # noqa: E402
 from app.custo_service import cnet_nacional, registrar_daune, referencia_vigente  # noqa: E402
 from app.db import engine  # noqa: E402
 from app.models import Fornecedor, Produto, StatusCusto  # noqa: E402
+from app.dinheiro import D, divide, para_float  # noqa: E402
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAIDA = os.path.join(RAIZ, "relatorios", "edredom_280g.json")
@@ -85,9 +86,10 @@ def cadastrar(aplicar: bool = False) -> dict:
                 and (p.gsm or 0) != GRAMATURA]
 
             registro = {
-                "medida": f"{largura}x{comprimento}", "gross": gross, "cnet": conta.cnet,
-                "icms_credito": conta.icms_credito,
-                "pis_cofins_credito": conta.pis_cofins_credito,
+                "medida": f"{largura}x{comprimento}", "gross": gross,
+                "cnet": para_float(conta.cnet),
+                "icms_credito": para_float(conta.icms_credito),
+                "pis_cofins_credito": para_float(conta.pis_cofins_credito),
                 "sku": sku,
                 "acao": "versao_nova" if exato else "sku_novo",
                 "skus_de_outra_gramatura_na_mesma_medida": [
