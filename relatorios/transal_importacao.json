@@ -1,0 +1,158 @@
+{
+ "gerado_em": "2026-09-04",
+ "arquivo": "Tabela TRANSAL - frete nacional 2026-02.xlsx",
+ "semantica": {
+  "cabecalho": [
+   "ORIGEM – CIDADE/REGIÃO",
+   "DESTINO – CIDADE/REGIÃO",
+   "DE 01 A 7.000 KG (P/TONELADA)",
+   "ACIMA DE 7.000 KG (P/TONELADA)",
+   "FRETE MINIMO",
+   "ADV",
+   "GRIS",
+   "PEDAGIO",
+   "TEMPO ENTREGA"
+  ],
+  "faixa_unidade": "KG",
+  "tarifa_unidade": "BRL_POR_TONELADA",
+  "limite_faixa_kg": 7000.0,
+  "minimo_rotulo": "FRETE MINIMO"
+ },
+ "regioes_total": 10,
+ "regioes_com_tarifa": 9,
+ "regioes_sem_tarifa": [
+  "REGIAO PASSO FUNDO - RS"
+ ],
+ "cidades": 238,
+ "unidades": [
+  "FILIAL - CACHOEIRINHA - RS",
+  "FILIAL - COLOMBO - PR",
+  "FILIAL - FARROUPILHA - RS",
+  "FILIAL - GUARULHOS - SP",
+  "FILIAL - ITAJAÍ - SC",
+  "FILIAL - JOINVILLE - SC",
+  "FILIAL - JUNDIAÍ - SP",
+  "FILIAL - PALHOÇA - SC",
+  "MATRIZ - MORRO DA FUMAÇA - SC"
+ ],
+ "validade_tabela": "31.12.2026.",
+ "fator_cubagem_kg_m3": 300.0,
+ "icms_texto_na_tabela": "ICMS CONFORME LEGISLAÇÃO",
+ "regioes": [
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO JUNDIAI - SP",
+   "tarifa_ate_limite": 439,
+   "tarifa_acima": 395,
+   "frete_minimo": 132,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "48 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO GUARULHOS - SP",
+   "tarifa_ate_limite": 439,
+   "tarifa_acima": 395,
+   "frete_minimo": 132,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "48 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO COLOMBO - PR",
+   "tarifa_ate_limite": 287,
+   "tarifa_acima": 259,
+   "frete_minimo": 86,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "24 a 48 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO JOINVILLE - SC",
+   "tarifa_ate_limite": 281,
+   "tarifa_acima": 252,
+   "frete_minimo": 84,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "24 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO ITAJAI - SC",
+   "tarifa_ate_limite": 270,
+   "tarifa_acima": 243,
+   "frete_minimo": 81,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "24 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO PALHOCA - SC",
+   "tarifa_ate_limite": 281,
+   "tarifa_acima": 252,
+   "frete_minimo": 84,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "24 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO MORRO DA FUMACA - SC",
+   "tarifa_ate_limite": 333,
+   "tarifa_acima": 299,
+   "frete_minimo": 99,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "24 a 48 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO CACHOEIRINHA - RS",
+   "tarifa_ate_limite": 598,
+   "tarifa_acima": 538,
+   "frete_minimo": 179,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "24 a 48 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO FARROUPILHA - RS",
+   "tarifa_ate_limite": 632,
+   "tarifa_acima": 569,
+   "frete_minimo": 189,
+   "adv": 0.2,
+   "gris": 0.1,
+   "pedagio": 0.0536,
+   "prazo": "48 hs"
+  },
+  {
+   "origem": "REGIAO ITAJAI - SC",
+   "destino": "REGIAO PASSO FUNDO - RS",
+   "tarifa_ate_limite": null,
+   "tarifa_acima": null,
+   "frete_minimo": null,
+   "adv": null,
+   "gris": null,
+   "pedagio": null,
+   "prazo": null
+  }
+ ],
+ "aplicado": true,
+ "tabela_id": 1,
+ "faixas_criadas": 20,
+ "cidades_criadas": 238,
+ "componentes_criados": 11
+}

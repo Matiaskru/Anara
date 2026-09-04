@@ -122,6 +122,31 @@ class StatusPagamento(str, enum.Enum):
     review_required = "REVIEW_REQUIRED"
 
 
+class SituacaoComponente(str, enum.Enum):
+    """Aplicabilidade de um componente de frete. Ausência de regra NÃO é NAO_APLICA."""
+    aplica = "APLICA"
+    nao_aplica = "NAO_APLICA"
+    desconhecido = "DESCONHECIDO"
+
+
+class StatusFrete(str, enum.Enum):
+    """Resultado da resolução do frete de um grupo logístico."""
+    ok = "OK"
+    estimado = "FRETE_ESTIMADO"                      # premissa logística explícita e datada
+    a_cotar = "FRETE_A_COTAR"                        # fora de cobertura, sem tarifa
+    review_required = "FRETE_REVIEW_REQUIRED"        # falta dado material (volume, base, tabela)
+    icms_review_required = "FRETE_ICMS_REVIEW_REQUIRED"   # tratamento do ICMS não provado
+
+
+class TipoComponenteFrete(str, enum.Enum):
+    """Como o componente entra na conta — e é isto que decide onde ele entra no waterfall."""
+    fixo = "FIXO"                    # R$ por embarque (paletização, agendamento, ...)
+    por_peso = "POR_PESO"            # R$ por kg (pedágio)
+    percentual_nf = "PERCENTUAL_NF"  # % sobre o valor da NF (ADV, GRIS, fiel depositário)
+    percentual_frete = "PERCENTUAL_FRETE"   # % sobre o próprio frete (reentrega, devolução)
+    por_hora = "POR_HORA"            # R$/hora excedente (TDE, TDC)
+
+
 class TipoFrete(str, enum.Enum):
     cif = "CIF"
     fob = "FOB"
@@ -158,6 +183,11 @@ class Fornecedor(SQLModel, table=True):
     # UF de onde a NF deste fornecedor efetivamente sai. NULO = desconhecida — cai para a
     # premissa padrão, e a memória registra que veio de default, não de evidência.
     uf_origem_fiscal: Optional[str] = None
+    # Origem LOGÍSTICA — de onde a mercadoria embarca. Não se confunde com a origem fiscal:
+    # uma é onde a carga sai, a outra é de onde a NF é emitida. NULO = desconhecida, e nesse
+    # caso nenhuma tabela de frete resolve o grupo.
+    origem_logistica_cidade: Optional[str] = None
+    origem_logistica_uf: Optional[str] = None
     ativo: bool = True
     observacoes: Optional[str] = None
 
@@ -344,6 +374,140 @@ class AliquotaInterestadual(SQLModel, table=True):
     ativo: bool = True
     fonte: Optional[str] = None
     notas: Optional[str] = None
+
+
+class Transportadora(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    codigo: str = Field(index=True, unique=True)
+    nome: str
+    cnpj: Optional[str] = None
+    endereco: Optional[str] = None
+    ativo: bool = True
+    notas: Optional[str] = None
+
+
+class TabelaFrete(SQLModel, table=True):
+    """Uma tabela de frete de uma transportadora, com origem, vigência e semântica declarada.
+
+    A semântica é persistida em vez de assumida: `tarifa_unidade` diz o que o número da faixa
+    significa, `faixa_unidade` diz em que grandeza a faixa é medida, `pedagio_base` diz sobre
+    qual peso o pedágio incide. Nada disso é deduzido no código.
+
+    **A tabela só resolve o grupo cuja origem logística e transportadora batem com as dela.**
+    Não existe "tabela padrão": origem incompatível não cai aqui, vai para `FRETE_A_COTAR`.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    transportadora_id: int = Field(foreign_key="transportadora.id", index=True)
+    versao: int = 1
+    origem_logistica_cidade: str                 # "Itajaí"
+    origem_logistica_uf: str                     # "SC"
+    origem_regiao: Optional[str] = None          # rótulo da região de origem na própria tabela
+    documento_fonte: str
+    data_fonte: Optional[date] = None
+    valid_from: date = Field(default_factory=date.today)
+    valid_to: Optional[date] = None              # a TRANSAL 2026-02 vence em 31/12/2026
+    ativo: bool = True
+
+    # semântica declarada — nunca inferida
+    tarifa_unidade: str = "BRL_POR_TONELADA"
+    faixa_unidade: str = "KG"
+    minimo_unidade: str = "BRL_POR_EMBARQUE"
+    fator_cubagem_kg_m3: Optional[float] = None  # 300 na TRANSAL
+    pedagio_base: str = "DESCONHECIDO"           # PESO_TAXADO | PESO_REAL | DESCONHECIDO
+
+    # ICMS da prestação: APLICA/NAO_APLICA/DESCONHECIDO, com a alíquota quando conhecida
+    icms_situacao: str = "DESCONHECIDO"
+    icms_pct: Optional[float] = None
+    icms_notas: Optional[str] = None
+    notas: Optional[str] = None
+
+
+class FaixaFrete(SQLModel, table=True):
+    """Faixa de peso × região de destino: a tarifa e o frete mínimo daquela região."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tabela_id: int = Field(foreign_key="tabelafrete.id", index=True)
+    regiao_destino: str = Field(index=True)
+    peso_de: float = 0.0                          # na unidade declarada em `faixa_unidade`
+    peso_ate: Optional[float] = None              # None = sem teto
+    tarifa: Optional[float] = None                # None = região sem tarifa (Passo Fundo)
+    frete_minimo: Optional[float] = None
+    prazo: Optional[str] = None
+    ativo: bool = True
+    notas: Optional[str] = None
+
+
+class CoberturaFrete(SQLModel, table=True):
+    """Cidade atendida → região tarifária. Sem linha, o destino está fora de cobertura."""
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tabela_id: int = Field(foreign_key="tabelafrete.id", index=True)
+    cidade: str = Field(index=True)
+    uf: Optional[str] = Field(default=None, index=True)
+    regiao_destino: str = Field(index=True)
+    unidade: Optional[str] = None                 # matriz/filial que atende
+    ativo: bool = True
+
+
+class ComponenteFrete(SQLModel, table=True):
+    """Componente do frete, com tipo, valor e **aplicabilidade explícita**.
+
+    O tipo decide onde o componente entra no waterfall: `PERCENTUAL_NF` é rate variável sobre a
+    receita e entra no denominador; `FIXO` e `POR_PESO` são custo fixo do embarque e entram no
+    numerador. Tratar tudo como valor fixo calculado antes do preço seria congelar um
+    percentual da receita sobre um preço preliminar.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    tabela_id: int = Field(foreign_key="tabelafrete.id", index=True)
+    codigo: str = Field(index=True)               # ADV | GRIS | PEDAGIO | FIEL_DEPOSITARIO | ...
+    nome: str
+    tipo: str                                     # TipoComponenteFrete
+    valor: Optional[float] = None                 # % em fração, ou R$ conforme o tipo
+    unidade: Optional[str] = None
+    situacao: str = "DESCONHECIDO"                # SituacaoComponente
+    automatico: bool = False                      # entra sem alguém pedir? (ADV sim; TDE não)
+    fonte: Optional[str] = None
+    regra: Optional[str] = None
+    valid_from: date = Field(default_factory=date.today)
+    valid_to: Optional[date] = None
+    ativo: bool = True
+
+
+class GrupoLogistico(SQLModel, table=True):
+    """Um embarque dentro da cotação: uma origem logística, uma transportadora, um destino.
+
+    Itens de origens diferentes **não** viram uma carga só. Cada grupo resolve o próprio frete,
+    e o frete CIF da cotação é a soma dos grupos. A base dos componentes percentuais é o valor
+    de mercadoria **do grupo**, não o total da cotação — senão o adicional seria cobrado
+    tantas vezes quantos forem os grupos.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cotacao_id: int = Field(foreign_key="cotacao.id", index=True)
+    nome: Optional[str] = None
+    origem_cidade: Optional[str] = None
+    origem_uf: Optional[str] = None
+    fornecedor_id: Optional[int] = Field(default=None, foreign_key="fornecedor.id")
+    transportadora_id: Optional[int] = Field(default=None, foreign_key="transportadora.id")
+    tabela_id: Optional[int] = Field(default=None, foreign_key="tabelafrete.id")
+    destino_cidade: Optional[str] = None
+    destino_uf: Optional[str] = None
+    regiao_destino: Optional[str] = None
+
+    peso_real_kg: Optional[float] = None
+    volume_m3: Optional[float] = None
+    peso_cubado_kg: Optional[float] = None
+    peso_taxado_kg: Optional[float] = None
+    peso_taxado_fonte: Optional[str] = None       # SKU_PACKING | SHIPMENT_VOLUME | ...
+    valor_mercadoria: Optional[float] = None      # base dos componentes percentuais DO GRUPO
+
+    frete_peso: Optional[float] = None
+    cf_logistico: Optional[float] = None          # soma dos componentes fixos/por peso
+    rv_logistico_pct: Optional[float] = None      # soma dos percentuais sobre a NF
+    rv_logistico_valor: Optional[float] = None    # recomposto em R$ depois do preço
+    frete_total: Optional[float] = None
+
+    status: str = "FRETE_REVIEW_REQUIRED"         # StatusFrete
+    motivo: Optional[str] = None
+    memoria_json: Optional[str] = None
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
 
 
 class RegraFcp(SQLModel, table=True):
@@ -684,6 +848,15 @@ class CotacaoItem(SQLModel, table=True):
     comissao_valor: Optional[float] = None
     markup_implicito: Optional[float] = None
     memoria_json: Optional[str] = None          # memória do preço congelada (snapshot completo)
+
+    # --- frete comercial rateado (Sessão 3A) ---
+    grupo_logistico_id: Optional[int] = Field(default=None, foreign_key="grupologistico.id")
+    frete_cf_unitario: Optional[float] = None     # parcela fixa do frete rateada ao item
+    frete_rv_pct: Optional[float] = None          # rate variável logístico aplicado
+    frete_rv_valor: Optional[float] = None        # recomposto sobre o preço final
+    frete_total_item: Optional[float] = None
+    frete_status: Optional[str] = None
+    frete_rateio_criterio: Optional[str] = None
 
     # --- snapshot fiscal POR ITEM (Onda 1) ---
     # Uma cotação pode ter KTC, Daune e Decor com três tratamentos fiscais diferentes. O que

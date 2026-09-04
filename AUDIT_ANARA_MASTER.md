@@ -586,6 +586,16 @@ premissas versionadas. **Uma tabela vencida não pode continuar sendo usada em s
 e sem versão válida no lugar → `FRETE_REVIEW_REQUIRED` ou `FRETE_A_COTAR`, conforme a modelagem
 da Onda 3A definir.
 
+### C-NEW-08 — Base do pedágio não declarada (P1, MÉDIO) — **NOVO na Sessão 3A**
+
+O cabeçalho da TRANSAL traz a coluna `PEDAGIO` com R$ 0,0536, mas **não diz sobre qual peso ela
+incide** — real ou taxado. O exemplo da planilha não distingue: nele os dois valem 500 kg.
+
+Tratamento implementado: a tabela guarda `pedagio_base` (PESO_TAXADO / PESO_REAL /
+DESCONHECIDO). Enquanto for DESCONHECIDO, o cálculo segue quando peso real e peso taxado
+coincidem — a ambiguidade não muda o número — e **bloqueia** quando eles diferem, que é
+exatamente quando ela passa a importar. Proporcional, e sem escolher por conveniência.
+
 ### C-NEW-03 — Região Passo Fundo-RS sem tarifa (P1, BAIXO)
 
 A linha existe na tabela mas sem tarifa, mínimo ou prazo, e **nenhuma cidade da aba de cobertura

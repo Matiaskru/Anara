@@ -577,6 +577,14 @@ def semear(verbose: bool = True) -> dict:
                            fonte="Regra canônica Anara 03/09/2026 — RJ: ICMS 20% + FECP 2%"))
         contagem["fcp"] = 1
 
+        # Origem LOGÍSTICA da KTC: Itajaí-SC, que é o ponto de entrada da importação e a
+        # origem declarada pela própria tabela TRANSAL. Daune e Decor ficam nulas: não se sabe
+        # de onde embarcam, e usar a tabela de Itajaí para elas seria inventar frete.
+        ktc = s.exec(select(Fornecedor).where(Fornecedor.codigo == "KTC")).first()
+        if ktc is not None and not ktc.origem_logistica_cidade:
+            ktc.origem_logistica_cidade, ktc.origem_logistica_uf = "Itajaí", "SC"
+            s.add(ktc)
+
         s.commit()
 
     if verbose:

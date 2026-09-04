@@ -32,9 +32,19 @@ class TaxRuleSet:
     # ordenada por markup_min ascendente: (markup_min, comissao_pct)
     comissao_tabela: List[Tuple[float, float]] = field(default_factory=list)
     origem_uf: str = "SC"
+    # --- frete comercial (Sessão 3A) ---
+    # CF entra no NUMERADOR (custo fixo do embarque, rateado ao item); RV entra no
+    # DENOMINADOR (percentuais sobre a NF: ADV, GRIS, fiel depositário). Congelar o RV a partir
+    # de um preço preliminar não fecharia com a margem-alvo.
+    frete_cf_unitario: float = 0.0
+    frete_rv_pct: float = 0.0
 
     def taxa_fixa(self) -> float:
         return self.icms_pct + self.pis_cofins_pct + self.encargo_financeiro_pct
+
+    def rates_variaveis(self) -> float:
+        """Tudo que é percentual da receita e não é comissão — impostos + rate logístico."""
+        return self.taxa_fixa() + self.frete_rv_pct
 
     def comissao_para_markup(self, markup: float) -> float:
         if not self.comissao_tabela:
@@ -69,6 +79,8 @@ class ResultadoPrecificacao:
     margem_liquida: float
     markup_implicito: float
     diferenca_pct_vs_base: Optional[float] = None
+    frete_cf: float = 0.0          # custo fixo do embarque atribuído a esta linha
+    frete_rv: float = 0.0          # rate variável logístico, recomposto sobre a receita
 
 
 def _vazio(preco: float, qtd: float) -> ResultadoPrecificacao:
@@ -86,7 +98,7 @@ def _sem_custo(preco: float, qtd: float) -> ResultadoPrecificacao:
 
 def _resolve_markup_de_preco(custo: float, preco: float, regras: TaxRuleSet):
     """Acha o markup E (e a faixa de comissão) consistente com um preço final dado."""
-    taxa_fixa = regras.taxa_fixa()
+    taxa_fixa = regras.rates_variaveis()
     faixas = regras.faixas() or [(0.0, None, 0.0)]
     for mmin, mmax, pct in faixas:
         e = preco * (1 - taxa_fixa - pct) / custo - 1
@@ -99,7 +111,7 @@ def _resolve_markup_de_preco(custo: float, preco: float, regras: TaxRuleSet):
 
 def _resolve_markup_de_margem(margem_alvo: float, regras: TaxRuleSet):
     """Acha o markup E (e a faixa de comissão) consistente com uma margem líquida alvo."""
-    taxa_fixa = regras.taxa_fixa()
+    taxa_fixa = regras.rates_variaveis()
     faixas = regras.faixas() or [(0.0, None, 0.0)]
     for mmin, mmax, pct in faixas:
         denom = (1 - taxa_fixa - pct) - margem_alvo
@@ -126,12 +138,19 @@ def calcular_por_preco(custo: float, qtd: float, preco_negociado: float,
         r.diferenca_pct_vs_base = ((preco_negociado / preco_base) - 1) if preco_base else None
         return r
 
-    markup, comissao_pct = _resolve_markup_de_preco(custo, preco_negociado, regras)
+    # O CF do frete é custo do embarque, não CNET: entra na formação do preço junto com o
+    # custo, mas é reportado à parte para o waterfall ficar legível linha a linha.
+    custo_efetivo = custo + (regras.frete_cf_unitario or 0.0)
+    markup, comissao_pct = _resolve_markup_de_preco(custo_efetivo, preco_negociado, regras)
     faturamento = preco_negociado * qtd
     custo_total = custo * qtd
     impostos = faturamento * regras.taxa_fixa()
     comissao = faturamento * comissao_pct
-    lucro = faturamento - impostos - comissao - custo_total
+    # O rate variável logístico só vira reais AGORA, sobre a receita final — nunca sobre um
+    # preço preliminar.
+    frete_rv = faturamento * regras.frete_rv_pct
+    frete_cf = (regras.frete_cf_unitario or 0.0) * qtd
+    lucro = faturamento - impostos - comissao - custo_total - frete_cf - frete_rv
     margem = (lucro / faturamento) if faturamento else 0.0
     diff = ((preco_negociado / preco_base) - 1) if preco_base else None
 
@@ -139,6 +158,7 @@ def calcular_por_preco(custo: float, qtd: float, preco_negociado: float,
         preco_negociado=preco_negociado, quantidade=qtd, faturamento=faturamento,
         custo_total=custo_total, impostos=impostos, comissao=comissao, lucro=lucro,
         margem_liquida=margem, markup_implicito=markup, diferenca_pct_vs_base=diff,
+        frete_cf=frete_cf, frete_rv=frete_rv,
     )
 
 
@@ -155,8 +175,8 @@ def calcular_por_margem(custo: float, qtd: float, margem_alvo: float,
         return _vazio(0.0, qtd)
 
     markup, comissao_pct = _resolve_markup_de_margem(margem_alvo, regras)
-    taxa_fixa = regras.taxa_fixa()
-    f = custo * (1 + markup)
+    taxa_fixa = regras.rates_variaveis()
+    f = (custo + (regras.frete_cf_unitario or 0.0)) * (1 + markup)
     denom = 1 - taxa_fixa - comissao_pct
     preco = f / denom if denom > 1e-9 else 0.0
 
@@ -176,7 +196,8 @@ def calcular_por_markup(custo: float, qtd: float, markup: float,
         return _vazio(0.0, qtd)
 
     comissao_pct = regras.comissao_para_markup(markup)
-    denom = 1 - regras.taxa_fixa() - comissao_pct
-    preco = custo * (1 + markup) / denom if denom > 1e-9 else 0.0
+    denom = 1 - regras.rates_variaveis() - comissao_pct
+    preco = (custo + (regras.frete_cf_unitario or 0.0)) * (1 + markup) / denom \
+        if denom > 1e-9 else 0.0
 
     return calcular_por_preco(custo, qtd, preco, regras, preco_base)
