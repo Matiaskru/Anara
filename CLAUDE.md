@@ -160,8 +160,12 @@ do workflow — dar sentido a eles é da Sessão 7.
   continua sendo exceção do A
 - **Blocker duro ≠ exceção comercial.** `A_COTAR`, `REVIEW_REQUIRED` e frete CIF irresolvido
   **não são aprováveis** — aprovação é decisão comercial, não cria o número que falta
-- **`ESTIMADO` emite proposta mas não compromete.** `validar_compromisso_firme()` bloqueia;
-  aprovar toda proposta estimada seria burocracia sem conteúdo
+- **`ESTIMADO` e `REVALIDAR` emitem proposta mas não comprometem.**
+  `validar_compromisso_firme()` bloqueia; aprovar toda proposta estimada seria burocracia
+  sem conteúdo. **A reconfirmação da referência libera o compromisso** sem tocar no
+  documento: o preço fica congelado, mas "posso me comprometer hoje?" é pergunta sobre o
+  presente. Sem essa porta o bloqueio seria eterno — o item emitido é imutável e seu status
+  nunca mudaria. O item **não** é promovido: continua registrando como o preço se formou
 - **Emitido é imutável**, e a recusa é do servidor (`exigir_editavel`). Mudança pós-emissão
   cria **revisão** — a anterior fica íntegra, com seu snapshot e seu número
 - **`SnapshotEmissao` congela o documento** para que reconstruí-lo não dependa de lookup

@@ -468,13 +468,54 @@ def revisoes_de(session: Session, cotacao: Cotacao) -> List[Cotacao]:
 # ---------------------------------------------------------------------------
 # Compromisso firme
 # ---------------------------------------------------------------------------
+def custos_reconfirmados(session: Session, itens: Sequence[CotacaoItem]) -> set:
+    """Itens cuja referência de custo foi **reconfirmada depois** de o item ser formado.
+
+    A pergunta que isto responde não é "qual era a confiança quando emitimos" — essa está
+    congelada no item, e é ela que explica o documento. É "a confiança **hoje** ainda
+    impede assumir compromisso?".
+
+    Sem isto, um item emitido com custo em REVALIDAR ficaria bloqueado para sempre: o item
+    é imutável, seu `status_custo_item` nunca mudaria, e reconfirmar o custo no cadastro não
+    teria efeito nenhum — o que tornaria a reconfirmação inútil justamente onde ela importa.
+
+    O que **não** acontece aqui: nada é promovido a CONFIRMADO, nem no item nem na
+    referência. O item continua dizendo REVALIDAR, porque foi assim que o preço se formou.
+    """
+    from app import custo_service as cs
+    from app.models import StatusCusto
+
+    resolvidos = set()
+    for it in itens:
+        if not it.produto_id:
+            continue
+        pendente = (bool(getattr(it, "confirmation_pending", False))
+                    or (it.status_custo_item or "").upper() == "REVALIDAR")
+        if not pendente:
+            continue
+        vigente = cs.referencia_vigente(session, it.produto_id)
+        if vigente is None:
+            continue
+        # A referência vigente precisa ser CONFIRMADA e não estar aguardando confirmação —
+        # e precisa ser mais nova que a que formou o item, senão não houve reconfirmação
+        # nenhuma, apenas a mesma linha sendo lida de novo.
+        mais_nova = (it.custo_referencia_id is None
+                     or (vigente.id or 0) != it.custo_referencia_id)
+        confirmada = (vigente.status_custo == StatusCusto.confirmado.value
+                      and not vigente.confirmation_pending)
+        if mais_nova and confirmada:
+            resolvidos.add(it.id)
+    return resolvidos
+
+
 def validar_compromisso_firme(session: Session, cotacao: Cotacao, *,
                               frete: Optional[dict] = None) -> wf.Compromisso:
     itens = itens_de(session, cotacao.id)
     fp = wf.fingerprint(cotacao, itens)
     return wf.validar_compromisso_firme(
         cotacao, itens, frete=frete,
-        aprovacao_vigente=aprovacao_vigente(session, cotacao.id, fp))
+        aprovacao_vigente=aprovacao_vigente(session, cotacao.id, fp),
+        custos_reconfirmados=custos_reconfirmados(session, itens))
 
 
 def fila_de_aprovacao(session: Session) -> List[dict]:

@@ -865,3 +865,273 @@ def test_historico_legado_nao_e_falsificado(session):
         itens = prod.exec(select(CotacaoItem)).all()
         assert len(itens) == 45
         assert all(i.status_custo_item is None for i in itens)
+
+
+# ===========================================================================
+# PROVA 1 — desconto é detectado POR ITEM, com os números do escopo
+# ===========================================================================
+def _fixar_recomendado(session, item, recomendado):
+    """Fixa o preço recomendado do item para o cenário exato do escopo.
+
+    O recomendado é calculado pelo motor a partir do custo e da margem-alvo; para
+    exercitar 100/95 e 100/110 de forma legível, ele é fixado aqui. O que está sob teste é
+    a **detecção da exceção**, não a formação do recomendado — essa tem suíte própria.
+    """
+    item.preco_recomendado = float(D(recomendado))
+    session.add(item)
+    session.commit()
+    session.refresh(item)
+    return item
+
+
+def test_prova_desconto_item_level_95_e_110(session, daune, cliente):
+    """A 100→95 e B 100→110. Total 200→205, acima do recomendado — e A continua exceção.
+
+    É o ponto inteiro da regra ser por item: sem ela, bastaria subir o preço de um SKU para
+    fazer o desconto de outro desaparecer do radar de quem aprova.
+    """
+    a = novo_produto(session, daune, custo=50.0)
+    b = novo_produto(session, daune, custo=50.0)
+    cot = nova_cotacao(session, cliente)
+    ia = add_item(session, cot, a, quantidade=1.0)
+    ib = add_item(session, cot, b, quantidade=1.0)
+
+    _fixar_recomendado(session, ia, "100.00")
+    _fixar_recomendado(session, ib, "100.00")
+    negociar(session, cot, ia, "95.00")
+    _fixar_recomendado(session, ia, "100.00")     # a negociação não move o recomendado
+    negociar(session, cot, ib, "110.00")
+    _fixar_recomendado(session, ib, "100.00")
+
+    resumo = wf.resumo_comercial(ws.itens_de(session, cot.id))
+    assert D(resumo["total_recomendado"]) == D("200.00")
+    assert D(resumo["total_negociado"]) == D("205.00")
+    assert D(resumo["diferenca"]) == D("5.00")            # o total está ACIMA
+
+    prontidao = ws.avaliar(session, cot)
+    assert prontidao.precisa_aprovacao is True
+    do_a = [e for e in prontidao.excecoes
+            if e.motivo == wf.PRECO_ABAIXO and e.escopo == ia.nome_produto]
+    assert len(do_a) == 1
+    assert D(do_a[0].preco_recomendado) == D("100.00")
+    assert D(do_a[0].preco_negociado) == D("95.00")
+    assert D(do_a[0].diferenca) == D("-5.00")
+    # e o item B, que subiu, não gera exceção de preço
+    assert not [e for e in prontidao.excecoes
+                if e.motivo == wf.PRECO_ABAIXO and e.escopo == ib.nome_produto]
+    assert prontidao.pode_emitir is False
+
+
+def test_prova_controle_sem_desconto_nao_exige_aprovacao(session, daune, cliente):
+    """Controle: todos os itens no recomendado ou acima, margem no alvo → sem aprovação."""
+    a = novo_produto(session, daune, custo=50.0)
+    b = novo_produto(session, daune, custo=50.0)
+    cot = nova_cotacao(session, cliente)
+    ia = add_item(session, cot, a, quantidade=1.0)
+    ib = add_item(session, cot, b, quantidade=1.0)
+
+    # exatamente no recomendado, e acima dele
+    negociar(session, cot, ia, recomendado_de(ia))
+    negociar(session, cot, ib, recomendado_de(ib) + D("10.00"))
+
+    prontidao = ws.avaliar(session, cot)
+    assert prontidao.excecoes == []
+    assert prontidao.precisa_aprovacao is False
+    assert prontidao.pode_emitir is True
+    with pytest.raises(ws.OperacaoInvalida):
+        ws.solicitar_aprovacao(session, cot, ator=vendedor(), justificativa="sem exceção")
+
+
+# ===========================================================================
+# PROVA 2 — REVALIDAR: proposta sim, compromisso não, e a saída pela reconfirmação
+# ===========================================================================
+def test_prova_revalidar_proposta_compromisso_e_reconfirmacao(session, daune, cliente):
+    """REVALIDAR não impede a proposta, impede o compromisso — e a reconfirmação libera.
+
+    Sem a última parte, o bloqueio seria eterno: o item emitido é imutável, seu
+    `status_custo_item` nunca mudaria, e reconfirmar o custo no cadastro não teria efeito
+    nenhum. O preço do documento continua congelado; o que muda é a resposta a "posso me
+    comprometer hoje?".
+    """
+    from app import admin_service as adm
+    from app import custo_service as cs
+
+    p = novo_produto(session, daune, custo=100.0)
+    prop = adm.preview_custo_sku(session, p.id, cnet_brl="100.00", status="REVALIDAR",
+                                 fonte="tabela de 2025, envelhecida")
+    adm.aplicar_custo_sku(session, p.id, prop, ator=aprovador(), cnet_brl="100.00",
+                          status="REVALIDAR", fonte="tabela de 2025, envelhecida")
+    session.commit()
+
+    cot = nova_cotacao(session, cliente)
+    item = add_item(session, cot, p)
+    session.commit()
+    assert item.status_custo_item == "REVALIDAR"
+
+    # --- 1. a proposta sai ---
+    prontidao = ws.avaliar(session, cot)
+    assert prontidao.pode_emitir is True
+    assert prontidao.precisa_aprovacao is False
+    _emitir(session, cot)
+    session.commit()
+    assert cot.status == StatusCotacao.emitida.value
+
+    # --- 2. o compromisso firme, não ---
+    antes = ws.validar_compromisso_firme(session, cot)
+    assert antes.pode is False
+    assert any("REVALIDAR" in m for m in antes.impedimentos)
+
+    # --- 3. a reconfirmação libera, sem tocar no preço ---
+    congelado = (item.preco_negociado, item.custo_unitario, item.status_custo_item,
+                 item.custo_referencia_id)
+    prop2 = adm.preview_custo_sku(session, p.id, cnet_brl="100.00", status="CONFIRMADO",
+                                  fonte="fornecedor reconfirmou em 05/09")
+    assert prop2.linhas[0].situacao in (adm.MUDANCA, adm.RECONFIRMACAO)
+    adm.aplicar_custo_sku(session, p.id, prop2, ator=aprovador(), cnet_brl="100.00",
+                          status="CONFIRMADO", fonte="fornecedor reconfirmou em 05/09")
+    session.commit()
+
+    depois = ws.validar_compromisso_firme(session, cot)
+    assert not any("REVALIDAR" in m for m in depois.impedimentos)
+    assert depois.pode is True
+
+    # o item NÃO foi promovido: continua dizendo como o preço se formou
+    session.refresh(item)
+    assert (item.preco_negociado, item.custo_unitario, item.status_custo_item,
+            item.custo_referencia_id) == congelado
+    assert cs.referencia_vigente(session, p.id).status_custo == "CONFIRMADO"
+
+
+def test_prova_estimado_tambem_libera_apos_confirmacao(session, daune, cliente):
+    """A mesma porta vale para ESTIMADO — e o item continua marcado como estimado."""
+    from app import admin_service as adm
+
+    p = novo_produto(session, daune, custo=100.0)
+    prop = adm.preview_custo_sku(session, p.id, cnet_brl="100.00", status="ESTIMADO",
+                                 fonte="curva de análogos")
+    adm.aplicar_custo_sku(session, p.id, prop, ator=aprovador(), cnet_brl="100.00",
+                          status="ESTIMADO", fonte="curva de análogos")
+    session.commit()
+
+    cot = nova_cotacao(session, cliente)
+    item = add_item(session, cot, p)
+    _emitir(session, cot)
+    session.commit()
+    assert item.confirmation_pending is True
+    assert ws.validar_compromisso_firme(session, cot).pode is False
+
+    prop2 = adm.preview_custo_sku(session, p.id, cnet_brl="100.00", status="CONFIRMADO",
+                                  fonte="KTC confirmou o EXW")
+    adm.aplicar_custo_sku(session, p.id, prop2, ator=aprovador(), cnet_brl="100.00",
+                          status="CONFIRMADO", fonte="KTC confirmou o EXW")
+    session.commit()
+
+    assert ws.validar_compromisso_firme(session, cot).pode is True
+    session.refresh(item)
+    assert item.confirmation_pending is True        # o item não foi reescrito
+
+
+def test_reconfirmacao_para_estimado_nao_libera(session, daune, cliente):
+    """Versão nova que continua ESTIMADA não é confirmação — e não abre a porta."""
+    from app import admin_service as adm
+
+    p = novo_produto(session, daune, custo=100.0)
+    prop = adm.preview_custo_sku(session, p.id, cnet_brl="100.00", status="ESTIMADO",
+                                 fonte="curva A")
+    adm.aplicar_custo_sku(session, p.id, prop, ator=aprovador(), cnet_brl="100.00",
+                          status="ESTIMADO", fonte="curva A")
+    session.commit()
+    cot = nova_cotacao(session, cliente)
+    add_item(session, cot, p)
+    _emitir(session, cot)
+    session.commit()
+
+    prop2 = adm.preview_custo_sku(session, p.id, cnet_brl="105.00", status="ESTIMADO",
+                                  fonte="curva B")
+    adm.aplicar_custo_sku(session, p.id, prop2, ator=aprovador(), cnet_brl="105.00",
+                          status="ESTIMADO", fonte="curva B")
+    session.commit()
+    assert ws.validar_compromisso_firme(session, cot).pode is False
+
+
+def test_a_cotar_continua_bloqueando_o_compromisso(session, daune, cliente):
+    """A porta da reconfirmação não vale para blocker duro — ele nem emite."""
+    p = novo_produto(session, daune, custo=100.0)
+    cot = nova_cotacao(session, cliente)
+    item = add_item(session, cot, p)
+    item.status_custo_item = "A_COTAR"
+    session.add(item)
+    session.commit()
+    c = ws.validar_compromisso_firme(session, cot)
+    assert c.pode is False
+    assert any("A_COTAR" in m or "não foi emitida" in m for m in c.impedimentos)
+
+
+# ===========================================================================
+# PROVA 3 — genealogia: R1 continua apontando para a aprovação A / fingerprint F1
+# ===========================================================================
+def test_prova_genealogia_da_aprovacao_usada_na_emissao(session, daune, cliente):
+    """Depois de outras decisões e de uma revisão, R1 ainda diz QUAL aprovação a autorizou.
+
+    A resposta não pode vir de "a aprovação aprovada mais recente": na genealogia existem
+    várias, de revisões diferentes. Ela vem do pino no snapshot.
+    """
+    p = novo_produto(session, daune, custo=100.0)
+    cot = nova_cotacao(session, cliente)
+    item = add_item(session, cot, p)
+    negociar(session, cot, item, recomendado_de(item) - D("7.00"))
+
+    pedido_a = ws.solicitar_aprovacao(session, cot, ator=vendedor(),
+                                      justificativa="volume anual")
+    session.commit()
+    f1 = pedido_a.fingerprint
+    ws.decidir(session, cot, pedido_a.id, ator=aprovador(), aprovar=True,
+               comentario="autorizado")
+    session.commit()
+
+    snap_r1 = _emitir(session, cot)
+    session.commit()
+    assert snap_r1.aprovacao_id == pedido_a.id
+    assert snap_r1.aprovacao_fingerprint == f1 == snap_r1.fingerprint
+
+    # --- a genealogia continua: revisão 2, com desconto diferente e OUTRA aprovação ---
+    r2 = ws.criar_revisao(session, cot, ator=aprovador())
+    session.commit()
+    item2 = ws.itens_de(session, r2.id)[0]
+    negociar(session, r2, item2, recomendado_de(item2) - D("25.00"))
+    pedido_b = ws.solicitar_aprovacao(session, r2, ator=vendedor(),
+                                      justificativa="cliente pediu mais desconto")
+    session.commit()
+    ws.decidir(session, r2, pedido_b.id, ator=aprovador(), aprovar=True)
+    session.commit()
+    snap_r2 = ws.emitir(session, r2, ator=aprovador())
+    session.commit()
+
+    assert pedido_b.id != pedido_a.id
+    assert snap_r2.fingerprint != f1
+
+    # --- reconstruindo R1: continua sendo a aprovação A, para o fingerprint F1 ---
+    session.refresh(snap_r1)
+    assert snap_r1.aprovacao_id == pedido_a.id
+    assert snap_r1.aprovacao_fingerprint == f1
+    assert snap_r1.revisao == 1
+    usada = session.get(AprovacaoCotacao, snap_r1.aprovacao_id)
+    assert usada.status == ws.APROVADA and usada.fingerprint == f1
+    assert usada.justificativa == "volume anual" and usada.comentario == "autorizado"
+
+    # e a "aprovada mais recente" da genealogia é OUTRA — o que provaria a busca errada
+    todas = ws.aprovacoes_de(session, cot.id) + ws.aprovacoes_de(session, r2.id)
+    aprovadas = [a for a in todas if a.status == ws.APROVADA]
+    mais_recente = max(aprovadas, key=lambda a: (a.decidido_em, a.id))
+    assert mais_recente.id == pedido_b.id
+    assert snap_r1.aprovacao_id != mais_recente.id
+
+
+def test_snapshot_sem_excecao_nao_inventa_aprovacao(session, daune, cliente):
+    """Cotação sem exceção emite sem aprovação — e o snapshot diz isso, não finge."""
+    p = novo_produto(session, daune, custo=100.0)
+    cot = nova_cotacao(session, cliente)
+    add_item(session, cot, p)
+    snap = _emitir(session, cot)
+    session.commit()
+    assert snap.aprovacao_id is None and snap.aprovacao_fingerprint is None

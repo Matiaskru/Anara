@@ -394,7 +394,8 @@ class Compromisso:
 
 
 def validar_compromisso_firme(cotacao, itens: Sequence, *, frete: Optional[dict] = None,
-                              aprovacao_vigente=None) -> Compromisso:
+                              aprovacao_vigente=None,
+                              custos_reconfirmados: Optional[set] = None) -> Compromisso:
     """Esta cotação poderia virar pedido/PO/WON?
 
     **Não cria pedido nem WON** — isso é da Sessão 7. Existe para que a regra fique escrita
@@ -404,7 +405,15 @@ def validar_compromisso_firme(cotacao, itens: Sequence, *, frete: Optional[dict]
     O caso central: uma proposta com custo **ESTIMADO** pode sair, com PDF e tudo. O que ela
     não pode é virar compromisso firme antes de alguém confirmar o custo — porque o número
     veio de proxy, e assumir obrigação sobre proxy é o caminho para vender no prejuízo.
+
+    `custos_reconfirmados` traz os itens cuja referência de custo **já foi reconfirmada
+    depois da emissão**. A distinção é sutil e importa: o preço do documento fica congelado
+    para sempre — é o que o cliente tem em mãos —, mas "posso me comprometer **hoje**?" é
+    pergunta sobre o presente. Sem essa porta, um item emitido em REVALIDAR ficaria
+    bloqueado eternamente, porque o item é imutável e seu status nunca mudaria. Quem resolve
+    isso é `workflow_service`, que tem banco; aqui só se consome a resposta.
     """
+    custos_reconfirmados = custos_reconfirmados or set()
     impedimentos = []
     prontidao = avaliar(cotacao, itens, frete=frete, aprovacao_vigente=aprovacao_vigente)
 
@@ -419,6 +428,11 @@ def validar_compromisso_firme(cotacao, itens: Sequence, *, frete: Optional[dict]
 
     for it in itens:
         rotulo = it.nome_produto or f"item #{it.id}"
+        if it.id in custos_reconfirmados:
+            # A referência foi reconfirmada depois da emissão. O preço não muda; o
+            # impedimento sai, porque ele era sobre a confiança no número, não sobre o
+            # número.
+            continue
         if getattr(it, "confirmation_pending", False):
             impedimentos.append(
                 f"{rotulo}: custo ESTIMADO ainda não confirmado. A proposta pode sair; o "
