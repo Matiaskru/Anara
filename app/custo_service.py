@@ -131,6 +131,53 @@ def proxima_versao(session: Session, produto_id: int) -> int:
 # ---------------------------------------------------------------------------
 # Escrita — sempre aditiva
 # ---------------------------------------------------------------------------
+#: O que identifica economicamente uma referência de custo.
+#:
+#: Não é só o número. Uma referência responde "de onde veio este valor", e a resposta tem
+#: duas metades: **quanto** (CNET, bruto, status) e **com base em quê** (fonte, documento,
+#: data da fonte). Duas linhas com o mesmo CNET e evidências diferentes NÃO são a mesma
+#: referência — a segunda é uma reconfirmação, e perdê-la apagaria a prova de que alguém
+#: conferiu o preço numa data posterior.
+CAMPOS_DE_IDENTIDADE = ("cnet_brl", "valor_bruto", "status_custo", "documento",
+                        "fonte", "data_ref")
+
+
+def identidade_economica(*, cnet_brl=None, valor_bruto=None, status_custo=None,
+                         documento=None, fonte=None, data_ref=None) -> tuple:
+    """A impressão digital de uma referência, normalizada.
+
+    Normaliza para que diferença de **escrita** não vire diferença de **conteúdo**:
+    `"100"`, `"100.00"` e `100.0` produzem a mesma entrada; `" tabela A "` e `"tabela A"`
+    também. É o que faz "R$ 100,00 vs 100.00" ser no-op de verdade, sem precisar comparar
+    strings cruas.
+    """
+    def numero(v):
+        d = D(v)
+        return None if d is None else d.normalize()
+
+    def texto(v):
+        t = (v or "").strip()
+        return t.lower() or None
+
+    return (numero(cnet_brl), numero(valor_bruto), texto(status_custo),
+            texto(documento), texto(fonte), data_ref)
+
+
+def identidade_da_referencia(ref) -> tuple:
+    """A identidade econômica de uma versão já gravada.
+
+    `registrar_referencia` compõe `origem_registro` acrescentando a fonte no fim — e quem
+    chama já pode ter composto um prefixo próprio (`"admin-ui · fulano@anara"`). Por isso a
+    fonte é o **último** segmento, não o segundo: pegar o segundo traria o e-mail do autor
+    junto e faria duas gravações da mesma fonte parecerem fontes diferentes.
+    """
+    origem = ref.origem_registro or ""
+    fonte = origem.rsplit(" · ", 1)[-1] if " · " in origem else origem
+    return identidade_economica(cnet_brl=ref.cnet_brl, valor_bruto=ref.valor_bruto,
+                                status_custo=ref.status_custo, documento=ref.documento,
+                                fonte=fonte, data_ref=ref.data_ref)
+
+
 def registrar_referencia(session: Session, produto: Produto, *, cnet_brl: float,
                          metodo: str, status: str, fonte: str, documento: Optional[str] = None,
                          data_ref: Optional[date] = None, valor_bruto: Optional[float] = None,
@@ -155,13 +202,13 @@ def registrar_referencia(session: Session, produto: Produto, *, cnet_brl: float,
     anterior = referencia_vigente(session, produto.id)
 
     # Registrar de novo a MESMA referência não cria versão: rodar a reconciliação duas vezes
-    # não pode encher o histórico de versões no-op. Versão nova exige número, fonte ou
-    # documento diferentes.
-    if (anterior is not None
-            and anterior.cnet_brl == cnet_brl
-            and anterior.valor_bruto == valor_bruto
-            and anterior.documento == documento
-            and anterior.status_custo == status):
+    # não pode encher o histórico de versões no-op. A comparação é pela **identidade
+    # econômica** completa — valor, status E evidência —, então mesmo preço com fonte nova
+    # continua sendo versão nova: é uma reconfirmação, e perdê-la apagaria a prova de que
+    # alguém conferiu o número numa data posterior.
+    if anterior is not None and identidade_da_referencia(anterior) == identidade_economica(
+            cnet_brl=cnet_brl, valor_bruto=valor_bruto, status_custo=status,
+            documento=documento, fonte=fonte, data_ref=data_ref or inicio):
         return anterior
     if anterior is not None:
         anterior.vigente = False

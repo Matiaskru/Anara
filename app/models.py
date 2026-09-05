@@ -919,6 +919,23 @@ class CotacaoItem(SQLModel, table=True):
     motivo_pagamento: Optional[str] = None
     encargo_pct: Optional[float] = None         # encargo financeiro efetivamente aplicado
 
+    # --- pinning das premissas (Sessão 5 · correção) ---
+    # O item já guardava os VALORES que formaram o preço, e isso protege o dinheiro. O que
+    # faltava era a IDENTIDADE: qual versão, exatamente, produziu aquele número.
+    #
+    # Sem estes campos, responder "de onde veio este preço" dependia de perguntar ao
+    # resolvedor qual versão estaria valendo naquela data — e uma versão cadastrada depois,
+    # com vigência retroativa, mudaria a resposta. O preço continuaria certo e a genealogia,
+    # não. Aqui a genealogia fica presa por ID, e nenhuma versão futura a reescreve.
+    custo_referencia_id: Optional[int] = Field(default=None,
+                                               foreign_key="custoreferencia.id", index=True)
+    custo_referencia_versao: Optional[int] = None
+    margem_regra_id: Optional[int] = Field(default=None, foreign_key="margemregra.id")
+    condicao_pagamento_id: Optional[int] = Field(default=None,
+                                                 foreign_key="condicaopagamento.id")
+    aliquota_interestadual_id: Optional[int] = None
+    premissas_pinadas: Optional[str] = None    # JSON: {chave: {"premissa_id", "valor"}}
+
 
 # ---------------------------------------------------------------------------
 # Usuários e acesso (Sessão 4)

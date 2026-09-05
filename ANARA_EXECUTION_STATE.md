@@ -22,7 +22,7 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 | **Sessão 5 — admin, versionamento, impacto controlado** | **EXECUTADA, aguarda auditoria** | commit da Sessão 5 |
 | Ondas 6 a 8 | não autorizadas | — |
 
-Alembic em **`0012`** · **576 testes passando** · árvore limpa · sem remote.
+Alembic em **`0013`** · **585 testes passando** · árvore limpa · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -270,6 +270,12 @@ seed, nenhuma linha do banco, nenhum byte do baseline.
   mesma condição precisam coexistir para agendar troca de encargo
 - **Trilha em `AuditLog`**: ator, papel, escopo, antes/depois, motivo, origem, resultado,
   correlação de lote
+- **NO_OP × RECONFIRMAÇÃO:** a comparação é pela identidade econômica completa (valor,
+  status **e** evidência). Preço igual com fonte nova vira versão — a reconfirmação é
+  informação, não ruído. Só diferença de escrita é no-op
+- **Pinning:** `CotacaoItem` guarda o **id** da versão de custo, da regra de margem, da
+  condição de pagamento, da alíquota e das premissas globais. A genealogia de uma cotação
+  não depende de lookup vivo, e versão retroativa não a reescreve
 - **Importação com dry run obrigatório.** 6 mudam · 2 no-op · 1 review · 1 inexistente: só as
   6 escrevem. Segunda passada da mesma planilha é no-op
 - **Rascunho não atualiza sozinho** — só é marcado como desatualizado

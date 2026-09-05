@@ -110,11 +110,20 @@ e **a data decide** qual delas o próximo cálculo usa.
 - **Vigência futura funciona.** `referencia_vigente`, `resolver_margem` e `resolver_encargo`
   resolvem **por data**. Antes da Sessão 5 os três ignoravam `valid_from`, e cadastrar algo
   para 2027 mudava o preço no mesmo instante
-- **No-op é no-op.** Reimportar a mesma fonte não cria versão. Na importação, a comparação é
-  por campo **economicamente relevante** (CNET + status); documento é procedência
+- **NO_OP ≠ RECONFIRMAÇÃO.** A comparação é pela **identidade econômica** completa —
+  `cs.identidade_economica()`: valor, bruto, status **e** evidência (fonte, documento, data).
+  Mesmo preço com fonte nova é **reconfirmação**: vira versão, porque "o fornecedor
+  confirmou em 05/09 que continua 100" é informação econômica e some se virar NO_OP. Só
+  diferença de escrita ("100" × "100,00", " Fonte A " × "fonte a") é no-op de verdade
 - **Casamento inequívoco ou nada.** SKU exato, ou campos estruturados suficientes. Ambíguo →
   `REVIEW_REQUIRED`; inexistente → `SKU_NAO_ENCONTRADO`. As duas coisas são diferentes, e
   fuzzy match de custo econômico é errar o preço com convicção
+- **A cotação fica presa à versão EXATA.** `CotacaoItem` pina `custo_referencia_id`,
+  `custo_referencia_versao`, `margem_regra_id`, `condicao_pagamento_id`,
+  `aliquota_interestadual_id` e `premissas_pinadas`. Guardar o valor protege o dinheiro;
+  guardar o **id** protege a genealogia — sem ele, uma versão cadastrada depois com vigência
+  retroativa mudaria a resposta de "qual versão formou este preço". **Nunca reconstruir a
+  autoria de uma cotação por `referencia_em(data)`**
 - **Rascunho não atualiza sozinho.** `premissas_desatualizadas()` **detecta e só detecta**
 - **Delete físico só no que nunca foi usado.** Referência que já participou de cotação
   encerra vigência; não some. Voltar ao valor antigo é criar V3, não apagar V2
@@ -211,7 +220,7 @@ SKU, origem logística de Daune e Decor) continuam **congeladas e fora de escopo
 Alembic em `0010` (tabela `usuario`, aditiva).
 
 **Sessão 5 — administração de premissas e versionamento: EXECUTADA, aguardando auditoria.**
-Alembic em `0012` (`auditlog`, vigência da condição de pagamento, `can_manage_economics`).
+Alembic em `0013` (`auditlog`, vigência da condição de pagamento, `can_manage_economics`, pinning das premissas no item).
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

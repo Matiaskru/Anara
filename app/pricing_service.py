@@ -141,6 +141,31 @@ def fiscal_do_item(session: Session, cotacao: Cotacao, produto: Optional[Produto
     return resultado
 
 
+def _condicao_vigente(condicoes, codigo):
+    """A linha de `CondicaoPagamento` que o resolvedor efetivamente escolheu."""
+    from app.payment_terms import _vigente_em
+    alvo = (codigo or "").strip().lower()
+    if not alvo:
+        return None
+    candidatas = [c for c in condicoes
+                  if (c.codigo or "").strip().lower() == alvo
+                  and getattr(c, "ativo", True) and _vigente_em(c, date.today())]
+    if not candidatas:
+        return None
+    candidatas.sort(key=lambda c: (getattr(c, "valid_from", None) is not None,
+                                   getattr(c, "valid_from", None) or date.min,
+                                   getattr(c, "versao", 1), c.id or 0))
+    return candidatas[-1]
+
+
+def _id_da_fonte(fonte):
+    """`"AliquotaInterestadual#12 + ..."` → `12`. A fonte fiscal já carregava a identidade
+    em texto; aqui ela vira coluna, para consulta e para prova."""
+    import re
+    m = re.search(r"AliquotaInterestadual#(\d+)", fonte or "")
+    return int(m.group(1)) if m else None
+
+
 def regras_da_cotacao(session: Session, cotacao: Cotacao,
                       produto: Optional[Produto] = None) -> Tuple[Optional[TaxRuleSet], dict]:
     """TaxRuleSet efetivo **do item** + contexto, para exibir e para snapshot.
@@ -151,6 +176,7 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     fiscal = fiscal_do_item(session, cotacao, produto)
     condicoes = session.exec(select(CondicaoPagamento)).all()
     encargo = resolver_encargo(condicoes, getattr(cotacao, "condicao_pagamento", None))
+    condicao_usada = _condicao_vigente(condicoes, getattr(cotacao, "condicao_pagamento", None))
     pis_cofins = cfg.num(session, "pis_cofins_pct", 0.0759)
     comissao = cfg.tabela_comissao(session)
 
@@ -171,6 +197,10 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
         "encargo_confirmado": encargo.confirmado, "encargo_aviso": encargo.aviso,
         "status_pagamento": encargo.status, "motivo_pagamento": encargo.motivo,
         "comissao_tabela": comissao,
+        # --- identidades para pinar no item ---
+        "condicao_pagamento_id": condicao_usada.id if condicao_usada else None,
+        "aliquota_interestadual_id": _id_da_fonte(fiscal.fonte),
+        "premissas_pinadas": pinar_premissas(session),
         "bloqueado": fiscal.bloqueado or encargo.bloqueado,
     }
     if contexto["bloqueado"]:
@@ -357,6 +387,29 @@ def calcular_exw(session: Session, produto: Produto):
 # ---------------------------------------------------------------------------
 # Custo NET por caminho de fornecedor
 # ---------------------------------------------------------------------------
+#: As premissas versionadas que participam da formação do preço e precisam ficar **pinadas**
+#: no item — não só pelo valor, mas pela identidade da versão que produziu aquele valor.
+CHAVES_PINADAS = ("fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un", "pis_cofins_pct")
+
+
+def pinar_premissas(session: Session, ref_data=None) -> dict:
+    """`{chave: {"premissa_id", "valor", "valid_from"}}` das premissas vigentes agora.
+
+    Guardar o valor já protegia o dinheiro; guardar o **id** protege a genealogia. Sem ele,
+    responder "qual versão formou este preço" dependeria de perguntar ao resolvedor o que
+    estaria valendo naquela data — e uma versão cadastrada depois, com vigência retroativa,
+    mudaria a resposta sem que preço nenhum tivesse mudado.
+    """
+    pinos = {}
+    for chave in CHAVES_PINADAS:
+        linha = cfg.premissa(session, chave, ref=ref_data)
+        if linha is not None:
+            pinos[chave] = {"premissa_id": linha.id, "valor": linha.valor_num,
+                            "valid_from": (linha.valid_from.isoformat()
+                                           if linha.valid_from else None)}
+    return pinos
+
+
 def premissas_nacionalizacao(session: Session) -> PremissasNacionalizacao:
     return PremissasNacionalizacao(
         frete_usd_kg=cfg.num(session, "frete_int_usd_kg", 0.516),
@@ -380,6 +433,13 @@ def custo_net(session: Session, produto: Produto) -> dict:
     metodo = produto.cost_method or (fornecedor.cost_method_padrao.value if fornecedor else None)
     memoria = {"fornecedor": fornecedor.nome if fornecedor else None,
                "cost_method": metodo, "avisos": [], "etapas": []}
+
+    # A versão exata de `CustoReferencia` que está valendo agora. É ela que o item vai
+    # pinar — a identidade, não só o número.
+    from app import custo_service as _cs
+    vigente = _cs.referencia_vigente(session, produto.id) if produto.id else None
+    memoria["custo_referencia_id"] = vigente.id if vigente else None
+    memoria["custo_referencia_versao"] = vigente.versao if vigente else None
 
     # --- fornecedor nacional: o custo já está em reais ---
     if fornecedor and fornecedor.tipo == TipoFornecedor.nacional:

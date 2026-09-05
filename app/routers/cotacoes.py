@@ -377,6 +377,14 @@ def _gravar_fiscal_no_item(it: CotacaoItem, contexto: dict, res=None):
     it.status_pagamento = contexto.get("status_pagamento")
     it.motivo_pagamento = contexto.get("motivo_pagamento")
     it.encargo_pct = contexto.get("encargo_pct")
+    # --- pinning: a IDENTIDADE das premissas, não só o valor delas ---
+    # Sem isto, "qual versão formou este preço" seria uma pergunta ao resolvedor de hoje, e
+    # uma versão cadastrada depois com vigência retroativa mudaria a resposta.
+    it.condicao_pagamento_id = contexto.get("condicao_pagamento_id")
+    it.aliquota_interestadual_id = contexto.get("aliquota_interestadual_id")
+    pinos = contexto.get("premissas_pinadas")
+    if pinos:
+        it.premissas_pinadas = json.dumps(pinos, ensure_ascii=False)
 
 
 # ---------------------------------------------------------------------------
@@ -437,12 +445,21 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
 # Itens
 # ---------------------------------------------------------------------------
 def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, margem):
+    from app import custo_service as cs
+
     fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
     item.fornecedor_id = produto.fornecedor_id
     item.fornecedor_nome = fornecedor.nome if fornecedor else None
     item.cost_method = produto.cost_method
     item.margem_padrao_pct = margem.margem_pct
     item.margem_regra = margem.regra
+    item.margem_regra_id = margem.regra_id
+    # A versão de custo que está valendo AGORA fica presa ao item. Depois disto, a
+    # genealogia deste preço não depende mais de nenhum lookup vivo.
+    vigente = cs.referencia_vigente(session, produto.id)
+    if vigente is not None:
+        item.custo_referencia_id = vigente.id
+        item.custo_referencia_versao = vigente.versao
 
 
 @router.post("/cotacoes/{cotacao_id}/itens")

@@ -48,6 +48,10 @@ from app.models import (
 # Resultados possíveis de uma linha de proposta.
 MUDANCA = "MUDANCA"
 NO_OP = "NO_OP"
+#: Mesmo valor econômico, **evidência nova**: outra fonte, outro documento, outra data.
+#: Não é mudança de preço, e também não é "nada aconteceu" — é a prova de que alguém
+#: reconferiu o número. Vira versão, para que a evidência não se perca.
+RECONFIRMACAO = "RECONFIRMACAO"
 REVIEW_REQUIRED = "REVIEW_REQUIRED"
 NAO_ENCONTRADO = "SKU_NAO_ENCONTRADO"
 CONFLITO = "CONFLITO"
@@ -122,7 +126,8 @@ class LinhaProposta:
 
     @property
     def aplicavel(self) -> bool:
-        return self.situacao == MUDANCA
+        """Gera versão nova. Reconfirmação gera — o valor é o mesmo, a evidência não."""
+        return self.situacao in (MUDANCA, RECONFIRMACAO)
 
     def como_dict(self) -> dict:
         return {"alvo": self.alvo, "situacao": self.situacao, "valor_atual": self.valor_atual,
@@ -246,14 +251,40 @@ def preview_custo_sku(session: Session, produto_id: int, *, cnet_brl, status: st
     prop = Proposta(entidade="CustoReferencia", escopo=f"SKU {produto.sku_key}",
                     vigencia_inicio=inicio, fonte=fonte, motivo=motivo)
 
-    # No-op: mesmo número, mesma fonte, mesmo status. Reimportar não cria versão.
-    if (atual is not None and D(atual.cnet_brl) == novo
-            and (atual.documento or None) == (documento or None)
-            and atual.status_custo == status):
+    identidade_nova = cs.identidade_economica(
+        cnet_brl=novo, valor_bruto=bruto, status_custo=status, documento=documento,
+        fonte=fonte, data_ref=inicio)
+    identidade_atual = cs.identidade_da_referencia(atual) if atual is not None else None
+    mesmo_valor = atual is not None and D(atual.cnet_brl) == novo \
+        and atual.status_custo == status
+
+    if identidade_atual == identidade_nova:
+        # Idêntica em valor E em evidência: reimportar a mesma coisa não versiona.
         prop.linhas.append(LinhaProposta(
             alvo=produto.sku_key, situacao=NO_OP, produto_id=produto.id,
             valor_atual=_retrato_custo(atual), valor_novo=f"CNET R$ {novo}",
-            motivo="Valor, fonte e status idênticos à versão vigente — nada a versionar."))
+            motivo="Mesma referência: valor, status, fonte, documento e data idênticos — "
+                   "nada a versionar."))
+    elif mesmo_valor:
+        # Mesmo preço, evidência nova. O preço não muda; a rastreabilidade, sim.
+        prop.linhas.append(LinhaProposta(
+            alvo=produto.sku_key, situacao=RECONFIRMACAO, produto_id=produto.id,
+            valor_atual=_retrato_custo(atual),
+            valor_novo=f"CNET R$ {novo} (inalterado) · nova evidência",
+            motivo="O valor não muda. O que muda é a evidência — fonte, documento ou data. "
+                   "Vira versão nova para que a reconfirmação fique auditável.",
+            detalhe={"cnet_anterior": para_float(D(atual.cnet_brl)),
+                     "cnet_novo": para_float(novo), "variacao_pct": 0.0,
+                     "versao_anterior": atual.versao,
+                     "versao_nova": cs.proxima_versao(session, produto_id),
+                     "evidencia_anterior": {"documento": atual.documento,
+                                            "data_ref": str(atual.data_ref),
+                                            "origem": atual.origem_registro},
+                     "evidencia_nova": {"documento": documento, "data_ref": str(inicio),
+                                        "fonte": fonte}}))
+        prop.avisos.append(
+            "Reconfirmação: o preço permanece o mesmo e uma versão nova é criada só para "
+            "registrar a evidência. Nenhuma cotação muda de valor.")
     else:
         linha = LinhaProposta(
             alvo=produto.sku_key, situacao=MUDANCA, produto_id=produto.id,
@@ -317,6 +348,7 @@ def aplicar_custo_sku(session: Session, produto_id: int, prop: Proposta, *, ator
 
     produto = session.get(Produto, produto_id)
     inicio = vigente_a_partir_de or date.today()
+    reconfirmacao = prop.mudancas[0].situacao == RECONFIRMACAO
     nova = cs.registrar_referencia(
         session, produto, cnet_brl=para_float(D(cnet_brl)),
         metodo=produto.cost_method or CostMethod.manual.value, status=status, fonte=fonte,
@@ -329,12 +361,15 @@ def aplicar_custo_sku(session: Session, produto_id: int, prop: Proposta, *, ator
         # regravada, ou quando o próximo cálculo resolver a vigência.
         atualizar_cache=(inicio <= date.today()))
 
-    registrar(session, ator=ator, acao="CRIAR_VERSAO", entidade="CustoReferencia",
+    registrar(session, ator=ator,
+              acao="RECONFIRMAR" if reconfirmacao else "CRIAR_VERSAO",
+              entidade="CustoReferencia",
               entidade_id=nova.id, escopo=prop.escopo,
               antes=_retrato_custo(atual), depois=_retrato_custo(nova),
               motivo=motivo, origem=origem, correlacao=correlacao,
               detalhe={"sku": produto.sku_key, "vigencia_inicio": str(inicio),
-                       "fonte": fonte, "documento": documento})
+                       "fonte": fonte, "documento": documento,
+                       "valor_alterado": not reconfirmacao})
     return nova
 
 
@@ -844,17 +879,31 @@ def preview_importacao(session: Session, linhas: Sequence[dict], *, fonte: str,
         estado.append({"produto": produto.id, "versao": atual.versao if atual else None,
                        "cnet": str(atual.cnet_brl) if atual else None})
         status = linha.get("status") or StatusCusto.confirmado.value
-        # No-op por campos **economicamente relevantes** (§18): CNET e status. O documento é
-        # procedência, não economia — receber o mesmo número numa planilha nova não é uma
-        # mudança de preço, e versionar isso encheria o histórico de linhas idênticas.
-        igual = (atual is not None and D(atual.cnet_brl) == valor
-                 and atual.status_custo == status)
+        bruto_linha = (D(linha.get("valor_bruto"))
+                       if linha.get("valor_bruto") is not None else None)
+        # A comparação é pela IDENTIDADE ECONÔMICA completa — valor, status e evidência.
+        # Comparar só o número faria "mesmo preço, tabela nova" desaparecer como se nada
+        # tivesse acontecido, e a prova de que o fornecedor reconfirmou o preço se perderia.
+        identidade_nova = cs.identidade_economica(
+            cnet_brl=valor, valor_bruto=bruto_linha, status_custo=status,
+            documento=documento, fonte=fonte, data_ref=inicio)
+        identidade_atual = cs.identidade_da_referencia(atual) if atual is not None else None
+        mesmo_valor = atual is not None and D(atual.cnet_brl) == valor \
+            and atual.status_custo == status
+
+        if identidade_atual == identidade_nova:
+            situacao, motivo = NO_OP, "Mesma referência e mesma evidência."
+        elif mesmo_valor:
+            situacao, motivo = RECONFIRMACAO, ("Preço inalterado; evidência nova "
+                                               "(fonte, documento ou data).")
+        else:
+            situacao, motivo = MUDANCA, None
         prop.linhas.append(LinhaProposta(
-            alvo=produto.sku_key, situacao=NO_OP if igual else MUDANCA,
-            produto_id=produto.id, valor_atual=_retrato_custo(atual),
-            valor_novo=f"CNET R$ {valor}",
-            motivo="Idêntica à versão vigente." if igual else None,
-            detalhe={"cnet_novo": para_float(valor), "status": status}))
+            alvo=produto.sku_key, situacao=situacao, produto_id=produto.id,
+            valor_atual=_retrato_custo(atual), valor_novo=f"CNET R$ {valor}",
+            motivo=motivo,
+            detalhe={"cnet_novo": para_float(valor), "status": status,
+                     "documento": documento, "data_ref": str(inicio)}))
 
     prop.skus_afetados = len(prop.mudancas)
     prop.token = _hash_estado(estado)

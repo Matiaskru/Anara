@@ -10,6 +10,7 @@ obrigatório, e não sorte.
 
 Os testes usam SKUs próprios, criados na hora, e nunca tocam nos 348 do catálogo real.
 """
+import json
 from datetime import date, timedelta
 
 import pytest
@@ -585,6 +586,15 @@ def test_simulacao_nao_toca_em_nada(session, daune, ator):
 _LOTE = iter(range(1, 999))
 
 
+#: A base é criada com a MESMA fonte e o MESMO documento do arquivo que será importado.
+#: Isso importa desde a correção da Sessão 5: preço igual vindo de documento diferente é
+#: **reconfirmação**, não no-op. Para o cenário do §48 ter dois NO_CHANGE de verdade, as
+#: duas linhas inalteradas precisam carregar a mesma evidência — que é o caso real de
+#: reimportar a mesma planilha.
+FONTE_DO_LOTE = "tabela do fornecedor 09/2026"
+DOC_DO_LOTE = "setembro.xlsx"
+
+
 @pytest.fixture
 def catalogo_de_importacao(session, daune, ator):
     """Oito SKUs com custo vigente, com prefixo próprio deste teste."""
@@ -592,7 +602,7 @@ def catalogo_de_importacao(session, daune, ator):
     skus = {}
     for i in range(1, 9):
         p = novo_produto(session, daune, f"{prefixo}-{i}", custo=100.0 + i)
-        versionar(session, p, f"{100 + i}.00", fonte="tabela base", documento="base.xlsx",
+        versionar(session, p, f"{100 + i}.00", fonte=FONTE_DO_LOTE, documento=DOC_DO_LOTE,
                   ator=ator)
         skus[p.sku_key] = p
     session.commit()
@@ -603,8 +613,8 @@ def catalogo_de_importacao(session, daune, ator):
 def _arquivo_de_dez_linhas(prefixo):
     """6 mudam · 2 idênticas · 1 ambígua · 1 inexistente."""
     linhas = [{"sku_key": f"{prefixo}-{i}", "cnet_brl": f"{200 + i}.00"} for i in range(1, 7)]
-    linhas += [{"sku_key": f"{prefixo}-7", "cnet_brl": "107.00", "documento": "base.xlsx"},
-               {"sku_key": f"{prefixo}-8", "cnet_brl": "108.00", "documento": "base.xlsx"}]
+    linhas += [{"sku_key": f"{prefixo}-7", "cnet_brl": "107.00"},
+               {"sku_key": f"{prefixo}-8", "cnet_brl": "108.00"}]
     linhas += [{"familia": "Flat Sheet", "fornecedor_id": None, "cnet_brl": "300.00"}]
     linhas += [{"sku_key": "NAO-EXISTE-NO-CATALOGO", "cnet_brl": "400.00"}]
     return linhas
@@ -619,8 +629,7 @@ def test_p0_dry_run_nao_escreve_nada(session, catalogo_de_importacao, ator):
     trilha_antes = len(adm.trilha(session, limite=500))
 
     prop = adm.preview_importacao(session, _arquivo_de_dez_linhas(prefixo),
-                                  fonte="tabela do fornecedor 09/2026",
-                                  documento="setembro.xlsx")
+                                  fonte=FONTE_DO_LOTE, documento=DOC_DO_LOTE)
     session.commit()
 
     assert prop.resumo.get(adm.MUDANCA) == 6
@@ -640,10 +649,10 @@ def test_p0_dry_run_nao_escreve_nada(session, catalogo_de_importacao, ator):
 def test_p0_apply_versiona_somente_as_seis_mudancas(session, catalogo_de_importacao, ator):
     prefixo = catalogo_de_importacao["_prefixo"]
     linhas = _arquivo_de_dez_linhas(prefixo)
-    prop = adm.preview_importacao(session, linhas, fonte="tabela 09/2026",
-                                  documento="setembro.xlsx")
+    prop = adm.preview_importacao(session, linhas, fonte=FONTE_DO_LOTE,
+                                  documento=DOC_DO_LOTE)
     resultado = adm.aplicar_importacao(session, linhas, prop, ator=ator,
-                                       fonte="tabela 09/2026", documento="setembro.xlsx",
+                                       fonte=FONTE_DO_LOTE, documento=DOC_DO_LOTE,
                                        motivo="reajuste de setembro")
     session.commit()
 
@@ -668,16 +677,18 @@ def test_importar_a_mesma_planilha_duas_vezes_e_idempotente(session, catalogo_de
     """§17: a segunda passada não cria V3."""
     prefixo = catalogo_de_importacao["_prefixo"]
     linhas = _arquivo_de_dez_linhas(prefixo)
-    p1 = adm.preview_importacao(session, linhas, fonte="t", documento="setembro.xlsx")
-    adm.aplicar_importacao(session, linhas, p1, ator=ator, fonte="t",
-                           documento="setembro.xlsx")
+    p1 = adm.preview_importacao(session, linhas, fonte=FONTE_DO_LOTE,
+                                documento=DOC_DO_LOTE)
+    adm.aplicar_importacao(session, linhas, p1, ator=ator, fonte=FONTE_DO_LOTE,
+                           documento=DOC_DO_LOTE)
     session.commit()
 
-    p2 = adm.preview_importacao(session, linhas, fonte="t", documento="setembro.xlsx")
+    p2 = adm.preview_importacao(session, linhas, fonte=FONTE_DO_LOTE,
+                                documento=DOC_DO_LOTE)
     assert p2.resumo.get(adm.MUDANCA, 0) == 0
     assert p2.resumo.get(adm.NO_OP) == 8
-    r2 = adm.aplicar_importacao(session, linhas, p2, ator=ator, fonte="t",
-                                documento="setembro.xlsx")
+    r2 = adm.aplicar_importacao(session, linhas, p2, ator=ator, fonte=FONTE_DO_LOTE,
+                                documento=DOC_DO_LOTE)
     session.commit()
     assert r2["aplicadas"] == 0
     for i in range(1, 7):
@@ -825,3 +836,268 @@ def test_erro_administrativo_nao_devolve_stack_trace(session, ator):
     assert "Traceback" not in corpo["erro"]
     assert "/Users/" not in corpo["erro"]
     assert "não é um número válido" in corpo["erro"]
+
+
+# ===========================================================================
+# CORREÇÃO 1 — NO_CHANGE real × reconfirmação com evidência nova
+# ===========================================================================
+def test_mesmo_preco_com_fonte_nova_e_reconfirmacao_nao_no_op(session, daune, ator):
+    """O preço não muda, mas alguém reconferiu. Perder isso apagaria a evidência.
+
+    É a diferença entre "nada aconteceu" e "o fornecedor confirmou em 05/09 que o preço
+    continua 100". A segunda frase é informação econômica, e some se o sistema devolver
+    NO_CHANGE.
+    """
+    x = novo_produto(session, daune, "RECONF-1", custo=100.0)
+    versionar(session, x, "100.00", fonte="tabela fornecedor 01/08", documento="A",
+              quando=HOJE - timedelta(days=35), ator=ator)
+    session.commit()
+    v1 = cs.referencia_vigente(session, x.id)
+
+    prop = adm.preview_custo_sku(session, x.id, cnet_brl="100.00", status="CONFIRMADO",
+                                 fonte="nova tabela oficial 05/09", documento="B")
+    assert prop.linhas[0].situacao == adm.RECONFIRMACAO
+    assert prop.pode_aplicar
+    assert prop.linhas[0].detalhe["variacao_pct"] == 0.0
+    assert any("Reconfirmação" in a for a in prop.avisos)
+
+    nova = adm.aplicar_custo_sku(session, x.id, prop, ator=ator, cnet_brl="100.00",
+                                 status="CONFIRMADO", fonte="nova tabela oficial 05/09",
+                                 documento="B")
+    session.commit()
+
+    # a evidência nova ficou persistida, e o preço não mudou
+    assert nova is not None and nova.versao == 2
+    assert D(nova.cnet_brl) == D("100.00")
+    assert nova.documento == "B"
+    assert "nova tabela oficial 05/09" in nova.origem_registro
+    # V1 continua auditável, com a evidência original
+    session.refresh(v1)
+    assert v1.documento == "A" and D(v1.cnet_brl) == D("100.00")
+    # e a trilha diz que foi reconfirmação, não mudança de preço
+    t = adm.trilha(session, entidade="CustoReferencia", limite=1)[0]
+    assert t.acao == "RECONFIRMAR"
+    assert json.loads(t.detalhe)["valor_alterado"] is False
+
+
+def test_reimportar_a_fonte_b_depois_da_reconfirmacao_e_no_op(session, daune, ator):
+    """A segunda passada da MESMA fonte B é idempotente — aí sim NO_CHANGE."""
+    x = novo_produto(session, daune, "RECONF-2", custo=100.0)
+    versionar(session, x, "100.00", fonte="fonte A", documento="A",
+              quando=HOJE - timedelta(days=35), ator=ator)
+    session.commit()
+    versionar(session, x, "100.00", fonte="fonte B", documento="B", ator=ator)
+    session.commit()
+    assert len(cs.versoes(session, x.id)) == 2
+
+    prop = adm.preview_custo_sku(session, x.id, cnet_brl="100.00", status="CONFIRMADO",
+                                 fonte="fonte B", documento="B")
+    assert prop.linhas[0].situacao == adm.NO_OP
+    assert not prop.pode_aplicar
+    assert adm.aplicar_custo_sku(session, x.id, prop, ator=ator, cnet_brl="100.00",
+                                 status="CONFIRMADO", fonte="fonte B",
+                                 documento="B") is None
+    session.commit()
+    assert len(cs.versoes(session, x.id)) == 2
+
+
+def test_diferenca_so_de_representacao_continua_no_op(session, daune, ator):
+    """"R$ 100,00" e "100.00" são o mesmo número; " Fonte A " e "fonte a", a mesma fonte."""
+    x = novo_produto(session, daune, "RECONF-3", custo=100.0)
+    versionar(session, x, "100.00", fonte="Tabela A", documento="A", ator=ator)
+    session.commit()
+    prop = adm.preview_custo_sku(session, x.id, cnet_brl="100", status="CONFIRMADO",
+                                 fonte="  tabela a  ", documento="A")
+    assert prop.linhas[0].situacao == adm.NO_OP
+
+
+def test_importacao_distingue_reconfirmacao_de_no_op(session, daune, ator):
+    """No lote também: mesma evidência é no-op; evidência nova é reconfirmação."""
+    x = novo_produto(session, daune, "RECONF-LOTE", custo=100.0)
+    versionar(session, x, "100.00", fonte="planilha agosto", documento="agosto.xlsx",
+              quando=HOJE - timedelta(days=35), ator=ator)
+    session.commit()
+
+    linhas = [{"sku_key": "RECONF-LOTE", "cnet_brl": "100.00"}]
+    reconf = adm.preview_importacao(session, linhas, fonte="planilha setembro",
+                                    documento="setembro.xlsx")
+    assert reconf.resumo.get(adm.RECONFIRMACAO) == 1
+    adm.aplicar_importacao(session, linhas, reconf, ator=ator, fonte="planilha setembro",
+                           documento="setembro.xlsx")
+    session.commit()
+    assert len(cs.versoes(session, x.id)) == 2
+
+    de_novo = adm.preview_importacao(session, linhas, fonte="planilha setembro",
+                                     documento="setembro.xlsx")
+    assert de_novo.resumo.get(adm.NO_OP) == 1
+    assert de_novo.resumo.get(adm.RECONFIRMACAO, 0) == 0
+
+
+# ===========================================================================
+# CORREÇÃO 2 — pinning: a cotação fica presa à versão EXATA
+# ===========================================================================
+def _montar_item(session, cotacao, produto, ator_req):
+    from app.routers.admin import _erro  # noqa: F401  (garante import do módulo)
+    from app.routers.cotacoes import adicionar_item
+    _chamar(adicionar_item, ator_req, cotacao_id=cotacao.id, produto_id=produto.id,
+            quantidade=3.0, modo="margem", valor=0.14, session=session)
+    session.commit()
+    return session.exec(select(CotacaoItem)
+                        .where(CotacaoItem.cotacao_id == cotacao.id)).all()[-1]
+
+
+def _nova_cotacao(session, numero):
+    c = Cotacao(cliente_id=0, estado_origem="São Paulo", uf_origem_fiscal="SP",
+                estado_destino="São Paulo", contribuinte_icms=True, finalidade="REVENDA",
+                condicao_pagamento="30", numero=numero, status="rascunho")
+    session.add(c)
+    session.commit()
+    session.refresh(c)
+    return c
+
+
+def test_item_pina_a_versao_exata_de_custo(session, daune, ator):
+    """O item guarda o ID da versão — não só o valor dela."""
+    x = novo_produto(session, daune, "PIN-1", custo=100.0)
+    v1 = versionar(session, x, "100.00", fonte="V1", ator=ator)
+    session.commit()
+
+    cot = _nova_cotacao(session, "PIN-0001")
+    item = _montar_item(session, cot, x, RequestFalsa(_novo_usuario("ADMIN")))
+
+    assert item.custo_referencia_id == v1.id
+    assert item.custo_referencia_versao == 1
+    assert item.margem_regra_id is not None or item.margem_padrao_pct is not None
+    assert item.condicao_pagamento_id is not None
+    pinos = json.loads(item.premissas_pinadas)
+    assert "pis_cofins_pct" in pinos and pinos["pis_cofins_pct"]["premissa_id"]
+
+
+def test_p0_versao_retroativa_nao_reescreve_a_genealogia(session, daune, ator):
+    """O teste crítico: V2 com vigência retroativa não rouba a autoria da cotação A.
+
+    O resolvedor por data passa a dizer que V2 valeria naquele dia — e é isso que torna o
+    pinning necessário. O item continua apontando para V1, que é a versão que realmente
+    formou aquele preço.
+    """
+    x = novo_produto(session, daune, "PIN-RETRO", custo=100.0)
+    ontem = HOJE - timedelta(days=10)
+    v1 = versionar(session, x, "100.00", fonte="V1 — tabela de agosto", quando=ontem,
+                   ator=ator)
+    session.commit()
+
+    cot = _nova_cotacao(session, "PIN-0002")
+    item = _montar_item(session, cot, x, RequestFalsa(_novo_usuario("ADMIN")))
+    congelado = (item.custo_referencia_id, item.custo_referencia_versao,
+                 item.custo_unitario, item.preco_negociado, item.faturamento)
+    assert item.custo_referencia_id == v1.id
+
+    # --- o admin cadastra V2 com vigência RETROATIVA, cobrindo a data da cotação ---
+    v2 = versionar(session, x, "175.00", fonte="V2 retroativa", quando=ontem, ator=ator)
+    session.commit()
+
+    # o resolvedor por data agora aponta para V2 naquela data...
+    resolvido = cs.referencia_em(session, x.id, ontem)
+    assert resolvido is not None and resolvido.id == v2.id
+    # ...mas a cotação continua identificando V1, e o preço não mudou
+    session.refresh(item)
+    assert (item.custo_referencia_id, item.custo_referencia_versao,
+            item.custo_unitario, item.preco_negociado, item.faturamento) == congelado
+    assert item.custo_referencia_id == v1.id
+    # e V1 continua consultável, com a evidência original
+    session.refresh(v1)
+    assert D(v1.cnet_brl) == D("100.00")
+    assert "V1 — tabela de agosto" in v1.origem_registro
+
+
+def test_pinning_sobrevive_a_mudanca_de_premissa_global(session, daune, ator):
+    """FX novo não reescreve qual versão de premissa formou a cotação de ontem."""
+    x = novo_produto(session, daune, "PIN-FX", custo=100.0)
+    versionar(session, x, "100.00", fonte="V1", ator=ator)
+    cfg.definir(session, "pis_cofins_pct", valor_num=0.0759, fonte="baseline")
+    session.commit()
+
+    cot = _nova_cotacao(session, "PIN-0003")
+    item = _montar_item(session, cot, x, RequestFalsa(_novo_usuario("ADMIN")))
+    pinado = json.loads(item.premissas_pinadas)["pis_cofins_pct"]
+
+    prop = adm.preview_premissa(session, "pis_cofins_pct", valor_num="0.08",
+                                fonte="mudança de regime")
+    adm.aplicar_premissa(session, "pis_cofins_pct", prop, ator=ator, valor_num=0.08,
+                         fonte="mudança de regime")
+    session.commit()
+
+    # a premissa vigente mudou, o pino do item não
+    assert D(cfg.num(session, "pis_cofins_pct")) == D("0.08")
+    session.refresh(item)
+    assert json.loads(item.premissas_pinadas)["pis_cofins_pct"] == pinado
+    assert D(pinado["valor"]) == D("0.0759")
+    # restaura para não contaminar as demais suítes
+    cfg.definir(session, "pis_cofins_pct", valor_num=0.0759, fonte="restauro do teste")
+    session.commit()
+
+
+# ===========================================================================
+# Future-dated da condição de pagamento
+# ===========================================================================
+def test_condicao_de_pagamento_futura_so_vale_depois_da_data(session):
+    """`resolver_encargo` resolve por data — fixture isolada, taxas canônicas intactas."""
+    from app.models import CondicaoPagamento
+    from app.payment_terms import resolver_encargo
+
+    v1 = CondicaoPagamento(codigo="TESTE-FUT", label="Fixture 30 DD", encargo_pct=0.016,
+                           encargo_confirmado=True, versao=1, valid_from=None)
+    session.add(v1)
+    session.commit()
+    session.refresh(v1)
+    v2 = CondicaoPagamento(codigo="TESTE-FUT", label="Fixture 30 DD (2027)",
+                           encargo_pct=0.021, encargo_confirmado=True, versao=2,
+                           valid_from=ANO_QUE_VEM, substitui_id=v1.id)
+    v1.valid_to = ANO_QUE_VEM
+    session.add_all([v1, v2])
+    session.commit()
+
+    condicoes = session.exec(select(CondicaoPagamento)).all()
+    assert D(resolver_encargo(condicoes, "TESTE-FUT", ref=HOJE).pct) == D("0.016")
+    assert D(resolver_encargo(condicoes, "TESTE-FUT", ref=ANO_QUE_VEM).pct) == D("0.021")
+
+    # as canônicas continuam intactas
+    assert D(resolver_encargo(condicoes, "30", ref=HOJE).pct) == D("0.016")
+    assert D(resolver_encargo(condicoes, "30/60/90", ref=HOJE).pct) == D("0.048")
+
+    session.delete(v2)
+    v1.valid_to = None
+    session.add(v1)
+    session.commit()
+    session.delete(session.get(CondicaoPagamento, v1.id))
+    session.commit()
+
+
+def test_item_pina_a_condicao_e_o_pino_nao_muda_com_versao_nova(session, daune, ator):
+    """O item guarda o ID da condição usada; uma versão nova não reescreve esse pino."""
+    from app.models import CondicaoPagamento
+
+    x = novo_produto(session, daune, "PIN-COND", custo=100.0)
+    versionar(session, x, "100.00", fonte="V1", ator=ator)
+    session.commit()
+    cot = _nova_cotacao(session, "PIN-0004")
+    item = _montar_item(session, cot, x, RequestFalsa(_novo_usuario("ADMIN")))
+    pinada = item.condicao_pagamento_id
+    assert pinada is not None
+
+    original = session.get(CondicaoPagamento, pinada)
+    nova = CondicaoPagamento(codigo=original.codigo, label=original.label + " v2",
+                             encargo_pct=0.025, encargo_confirmado=True, versao=2,
+                             valid_from=HOJE, substitui_id=original.id)
+    original.valid_to = HOJE
+    session.add_all([original, nova])
+    session.commit()
+
+    session.refresh(item)
+    assert item.condicao_pagamento_id == pinada          # o pino não se move
+    assert D(item.encargo_pct) == D("0.016")             # nem o valor congelado
+
+    session.delete(nova)
+    original.valid_to = None
+    session.add(original)
+    session.commit()
