@@ -14,10 +14,13 @@ Condições canônicas (todas cadastradas em `CondicaoPagamento`):
     30 DD 1,6% · 30/60 3,2% · 30/60/90 4,8% · 30/60/90/120 6,4% · 30/60/90/120/150 8,0%
 """
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Optional, Sequence
 
 from app.dinheiro import D, ZERO
+
+_MIN_DATA = date.min
 
 OK = "OK"
 REVIEW_REQUIRED = "REVIEW_REQUIRED"
@@ -43,9 +46,27 @@ def _bloqueio(label: str, motivo: str) -> EncargoResolvido:
                             status=REVIEW_REQUIRED, aviso=motivo, motivo=motivo)
 
 
+def _vigente_em(c, ref) -> bool:
+    """A versão da condição que vale nesta data (Sessão 5).
+
+    Uma condição pode ter mais de uma linha: a que valeu até ontem e a que passa a valer
+    amanhã. Linha sem datas — as oito herdadas — vale sempre.
+    """
+    if ref is None:
+        return True
+    inicio = getattr(c, "valid_from", None)
+    fim = getattr(c, "valid_to", None)
+    if inicio is not None and inicio > ref:
+        return False
+    if fim is not None and fim <= ref:
+        return False
+    return True
+
+
 def resolver_encargo(condicoes: Sequence, codigo: str,
                      override_pct: Optional[float] = None,
-                     override_motivo: Optional[str] = None) -> EncargoResolvido:
+                     override_motivo: Optional[str] = None,
+                     ref=None) -> EncargoResolvido:
     """Encargo financeiro da condição. Só devolve número quando há premissa ou override.
 
     `override_pct` existe para o caso autorizado — uma condição negociada fora da tabela. Quem
@@ -65,9 +86,14 @@ def resolver_encargo(condicoes: Sequence, codigo: str,
                          "Condição de pagamento não informada. O encargo financeiro não é "
                          "presumido — escolha uma condição cadastrada.")
 
-    for c in condicoes:
-        if (c.codigo or "").strip().lower() != codigo.lower():
-            continue
+    candidatas = [c for c in condicoes
+                  if (c.codigo or "").strip().lower() == codigo.lower()
+                  and getattr(c, "ativo", True) and _vigente_em(c, ref)]
+    # mais recente primeiro: entre duas versões vigentes, ganha a que começou depois
+    candidatas.sort(key=lambda c: (getattr(c, "valid_from", None) is not None,
+                                   getattr(c, "valid_from", None) or _MIN_DATA,
+                                   getattr(c, "versao", 1), c.id or 0))
+    for c in reversed(candidatas):
         if c.encargo_pct is None:
             return _bloqueio(
                 c.label,

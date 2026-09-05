@@ -584,15 +584,32 @@ class MargemRegra(SQLModel, table=True):
 
 
 class CondicaoPagamento(SQLModel, table=True):
-    """Condição de pagamento e seu encargo financeiro — regra centralizada num lugar só."""
+    """Condição de pagamento e seu encargo financeiro — regra centralizada num lugar só.
+
+    **Versionada por vigência desde a Sessão 5.** `codigo` deixou de ser único porque a mesma
+    condição ("30/60") pode ter mais de uma linha: a que valeu até ontem e a que vale a partir
+    de hoje. Quem resolve qual delas usar é a data, não a unicidade — e é isso que permite
+    cadastrar hoje um encargo que só entra em vigor no ano que vem.
+
+    O histórico não depende disto: cotação emitida guarda o `encargo_pct` no próprio item.
+    A vigência serve para o cálculo NOVO.
+    """
     id: Optional[int] = Field(default=None, primary_key=True)
-    codigo: str = Field(index=True, unique=True)
+    codigo: str = Field(index=True)
     label: str
     encargo_pct: Optional[float] = None      # None = taxa ainda não confirmada
     encargo_confirmado: bool = True
     ordem: int = 0
     ativo: bool = True
     notas: Optional[str] = None
+    # --- vigência (Sessão 5) ---
+    valid_from: Optional[date] = None        # NULO nas 8 linhas herdadas = "sempre valeu"
+    valid_to: Optional[date] = None
+    versao: int = 1
+    substitui_id: Optional[int] = Field(default=None, foreign_key="condicaopagamento.id")
+    fonte: Optional[str] = None
+    criado_em: Optional[datetime] = None
+    criado_por: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
@@ -927,6 +944,7 @@ class Usuario(SQLModel, table=True):
     papel: str = Field(default=Papel.vendedor_interno.value, index=True)
     ativo: bool = True
     can_manage_users: bool = False
+    can_manage_economics: bool = True
     sessao_versao: int = 1
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     ultimo_login_em: Optional[datetime] = None
@@ -943,7 +961,53 @@ class Usuario(SQLModel, table=True):
         return self.ativo and self.papel in PAPEIS_ADMINISTRATIVOS
 
     @property
+    def gerencia_economia(self) -> bool:
+        """Pode **versionar** premissa econômica: custo, câmbio, margem, encargo.
+
+        Separada de `administra` de propósito (Sessão 5). Ver o custo e poder trocá-lo são
+        coisas diferentes: um administrativo consulta a formação do preço o dia inteiro sem
+        precisar da caneta que muda o custo de um SKU. `can_manage_users` **não** concede
+        isto — gerir gente não é gerir número.
+
+        OWNER sempre pode; ADMIN, conforme a flag, que vem ligada por não haver hoje um
+        segundo administrador de quem separar.
+        """
+        if not self.ativo:
+            return False
+        if self.papel == Papel.owner.value:
+            return True
+        return self.papel == Papel.admin.value and bool(self.can_manage_economics)
+
+    @property
     def gerencia_usuarios(self) -> bool:
         # OWNER nunca perde a capacidade de administrar quem entra — senão um sistema com um
         # único OWNER e a flag desligada ficaria sem ninguém capaz de criar acesso.
         return self.ativo and (self.papel == Papel.owner.value or bool(self.can_manage_users))
+
+
+class AuditLog(SQLModel, table=True):
+    """Trilha de auditoria administrativa — quem mudou o quê, quando e por quê.
+
+    Existe porque versionar o valor responde "qual era o número antes", mas não responde
+    "quem decidiu trocar, e com base em quê". As duas perguntas são diferentes, e a segunda é
+    a que aparece quando um preço é contestado meses depois.
+
+    **Nunca guarda senha, hash, cookie, segredo nem payload confidencial inteiro.** Guarda o
+    valor econômico antes e depois — que é o ponto — e o motivo declarado pelo ator.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    ocorrido_em: datetime = Field(default_factory=datetime.utcnow, index=True)
+    ator_id: Optional[int] = Field(default=None, foreign_key="usuario.id", index=True)
+    ator_email: Optional[str] = None
+    ator_papel: Optional[str] = None
+    acao: str = Field(index=True)             # CRIAR_VERSAO | ENCERRAR_VIGENCIA | IMPORTAR | ...
+    entidade: str = Field(index=True)         # CustoReferencia | Premissa | MargemRegra | ...
+    entidade_id: Optional[int] = Field(default=None, index=True)
+    escopo: Optional[str] = None              # "SKU X" | "fornecedor Daune" | "global"
+    versao_anterior: Optional[str] = None     # representação textual, não o objeto
+    versao_nova: Optional[str] = None
+    motivo: Optional[str] = None
+    origem: Optional[str] = None              # "admin-ui" | "importacao" | "script"
+    resultado: str = "OK"                     # OK | CONFLITO | RECUSADO | NO_OP
+    correlacao: Optional[str] = Field(default=None, index=True)   # agrupa um lote/preview
+    detalhe: Optional[str] = None             # JSON curto com o diff

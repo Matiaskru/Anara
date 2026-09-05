@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}{{ produto.sku_key }} — versões de custo{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ produto.nome }}</h1>
+    <div class="sub"><code>{{ produto.sku_key }}</code> · {{ produto.familia or '—' }}
+      · versões de custo deste SKU, e somente dele</div></div>
+  <a href="/admin" class="btn btn-ghost">Administração</a>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Histórico de versões</h3>
+  <p style="color:var(--gray);font-size:12px;">
+    Nenhuma versão é apagada. A vigente é resolvida <strong>pela data</strong> — uma versão
+    com início futuro já está gravada mas ainda não vale.</p>
+  <table class="compacta">
+    <thead><tr><th class="num">Versão</th><th class="num">CNET</th><th class="num">Bruto</th>
+      <th>Status</th><th>Vigência</th><th>Fonte</th><th>Documento</th><th></th></tr></thead>
+    <tbody>
+    {% for v in versoes %}
+      <tr {% if vigente and v.id == vigente.id %}style="background:var(--row-alt);font-weight:600;"{% endif %}>
+        <td class="num">V{{ v.versao }}</td>
+        <td class="num">{{ v.cnet_brl|brl }}</td>
+        <td class="num">{{ v.valor_bruto|brl if v.valor_bruto else '—' }}</td>
+        <td><span class="tag">{{ v.status_custo or '—' }}</span></td>
+        <td style="font-size:11px;">
+          {{ v.valid_from|data }}{% if v.valid_to %} → {{ v.valid_to|data }}{% endif %}
+          {% if v.valid_from and v.valid_from > hoje %}
+            <span class="tag tag-review">agendada</span>{% endif %}
+        </td>
+        <td style="font-size:11px;">{{ v.origem_registro or '—' }}</td>
+        <td style="font-size:11px;">{{ v.documento or '—' }}</td>
+        <td>{% if vigente and v.id == vigente.id %}<span class="tag tag-calc">VIGENTE</span>
+            {% elif v.valid_to %}<span class="tag" style="opacity:.6;">encerrada</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" style="color:var(--gray);">Este SKU ainda não tem referência versionada.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Nova versão de custo</h3>
+  <div class="grid-3">
+    <div class="field"><label>CNET (R$)</label><input id="c-cnet" type="text"></div>
+    <div class="field"><label>Valor bruto do fornecedor (opcional)</label><input id="c-bruto" type="text"></div>
+    <div class="field"><label>Status</label>
+      <select id="c-status">
+        <option value="CONFIRMADO">CONFIRMADO</option>
+        <option value="ESTIMADO">ESTIMADO</option>
+        <option value="REVALIDAR">REVALIDAR</option>
+        <option value="A_COTAR">A_COTAR</option>
+        <option value="REVIEW_REQUIRED">REVIEW_REQUIRED</option>
+      </select></div>
+  </div>
+  <div class="grid-3">
+    <div class="field"><label>Fonte (obrigatória)</label><input id="c-fonte" type="text"
+        placeholder="cotação, e-mail, tabela"></div>
+    <div class="field"><label>Documento</label><input id="c-doc" type="text"></div>
+    <div class="field"><label>Vigente a partir de</label><input id="c-vig" type="date">
+      <small style="color:var(--gray);">Vazio = hoje.</small></div>
+  </div>
+  <div class="field"><label>Motivo</label><input id="c-motivo" type="text"></div>
+  <div id="c-preview" style="margin:10px 0;"></div>
+  <button class="btn btn-ghost" onclick="previewCusto()">Ver impacto</button>
+  <button class="btn btn-copper" id="c-aplicar" style="display:none;" onclick="aplicarCusto()">Aplicar</button>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const PRODUTO_ID = {{ produto.id }};
+let tokenCusto = null;
+
+function corpoCusto() {
+  const d = new FormData();
+  d.append('cnet', document.getElementById('c-cnet').value);
+  d.append('valor_bruto', document.getElementById('c-bruto').value);
+  d.append('status', document.getElementById('c-status').value);
+  d.append('fonte', document.getElementById('c-fonte').value);
+  d.append('documento', document.getElementById('c-doc').value);
+  d.append('vigencia', document.getElementById('c-vig').value);
+  d.append('motivo', document.getElementById('c-motivo').value);
+  return d;
+}
+
+async function previewCusto() {
+  const r = await fetch(`/admin/sku/${PRODUTO_ID}/custo/preview`, {method: 'POST', body: corpoCusto()});
+  const j = await r.json();
+  const alvo = document.getElementById('c-preview');
+  if (j.erro) { alvo.innerHTML = '<div class="erro">' + j.erro + '</div>'; return; }
+  tokenCusto = j.token;
+  let html = '<table class="compacta"><tr><th>SKU</th><th>Situação</th><th>Atual</th><th>Novo</th></tr>';
+  j.linhas.forEach(l => { html += `<tr><td>${l.alvo}</td><td><span class="tag">${l.situacao}</span></td>
+    <td>${l.valor_atual ?? '—'}</td><td>${l.valor_novo ?? '—'}</td></tr>`; });
+  html += '</table>';
+  html += `<p style="font-size:12px;"><strong>Escopo:</strong> ${j.escopo} —
+           ${j.skus_afetados} SKU(s) afetado(s). Nenhum outro item do catálogo muda.</p>`;
+  if (j.impacto && !j.impacto.bloqueado && !j.impacto.erro) {
+    const i = j.impacto;
+    html += `<p style="font-size:12px;"><strong>Simulação:</strong> preço recomendado
+      R$ ${i.preco_atual} → R$ ${i.preco_novo}
+      (${i.diferenca >= 0 ? '+' : ''}R$ ${i.diferenca}).
+      <em>${i.observacao}</em></p>`;
+  }
+  j.avisos.forEach(a => { html += '<div class="aviso">' + a + '</div>'; });
+  alvo.innerHTML = html;
+  document.getElementById('c-aplicar').style.display = j.pode_aplicar ? 'inline-flex' : 'none';
+}
+
+async function aplicarCusto() {
+  const d = corpoCusto();
+  d.append('token', tokenCusto);
+  const r = await fetch(`/admin/sku/${PRODUTO_ID}/custo/aplicar`, {method: 'POST', body: d});
+  const j = await r.json();
+  if (j.erro) { document.getElementById('c-preview').innerHTML = '<div class="erro">' + j.erro + '</div>'; return; }
+  toast(j.mensagem || 'Aplicado.');
+  setTimeout(() => location.reload(), 900);
+}
+</script>
+{% endblock %}

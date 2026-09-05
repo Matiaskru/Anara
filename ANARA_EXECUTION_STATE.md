@@ -2,13 +2,13 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **04/09/2026 — fim da Sessão 4**
+Última atualização: **05/09/2026 — fim da Sessão 5**
 
 ---
 
 # Estado atual
 
-**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B e 4 EXECUTADAS, aguardando auditoria.**
+**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B, 4 e 5 EXECUTADAS, aguardando auditoria.**
 
 | Etapa | Situação | Commit |
 |---|---|---|
@@ -19,9 +19,10 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 | **Sessão 3A — frete comercial TRANSAL** | **APROVADA** | `a88eebd` |
 | **Sessão 3B — Decimal e reconciliação monetária** | **EXECUTADA, aguarda auditoria** | `e27e11e` (WIP) + commit final |
 | **Sessão 4 — segurança, papéis, confidencialidade** | **EXECUTADA, aguarda auditoria** | commit da Sessão 4 |
-| Ondas 5 a 8 | não autorizadas | — |
+| **Sessão 5 — admin, versionamento, impacto controlado** | **EXECUTADA, aguarda auditoria** | commit da Sessão 5 |
+| Ondas 6 a 8 | não autorizadas | — |
 
-Alembic em **`0010`** (a 3B não criou migration, por decisão medida; a Sessão 4 criou a tabela `usuario`, aditiva) · **520 testes passando** · árvore limpa · sem remote.
+Alembic em **`0012`** · **576 testes passando** · árvore limpa · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -256,6 +257,25 @@ seed, nenhuma linha do banco, nenhum byte do baseline.
   `413d6bd` e `165d75e`
 - Provado: 79 testes de segurança · regressão econômica idêntica à da 3B · digest sem nenhuma
   alteração em tabela preexistente
+
+## Administração e versionamento (Sessão 5)
+- **`app/admin_service.py` é a camada administrativa.** Atualizar cria versão; nunca
+  sobrescreve. A **data** decide a versão vigente
+- **Vigência futura passou a funcionar de verdade:** `referencia_vigente`, `resolver_margem` e
+  `resolver_encargo` resolvem por data. Antes os três ignoravam `valid_from` — cadastrar para
+  2027 valia no ato
+- **`preview → aplicar` com token** de estado. Estado mudou desde o preview → `CONFLITO`,
+  registrado na trilha, sem criar versão
+- **`CondicaoPagamento` ganhou vigência** e `codigo` deixou de ser único — duas versões da
+  mesma condição precisam coexistir para agendar troca de encargo
+- **Trilha em `AuditLog`**: ator, papel, escopo, antes/depois, motivo, origem, resultado,
+  correlação de lote
+- **Importação com dry run obrigatório.** 6 mudam · 2 no-op · 1 review · 1 inexistente: só as
+  6 escrevem. Segunda passada da mesma planilha é no-op
+- **Rascunho não atualiza sozinho** — só é marcado como desatualizado
+- **`can_manage_economics`** separa ver de alterar. `can_manage_users` não concede economia
+- Provado: 56 testes de admin · regressão econômica idêntica à da 3B · nenhuma coluna
+  preexistente alterada no digest
 
 # Blockers conhecidos
 

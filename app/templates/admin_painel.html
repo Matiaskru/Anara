@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Administração — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Administração de premissas</h1>
+    <div class="sub">Toda alteração cria uma <strong>versão nova</strong> — nada é sobrescrito,
+      e nenhuma cotação já emitida muda.</div></div>
+  <a href="/admin/trilha" class="btn btn-ghost">Trilha de auditoria</a>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Premissas globais</h3>
+  <p style="color:var(--gray);font-size:12px;">
+    Estas alcançam vários SKUs de uma vez. O alcance aparece antes de aplicar.</p>
+  <table class="compacta">
+    <thead><tr><th>Premissa</th><th class="num">Vigente</th><th>Unidade</th><th>Desde</th>
+      <th>Alcance</th><th></th></tr></thead>
+    <tbody>
+    {% for p in premissas %}
+      <tr>
+        <td><strong>{{ p.rotulo }}</strong><br><span style="color:var(--gray);font-size:11px;">{{ p.chave }}</span></td>
+        <td class="num">{{ p.valor if p.valor is not none else '—' }}</td>
+        <td style="font-size:11px;color:var(--gray);">{{ p.unidade }}</td>
+        <td>{{ p.desde|data }}</td>
+        <td style="font-size:11px;">{{ p.escopo.skus }} SKU(s) · {{ p.escopo.texto }}</td>
+        <td><button class="btn btn-ghost btn-sm"
+              onclick="abrirPremissa('{{ p.chave }}','{{ p.rotulo }}')">Nova versão</button></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Regras de margem</h3>
+  <p style="color:var(--gray);font-size:12px;">
+    Precedência: override do item → SKU → fornecedor/família → geral.
+    O <strong>nível</strong> de cada regra está explícito para não confundir
+    “ajustei um item” com “ajustei o fornecedor inteiro”.</p>
+  <table class="compacta">
+    <thead><tr><th>Nível</th><th>Regra</th><th>Escopo</th><th class="num">Margem</th>
+      <th class="num">Prior.</th><th>Vigência</th></tr></thead>
+    <tbody>
+    {% for r in margens %}
+      <tr {% if r.valid_to %}style="opacity:.5;"{% endif %}>
+        <td><span class="tag">{{ niveis[r.id] }}</span></td>
+        <td>{{ r.nome }}</td>
+        <td style="font-size:11px;">
+          {%- if r.sku_key %}SKU {{ r.sku_key }}
+          {%- elif r.fornecedor_id %}{{ fornecedores.get(r.fornecedor_id, '—') }}
+          {%- elif r.familia %}família {{ r.familia }}
+          {%- else %}todos{% endif -%}
+          {% if r.min_thread_count or r.max_thread_count %}
+            · {{ r.min_thread_count or '' }}–{{ r.max_thread_count or '' }} fios{% endif %}
+        </td>
+        <td class="num">{{ r.margem_pct|pct(2) }}</td>
+        <td class="num">{{ r.prioridade }}</td>
+        <td style="font-size:11px;">{{ r.valid_from|data }}{% if r.valid_to %} → {{ r.valid_to|data }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Condições de pagamento</h3>
+  <table class="compacta">
+    <thead><tr><th>Código</th><th>Rótulo</th><th class="num">Encargo</th>
+      <th>Confirmado</th><th class="num">Versão</th><th>Vigência</th></tr></thead>
+    <tbody>
+    {% for c in condicoes %}
+      <tr {% if c.valid_to %}style="opacity:.5;"{% endif %}>
+        <td><code>{{ c.codigo }}</code></td><td>{{ c.label }}</td>
+        <td class="num">{{ c.encargo_pct|pct(2) if c.encargo_pct is not none else '—' }}</td>
+        <td>{{ 'sim' if c.encargo_confirmado else 'NÃO' }}</td>
+        <td class="num">{{ c.versao }}</td>
+        <td style="font-size:11px;">{{ c.valid_from|data if c.valid_from else 'sempre' }}{% if c.valid_to %} → {{ c.valid_to|data }}{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Últimas alterações</h3>
+  <table class="compacta">
+    <thead><tr><th>Quando</th><th>Quem</th><th>Ação</th><th>Escopo</th>
+      <th>Antes</th><th>Depois</th><th>Resultado</th></tr></thead>
+    <tbody>
+    {% for t in trilha %}
+      <tr><td style="font-size:11px;">{{ t.ocorrido_em.strftime('%d/%m %H:%M') if t.ocorrido_em else '—' }}</td>
+        <td style="font-size:11px;">{{ t.ator_email or '—' }}</td>
+        <td><span class="tag">{{ t.acao }}</span></td>
+        <td style="font-size:11px;">{{ t.escopo or '—' }}</td>
+        <td style="font-size:11px;">{{ t.versao_anterior or '—' }}</td>
+        <td style="font-size:11px;">{{ t.versao_nova or '—' }}</td>
+        <td><span class="tag {{ 'tag-review' if t.resultado != 'OK' else '' }}">{{ t.resultado }}</span></td></tr>
+    {% else %}
+      <tr><td colspan="7" style="color:var(--gray);">Nenhuma alteração administrativa ainda.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div id="modal-premissa" class="card" style="display:none;">
+  <h3 id="mp-titulo" style="margin-top:0;"></h3>
+  <input type="hidden" id="mp-chave">
+  <div class="grid-3">
+    <div class="field"><label>Novo valor</label><input id="mp-valor" type="text"></div>
+    <div class="field"><label>Vigente a partir de</label><input id="mp-vigencia" type="date">
+      <small style="color:var(--gray);">Vazio = hoje. Data futura agenda a troca.</small></div>
+    <div class="field"><label>Fonte (obrigatória)</label><input id="mp-fonte" type="text"
+        placeholder="documento, e-mail, decisão"></div>
+  </div>
+  <div class="field"><label>Motivo</label><input id="mp-motivo" type="text"></div>
+  <div id="mp-preview" style="margin:10px 0;"></div>
+  <button class="btn btn-ghost" onclick="previewPremissa()">Ver impacto</button>
+  <button class="btn btn-copper" id="mp-aplicar" style="display:none;"
+          onclick="aplicarPremissa()">Aplicar</button>
+  <button class="btn btn-ghost" onclick="document.getElementById('modal-premissa').style.display='none'">Cancelar</button>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let tokenPremissa = null;
+
+function abrirPremissa(chave, rotulo) {
+  document.getElementById('mp-chave').value = chave;
+  document.getElementById('mp-titulo').textContent = 'Nova versão — ' + rotulo;
+  document.getElementById('mp-preview').innerHTML = '';
+  document.getElementById('mp-aplicar').style.display = 'none';
+  document.getElementById('modal-premissa').style.display = 'block';
+  tokenPremissa = null;
+}
+
+function corpoPremissa() {
+  const d = new FormData();
+  d.append('chave', document.getElementById('mp-chave').value);
+  d.append('valor', document.getElementById('mp-valor').value);
+  d.append('fonte', document.getElementById('mp-fonte').value);
+  d.append('vigencia', document.getElementById('mp-vigencia').value);
+  d.append('motivo', document.getElementById('mp-motivo').value);
+  return d;
+}
+
+async function previewPremissa() {
+  const r = await fetch('/admin/premissa/preview', {method: 'POST', body: corpoPremissa()});
+  const j = await r.json();
+  const alvo = document.getElementById('mp-preview');
+  if (j.erro) { alvo.innerHTML = '<div class="erro">' + j.erro + '</div>'; return; }
+  tokenPremissa = j.token;
+  let html = '<table class="compacta"><tr><th>Alvo</th><th>Situação</th><th>Atual</th><th>Novo</th></tr>';
+  j.linhas.forEach(l => { html += `<tr><td>${l.alvo}</td><td><span class="tag">${l.situacao}</span></td>
+    <td>${l.valor_atual ?? '—'}</td><td>${l.valor_novo ?? '—'}</td></tr>`; });
+  html += '</table>';
+  html += `<p style="font-size:12px;"><strong>Alcance:</strong> ${j.skus_afetados} SKU(s).</p>`;
+  j.avisos.forEach(a => { html += '<div class="aviso">' + a + '</div>'; });
+  alvo.innerHTML = html;
+  document.getElementById('mp-aplicar').style.display = j.pode_aplicar ? 'inline-flex' : 'none';
+}
+
+async function aplicarPremissa() {
+  const d = corpoPremissa();
+  d.append('token', tokenPremissa);
+  const r = await fetch('/admin/premissa/aplicar', {method: 'POST', body: d});
+  const j = await r.json();
+  if (j.erro) { document.getElementById('mp-preview').innerHTML = '<div class="erro">' + j.erro + '</div>'; return; }
+  toast(j.mensagem || 'Aplicado.');
+  setTimeout(() => location.reload(), 900);
+}
+</script>
+{% endblock %}

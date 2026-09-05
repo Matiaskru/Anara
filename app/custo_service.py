@@ -98,10 +98,19 @@ def versoes(session: Session, produto_id: int) -> List[CustoReferencia]:
     return sorted(linhas, key=lambda r: (r.versao or 0, r.id or 0))
 
 
-def referencia_vigente(session: Session, produto_id: int) -> Optional[CustoReferencia]:
-    """A versão em vigor. `None` quando o SKU ainda não tem referência versionada."""
-    vigentes = [r for r in versoes(session, produto_id) if r.vigente]
-    return vigentes[-1] if vigentes else None
+def referencia_vigente(session: Session, produto_id: int,
+                       quando: Optional[date] = None) -> Optional[CustoReferencia]:
+    """A versão em vigor **na data**. `None` quando o SKU não tem referência versionada.
+
+    Resolve por vigência, não pelo flag `vigente` (Sessão 5). A diferença aparece na versão
+    com data futura: ela já está gravada e já é a "mais nova não superada", mas **não** é a
+    que vale hoje. Antes desta mudança, cadastrar um custo para 01/01/2027 mudava o preço
+    imediatamente — que é o oposto de agendar.
+
+    O flag `vigente` continua significando "não foi superada por outra versão" e serve à
+    listagem administrativa; quem decide o número do cálculo é a data.
+    """
+    return referencia_em(session, produto_id, quando or date.today())
 
 
 def referencia_em(session: Session, produto_id: int, quando: date) -> Optional[CustoReferencia]:

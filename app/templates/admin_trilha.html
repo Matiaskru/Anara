@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Trilha de auditoria — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Trilha de auditoria</h1>
+    <div class="sub">Quem alterou o quê, quando e por quê. Versão responde “qual era o
+      número”; a trilha responde “quem decidiu trocar”.</div></div>
+  <a href="/admin" class="btn btn-ghost">Voltar</a>
+</div>
+<div class="card">
+  <table class="compacta">
+    <thead><tr><th>Quando</th><th>Quem</th><th>Papel</th><th>Ação</th><th>Entidade</th>
+      <th>Escopo</th><th>Antes</th><th>Depois</th><th>Motivo</th><th>Origem</th>
+      <th>Resultado</th></tr></thead>
+    <tbody>
+    {% for t in linhas %}
+      <tr>
+        <td style="font-size:11px;white-space:nowrap;">{{ t.ocorrido_em.strftime('%d/%m/%Y %H:%M') if t.ocorrido_em else '—' }}</td>
+        <td style="font-size:11px;">{{ t.ator_email or '—' }}</td>
+        <td style="font-size:11px;">{{ t.ator_papel or '—' }}</td>
+        <td><span class="tag">{{ t.acao }}</span></td>
+        <td style="font-size:11px;">{{ t.entidade }}{% if t.entidade_id %} #{{ t.entidade_id }}{% endif %}</td>
+        <td style="font-size:11px;">{{ t.escopo or '—' }}</td>
+        <td style="font-size:11px;">{{ t.versao_anterior or '—' }}</td>
+        <td style="font-size:11px;">{{ t.versao_nova or '—' }}</td>
+        <td style="font-size:11px;">{{ t.motivo or '—' }}</td>
+        <td style="font-size:11px;">{{ t.origem or '—' }}</td>
+        <td><span class="tag {{ 'tag-review' if t.resultado != 'OK' else '' }}">{{ t.resultado }}</span></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="11" style="color:var(--gray);">Nenhuma alteração registrada.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

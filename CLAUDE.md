@@ -95,6 +95,36 @@ aplicada **antes** de a resposta ser montada.
 Ao criar rota nova: se ela devolve número econômico, o corte é `conforme_papel(...)` ou
 `exigir_economia(request)`. Rota que só um administrador deve abrir usa `exigir_admin(request)`.
 
+## Administração de premissas (Sessão 5)
+
+**Atualizar não é editar histórico.** Nada em `app/admin_service.py` faz
+`UPDATE valor = novo`: a versão antiga fica com sua fonte e sua data, uma versão nova nasce,
+e **a data decide** qual delas o próximo cálculo usa.
+
+- **Escopo declarado e conferido.** Mexer no SKU X não toca no SKU Y, na família nem no
+  fornecedor. O preview mostra quantos SKUs a mudança alcança — é o que impede confundir
+  "ajustei um item" com "ajustei o fornecedor inteiro"
+- **`preview → aplicar`, sempre.** O preview devolve um **token** com o hash do estado
+  observado; o apply recomputa e recusa se algo mudou nesse meio-tempo (`ConflitoDeVersao`).
+  O navegador devolve o token, nunca os valores — esses são recalculados no servidor
+- **Vigência futura funciona.** `referencia_vigente`, `resolver_margem` e `resolver_encargo`
+  resolvem **por data**. Antes da Sessão 5 os três ignoravam `valid_from`, e cadastrar algo
+  para 2027 mudava o preço no mesmo instante
+- **No-op é no-op.** Reimportar a mesma fonte não cria versão. Na importação, a comparação é
+  por campo **economicamente relevante** (CNET + status); documento é procedência
+- **Casamento inequívoco ou nada.** SKU exato, ou campos estruturados suficientes. Ambíguo →
+  `REVIEW_REQUIRED`; inexistente → `SKU_NAO_ENCONTRADO`. As duas coisas são diferentes, e
+  fuzzy match de custo econômico é errar o preço com convicção
+- **Rascunho não atualiza sozinho.** `premissas_desatualizadas()` **detecta e só detecta**
+- **Delete físico só no que nunca foi usado.** Referência que já participou de cotação
+  encerra vigência; não some. Voltar ao valor antigo é criar V3, não apagar V2
+- **`can_manage_economics`** separa ver a economia de poder alterá-la. `can_manage_users`
+  não concede isso — gerir gente não é gerir número. OWNER sempre pode
+- **Trilha em `AuditLog`:** ator, papel, ação, escopo, antes, depois, motivo, origem,
+  resultado e correlação do lote. Nunca senha, hash, cookie ou segredo
+- Lista **fechada** de premissas editáveis pela tela. Formulário genérico sobre `chave`
+  deixaria alguém cadastrar "icms = banana" e achar que configurou algo
+
 ## Aprovação
 
 Qualquer preço negociado **abaixo** do recomendado exige aprovação administrativa, mesmo que a
@@ -179,6 +209,9 @@ SKU, origem logística de Daune e Decor) continuam **congeladas e fora de escopo
 
 **Sessão 4 — segurança, papéis e confidencialidade: EXECUTADA, aguardando auditoria.**
 Alembic em `0010` (tabela `usuario`, aditiva).
+
+**Sessão 5 — administração de premissas e versionamento: EXECUTADA, aguardando auditoria.**
+Alembic em `0012` (`auditlog`, vigência da condição de pagamento, `can_manage_economics`).
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

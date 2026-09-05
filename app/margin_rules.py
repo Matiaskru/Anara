@@ -33,8 +33,29 @@ class MargemResolvida:
 MARGEM_ULTIMO_RECURSO = Decimal("0.15")
 
 
-def _bate(regra, fornecedor_id, familia, thread_count, sku_key) -> bool:
+def _vigente_em(regra, ref) -> bool:
+    """A regra está valendo nesta data?
+
+    `MargemRegra` sempre teve `valid_from`/`valid_to`, mas o resolvedor os ignorava — só
+    olhava `ativo`. Consequência: uma regra cadastrada para valer no ano que vem passava a
+    valer no instante em que era salva. Corrigido na Sessão 5; regra sem datas continua
+    valendo sempre, como as herdadas.
+    """
+    if ref is None:
+        return True
+    inicio = getattr(regra, "valid_from", None)
+    fim = getattr(regra, "valid_to", None)
+    if inicio is not None and inicio > ref:
+        return False
+    if fim is not None and fim <= ref:
+        return False
+    return True
+
+
+def _bate(regra, fornecedor_id, familia, thread_count, sku_key, ref=None) -> bool:
     if not getattr(regra, "ativo", True):
+        return False
+    if not _vigente_em(regra, ref):
         return False
     if regra.sku_key and (sku_key or "") != regra.sku_key:
         return False
@@ -69,12 +90,13 @@ def _especificidade(regra) -> int:
 def resolver_margem(regras: Sequence, fornecedor_id: Optional[int] = None,
                     familia: Optional[str] = None, thread_count: Optional[int] = None,
                     sku_key: Optional[str] = None,
-                    override_pct: Optional[float] = None) -> MargemResolvida:
+                    override_pct: Optional[float] = None, ref=None) -> MargemResolvida:
     if override_pct is not None:
         return MargemResolvida(D(override_pct), "Margem definida manualmente nesta cotação",
                                origem="override")
 
-    candidatas = [r for r in regras if _bate(r, fornecedor_id, familia, thread_count, sku_key)]
+    candidatas = [r for r in regras
+                  if _bate(r, fornecedor_id, familia, thread_count, sku_key, ref)]
     if not candidatas:
         return MargemResolvida(MARGEM_ULTIMO_RECURSO,
                                "Nenhuma regra de margem cadastrada bateu — usando 15% como último "

@@ -58,6 +58,16 @@ def administra(request: Request) -> bool:
     return bool(u and u.ativo and u.papel in PAPEIS_ADMINISTRATIVOS)
 
 
+def gerencia_economia(request: Request) -> bool:
+    """Pode versionar premissa econômica — custo, câmbio, margem, encargo.
+
+    É mais estreito que `administra`: ver a economia e poder alterá-la são permissões
+    distintas, e a segunda é a que muda o preço de amanhã.
+    """
+    u = usuario_da_request(request)
+    return bool(u and u.gerencia_economia)
+
+
 def gerencia_usuarios(request: Request) -> bool:
     u = usuario_da_request(request)
     return bool(u and u.gerencia_usuarios)
@@ -98,6 +108,16 @@ def exigir_admin(request: Request) -> Usuario:
     if u.papel not in PAPEIS_ADMINISTRATIVOS:
         raise HTTPException(status_code=403,
                             detail="Ação restrita a administradores.")
+    return u
+
+
+def exigir_economia_gerenciavel(request: Request) -> Usuario:
+    """Barreira das rotas que **alteram** premissa econômica."""
+    u = exigir_autenticado(request)
+    if not u.gerencia_economia:
+        raise HTTPException(
+            status_code=403,
+            detail="Alterar premissa econômica exige permissão de gestão econômica.")
     return u
 
 
