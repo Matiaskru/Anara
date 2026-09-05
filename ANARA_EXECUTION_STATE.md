@@ -2,13 +2,13 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **05/09/2026 — fim da Sessão 5**
+Última atualização: **05/09/2026 — fim da Sessão 6**
 
 ---
 
 # Estado atual
 
-**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B, 4 e 5 EXECUTADAS, aguardando auditoria.**
+**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B, 4, 5 e 6 EXECUTADAS, aguardando auditoria.**
 
 | Etapa | Situação | Commit |
 |---|---|---|
@@ -20,9 +20,10 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 | **Sessão 3B — Decimal e reconciliação monetária** | **EXECUTADA, aguarda auditoria** | `e27e11e` (WIP) + commit final |
 | **Sessão 4 — segurança, papéis, confidencialidade** | **EXECUTADA, aguarda auditoria** | commit da Sessão 4 |
 | **Sessão 5 — admin, versionamento, impacto controlado** | **EXECUTADA, aguarda auditoria** | commit da Sessão 5 |
-| Ondas 6 a 8 | não autorizadas | — |
+| **Sessão 6 — workflow, aprovações, emissão, revisão** | **EXECUTADA, aguarda auditoria** | commit da Sessão 6 |
+| Ondas 7 e 8 | não autorizadas | — |
 
-Alembic em **`0013`** · **585 testes passando** · árvore limpa · sem remote.
+Alembic em **`0016`** · **632 testes passando** · árvore limpa · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -282,6 +283,20 @@ seed, nenhuma linha do banco, nenhum byte do baseline.
 - **`can_manage_economics`** separa ver de alterar. `can_manage_users` não concede economia
 - Provado: 56 testes de admin · regressão econômica idêntica à da 3B · nenhuma coluna
   preexistente alterada no digest
+
+## Workflow comercial (Sessão 6)
+- Estados: `rascunho` · `aguardando_aprovacao` · `aprovada` · `emitida` · `enviada` ·
+  `cancelada`. `fechada`/`pedido`/`perdida` são legados e ficam **fora** do workflow
+- **Aprovação vale para um fingerprint**, não para a cotação. Alteração material invalida
+- **Preço abaixo do recomendado exige aprovação mesmo com margem boa**; margem abaixo da
+  alvo exige de forma independente. Detecção **por item**
+- **`preco_recomendado` ≠ `preco_base`** — o primeiro é do cenário da cotação
+- **Blocker duro não é aprovável**: `A_COTAR`, `REVIEW_REQUIRED`, frete CIF irresolvido
+- **`ESTIMADO`** emite proposta; `validar_compromisso_firme()` bloqueia o pedido
+- **Emitido é imutável**; alterar depois cria revisão, com genealogia por
+  `cotacao_origem_id` + `revisao`
+- **`can_approve_quotes`** é alçada própria — `can_manage_economics` não a concede
+- 18 cotações e 45 itens históricos: status, revisão e fingerprint **não** foram inventados
 
 # Blockers conhecidos
 

@@ -17,7 +17,14 @@ _gerar_cotacao = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_gerar_cotacao)
 
 
-def gerar_pdf_para_cotacao(cotacao, cliente, itens) -> str:
+def gerar_pdf_para_cotacao(cotacao, cliente, itens, *, rascunho: bool = False) -> str:
+    """Monta o PDF. `rascunho=True` marca o documento como não emitido.
+
+    A marca existe porque um preview e um documento final são a mesma folha de papel para
+    quem recebe. Sem ela, uma proposta ainda em negociação — talvez com aprovação pendente —
+    chegaria ao cliente indistinguível da versão fechada. A marca é textual e discreta: o
+    layout aprovado não é redesenhado.
+    """
     frete_texto = cotacao.frete or ""
     rotulos_frete = {"CIF": "CIF", "FOB": "FOB", "A_COMBINAR": "A combinar", "OUTRO": "Outro"}
     tipo_frete = rotulos_frete.get(cotacao.freight_type or "", cotacao.freight_type or "")
@@ -26,8 +33,15 @@ def gerar_pdf_para_cotacao(cotacao, cliente, itens) -> str:
     else:
         frete_final = tipo_frete or frete_texto or "A combinar"
 
+    numero = cotacao.numero
+    revisao = getattr(cotacao, "revisao", 1) or 1
+    if revisao > 1:
+        numero = f"{numero} · rev. {revisao}"
+    if rascunho:
+        numero = f"{numero}  (RASCUNHO — não emitida)"
+
     header = {
-        "numero": cotacao.numero,
+        "numero": numero,
         "cliente": cliente.nome if cliente else None,
         "cnpj": cliente.cnpj_cpf if cliente else None,
         "cidade": cliente.cidade_uf if cliente else None,

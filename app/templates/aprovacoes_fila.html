@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Aprovações pendentes — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Aprovações pendentes</h1>
+    <div class="sub">Cada pedido aprova <strong>uma configuração exata</strong>. Se a cotação
+      mudar depois, a decisão deixa de valer — ela era sobre outra proposta.</div></div>
+</div>
+<div class="card">
+  <table class="compacta">
+    <thead><tr><th>Cotação</th><th>Cliente</th><th>Motivos</th>
+      <th class="num">Recomendado</th><th class="num">Negociado</th>
+      <th class="num">Diferença</th><th>Solicitante</th><th>Quando</th><th></th></tr></thead>
+    <tbody>
+    {% for p in pendentes %}
+      <tr>
+        <td><code>{{ p.cotacao.numero or p.cotacao.id }}</code>
+            {% if p.cotacao.revisao > 1 %}<span class="tag">rev. {{ p.cotacao.revisao }}</span>{% endif %}</td>
+        <td>{{ p.cliente or '—' }}</td>
+        <td>{% for m in p.motivos %}<span class="tag tag-review">{{ m.replace('_',' ')|lower }}</span> {% endfor %}</td>
+        <td class="num">{{ p.resumo.get('total_recomendado')|brl }}</td>
+        <td class="num">{{ p.resumo.get('total_negociado')|brl }}</td>
+        <td class="num">{{ p.resumo.get('diferenca')|brl }}</td>
+        <td style="font-size:11px;">{{ p.pedido.solicitante_email or '—' }}</td>
+        <td style="font-size:11px;">{{ p.pedido.criado_em.strftime('%d/%m %H:%M') if p.pedido.criado_em else '—' }}</td>
+        <td><a class="btn btn-ghost btn-sm" href="/aprovacoes/{{ p.pedido.id }}">Analisar</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" style="color:var(--gray);">Nenhum pedido pendente.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if not pode_decidir %}
+  <p style="color:var(--gray);font-size:12px;margin-top:10px;">
+    Você pode consultar os pedidos, mas não tem alçada para decidir. Aprovar exige
+    permissão própria — administrar premissas não a concede.</p>
+  {% endif %}
+</div>
+{% endblock %}

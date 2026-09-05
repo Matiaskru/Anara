@@ -10,7 +10,9 @@ from app import config_service as cfg
 from app import pricing_service as ps
 from app.confidencial import item_comercial, sem_confidenciais, totais_comerciais
 from app.db import get_session
-from app.permissoes import exigir_economia, ve_economia
+from app.permissoes import exigir_autenticado, exigir_economia, ve_economia
+from app import workflow as wf
+from app import workflow_service as ws
 from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
 from app.models import (
     Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Produto,
@@ -275,6 +277,8 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
                         observacoes: str = Form(""), termos_texto: str = Form(""),
                         session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
+    if cotacao is not None:
+        ws.exigir_editavel(cotacao, "alterar o cabeçalho")
     if not cotacao:
         return RedirectResponse(url="/cotacoes", status_code=303)
 
@@ -312,7 +316,12 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
 
 
 def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
-    """Recalcula item a item: cada um resolve o próprio cenário fiscal."""
+    """Recalcula item a item: cada um resolve o próprio cenário fiscal.
+
+    Todo recálculo pode mudar o fingerprint — e aprovação vale para uma configuração, não
+    para uma cotação. Por isso a invalidação vem junto, aqui, e não como algo que a tela
+    precise lembrar de fazer.
+    """
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao.id)).all()
     for it in itens:
         produto = session.get(Produto, it.produto_id) if it.produto_id else None
@@ -321,6 +330,8 @@ def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
                         regras, it.preco_base)
         _aplicar_resultado(it, res, regras, ctx)
         session.add(it)
+    session.flush()
+    ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="recálculo dos itens")
     session.commit()
 
 
@@ -331,6 +342,15 @@ def _aplicar_resultado(it: CotacaoItem, res, regras: TaxRuleSet = None, contexto
     `Decimal` vira `float`. Os valores monetários já estão quantizados em 2 casas, então a
     conversão é exata — e a leitura de volta, via `D()`, devolve o mesmo centavo.
     """
+    # O preço que o motor recomendaria para ESTE cenário, na margem-alvo do item. É a
+    # referência contra a qual o desconto é medido — e ela **não** é o `preco_base` do
+    # catálogo, que foi formado com outro destino fiscal e outra condição de pagamento.
+    # Confundir os dois faria toda venda interestadual parecer desconto, e o aprovador seria
+    # chamado para autorizar uma exceção inexistente.
+    if regras is not None and it.custo_unitario and it.margem_padrao_pct is not None:
+        it.preco_recomendado = para_float(
+            calcular_por_margem(it.custo_unitario, 1, it.margem_padrao_pct,
+                                regras).preco_negociado)
     it.preco_negociado = para_float(res.preco_negociado)
     it.margem_liquida = para_float(res.margem_liquida)
     it.faturamento = para_float(res.faturamento)
@@ -460,6 +480,13 @@ def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, marge
     if vigente is not None:
         item.custo_referencia_id = vigente.id
         item.custo_referencia_versao = vigente.versao
+        # Como o custo foi obtido viaja junto com quanto ele é: A_COTAR não forma preço,
+        # ESTIMADO forma proposta mas não compromisso firme.
+        item.status_custo_item = vigente.status_custo
+        item.confirmation_pending = bool(vigente.confirmation_pending)
+    else:
+        item.status_custo_item = produto.custo_confianca
+        item.confirmation_pending = False
 
 
 @router.post("/cotacoes/{cotacao_id}/itens")
@@ -467,6 +494,8 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
                    quantidade: float = Form(...), modo: str = Form("margem"),
                    valor: float = Form(None), session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
+    if cotacao is not None:
+        ws.exigir_editavel(cotacao, "adicionar item")
     produto = session.get(Produto, produto_id)
     if not cotacao or not produto:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
@@ -512,6 +541,8 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
     valor = float(form.get("valor"))
 
     cotacao = session.get(Cotacao, cotacao_id)
+    if cotacao is not None:
+        ws.exigir_editavel(cotacao, "editar item")
     item = session.get(CotacaoItem, item_id)
     if not cotacao or not item or item.cotacao_id != cotacao_id:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
@@ -561,9 +592,15 @@ def memoria_item(request: Request, cotacao_id: int, item_id: int,
 @router.delete("/cotacoes/{cotacao_id}/itens/{item_id}")
 def remover_item(request: Request, cotacao_id: int, item_id: int,
                  session: Session = Depends(get_session)):
+    cotacao = session.get(Cotacao, cotacao_id)
+    if cotacao is not None:
+        ws.exigir_editavel(cotacao, "remover item")
     item = session.get(CotacaoItem, item_id)
     if item and item.cotacao_id == cotacao_id:
         session.delete(item)
+        session.flush()
+        if cotacao is not None:
+            ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="item removido")
         session.commit()
     return JSONResponse({"ok": True})
 
@@ -684,12 +721,19 @@ def gerar_pdf(cotacao_id: int, session: Session = Depends(get_session)):
                          "Resolva a pendência antes de emitir o documento.")},
             status_code=409)
 
+    # Sessão 6: preview e documento final são a mesma folha para quem recebe. Enquanto a
+    # cotação não estiver emitida, o PDF sai marcado — inclusive (e principalmente) quando
+    # há aprovação pendente. Emitir de verdade é a rota `/emitir`.
+    prontidao = ws.avaliar(session, cotacao)
+    rascunho = cotacao.status not in (StatusCotacao.emitida.value,
+                                      StatusCotacao.enviada.value)
+
     if not cotacao.termos_texto:
         cotacao.termos_texto = cfg.txt(session, "termos_padrao")
-    if not cotacao.emitida_em:
+    if not rascunho and not cotacao.emitida_em:
         cotacao.emitida_em = datetime.utcnow()
 
-    out_path = gerar_pdf_para_cotacao(cotacao, cliente, itens)
+    out_path = gerar_pdf_para_cotacao(cotacao, cliente, itens, rascunho=rascunho)
     cotacao.pdf_gerado_em = datetime.utcnow()
     session.add(cotacao)
     session.commit()

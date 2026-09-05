@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Aprovação — {{ cotacao.numero }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Pedido de aprovação</h1>
+    <div class="sub"><code>{{ cotacao.numero or cotacao.id }}</code>
+      {% if cotacao.revisao > 1 %}· revisão {{ cotacao.revisao }}{% endif %}
+      · {{ cliente.nome if cliente else 'sem cliente' }}
+      · {{ cotacao.estado_destino }} · {{ cotacao.condicao_pagamento }}</div></div>
+  <a href="/aprovacoes" class="btn btn-ghost">Voltar à fila</a>
+</div>
+
+{% if desatualizado %}
+<div class="card" style="border-left:4px solid var(--copper);">
+  <strong>Esta proposta mudou depois que o pedido foi aberto.</strong>
+  <p style="font-size:12px;color:var(--gray);margin:6px 0 0;">
+    Decidir agora seria decidir sobre uma configuração que não existe mais. O pedido precisa
+    ser refeito pelo vendedor sobre o estado atual.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0;">Por que precisa de aprovação</h3>
+  {% for e in excecoes %}
+  <div style="margin-bottom:10px;padding:8px;background:var(--row-alt);border-radius:4px;">
+    <span class="tag tag-review">{{ e.motivo.replace('_',' ')|lower }}</span>
+    <strong>{{ e.escopo }}</strong>
+    <div style="font-size:12px;color:var(--gray);margin-top:4px;">{{ e.detalhe }}</div>
+    {% if e.preco_recomendado %}
+    <div style="font-size:12px;margin-top:4px;">
+      recomendado {{ e.preco_recomendado|brl }} · negociado {{ e.preco_negociado|brl }}
+      · diferença {{ e.diferenca|brl }} ({{ e.diferenca_pct|pct(2) }})</div>
+    {% endif %}
+    {% if e.margem_alvo %}
+    <div style="font-size:12px;margin-top:4px;">
+      margem alvo {{ e.margem_alvo|pct(2) }} · margem real {{ e.margem_real|pct(2) }}</div>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <p style="font-size:12px;"><strong>Justificativa do solicitante:</strong>
+    {{ pedido.justificativa or '—' }}</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Itens</h3>
+  <table class="compacta">
+    <thead><tr><th>Produto</th><th class="num">Qtd</th><th class="num">Recomendado</th>
+      <th class="num">Negociado</th><th class="num">Total</th>
+      <th class="num">Margem alvo</th><th class="num">Margem real</th>
+      <th>Custo</th></tr></thead>
+    <tbody>
+    {% for it in itens %}
+      <tr>
+        <td>{{ it.nome_produto }}</td>
+        <td class="num">{{ it.quantidade|num }}</td>
+        <td class="num">{{ it.preco_base|brl }}</td>
+        <td class="num">{{ it.preco_negociado|brl }}</td>
+        <td class="num">{{ it.faturamento|brl }}</td>
+        <td class="num">{{ it.margem_padrao_pct|pct(2) }}</td>
+        <td class="num">{{ it.margem_liquida|pct(2) }}</td>
+        <td><span class="tag">{{ it.status_custo_item or '—' }}</span>
+            {% if it.confirmation_pending %}<span class="tag tag-review">a confirmar</span>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div class="kpis" style="margin-top:10px;">
+    <div class="kpi"><div class="label">Total recomendado</div><div class="value">{{ resumo.get('total_recomendado')|brl }}</div></div>
+    <div class="kpi"><div class="label">Total negociado</div><div class="value copper">{{ resumo.get('total_negociado')|brl }}</div></div>
+    <div class="kpi"><div class="label">Diferença</div><div class="value">{{ resumo.get('diferenca')|brl }}</div></div>
+  </div>
+</div>
+
+{% if prontidao.blockers %}
+<div class="card" style="border-left:4px solid var(--copper);">
+  <h3 style="margin-top:0;">Impedimentos que a aprovação NÃO resolve</h3>
+  <p style="font-size:12px;color:var(--gray);">
+    Aprovação é decisão comercial. Ela não cria o número que falta.</p>
+  <ul style="font-size:12px;">
+    {% for b in prontidao.blockers %}<li><strong>{{ b.escopo }}</strong>: {{ b.detalhe }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0;">Decisão</h3>
+  {% if pode_decidir and not desatualizado and pedido.status == 'PENDENTE' %}
+  <div class="field"><label>Comentário</label><input id="ap-comentario" type="text"></div>
+  <button class="btn btn-copper" onclick="decidir(true)">Aprovar esta configuração</button>
+  <button class="btn btn-ghost" onclick="decidir(false)">Rejeitar</button>
+  {% elif pedido.status != 'PENDENTE' %}
+  <p><span class="tag">{{ pedido.status }}</span>
+     por {{ pedido.aprovador_email or '—' }}
+     {% if pedido.decidido_em %}em {{ pedido.decidido_em.strftime('%d/%m/%Y %H:%M') }}{% endif %}
+     {% if pedido.comentario %}<br><em>{{ pedido.comentario }}</em>{% endif %}</p>
+  {% elif desatualizado %}
+  <p style="color:var(--gray);">Decisão bloqueada: a proposta mudou desde o pedido.</p>
+  {% else %}
+  <p style="color:var(--gray);">Você não tem alçada para decidir sobre exceções comerciais.</p>
+  {% endif %}
+  <div id="ap-resultado" style="margin-top:10px;"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function decidir(aprovar) {
+  const d = new FormData();
+  d.append('comentario', document.getElementById('ap-comentario').value);
+  d.append('fingerprint', '{{ pedido.fingerprint }}');
+  const rota = aprovar ? 'aprovar' : 'rejeitar';
+  const r = await fetch(`/cotacoes/{{ cotacao.id }}/aprovacao/{{ pedido.id }}/${rota}`,
+                        {method: 'POST', body: d});
+  const j = await r.json();
+  const alvo = document.getElementById('ap-resultado');
+  if (!r.ok) { alvo.innerHTML = '<div class="erro">' + (j.detail || j.erro) + '</div>'; return; }
+  alvo.innerHTML = '<div class="aviso">' + j.mensagem + '</div>';
+  setTimeout(() => location.reload(), 900);
+}
+</script>
+{% endblock %}

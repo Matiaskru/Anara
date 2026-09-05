@@ -20,8 +20,24 @@ from sqlmodel import Field, SQLModel
 # Enums
 # ---------------------------------------------------------------------------
 class StatusCotacao(str, enum.Enum):
-    rascunho = "rascunho"
-    enviada = "enviada"
+    """Estados da cotação.
+
+    Os cinco primeiros são o workflow da Sessão 6. `rascunho` e `enviada` já existiam com
+    exatamente esta semântica e foram **reaproveitados**, não duplicados — `enviada` sempre
+    significou "documento emitido e mandado ao cliente".
+
+    `fechada`, `pedido` e `perdida` são estados comerciais **legados** (WON/LOST). Continuam
+    gravados como estão nas cotações históricas e ficam fora do workflow novo: dar sentido a
+    eles é assunto da Sessão 7, e reescrevê-los agora seria fingir que cotações de 2026
+    passaram por um fluxo de aprovação que não existia.
+    """
+    rascunho = "rascunho"                          # DRAFT — editável
+    aguardando_aprovacao = "aguardando_aprovacao"  # PENDING_APPROVAL
+    aprovada = "aprovada"                          # APPROVED — exceção autorizada
+    emitida = "emitida"                            # ISSUED — congelada
+    enviada = "enviada"                            # SENT — emitida e enviada
+    cancelada = "cancelada"                        # CANCELLED
+    # --- legados, preservados ---
     fechada = "fechada"
     perdida = "perdida"
     pedido = "pedido"
@@ -853,6 +869,23 @@ class Cotacao(SQLModel, table=True):
     pis_cofins_pct: Optional[float] = None
     encargo_financeiro_pct: Optional[float] = None
 
+    # --- workflow comercial (Sessão 6) ---
+    # Uma cotação emitida não se edita: cria-se uma revisão. `revisao` e `cotacao_origem_id`
+    # guardam a genealogia; a numeração histórica (`numero`) não muda, para que ninguém
+    # perca a referência que já mandou ao cliente.
+    revisao: int = 1
+    cotacao_origem_id: Optional[int] = Field(default=None, foreign_key="cotacao.id",
+                                             index=True)
+    fingerprint: Optional[str] = None            # do estado material, quando emitida
+    issued_em: Optional[datetime] = None
+    issued_por: Optional[str] = None
+    sent_em: Optional[datetime] = None
+    sent_por: Optional[str] = None
+    cancelada_em: Optional[datetime] = None
+    cancelada_por: Optional[str] = None
+    cancelamento_motivo: Optional[str] = None
+    premissas_mantidas_aprovadas: bool = False   # optou por manter premissa velha
+
 
 class CotacaoItem(SQLModel, table=True):
     """Fotografia dos valores usados no momento em que o item foi salvo."""
@@ -935,6 +968,18 @@ class CotacaoItem(SQLModel, table=True):
                                                  foreign_key="condicaopagamento.id")
     aliquota_interestadual_id: Optional[int] = None
     premissas_pinadas: Optional[str] = None    # JSON: {chave: {"premissa_id", "valor"}}
+    # --- confiança do custo, congelada no item (Sessão 6) ---
+    # O workflow precisa saber COMO o custo foi obtido, não só quanto ele é: A_COTAR não
+    # forma preço, ESTIMADO forma proposta mas não compromisso firme, e REVALIDAR pede
+    # reconfirmação. Ler isso do produto na hora da emissão daria a resposta de hoje para
+    # uma pergunta sobre ontem.
+    status_custo_item: Optional[str] = None
+    confirmation_pending: bool = False
+    # O preço que o motor recomenda **para o cenário desta cotação** — não o `preco_base`,
+    # que é a referência do catálogo e foi formada com outro destino fiscal, outra condição
+    # de pagamento e talvez outro custo. Confundir os dois faria toda cotação interestadual
+    # parecer um desconto, e o aprovador seria chamado para autorizar exceção inexistente.
+    preco_recomendado: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------
@@ -962,6 +1007,7 @@ class Usuario(SQLModel, table=True):
     ativo: bool = True
     can_manage_users: bool = False
     can_manage_economics: bool = True
+    can_approve_quotes: bool = False
     sessao_versao: int = 1
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     ultimo_login_em: Optional[datetime] = None
@@ -996,6 +1042,23 @@ class Usuario(SQLModel, table=True):
         return self.papel == Papel.admin.value and bool(self.can_manage_economics)
 
     @property
+    def aprova_cotacoes(self) -> bool:
+        """Pode decidir sobre exceção comercial — desconto, margem, premissa velha.
+
+        **Permissão própria, e isso é deliberado.** Administrar premissa
+        (`can_manage_economics`) é manter o cadastro; aprovar cotação é autorizar abrir mão
+        de receita numa venda específica. Quem versiona o câmbio não é, por isso, quem
+        decide o desconto — e reaproveitar a outra flag apagaria essa diferença.
+
+        Vem desligada: alçada se concede, não se herda. OWNER sempre pode.
+        """
+        if not self.ativo:
+            return False
+        if self.papel == Papel.owner.value:
+            return True
+        return self.papel == Papel.admin.value and bool(self.can_approve_quotes)
+
+    @property
     def gerencia_usuarios(self) -> bool:
         # OWNER nunca perde a capacidade de administrar quem entra — senão um sistema com um
         # único OWNER e a flag desligada ficaria sem ninguém capaz de criar acesso.
@@ -1028,3 +1091,68 @@ class AuditLog(SQLModel, table=True):
     resultado: str = "OK"                     # OK | CONFLITO | RECUSADO | NO_OP
     correlacao: Optional[str] = Field(default=None, index=True)   # agrupa um lote/preview
     detalhe: Optional[str] = None             # JSON curto com o diff
+
+
+class AprovacaoCotacao(SQLModel, table=True):
+    """Decisão de aprovação — **append-only**. Nada aqui é editado nem apagado.
+
+    A ideia central: uma aprovação **não aprova uma cotação, aprova uma configuração**.
+    "A cotação 123 está aprovada" não responde com qual desconto, com qual quantidade nem
+    para qual destino fiscal. Por isso cada decisão carrega o `fingerprint` do estado
+    material que o aprovador viu; se qualquer campo material mudar, esta decisão passa a ser
+    sobre outra coisa e é marcada `INVALIDADA` — não porque alguém a revogou, mas porque o
+    objeto dela deixou de existir.
+
+    Rejeitar **não** apaga nem encerra a cotação: ela volta a ser editável, o vendedor
+    ajusta, e um pedido novo nasce com fingerprint novo.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cotacao_id: int = Field(foreign_key="cotacao.id", index=True)
+    revisao: int = 1
+    fingerprint: str = Field(index=True)
+    status: str = Field(default="PENDENTE", index=True)   # PENDENTE|APROVADA|REJEITADA|INVALIDADA
+    motivos: Optional[str] = None                 # JSON: lista de motivos estruturados
+    excecoes_json: Optional[str] = None           # o retrato da exceção, como foi vista
+    resumo_json: Optional[str] = None             # totais comerciais no momento do pedido
+
+    solicitante_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    solicitante_email: Optional[str] = None
+    justificativa: Optional[str] = None           # obrigatória no pedido de exceção
+
+    aprovador_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    aprovador_email: Optional[str] = None
+    comentario: Optional[str] = None
+
+    criado_em: datetime = Field(default_factory=datetime.utcnow, index=True)
+    decidido_em: Optional[datetime] = None
+    invalidado_em: Optional[datetime] = None
+    invalidacao_motivo: Optional[str] = None
+
+
+class SnapshotEmissao(SQLModel, table=True):
+    """O documento emitido, congelado.
+
+    Existe para que reconstruir uma proposta emitida **não dependa de nenhum lookup vivo**:
+    nem do catálogo, nem das premissas, nem da tabela de frete, nem sequer da própria
+    cotação. Tudo o que formou aquele documento está aqui, em JSON, no estado em que estava.
+
+    `aprovacao_id` + `aprovacao_fingerprint` identificam a decisão exata usada — não um
+    "aprovado = sim", que não diria *o quê* foi aprovado.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cotacao_id: int = Field(foreign_key="cotacao.id", index=True)
+    revisao: int = 1
+    numero: Optional[str] = None
+    fingerprint: str = Field(index=True)
+    emitido_em: datetime = Field(default_factory=datetime.utcnow)
+    emitido_por: Optional[str] = None
+    aprovacao_id: Optional[int] = Field(default=None, foreign_key="aprovacaocotacao.id")
+    aprovacao_fingerprint: Optional[str] = None
+    cliente_json: Optional[str] = None
+    itens_json: Optional[str] = None
+    totais_json: Optional[str] = None
+    fiscal_json: Optional[str] = None
+    frete_json: Optional[str] = None
+    premissas_json: Optional[str] = None
+    memoria_json: Optional[str] = None            # interna; nunca vai ao PDF do cliente
+    pdf_caminho: Optional[str] = None

@@ -21,6 +21,9 @@
         <a href="/cotacoes" class="{{ 'active' if active == 'cotacoes' else '' }}">Histórico de cotações</a>
         <a href="/cotacoes/nova" class="{{ 'active' if active == 'nova_cotacao' else '' }}">Nova cotação</a>
         <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">Produtos e preços</a>
+        {% if ve_economia(request) %}
+        <a href="/aprovacoes" class="{{ 'active' if active == 'aprovacoes' else '' }}">Aprovações</a>
+        {% endif %}
         {% if administra(request) %}
         <a href="/calculadora" class="{{ 'active' if active == 'calculadora' else '' }}">Calculadora KTC</a>
         <a href="/importar" class="{{ 'active' if active == 'importar' else '' }}">Importar Excel</a>

@@ -141,6 +141,35 @@ margem final continue boa — a autonomia de desconto do vendedor é zero. Preç
 recomendado é livre, com recálculo de comissão. Alteração posterior invalida a aprovação
 anterior. Enquanto aguarda aprovação: salva como rascunho, **não** gera PDF final.
 
+## Workflow comercial (Sessão 6)
+
+Estados: `rascunho` → `aguardando_aprovacao` → `aprovada` → `emitida` → `enviada`, com
+`cancelada` a partir de qualquer um. `rascunho` e `enviada` já existiam com esta semântica e
+foram reaproveitados. `fechada`, `pedido` e `perdida` são **legados** (WON/LOST) e ficam fora
+do workflow — dar sentido a eles é da Sessão 7.
+
+- **Aprovação aprova uma CONFIGURAÇÃO, não uma cotação.** Toda decisão fica presa a um
+  `fingerprint` do estado material. Mudou item, quantidade, preço, destino fiscal, condição
+  ou premissa — a decisão vira `INVALIDADA`: ela era sobre outra proposta
+- **Preço abaixo do recomendado exige aprovação, mesmo com margem boa.** A autonomia de
+  desconto do vendedor é zero. Margem real abaixo da alvo também exige, de forma independente
+- **`preco_recomendado` ≠ `preco_base`.** O recomendado é o que o motor forma para o cenário
+  **desta** cotação; o base é a referência do catálogo, formada noutro contexto fiscal.
+  Medir desconto contra o base faria toda venda interestadual parecer exceção
+- **Exceção é detectada por ITEM.** Desconto no item A compensado por acréscimo no B
+  continua sendo exceção do A
+- **Blocker duro ≠ exceção comercial.** `A_COTAR`, `REVIEW_REQUIRED` e frete CIF irresolvido
+  **não são aprováveis** — aprovação é decisão comercial, não cria o número que falta
+- **`ESTIMADO` emite proposta mas não compromete.** `validar_compromisso_firme()` bloqueia;
+  aprovar toda proposta estimada seria burocracia sem conteúdo
+- **Emitido é imutável**, e a recusa é do servidor (`exigir_editavel`). Mudança pós-emissão
+  cria **revisão** — a anterior fica íntegra, com seu snapshot e seu número
+- **`SnapshotEmissao` congela o documento** para que reconstruí-lo não dependa de lookup
+  vivo, e pina `aprovacao_id` + fingerprint — não um "aprovado = sim"
+- **`can_approve_quotes` é permissão própria.** Administrar premissa
+  (`can_manage_economics`) não autoriza desconto. OWNER sempre pode
+- **PDF de rascunho sai marcado.** Preview e final são a mesma folha para quem recebe
+
 ## Armadilhas de cálculo que já custaram retrabalho
 
 - **Waste divide:** `consumo / (1 − waste)`. Nunca `× (1 + waste)`
@@ -221,6 +250,8 @@ Alembic em `0010` (tabela `usuario`, aditiva).
 
 **Sessão 5 — administração de premissas e versionamento: EXECUTADA, aguardando auditoria.**
 Alembic em `0013` (`auditlog`, vigência da condição de pagamento, `can_manage_economics`, pinning das premissas no item).
+
+**Sessão 6 — workflow comercial e aprovações: EXECUTADA, aguardando auditoria.** Alembic em `0016`.
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o
