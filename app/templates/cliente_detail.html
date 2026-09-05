@@ -52,4 +52,99 @@
   <div class="empty-state"><h3>Nenhuma cotação ainda</h3></div>
   {% endif %}
 </div>
+
+{% if faltando_fiscal %}
+<div class="card" style="border-left:4px solid var(--copper);">
+  <strong>Dados fiscais necessários para emitir cotação</strong>
+  <ul style="font-size:12px;margin:6px 0 0;">{% for f in faltando_fiscal %}<li>{{ f }}</li>{% endfor %}</ul>
+  <p style="font-size:12px;color:var(--gray);margin:6px 0 0;">
+    O cadastro comercial pode seguir assim. O que precisa desses dados é a proposta.</p>
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0;">Contatos</h3>
+  <table class="compacta">
+    <tbody>
+    {% for c in contatos %}
+      <tr {% if not c.ativo %}style="opacity:.5;"{% endif %}>
+        <td>{{ c.nome }}{% if c.principal %} <span class="tag tag-calc">principal</span>{% endif %}</td>
+        <td style="font-size:11px;">{{ c.cargo or '—' }}</td>
+        <td style="font-size:11px;">{{ c.email or '—' }}</td>
+        <td style="font-size:11px;">{{ c.telefone or '—' }}</td></tr>
+    {% else %}
+      <tr><td colspan="4" style="color:var(--gray);">Nenhum contato cadastrado.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" action="/clientes/{{ cliente.id }}/contatos" class="grid-4" style="margin-top:10px;">
+    <div class="field"><label>Nome</label><input name="nome" required></div>
+    <div class="field"><label>Cargo</label><input name="cargo"></div>
+    <div class="field"><label>E-mail</label><input name="email" type="email"></div>
+    <div class="field"><label>Telefone</label><input name="telefone"></div>
+    <div class="field"><label>Principal</label>
+      <select name="principal"><option value="">não</option><option value="sim">sim</option></select></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-ghost" type="submit">Adicionar contato</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Oportunidades abertas</h3>
+  <table class="compacta">
+    <tbody>
+    {% for o in abertas %}
+      <tr><td><a href="/oportunidades/{{ o.id }}">{{ o.titulo }}</a></td>
+        <td><span class="tag">{{ o.etapa }}</span></td>
+        <td style="font-size:11px;">{{ o.responsavel or '—' }}</td>
+        <td class="num">{{ (o.valor_cotado or o.valor_estimado)|brl }}</td>
+        <td style="font-size:11px;">{% if o.proxima_atividade %}{{ o.proxima_atividade.titulo }}
+          {% else %}<span style="color:var(--gray);">Sem próxima atividade</span>{% endif %}</td></tr>
+    {% else %}
+      <tr><td colspan="5" style="color:var(--gray);">Nenhuma oportunidade aberta.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <form method="post" action="/oportunidades" class="grid-4" style="margin-top:10px;">
+    <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+    <div class="field"><label>Nova oportunidade</label><input name="titulo" required placeholder="ex.: enxoval 120 UHs"></div>
+    <div class="field"><label>Etapa</label>
+      <select name="etapa">{% for e in etapas %}<option value="{{ e }}">{{ e }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Origem</label>
+      <select name="origem"><option value="">—</option>{% for o in origens %}<option value="{{ o }}">{{ o }}</option>{% endfor %}</select></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-copper" type="submit">Criar</button></div>
+  </form>
+</div>
+
+{% if fechadas %}
+<div class="card">
+  <h3 style="margin-top:0;">Oportunidades encerradas</h3>
+  <table class="compacta">
+    <tbody>
+    {% for o in fechadas %}
+      <tr><td><a href="/oportunidades/{{ o.id }}">{{ o.titulo }}</a></td>
+        <td><span class="tag {{ 'tag-calc' if o.status == 'GANHA' else 'tag-review' }}">{{ o.status }}</span></td>
+        <td class="num">{{ (o.valor_fechado or o.valor_cotado)|brl }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if atividades %}
+<div class="card">
+  <h3 style="margin-top:0;">Atividades recentes</h3>
+  <table class="compacta">
+    <tbody>
+    {% for a in atividades %}
+      <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
+        <td style="font-size:11px;">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
+        <td><span class="tag">{{ a.tipo }}</span></td>
+        <td>{{ a.titulo }}</td>
+        <td style="font-size:11px;">{{ 'concluída' if a.concluida_em else 'pendente' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
 {% endblock %}

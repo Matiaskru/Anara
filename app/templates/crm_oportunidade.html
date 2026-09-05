@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ op.titulo }} — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ op.titulo }}</h1>
+    <div class="sub">
+      <a href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a>
+      · <span class="tag">{{ op.etapa }}</span>
+      · <span class="tag {{ 'tag-calc' if op.status == 'GANHA' else ('tag-review' if op.status == 'PERDIDA' else '') }}">{{ op.status }}</span>
+      · {{ responsavel.nome if responsavel else 'sem responsável' }}
+      {% if op.data_prevista_fechamento %} · previsão {{ op.data_prevista_fechamento|data }}{% endif %}
+    </div></div>
+</div>
+
+{% if faltando_fiscal %}
+<div class="card" style="border-left:4px solid var(--copper);">
+  <strong>Dados fiscais necessários para emitir cotação</strong>
+  <ul style="font-size:12px; margin:6px 0 0;">
+    {% for f in faltando_fiscal %}<li>{{ f }}</li>{% endfor %}
+  </ul>
+  <p style="font-size:12px;color:var(--gray);margin:6px 0 0;">
+    O negócio pode ser trabalhado assim mesmo. O que precisa desses dados é a proposta.</p>
+</div>
+{% endif %}
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Valor estimado</div><div class="value">{{ op.valor_estimado|brl }}</div></div>
+  <div class="kpi"><div class="label">Valor cotado</div><div class="value copper">{{ cartao.valor_cotado|brl }}</div></div>
+  {% if op.valor_fechado %}
+  <div class="kpi"><div class="label">Valor fechado</div><div class="value">{{ op.valor_fechado|brl }}</div></div>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Ações</h3>
+  {% if op.status == 'ABERTA' %}
+  <div class="grid-3">
+    <div class="field"><label>Mover para</label>
+      <select id="op-etapa" onchange="mover(this.value)">
+        <option value="">Selecione…</option>
+        {% for e in etapas %}{% if e != op.etapa %}<option value="{{ e }}">{{ e }}</option>{% endif %}{% endfor %}
+      </select></div>
+    <div class="field"><label>Responsável</label>
+      <select id="op-resp" onchange="atribuir(this.value)">
+        <option value="">Sem responsável</option>
+        {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if op.responsavel_id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>&nbsp;</label>
+      <form method="post" action="/oportunidades/{{ op.id }}/cotacao" style="margin:0;">
+        <button class="btn btn-copper" type="submit" style="width:100%;">Nova cotação</button>
+      </form></div>
+  </div>
+  <div class="grid-3" style="margin-top:10px;">
+    <div class="field"><label>Marcar como ganha (cotação vencedora)</label>
+      <select id="op-vencedora">
+        <option value="">Selecione a proposta aceita…</option>
+        {% for c in cotacoes %}{% if c.status in ('emitida', 'enviada') %}
+        <option value="{{ c.id }}">{{ c.numero }} r{{ c.revisao }} — {{ c.status }}</option>
+        {% endif %}{% endfor %}
+      </select>
+      <button class="btn btn-copper btn-sm" style="margin-top:6px;" onclick="ganhar()">Marcar ganha</button></div>
+    <div class="field"><label>Marcar como perdida</label>
+      <select id="op-motivo">
+        <option value="">Motivo…</option>
+        {% for m in motivos_perda %}<option value="{{ m }}">{{ m.replace('_',' ')|lower }}</option>{% endfor %}
+      </select>
+      <input id="op-comentario" type="text" placeholder="comentário (opcional)" style="margin-top:4px;">
+      <button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="perder()">Marcar perdida</button></div>
+  </div>
+  {% elif op.status == 'PERDIDA' %}
+  <p style="font-size:12px;">Perdida em {{ op.lost_em.strftime('%d/%m/%Y') if op.lost_em else '—' }}
+     por {{ op.lost_por or '—' }} · motivo <span class="tag tag-review">{{ op.motivo_perda }}</span>
+     {% if op.comentario_perda %}<br><em>{{ op.comentario_perda }}</em>{% endif %}</p>
+  <button class="btn btn-ghost" onclick="reabrir()">Reabrir oportunidade</button>
+  {% else %}
+  <p style="font-size:12px;">Ganha em {{ op.won_em.strftime('%d/%m/%Y') if op.won_em else '—' }}
+     por {{ op.won_por or '—' }} · valor fechado {{ op.valor_fechado|brl }}
+     {% if op.cotacao_vencedora_id %}<br>proposta vencedora:
+     <a href="/cotacoes/{{ op.cotacao_vencedora_id }}">cotação #{{ op.cotacao_vencedora_id }}</a>{% endif %}</p>
+  {% endif %}
+  <div id="op-resultado" style="margin-top:8px;"></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Cotações</h3>
+  <p style="color:var(--gray);font-size:12px;">Revisões da mesma proposta continuam sendo o
+    mesmo negócio — não contam como oportunidades separadas.</p>
+  <table class="compacta">
+    <thead><tr><th>Número</th><th class="num">Revisão</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for c in cotacoes %}
+      <tr {% if cotacao_atual and c.id == cotacao_atual.id %}style="background:var(--row-alt);font-weight:600;"{% endif %}>
+        <td><code>{{ c.numero or c.id }}</code></td>
+        <td class="num">{{ c.revisao }}</td>
+        <td><span class="tag">{{ c.status.replace('_',' ') }}</span>
+            {% if cotacao_atual and c.id == cotacao_atual.id %}<span class="tag tag-calc">mais recente</span>{% endif %}</td>
+        <td><a class="btn btn-ghost btn-sm" href="/cotacoes/{{ c.id }}">Abrir</a></td></tr>
+    {% else %}
+      <tr><td colspan="4" style="color:var(--gray);">Nenhuma cotação ainda.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Próxima atividade</h3>
+  {% if proxima %}
+  <p><span class="tag">{{ proxima.tipo }}</span> <strong>{{ proxima.titulo }}</strong>
+     · {{ proxima.due_em.strftime('%d/%m/%Y %H:%M') if proxima.due_em else 'sem data' }}
+     {% if atrasada(proxima) %}<span class="tag tag-review">atrasada</span>{% endif %}
+     <button class="btn btn-ghost btn-sm" onclick="concluir({{ proxima.id }})">Concluir</button></p>
+  {% else %}
+  <p style="color:var(--gray);">Sem próxima atividade.</p>
+  {% endif %}
+  <div class="grid-4">
+    <div class="field"><label>Tipo</label>
+      <select id="at-tipo">{% for t in tipos_atividade %}<option value="{{ t }}">{{ t }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Título</label><input id="at-titulo" type="text"></div>
+    <div class="field"><label>Quando</label><input id="at-due" type="datetime-local"></div>
+    <div class="field"><label>&nbsp;</label>
+      <button class="btn btn-ghost" onclick="novaAtividade()" style="width:100%;">Agendar</button></div>
+  </div>
+  {% if atividades %}
+  <table class="compacta" style="margin-top:10px;">
+    <tbody>
+    {% for a in atividades %}
+      <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
+        <td style="font-size:11px;">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
+        <td><span class="tag">{{ a.tipo }}</span></td>
+        <td>{{ a.titulo }}</td>
+        <td style="font-size:11px;">
+          {% if a.concluida_em %}concluída {{ a.concluida_em.strftime('%d/%m') }}
+          {% elif atrasada(a) %}<span class="tag tag-review">atrasada</span>
+          {% else %}pendente{% endif %}</td>
+        <td>{% if not a.concluida_em %}<button class="btn btn-ghost btn-sm" onclick="concluir({{ a.id }})">Concluir</button>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Contatos</h3>
+  <table class="compacta">
+    <tbody>
+    {% for c in contatos %}
+      <tr><td>{{ c.nome }}{% if c.principal %} <span class="tag tag-calc">principal</span>{% endif %}</td>
+        <td style="font-size:11px;">{{ c.cargo or '—' }}</td>
+        <td style="font-size:11px;">{{ c.email or '—' }}</td>
+        <td style="font-size:11px;">{{ c.telefone or '—' }}</td></tr>
+    {% else %}
+      <tr><td colspan="4" style="color:var(--gray);">Nenhum contato cadastrado.
+        <a href="/clientes/{{ cliente.id }}">Adicionar na ficha do cliente</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Histórico</h3>
+  <table class="compacta">
+    <tbody>
+    {% for e in timeline %}
+      <tr><td style="font-size:11px;white-space:nowrap;">{{ e.quando.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td><span class="tag">{{ e.tipo }}</span></td>
+        <td style="font-size:12px;">{{ e.texto }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const OP = {{ op.id }};
+function mostrar(j, ok) {
+  document.getElementById('op-resultado').innerHTML =
+    ok ? '<div class="aviso">' + j.mensagem + '</div>'
+       : '<div class="erro">' + (j.detail || j.erro || 'erro') + '</div>';
+}
+async function postar(url, dados) {
+  const d = new FormData();
+  Object.entries(dados).forEach(([k, v]) => d.append(k, v));
+  const r = await fetch(url, {method: 'POST', body: d});
+  const j = await r.json();
+  mostrar(j, r.ok);
+  if (r.ok) setTimeout(() => location.reload(), 800);
+  return r.ok;
+}
+const mover = e => e && postar(`/oportunidades/${OP}/etapa`, {etapa: e});
+const atribuir = r => postar(`/oportunidades/${OP}/responsavel`, {responsavel_id: r});
+function ganhar() {
+  const c = document.getElementById('op-vencedora').value;
+  if (!c) { mostrar({detail: 'Escolha a proposta que o cliente aceitou.'}, false); return; }
+  postar(`/oportunidades/${OP}/ganha`, {cotacao_id: c});
+}
+function perder() {
+  const m = document.getElementById('op-motivo').value;
+  if (!m) { mostrar({detail: 'Informe o motivo da perda.'}, false); return; }
+  postar(`/oportunidades/${OP}/perdida`,
+         {motivo: m, comentario: document.getElementById('op-comentario').value});
+}
+const reabrir = () => postar(`/oportunidades/${OP}/reabrir`, {motivo: 'reaberta pelo comercial'});
+function novaAtividade() {
+  const t = document.getElementById('at-titulo').value;
+  if (!t) { mostrar({detail: 'A atividade precisa de um título.'}, false); return; }
+  postar('/atividades', {titulo: t, oportunidade_id: OP,
+                         tipo: document.getElementById('at-tipo').value,
+                         due_em: document.getElementById('at-due').value});
+}
+const concluir = id => postar(`/atividades/${id}/concluir`, {});
+</script>
+{% endblock %}

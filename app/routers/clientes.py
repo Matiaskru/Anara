@@ -79,8 +79,21 @@ def detalhe(request: Request, cliente_id: int, session: Session = Depends(get_se
                 ultimos_precos[it.nome_produto] = {"preco": it.preco_negociado, "data": c.criado_em,
                                                     "especificacao": it.especificacao}
 
+    # --- CRM (Sessão 7): a ficha vira 360 sem virar dashboard ---
+    from app import crm_service as crm
+
+    oportunidades = crm.listar_oportunidades(session, cliente_id=cliente_id)
     return templates.TemplateResponse(request, "cliente_detail.html", {
         "active": "clientes", "cliente": cliente, "cotacoes": cotacoes,
         "totais": totais,
         "ultimos_precos": sorted(ultimos_precos.items(), key=lambda x: x[1]["data"], reverse=True),
+        "contatos": crm.contatos_de(session, cliente_id),
+        "abertas": [crm.cartao(session, o) for o in oportunidades
+                    if o.status == "ABERTA"],
+        "fechadas": [crm.cartao(session, o) for o in oportunidades
+                     if o.status != "ABERTA"],
+        "atividades": crm.atividades_de(session, cliente_id=cliente_id, limite=20),
+        "faltando_fiscal": crm.dados_fiscais_faltando(cliente),
+        "etapas": crm.ETAPAS,
+        "origens": [o.value for o in __import__("app.models", fromlist=["x"]).OrigemOportunidade],
     })

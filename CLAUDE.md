@@ -174,6 +174,37 @@ do workflow — dar sentido a eles é da Sessão 7.
   (`can_manage_economics`) não autoriza desconto. OWNER sempre pode
 - **PDF de rascunho sai marcado.** Preview e final são a mesma folha para quem recebe
 
+## CRM comercial (Sessão 7)
+
+**Cliente** é a organização — e também o prospect. Não existe `Lead → Prospect → Conta`: o
+que muda entre eles é *quanto se sabe*, não *o que são*. O CRM aceita empresa com nome e
+telefone; **emitir cotação continua exigindo os dados fiscais**, e essa validação não foi
+afrouxada.
+
+**Oportunidade ≠ Cotação.** A oportunidade é o negócio; a cotação é a proposta econômica com
+o workflow da Sessão 6. Uma oportunidade tem zero, uma ou várias cotações, e as **revisões de
+uma proposta continuam sendo o mesmo negócio** — contar cada revisão faria o pipeline medir
+papel em vez de negócio.
+
+- **`responsavel_id` não é ACL.** Quem vê o quê segue a Sessão 4; o filtro "minhas
+  oportunidades" organiza o dia, não esconde negócio de colega
+- **Pipeline não é máquina de estados**, ao contrário da cotação: avança, volta e pula
+  etapa. O que é obrigatório é **registrar** — `OportunidadeEtapaHistorico`, append-only
+- **Persistir fato, derivar métrica.** `valor_estimado` é palpite manual; o **valor cotado é
+  derivado** da cotação mais recente e não tem coluna; `valor_fechado` é snapshot do ganho.
+  "Atrasada" também é derivado (`due_em < agora` e não concluída) — um campo assim só seria
+  verdadeiro enquanto alguém lembrasse de atualizá-lo
+- **GANHA passa por `validar_compromisso_firme`.** Custo `ESTIMADO` não confirmado,
+  `REVALIDAR` não reconfirmado, `A_COTAR`, frete CIF irresolvido ou exceção sem aprovação
+  **impedem** fechar. Não cria pedido nem PO
+- **PERDIDA exige motivo estruturado**; reabrir é ato explícito e **não apaga o evento de
+  perda**. GANHA é terminal nesta versão
+- **Cross-client é recusado pelo servidor**: cotação do Hotel B não entra no negócio do
+  Hotel A. O resultado não seria erro visível — seria um funil que parece certo e aponta
+  para o cliente errado
+- **Confidencialidade não muda porque o dado virou card.** Preço e total comerciais podem
+  aparecer no pipeline; custo, margem, lucro e markup, não
+
 ## Armadilhas de cálculo que já custaram retrabalho
 
 - **Waste divide:** `consumo / (1 − waste)`. Nunca `× (1 + waste)`
@@ -256,6 +287,8 @@ Alembic em `0010` (tabela `usuario`, aditiva).
 Alembic em `0013` (`auditlog`, vigência da condição de pagamento, `can_manage_economics`, pinning das premissas no item).
 
 **Sessão 6 — workflow comercial e aprovações: EXECUTADA, aguardando auditoria.** Alembic em `0016`.
+
+**Sessão 7 — CRM, pipeline e UX comercial: EXECUTADA, aguardando auditoria.** Alembic em `0017`.
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

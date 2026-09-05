@@ -2,13 +2,13 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **05/09/2026 — fim da Sessão 6**
+Última atualização: **05/09/2026 — fim da Sessão 7**
 
 ---
 
 # Estado atual
 
-**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B, 4, 5 e 6 EXECUTADAS, aguardando auditoria.**
+**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B, 4, 5, 6 e 7 EXECUTADAS, aguardando auditoria.**
 
 | Etapa | Situação | Commit |
 |---|---|---|
@@ -21,9 +21,10 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 | **Sessão 4 — segurança, papéis, confidencialidade** | **EXECUTADA, aguarda auditoria** | commit da Sessão 4 |
 | **Sessão 5 — admin, versionamento, impacto controlado** | **EXECUTADA, aguarda auditoria** | commit da Sessão 5 |
 | **Sessão 6 — workflow, aprovações, emissão, revisão** | **EXECUTADA, aguarda auditoria** | commit da Sessão 6 |
-| Ondas 7 e 8 | não autorizadas | — |
+| **Sessão 7 — CRM, pipeline, atividades, UX** | **EXECUTADA, aguarda auditoria** | commit da Sessão 7 |
+| Onda 8 | não autorizada | — |
 
-Alembic em **`0016`** · **632 testes passando** · árvore limpa · sem remote.
+Alembic em **`0017`** · **682 testes passando** · árvore limpa · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -297,6 +298,18 @@ seed, nenhuma linha do banco, nenhum byte do baseline.
   `cotacao_origem_id` + `revisao`
 - **`can_approve_quotes`** é alçada própria — `can_manage_economics` não a concede
 - 18 cotações e 45 itens históricos: status, revisão e fingerprint **não** foram inventados
+
+## CRM comercial (Sessão 7)
+- **Cliente serve de prospect** — sem cadeia Lead/Prospect/Conta. CNPJ não é exigido para
+  cadastrar; **emitir cotação continua exigindo dado fiscal**
+- **Oportunidade ≠ cotação**; revisões da mesma proposta são o mesmo negócio
+- **`responsavel_id` não é ACL** — "minhas oportunidades" é filtro, não segurança
+- **Pipeline aceita avançar, voltar e pular**; `OportunidadeEtapaHistorico` é append-only
+- **Valor estimado × cotado × fechado:** o cotado é **derivado**, não persistido
+- **GANHA chama `validar_compromisso_firme`** — ESTIMADO/REVALIDAR/A_COTAR/frete bloqueiam
+- **PERDIDA exige motivo estruturado**; reabrir não apaga a perda; GANHA é terminal
+- **Cross-client recusado no servidor**
+- Nenhuma das 18 cotações históricas ganhou oportunidade: `oportunidade_id` fica NULO
 
 # Blockers conhecidos
 

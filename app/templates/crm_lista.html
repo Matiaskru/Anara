@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Oportunidades — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Oportunidades</h1><div class="sub">Busca e filtros.</div></div>
+  <a href="/pipeline" class="btn btn-ghost">Ver como pipeline</a>
+</div>
+
+<div class="card">
+  <form method="get" class="grid-4">
+    <div class="field"><label>Etapa</label>
+      <select name="etapa" onchange="this.form.submit()"><option value="">Todas</option>
+        {% for e in etapas %}<option value="{{ e }}" {{ 'selected' if filtros.etapa == e else '' }}>{{ e }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Status</label>
+      <select name="status" onchange="this.form.submit()"><option value="">Todos</option>
+        {% for s in status_possiveis %}<option value="{{ s }}" {{ 'selected' if filtros.status == s else '' }}>{{ s }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Responsável</label>
+      <select name="responsavel" onchange="this.form.submit()"><option value="">Todos</option>
+        <option value="eu" {{ 'selected' if filtros.responsavel == 'eu' else '' }}>Minhas oportunidades</option>
+        {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if filtros.responsavel == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Cliente</label>
+      <select name="cliente_id" onchange="this.form.submit()"><option value="">Todos</option>
+        {% for c in clientes %}<option value="{{ c.id }}" {{ 'selected' if filtros.cliente_id == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Origem</label>
+      <select name="origem" onchange="this.form.submit()"><option value="">Todas</option>
+        {% for o in origens %}<option value="{{ o }}" {{ 'selected' if filtros.origem == o else '' }}>{{ o }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Próxima atividade</label>
+      <select name="sem_atividade" onchange="this.form.submit()"><option value="">Todas</option>
+        <option value="sim" {{ 'selected' if filtros.sem_atividade == 'sim' else '' }}>Sem próxima atividade</option>
+      </select></div>
+    <div class="field"><label>Busca</label><input type="text" name="busca" value="{{ filtros.busca }}"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-ghost" type="submit">Filtrar</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <table class="compacta">
+    <thead><tr><th>Cliente</th><th>Oportunidade</th><th>Etapa</th><th>Status</th>
+      <th>Responsável</th><th class="num">Valor</th><th>Próxima atividade</th>
+      <th>Previsão</th><th>Cotação</th></tr></thead>
+    <tbody>
+    {% for c in oportunidades %}
+      <tr>
+        <td>{{ c.cliente }}</td>
+        <td><a href="/oportunidades/{{ c.id }}">{{ c.titulo }}</a></td>
+        <td><span class="tag">{{ c.etapa }}</span></td>
+        <td><span class="tag {{ 'tag-calc' if c.status == 'GANHA' else ('tag-review' if c.status == 'PERDIDA' else '') }}">{{ c.status }}</span></td>
+        <td style="font-size:11px;">{{ c.responsavel or '—' }}</td>
+        <td class="num">{{ (c.valor_fechado or c.valor_cotado or c.valor_estimado)|brl }}</td>
+        <td style="font-size:11px;">
+          {% if c.proxima_atividade %}{{ c.proxima_atividade.titulo }}
+            {% if c.proxima_atividade.atrasada %}<span class="tag tag-review">atrasada</span>{% endif %}
+          {% else %}<span style="color:var(--gray);">Sem próxima atividade</span>{% endif %}</td>
+        <td style="font-size:11px;">{{ c.previsao|data if c.previsao else '—' }}</td>
+        <td style="font-size:11px;">
+          {% if c.cotacao %}<a href="/cotacoes/{{ c.cotacao.id }}">{{ c.cotacao.numero }}{% if c.cotacao.revisao > 1 %} r{{ c.cotacao.revisao }}{% endif %}</a>{% else %}—{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="9" style="color:var(--gray);">Nenhuma oportunidade com esses filtros.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <div style="margin-top:10px;">
+    {% if pagina > 1 %}<a class="btn btn-ghost btn-sm" href="?pagina={{ pagina - 1 }}">Anterior</a>{% endif %}
+    {% if tem_proxima %}<a class="btn btn-ghost btn-sm" href="?pagina={{ pagina + 1 }}">Próxima</a>{% endif %}
+  </div>
+</div>
+{% endblock %}

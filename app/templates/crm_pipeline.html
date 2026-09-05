@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Pipeline — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Pipeline</h1>
+    <div class="sub">Negócios abertos por etapa. As etapas da <em>cotação</em> — aprovação,
+      emissão, envio — não entram aqui: são estados do documento, não do negócio.</div></div>
+  <a href="/oportunidades" class="btn btn-ghost">Ver como lista</a>
+</div>
+
+<div class="card">
+  <form method="get" class="grid-4" style="margin-bottom:0;">
+    <div class="field"><label>Responsável</label>
+      <select name="responsavel" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        <option value="eu" {{ 'selected' if responsavel == 'eu' else '' }}>Minhas oportunidades</option>
+        {% for u in usuarios %}
+        <option value="{{ u.id }}" {{ 'selected' if responsavel == u.id|string else '' }}>{{ u.nome }}</option>
+        {% endfor %}
+      </select></div>
+    <div class="field"><label>Origem</label>
+      <select name="origem" onchange="this.form.submit()">
+        <option value="">Todas</option>
+        {% for o in origens %}<option value="{{ o }}" {{ 'selected' if origem == o else '' }}>{{ o }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Busca</label>
+      <input type="text" name="busca" value="{{ busca }}" placeholder="cliente ou negócio"></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-ghost" type="submit">Filtrar</button></div>
+  </form>
+</div>
+
+<div style="display:flex; gap:10px; overflow-x:auto; padding-bottom:12px;">
+  {% for etapa in etapas %}
+  <div style="min-width:230px; flex:1;">
+    <div style="font-weight:700; font-size:12px; padding:6px 8px; text-transform:uppercase;
+                letter-spacing:.04em; color:var(--gray);">
+      {{ etapa.replace('_',' ')|title }} <span style="opacity:.6;">({{ totais.get(etapa, 0) }})</span>
+    </div>
+    {% for c in colunas.get(etapa, []) %}
+    <div class="card" style="padding:10px; margin-bottom:8px;">
+      <div style="font-size:11px; color:var(--gray);">{{ c.cliente }}</div>
+      <div style="font-weight:600; margin:2px 0 6px;">
+        <a href="/oportunidades/{{ c.id }}">{{ c.titulo }}</a></div>
+      <div style="font-size:12px;">{{ (c.valor_cotado or c.valor_estimado)|brl }}</div>
+      {% if c.cotacao %}
+      <div style="font-size:10.5px; margin-top:4px;">
+        <span class="tag">{{ c.cotacao.status.replace('_',' ') }}</span>
+        <code style="font-size:10px;">{{ c.cotacao.numero }}{% if c.cotacao.revisao > 1 %} r{{ c.cotacao.revisao }}{% endif %}</code>
+      </div>
+      {% endif %}
+      <div style="font-size:10.5px; color:var(--gray); margin-top:5px;">
+        {% if c.proxima_atividade %}
+          {{ c.proxima_atividade.titulo }}
+          {% if c.proxima_atividade.atrasada %}<span class="tag tag-review">atrasada</span>{% endif %}
+        {% else %}Sem próxima atividade{% endif %}
+      </div>
+      <div style="font-size:10.5px; color:var(--gray); margin-top:3px;">
+        {{ c.responsavel or 'sem responsável' }}
+        {% if c.previsao %} · {{ c.previsao|data }}{% endif %}
+      </div>
+      <select style="width:100%; margin-top:6px; font-size:11px;"
+              onchange="mover({{ c.id }}, this.value)">
+        <option value="">Mover para…</option>
+        {% for e in etapas %}{% if e != c.etapa %}<option value="{{ e }}">{{ e }}</option>{% endif %}{% endfor %}
+      </select>
+    </div>
+    {% else %}
+    <div style="font-size:11px; color:var(--gray); padding:8px;">vazio</div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function mover(id, etapa) {
+  if (!etapa) return;
+  const d = new FormData(); d.append('etapa', etapa);
+  const r = await fetch(`/oportunidades/${id}/etapa`, {method: 'POST', body: d});
+  const j = await r.json();
+  if (!r.ok) { toast(j.detail || 'Não foi possível mover.'); return; }
+  toast(j.mensagem); setTimeout(() => location.reload(), 600);
+}
+</script>
+{% endblock %}

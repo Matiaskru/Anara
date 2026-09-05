@@ -163,6 +163,60 @@ class TipoComponenteFrete(str, enum.Enum):
     por_hora = "POR_HORA"            # R$/hora excedente (TDE, TDC)
 
 
+class EtapaOportunidade(str, enum.Enum):
+    """Onde o negócio está no funil.
+
+    **Não é máquina de estados rígida** — diferente do workflow da cotação. Um negócio
+    comercial pula etapa, volta, e às vezes uma qualificação vira negociação no mesmo
+    telefonema. Travar isso criaria burocracia que não corresponde a como se vende; o que
+    importa é **registrar** toda mudança, e isso `OportunidadeEtapaHistorico` faz.
+
+    As etapas da COTAÇÃO (aguardando aprovação, emitida, enviada) **não** entram aqui: são
+    estados do documento, não do negócio.
+    """
+    prospeccao = "PROSPECCAO"
+    contato = "CONTATO"
+    qualificacao = "QUALIFICACAO"
+    cotacao = "COTACAO"
+    negociacao = "NEGOCIACAO"
+    decisao = "DECISAO"
+
+
+class StatusOportunidade(str, enum.Enum):
+    """Resultado do negócio — eixo separado da etapa."""
+    aberta = "ABERTA"
+    ganha = "GANHA"
+    perdida = "PERDIDA"
+
+
+class OrigemOportunidade(str, enum.Enum):
+    inbound = "INBOUND"
+    outbound = "OUTBOUND"
+    indicacao = "INDICACAO"
+    evento = "EVENTO"
+    parceria = "PARCERIA"
+    carteira = "CARTEIRA"
+    outro = "OUTRO"
+
+
+class MotivoPerda(str, enum.Enum):
+    preco = "PRECO"
+    prazo = "PRAZO"
+    concorrente = "CONCORRENTE"
+    sem_retorno = "SEM_RETORNO"
+    projeto_cancelado = "PROJETO_CANCELADO"
+    fora_de_escopo = "FORA_DE_ESCOPO"
+    outro = "OUTRO"
+
+
+class TipoAtividade(str, enum.Enum):
+    ligacao = "LIGACAO"
+    email = "EMAIL"
+    reuniao = "REUNIAO"
+    follow_up = "FOLLOW_UP"
+    outro = "OUTRO"
+
+
 class Papel(str, enum.Enum):
     """Papéis canônicos. Quem pode ver o motor econômico, e quem não pode.
 
@@ -885,6 +939,11 @@ class Cotacao(SQLModel, table=True):
     cancelada_por: Optional[str] = None
     cancelamento_motivo: Optional[str] = None
     premissas_mantidas_aprovadas: bool = False   # optou por manter premissa velha
+    # --- CRM (Sessão 7) ---
+    # Nulo nas 18 históricas, e assim fica: inventar oportunidade para cotação de 2026 seria
+    # criar negócio que nunca existiu no funil.
+    oportunidade_id: Optional[int] = Field(default=None, foreign_key="oportunidade.id",
+                                           index=True)
 
 
 class CotacaoItem(SQLModel, table=True):
@@ -1156,3 +1215,111 @@ class SnapshotEmissao(SQLModel, table=True):
     premissas_json: Optional[str] = None
     memoria_json: Optional[str] = None            # interna; nunca vai ao PDF do cliente
     pdf_caminho: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# CRM (Sessão 7)
+# ---------------------------------------------------------------------------
+class Contato(SQLModel, table=True):
+    """Pessoa dentro de uma organização.
+
+    O `contato_nome` que já existia em `Cliente` e em `Cotacao` continua onde está — ele é o
+    contato **daquele documento**, congelado. Este modelo é a agenda: várias pessoas por
+    cliente, cada uma com seu papel.
+
+    O e-mail **não** é único globalmente: duas fichas podem legitimamente compartilhar um
+    endereço (`compras@`), e tornar isso único quebraria cadastro real por causa de uma
+    regra que ninguém pediu.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cliente_id: int = Field(foreign_key="cliente.id", index=True)
+    nome: str
+    cargo: Optional[str] = None
+    email: Optional[str] = None
+    telefone: Optional[str] = None
+    observacao: Optional[str] = None
+    principal: bool = False
+    ativo: bool = True
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+    criado_por: Optional[str] = None
+
+
+class Oportunidade(SQLModel, table=True):
+    """O negócio sendo perseguido — que **não** é a cotação.
+
+    Uma oportunidade pode ter zero, uma ou várias cotações, e as revisões de uma proposta
+    continuam sendo o mesmo negócio. Confundir os dois faria cada revisão virar um item a
+    mais no funil, e o pipeline passaria a contar papel em vez de negócio.
+
+    **`responsavel_id` é responsabilidade operacional, não controle de acesso.** Quem vê o
+    quê continua sendo a política da Sessão 4; aqui só se registra quem toca o negócio, para
+    que exista o filtro "minhas oportunidades" e para que a Sessão 8 consiga medir.
+
+    Três valores, três significados diferentes, e persistir só o que é **fato**:
+    `valor_estimado` é palpite manual de antes da cotação; o valor cotado é **derivado** da
+    cotação mais recente e por isso não tem coluna; `valor_fechado` é snapshot do ganho.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cliente_id: int = Field(foreign_key="cliente.id", index=True)
+    titulo: str
+    descricao: Optional[str] = None
+    responsavel_id: Optional[int] = Field(default=None, foreign_key="usuario.id", index=True)
+    etapa: str = Field(default=EtapaOportunidade.prospeccao.value, index=True)
+    status: str = Field(default=StatusOportunidade.aberta.value, index=True)
+    origem: Optional[str] = None
+    origem_detalhe: Optional[str] = None
+    valor_estimado: Optional[float] = None
+    data_prevista_fechamento: Optional[date] = Field(default=None, index=True)
+    criado_em: datetime = Field(default_factory=datetime.utcnow, index=True)
+    atualizado_em: Optional[datetime] = None
+    criado_por: Optional[str] = None
+    # --- fechamento ---
+    won_em: Optional[datetime] = None
+    won_por: Optional[str] = None
+    cotacao_vencedora_id: Optional[int] = Field(default=None, foreign_key="cotacao.id")
+    cotacao_vencedora_fingerprint: Optional[str] = None
+    valor_fechado: Optional[float] = None
+    lost_em: Optional[datetime] = None
+    lost_por: Optional[str] = None
+    motivo_perda: Optional[str] = None
+    comentario_perda: Optional[str] = None
+
+
+class OportunidadeEtapaHistorico(SQLModel, table=True):
+    """Append-only: toda mudança de etapa, com quem e quando.
+
+    A coluna `etapa` diz onde o negócio está; ela não diz há quanto tempo, nem por onde
+    passou. Sem este registro, "tempo em etapa", "conversão" e "aging" — que a Sessão 8 vai
+    precisar — seriam impossíveis de reconstruir depois.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    oportunidade_id: int = Field(foreign_key="oportunidade.id", index=True)
+    etapa_anterior: Optional[str] = None
+    etapa_nova: str
+    ator_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    ator_email: Optional[str] = None
+    ocorrido_em: datetime = Field(default_factory=datetime.utcnow, index=True)
+    observacao: Optional[str] = None
+
+
+class AtividadeComercial(SQLModel, table=True):
+    """Follow-up: a próxima ação combinada.
+
+    "Atrasada" **não** é coluna: é `due_em < agora and concluida_em is None`, derivado na
+    leitura. Persistir isso exigiria um job para mantê-lo verdadeiro, e um campo que só é
+    verdadeiro enquanto alguém lembra de atualizá-lo é pior que não existir.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    oportunidade_id: Optional[int] = Field(default=None, foreign_key="oportunidade.id",
+                                           index=True)
+    cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id", index=True)
+    contato_id: Optional[int] = Field(default=None, foreign_key="contato.id")
+    responsavel_id: Optional[int] = Field(default=None, foreign_key="usuario.id", index=True)
+    tipo: str = Field(default=TipoAtividade.follow_up.value)
+    titulo: str
+    observacao: Optional[str] = None
+    due_em: Optional[datetime] = Field(default=None, index=True)
+    concluida_em: Optional[datetime] = None
+    concluida_por: Optional[str] = None
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+    criado_por: Optional[str] = None

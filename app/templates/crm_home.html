@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Comercial — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Meu dia</h1>
+    <div class="sub">O que precisa de atenção agora.</div></div>
+  <div>
+    <a href="/pipeline" class="btn btn-ghost">Pipeline</a>
+    <a href="/oportunidades" class="btn btn-ghost">Oportunidades</a>
+    <a href="/clientes" class="btn btn-ghost">Clientes</a>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Atividades atrasadas</h3>
+  {% if atrasadas %}
+  <table class="compacta">
+    <thead><tr><th>Quando</th><th>Tipo</th><th>Atividade</th><th></th></tr></thead>
+    <tbody>
+    {% for a in atrasadas %}
+      <tr><td style="font-size:11px;color:var(--copper);">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
+        <td><span class="tag">{{ a.tipo }}</span></td>
+        <td>{{ a.titulo }}
+          {% if a.oportunidade_id %}<a href="/oportunidades/{{ a.oportunidade_id }}" style="font-size:11px;">ver negócio</a>{% endif %}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="concluir({{ a.id }})">Concluir</button></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p style="color:var(--gray);">Nada atrasado.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Para hoje</h3>
+  {% if hoje %}
+  <table class="compacta">
+    <tbody>
+    {% for a in hoje %}
+      <tr><td style="font-size:11px;">{{ a.due_em.strftime('%H:%M') if a.due_em else '—' }}</td>
+        <td><span class="tag">{{ a.tipo }}</span></td><td>{{ a.titulo }}</td>
+        <td><button class="btn btn-ghost btn-sm" onclick="concluir({{ a.id }})">Concluir</button></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p style="color:var(--gray);">Nada agendado para hoje.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Negócios sem próxima atividade</h3>
+  <p style="color:var(--gray);font-size:12px;">Negócio aberto sem próximo passo combinado
+    costuma ser negócio parado.</p>
+  {% if sem_atividade %}
+  <table class="compacta">
+    <thead><tr><th>Cliente</th><th>Oportunidade</th><th>Etapa</th><th class="num">Valor</th></tr></thead>
+    <tbody>
+    {% for c in sem_atividade %}
+      <tr><td>{{ c.cliente }}</td>
+        <td><a href="/oportunidades/{{ c.id }}">{{ c.titulo }}</a></td>
+        <td><span class="tag">{{ c.etapa }}</span></td>
+        <td class="num">{{ (c.valor_cotado or c.valor_estimado)|brl }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}<p style="color:var(--gray);">Todos os seus negócios têm próximo passo.</p>{% endif %}
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Minhas oportunidades abertas</h3>
+  <table class="compacta">
+    <thead><tr><th>Cliente</th><th>Oportunidade</th><th>Etapa</th>
+      <th class="num">Valor</th><th>Próxima atividade</th><th>Previsão</th></tr></thead>
+    <tbody>
+    {% for c in minhas %}
+      <tr><td>{{ c.cliente }}</td>
+        <td><a href="/oportunidades/{{ c.id }}">{{ c.titulo }}</a></td>
+        <td><span class="tag">{{ c.etapa }}</span></td>
+        <td class="num">{{ (c.valor_cotado or c.valor_estimado)|brl }}</td>
+        <td style="font-size:11px;">
+          {% if c.proxima_atividade %}
+            {{ c.proxima_atividade.titulo }}
+            {% if c.proxima_atividade.atrasada %}<span class="tag tag-review">atrasada</span>{% endif %}
+          {% else %}<span style="color:var(--gray);">Sem próxima atividade</span>{% endif %}</td>
+        <td style="font-size:11px;">{{ c.previsao|data if c.previsao else '—' }}</td></tr>
+    {% else %}
+      <tr><td colspan="6" style="color:var(--gray);">Nenhuma oportunidade sua em aberto.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if aprovacoes %}
+<div class="card">
+  <h3 style="margin-top:0;">Aprovações aguardando decisão</h3>
+  <table class="compacta">
+    <tbody>
+    {% for p in aprovacoes %}
+      <tr><td><code>{{ p.cotacao.numero or p.cotacao.id }}</code></td>
+        <td>{{ p.cliente or '—' }}</td>
+        <td>{% for m in p.motivos %}<span class="tag tag-review">{{ m.replace('_',' ')|lower }}</span> {% endfor %}</td>
+        <td><a class="btn btn-ghost btn-sm" href="/aprovacoes/{{ p.pedido.id }}">Analisar</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function concluir(id) {
+  const r = await fetch(`/atividades/${id}/concluir`, {method: 'POST'});
+  if (r.ok) { toast('Atividade concluída.'); setTimeout(() => location.reload(), 600); }
+}
+</script>
+{% endblock %}
