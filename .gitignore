@@ -22,6 +22,9 @@ data/backups/
 # --- credenciais e segredos ------------------------------------------------
 .env
 .env.*
+# o exemplo NÃO tem segredo e precisa ser versionado —
+# sem ele, quem for rodar o sistema teria de adivinhar os nomes das variáveis
+!.env.example
 *.pem
 *.key
 *.p12

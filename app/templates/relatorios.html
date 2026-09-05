@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Relatórios — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Relatórios comerciais</h1>
+    <div class="sub">{{ periodo.rotulo }}. Métricas de <strong>estado atual</strong>:
+      um negócio perdido e reaberto conta como aberto, não como perdido.</div></div>
+  <div>
+    {% if ve_eco %}<a href="/relatorios/economico" class="btn btn-ghost">Econômico</a>{% endif %}
+    <a href="/relatorios/oportunidades.csv?periodo={{ atalho }}&inicio={{ inicio }}&fim={{ fim }}&responsavel={{ responsavel }}"
+       class="btn btn-ghost">CSV</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" class="grid-4" style="margin-bottom:0;">
+    <div class="field"><label>Período</label>
+      <select name="periodo" onchange="this.form.submit()">
+        <option value="" {{ 'selected' if not atalho else '' }}>Todo o período</option>
+        <option value="mes" {{ 'selected' if atalho == 'mes' else '' }}>Este mês</option>
+        <option value="30d" {{ 'selected' if atalho == '30d' else '' }}>Últimos 30 dias</option>
+        <option value="ano" {{ 'selected' if atalho == 'ano' else '' }}>Este ano</option>
+      </select></div>
+    <div class="field"><label>De</label><input type="date" name="inicio" value="{{ inicio }}"></div>
+    <div class="field"><label>Até</label><input type="date" name="fim" value="{{ fim }}"></div>
+    <div class="field"><label>Responsável</label>
+      <select name="responsavel" onchange="this.form.submit()">
+        <option value="">Todos</option>
+        <option value="eu" {{ 'selected' if responsavel == 'eu' else '' }}>Só eu</option>
+        {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if responsavel == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
+      </select></div>
+  </form>
+</div>
+
+{% if painel.vazio %}
+<div class="card" style="text-align:center; padding:40px;">
+  <h3 style="margin-top:0;">Nenhuma oportunidade ainda</h3>
+  <p style="color:var(--gray);">Os relatórios se preenchem conforme o comercial for usando o
+    sistema. Nada aqui é inventado para a tela parecer cheia.</p>
+  <a class="btn btn-copper" href="/clientes">Cadastrar cliente</a>
+  <a class="btn btn-ghost" href="/oportunidades">Ver oportunidades</a>
+</div>
+{% else %}
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Oportunidades abertas</div><div class="value">{{ painel.abertas }}</div></div>
+  <div class="kpi"><div class="label">Pipeline aberto</div>
+    <div class="value copper">{{ painel.valor_pipeline|brl }}</div>
+    {% if painel.abertas_sem_valor %}<div style="font-size:10.5px;color:var(--gray);">
+      {{ painel.abertas_sem_valor }} sem valor informado — fora do total</div>{% endif %}</div>
+  <div class="kpi"><div class="label">Ganhas no período</div><div class="value">{{ painel.ganhas }}</div></div>
+  <div class="kpi"><div class="label">Valor ganho</div><div class="value copper">{{ painel.valor_ganho|brl }}</div></div>
+  <div class="kpi"><div class="label">Perdidas no período</div><div class="value">{{ painel.perdidas }}</div></div>
+  <div class="kpi"><div class="label">Conversão</div>
+    <div class="value">{{ painel.conversao|pct(1) }}</div>
+    <div style="font-size:10.5px;color:var(--gray);">ganhas ÷ encerradas</div></div>
+  <div class="kpi"><div class="label">Ticket médio ganho</div><div class="value">{{ painel.ticket_medio|brl }}</div></div>
+  <div class="kpi"><div class="label">Atividades atrasadas</div><div class="value">{{ painel.atividades_atrasadas }}</div></div>
+  <div class="kpi"><div class="label">Sem próxima atividade</div><div class="value">{{ painel.sem_proxima_atividade }}</div></div>
+  <div class="kpi"><div class="label">Aprovações pendentes</div><div class="value">{{ painel.aprovacoes_pendentes }}</div></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Pipeline por etapa</h3>
+  <p style="color:var(--gray);font-size:12px;">Só oportunidades abertas. Valor bruto —
+    não há forecast ponderado por probabilidade, porque nunca definimos esses pesos.</p>
+  <table class="compacta">
+    <thead><tr><th>Etapa</th><th class="num">Negócios</th><th class="num">Valor</th>
+      <th class="num">Aging médio</th><th style="width:34%;"></th></tr></thead>
+    <tbody>
+    {% set maior = painel.por_etapa|map(attribute='quantidade')|max %}
+    {% for e in painel.por_etapa %}
+      <tr><td>{{ e.etapa }}</td>
+        <td class="num">{{ e.quantidade }}</td>
+        <td class="num">{{ e.valor|brl }}</td>
+        <td class="num">{{ (e.aging_medio_dias ~ ' d') if e.aging_medio_dias is not none else '—' }}</td>
+        <td><div style="background:var(--copper); height:12px; border-radius:2px;
+             width:{{ ((e.quantidade / maior * 100) if maior else 0)|round|int }}%;
+             min-width:{{ 2 if e.quantidade else 0 }}px;"></div></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Por responsável</h3>
+  <p style="color:var(--gray);font-size:12px;">Panorama de carga e pendência — não é ranking.</p>
+  <table class="compacta">
+    <thead><tr><th>Responsável</th><th class="num">Abertas</th><th class="num">Pipeline</th>
+      <th class="num">Ganhas</th><th class="num">Valor ganho</th><th class="num">Perdidas</th>
+      <th class="num">Conversão</th><th class="num">Atrasadas</th></tr></thead>
+    <tbody>
+    {% for r in painel.por_responsavel %}
+      <tr><td>{{ r.responsavel }}</td><td class="num">{{ r.abertas }}</td>
+        <td class="num">{{ r.pipeline|brl }}</td><td class="num">{{ r.ganhas }}</td>
+        <td class="num">{{ r.valor_ganho|brl }}</td><td class="num">{{ r.perdidas }}</td>
+        <td class="num">{{ r.conversao|pct(1) }}</td>
+        <td class="num">{{ r.atividades_atrasadas }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Por origem</h3>
+  <table class="compacta">
+    <thead><tr><th>Origem</th><th class="num">Total</th><th class="num">Ganhas</th>
+      <th class="num">Perdidas</th><th class="num">Valor ganho</th><th class="num">Conversão</th></tr></thead>
+    <tbody>
+    {% for o in painel.por_origem %}
+      <tr><td>{{ o.origem }}</td><td class="num">{{ o.total }}</td>
+        <td class="num">{{ o.ganhas }}</td><td class="num">{{ o.perdidas }}</td>
+        <td class="num">{{ o.valor_ganho|brl }}</td><td class="num">{{ o.conversao|pct(1) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if painel.motivos_perda %}
+<div class="card">
+  <h3 style="margin-top:0;">Motivos de perda</h3>
+  <p style="color:var(--gray);font-size:12px;">Pelo desfecho atual — um negócio perdido,
+    reaberto e perdido de novo aparece uma vez.</p>
+  <table class="compacta">
+    <tbody>
+    {% for m in painel.motivos_perda %}
+      <tr><td>{{ m.motivo.replace('_',' ')|lower }}</td>
+        <td class="num">{{ m.quantidade }}</td>
+        <td class="num">{{ m.participacao|pct(1) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0;">Documentos e aprovações</h3>
+  <p style="color:var(--gray);font-size:12px;">Aqui cada <em>revisão</em> conta como um
+    documento — é diferente de contar negócios.</p>
+  <div class="kpis">
+    <div class="kpi"><div class="label">Cotações no período</div><div class="value">{{ cotacoes.documentos }}</div></div>
+    <div class="kpi"><div class="label">Sendo revisões</div><div class="value">{{ cotacoes.revisoes }}</div></div>
+    <div class="kpi"><div class="label">Valor comercial</div><div class="value">{{ cotacoes.valor_comercial|brl }}</div></div>
+    <div class="kpi"><div class="label">Aprovações pendentes</div><div class="value">{{ aprovacoes.pendentes }}</div></div>
+    <div class="kpi"><div class="label">Aprovadas</div><div class="value">{{ aprovacoes.aprovadas }}</div></div>
+    <div class="kpi"><div class="label">Rejeitadas</div><div class="value">{{ aprovacoes.rejeitadas }}</div></div>
+  </div>
+  {% if cotacoes.por_status %}
+  <table class="compacta" style="margin-top:10px;">
+    <tbody>{% for s, n in cotacoes.por_status.items() %}
+      <tr><td>{{ s.replace('_',' ') }}</td><td class="num">{{ n }}</td></tr>{% endfor %}</tbody>
+  </table>
+  {% endif %}
+  <a class="btn btn-ghost btn-sm" style="margin-top:8px;"
+     href="/relatorios/cotacoes.csv?periodo={{ atalho }}&inicio={{ inicio }}&fim={{ fim }}">CSV de cotações</a>
+  <a class="btn btn-ghost btn-sm" style="margin-top:8px;"
+     href="/relatorios/atividades.csv?responsavel={{ responsavel }}">CSV de atividades</a>
+</div>
+{% endblock %}

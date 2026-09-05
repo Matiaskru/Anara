@@ -205,6 +205,34 @@ papel em vez de negócio.
 - **Confidencialidade não muda porque o dado virou card.** Preço e total comerciais podem
   aparecer no pipeline; custo, margem, lucro e markup, não
 
+## Relatórios e runtime (Sessão 8)
+
+**As definições métricas moram em `app/metrics_service.py`, um lugar só.** Dashboard, CSV e
+testes chamam as mesmas funções — é o que impede a tela dizer 42% e o CSV dizer 39%.
+
+- **Persistir fato, derivar métrica.** Conversão, aging, ticket médio, valor de pipeline e
+  tempo em etapa não têm coluna: ficariam errados no dia em que alguém fechasse um negócio
+  sem passar pela tela que os atualiza
+- **Estado atual ≠ evento histórico.** Um negócio perdido e reaberto está **aberto** — não
+  conta como perdido em nenhuma métrica de estado. O evento de perda continua auditável
+- **`valor_cotado_atual` é determinístico:** só cotações da oportunidade, canceladas fora,
+  maior revisão dentro de cada genealogia (R1 e R2 **nunca somadas**), e entre propostas
+  paralelas vale a de atualização mais recente, com o `id` desempatando
+- **Conversão = ganhas ÷ (ganhas + perdidas).** Abertas não entram no denominador. Sem
+  encerradas, o resultado é **`None`**, não `0%` — "0% de conversão" afirma um fracasso que
+  não aconteceu
+- **Margem agregada é `Σ lucro ÷ Σ receita`**, nunca a média dos percentuais. Item sem dado
+  econômico fica de fora; incluí-lo como zero afirmaria prejuízo que ninguém apurou
+- **Valor ausente ≠ R$ 0,00.** Somar zero encolheria o pipeline artificialmente
+- **Saúde separa bloqueio de aviso.** "23 problemas" não diz nada; o que trava a emissão e o
+  que só pede atenção são coisas diferentes, e cada contagem diz o que está contando
+- **`ANARA_DB_URL` isola o sistema inteiro** — aplicação, scripts e migrations. Até a Sessão 8
+  só o Alembic a lia, e apontar para uma cópia migrava a cópia e **escrevia na produção**
+  (B-21). Use `python3 scripts/smoke_test.py` para exercitar o sistema com o servidor de
+  verdade: ele prova o isolamento antes de escrever qualquer coisa
+
+Subir o sistema, criar o primeiro OWNER e o checklist do piloto estão em `PILOT_READINESS.md`.
+
 ## Armadilhas de cálculo que já custaram retrabalho
 
 - **Waste divide:** `consumo / (1 − waste)`. Nunca `× (1 + waste)`
@@ -289,6 +317,8 @@ Alembic em `0013` (`auditlog`, vigência da condição de pagamento, `can_manage
 **Sessão 6 — workflow comercial e aprovações: EXECUTADA, aguardando auditoria.** Alembic em `0016`.
 
 **Sessão 7 — CRM, pipeline e UX comercial: EXECUTADA, aguardando auditoria.** Alembic em `0017`.
+
+**Sessão 8 — relatórios, saúde e prontidão para o piloto: EXECUTADA.** Sem migration nova — relatórios são derivados. O sistema sobe, autentica e responde: `scripts/smoke_test.py`.
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

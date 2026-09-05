@@ -2,13 +2,15 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **05/09/2026 — fim da Sessão 7**
+Última atualização: **05/09/2026 — fim da Sessão 8**
 
 ---
 
 # Estado atual
 
-**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B, 4, 5, 6 e 7 EXECUTADAS, aguardando auditoria.**
+**Fase 0, Sessões 0.1, 1, 2 e 3A aprovadas. Sessões 3B a 8 EXECUTADAS, aguardando auditoria.**
+
+**O sistema está pronto para ser aberto e usado localmente** — ver `PILOT_READINESS.md`.
 
 | Etapa | Situação | Commit |
 |---|---|---|
@@ -22,9 +24,9 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 | **Sessão 5 — admin, versionamento, impacto controlado** | **EXECUTADA, aguarda auditoria** | commit da Sessão 5 |
 | **Sessão 6 — workflow, aprovações, emissão, revisão** | **EXECUTADA, aguarda auditoria** | commit da Sessão 6 |
 | **Sessão 7 — CRM, pipeline, atividades, UX** | **EXECUTADA, aguarda auditoria** | commit da Sessão 7 |
-| Onda 8 | não autorizada | — |
+| **Sessão 8 — relatórios, saúde, runtime, piloto** | **EXECUTADA, aguarda auditoria** | commit da Sessão 8 |
 
-Alembic em **`0017`** · **682 testes passando** · árvore limpa · sem remote.
+Alembic em **`0017`** (a Sessão 8 não criou migration) · **715 testes passando** · smoke test em runtime: 60 ok · árvore limpa · sem remote.
 
 - Fase 1 (auditoria): **concluída** → `AUDIT_ANARA_MASTER.md`
 - Fase 2 (plano): **concluída** → `IMPLEMENTATION_PLAN_ANARA.md`
@@ -310,6 +312,20 @@ seed, nenhuma linha do banco, nenhum byte do baseline.
 - **PERDIDA exige motivo estruturado**; reabrir não apaga a perda; GANHA é terminal
 - **Cross-client recusado no servidor**
 - Nenhuma das 18 cotações históricas ganhou oportunidade: `oportunidade_id` fica NULO
+
+## Relatórios e prontidão (Sessão 8)
+- **`app/metrics_service.py` é a definição única** das métricas; dashboard, CSV e testes
+  usam as mesmas funções
+- **Estado atual ≠ evento histórico**: reaberta conta como aberta, não como perdida
+- **`valor_cotado_atual`**: maior revisão não cancelada por genealogia; R1 e R2 nunca somadas
+- **Conversão** só sobre encerradas; sem encerradas devolve `None`, não `0%`
+- **Margem agregada** é `Σ lucro ÷ Σ receita`
+- **Saúde operacional** separa bloqueio de aviso e lista as pendências conhecidas sem
+  resolvê-las
+- **`/health`** público e mínimo; `/health/detalhe` autenticado
+- **Smoke test real** (`scripts/smoke_test.py`): sobe o uvicorn, faz login, 23 rotas, dois
+  fluxos E2E, PDF, e prova que o banco de produção não foi tocado
+- **B-21 corrigido**: `ANARA_DB_URL` passou a isolar a aplicação inteira
 
 # Blockers conhecidos
 

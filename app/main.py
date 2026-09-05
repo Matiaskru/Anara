@@ -12,7 +12,7 @@ from app.migrations import backfill, migrar
 from app.seeds import semear
 from app.routers import (
     admin, calculadora, clientes, configuracoes, cotacoes, crm, dashboard, importar,
-    login, produtos, relatorios, workflow,
+    login, produtos, relatorios, relatorios_comerciais, workflow,
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -103,6 +103,7 @@ app.include_router(relatorios.router)
 app.include_router(admin.router)
 app.include_router(workflow.router)
 app.include_router(crm.router)
+app.include_router(relatorios_comerciais.router)
 
 
 @app.on_event("startup")
@@ -120,4 +121,20 @@ def on_startup():
 
 @app.get("/health")
 def health():
-    return {"ok": True}
+    """Healthcheck **público e mínimo**: o app subiu e o banco responde.
+
+    Não devolve versão de migration, caminho de arquivo nem contagem de dados. Um endpoint
+    aberto que descreve a instalação é reconhecimento gratuito para quem estiver sondando —
+    e o detalhe existe em `/health/detalhe`, atrás de autenticação.
+    """
+    from sqlalchemy import text
+
+    from app.db import engine
+
+    try:
+        with engine.connect() as conexao:
+            conexao.execute(text("select 1"))
+        return {"status": "ok", "database": "ok"}
+    except Exception:                               # noqa: BLE001
+        # A causa vai para o log do servidor, não para a resposta.
+        return JSONResponse({"status": "degradado", "database": "erro"}, status_code=503)

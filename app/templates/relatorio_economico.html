@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Relatório econômico — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Indicadores econômicos</h1>
+    <div class="sub">{{ periodo.rotulo }} · restrito a quem tem acesso à economia.</div></div>
+  <a href="/relatorios" class="btn btn-ghost">Relatórios comerciais</a>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Receita cotada</div><div class="value">{{ economico.receita_cotada|brl }}</div></div>
+  <div class="kpi"><div class="label">Lucro cotado</div><div class="value copper">{{ economico.lucro_cotado|brl }}</div></div>
+  <div class="kpi"><div class="label">Margem agregada</div>
+    <div class="value">{{ economico.margem_agregada|pct(2) }}</div>
+    <div style="font-size:10.5px;color:var(--gray);">Σ lucro ÷ Σ receita</div></div>
+  <div class="kpi"><div class="label">Valor ganho no período</div><div class="value">{{ economico.valor_ganho|brl }}</div></div>
+</div>
+
+<div class="card">
+  <p style="font-size:12px;color:var(--gray);margin:0;">
+    A margem agregada é <strong>Σ lucro ÷ Σ receita</strong>, nunca a média dos percentuais
+    por item: R$ 100 com 10% e R$ 900 com 20% dão <strong>19%</strong> agregados e 15% na
+    média simples — e 15% não corresponde a dinheiro nenhum.
+    {{ economico.itens_considerados }} item(ns) entraram no cálculo;
+    {{ economico.itens_sem_dado_economico }} ficaram de fora por não terem dado econômico
+    válido — incluí-los como margem zero afirmaria um prejuízo que ninguém apurou.
+  </p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Margem por fornecedor</h3>
+  <table class="compacta">
+    <thead><tr><th>Fornecedor</th><th class="num">Itens</th><th class="num">Receita</th>
+      <th class="num">Lucro</th><th class="num">Margem</th></tr></thead>
+    <tbody>
+    {% for f in economico.por_fornecedor %}
+      <tr><td>{{ f.fornecedor }}</td><td class="num">{{ f.itens }}</td>
+        <td class="num">{{ f.receita|brl }}</td><td class="num">{{ f.lucro|brl }}</td>
+        <td class="num">{{ f.margem|pct(2) }}</td></tr>
+    {% else %}
+      <tr><td colspan="5" style="color:var(--gray);">Ainda não há itens com dado econômico.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Referências de custo vigentes</h3>
+  <table class="compacta">
+    <tbody>
+    {% for status, n in saude.catalogo.referencias_vigentes_por_status.items() %}
+      <tr><td><span class="tag">{{ status }}</span></td><td class="num">{{ n }}</td>
+        <td style="font-size:11px;color:var(--gray);">referências, não SKUs</td></tr>
+    {% else %}
+      <tr><td colspan="3" style="color:var(--gray);">Nenhuma referência versionada.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p style="font-size:12px;color:var(--gray);">
+    {{ saude.catalogo.skus_ativos }} SKUs ativos ·
+    {{ saude.catalogo.skus_sem_custo }} sem custo cadastrado ·
+    {{ saude.catalogo.referencias_versionadas }} referências no total.
+    <a href="/saude">Ver saúde operacional</a></p>
+</div>
+{% endblock %}

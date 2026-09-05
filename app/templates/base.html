@@ -21,6 +21,7 @@
         <a href="/oportunidades" class="{{ 'active' if active == 'oportunidades' else '' }}">Oportunidades</a>
         <a href="/clientes" class="{{ 'active' if active == 'clientes' else '' }}">Clientes</a>
         <a href="/cotacoes" class="{{ 'active' if active == 'cotacoes' else '' }}">Histórico de cotações</a>
+        <a href="/relatorios" class="{{ 'active' if active == 'relatorios' else '' }}">Relatórios</a>
         <a href="/cotacoes/nova" class="{{ 'active' if active == 'nova_cotacao' else '' }}">Nova cotação</a>
         <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">Produtos e preços</a>
         {% if ve_economia(request) %}
@@ -31,6 +32,8 @@
         <a href="/importar" class="{{ 'active' if active == 'importar' else '' }}">Importar Excel</a>
         <div class="nav-sep">Administração</div>
         <a href="/relatorios/qualidade" class="{{ 'active' if active == 'relatorios' else '' }}">Qualidade da base</a>
+        <a href="/relatorios/economico" class="{{ 'active' if active == 'relatorios_eco' else '' }}">Relatório econômico</a>
+        <a href="/saude" class="{{ 'active' if active == 'saude' else '' }}">Saúde operacional</a>
         <a href="/admin" class="{{ 'active' if active == 'admin' else '' }}">Premissas e versões</a>
         <a href="/configuracoes" class="{{ 'active' if active == 'configuracoes' else '' }}">Configurações</a>
         {% endif %}
