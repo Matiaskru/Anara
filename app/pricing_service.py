@@ -703,7 +703,17 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
         "revisao_motivo": produto.revisao_motivo,
         "custo": custo,
         "frescor": frescor(session, produto.custo_ref_data),
-        "fiscal": {**{k: v for k, v in contexto.items() if k != "fiscal"},
+        # O espalhamento do `contexto` levava `Decimal` cru para dentro da memória — o
+        # `contexto["fiscal"]` passava por `como_dict()`, mas `icms_pct`,
+        # `aliquota_interna_destino`, `fcp_pct` e `encargo_pct` vinham do nível de cima e
+        # escapavam da conversão. Duas consequências, e a segunda é a silenciosa:
+        #
+        #   * `/calculadora/calcular` devolve este dicionário como JSON e quebrava com
+        #     "Object of type Decimal is not JSON serializable" — sempre que o cenário
+        #     fiscal resolvia, que é o caso do cenário padrão do catálogo;
+        #   * `memoria_json` serializa com `default=str`, então um item novo gravaria
+        #     `"0.18"` (texto) onde o histórico tem `0.18` (número).
+        "fiscal": {**{k: _para_json(v) for k, v in contexto.items() if k != "fiscal"},
                    "memoria_fiscal": contexto["fiscal"].como_dict()},
         "margem": margem.como_dict(),
         # `como_dict()`, não `asdict()`: a memória é JSON, e o núcleo é Decimal. A conversão
@@ -722,6 +732,24 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
         "motivo_bloqueio": contexto.get("motivo_bloqueio"),
         "gerado_em": datetime.utcnow().isoformat(),
     }
+
+
+def _para_json(valor):
+    """Fronteira de saída: `Decimal` vira `float`, o resto passa como está.
+
+    A memória do preço é **representação externa** — vai para JSON, para o snapshot do item
+    e para o baseline. `Decimal` não é serializável, e deixar `default=str` resolver
+    transformaria número em texto e mudaria o formato do que já está gravado.
+    """
+    from decimal import Decimal
+
+    if isinstance(valor, Decimal):
+        return para_float(valor)
+    if isinstance(valor, dict):
+        return {k: _para_json(v) for k, v in valor.items()}
+    if isinstance(valor, (list, tuple)):
+        return [_para_json(v) for v in valor]
+    return valor
 
 
 def memoria_json(memoria: dict) -> str:
