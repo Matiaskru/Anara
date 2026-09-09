@@ -8,17 +8,56 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pytest
 
 
+# ---------------------------------------------------------------------------
+# Guarda de isolamento: a suíte não escreve em `data/backups/`
+# ---------------------------------------------------------------------------
+#: O diretório de backups **de produção**. A suíte inteira tem de passar longe dele.
+#:
+#: Em 09/09/2026 isto deixou de ser hipótese duas vezes no mesmo dia. Primeiro,
+#: `fazer_backup()` copiava o `DB_PATH` global mesmo quando o teste apontava o sistema para
+#: um banco temporário: cada execução da suíte despejava cópias de `anara.db` aqui. Depois, um
+#: teste que trocava `MAX_BACKUPS` por 2 alcançou este diretório e a poda **apagou 29 backups
+#: reais**. Nenhum dado único se perdeu — eram todos cópias do banco do próprio dia —, mas a
+#: lição ficou: um diretório de produção alcançável por teste é um diretório que um teste
+#: acaba apagando.
+#:
+#: Esta guarda é autouse e de sessão. Se qualquer teste criar ou remover arquivo aqui, a
+#: suíte acusa no teardown — em vez de o dono do repositório descobrir pela ausência.
+DIR_BACKUPS_PRODUCAO = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "backups")
+
+
+def _inventario_de_producao() -> set:
+    if not os.path.isdir(DIR_BACKUPS_PRODUCAO):
+        return set()
+    return set(os.listdir(DIR_BACKUPS_PRODUCAO))
+
+
+@pytest.fixture(scope="session", autouse=True)
+def backups_de_producao_intocados():
+    """Nenhum teste cria nem apaga arquivo em `data/backups/`."""
+    antes = _inventario_de_producao()
+    yield antes
+    depois = _inventario_de_producao()
+    criados = sorted(depois - antes)
+    removidos = sorted(antes - depois)
+    assert not criados, f"a suíte criou backup em data/backups/: {criados}"
+    assert not removidos, f"a suíte APAGOU backup de data/backups/: {removidos}"
+
+
 @pytest.fixture(scope="session")
-def engine_teste():
+def engine_teste(tmp_path_factory):
     from sqlmodel import SQLModel, create_engine
     import app.models  # noqa: F401
 
-    fd, caminho = tempfile.mkstemp(suffix=".db", prefix="anara-teste-")
-    os.close(fd)
+    # `tmp_path_factory`, e não `tempfile`: o backup do banco nasce em `backups/`
+    # AO LADO do arquivo do banco, então o diretório temporário do pytest é o que
+    # mantém a suíte fora de `data/backups/` — e é o pytest que o limpa depois.
+    caminho = str(tmp_path_factory.mktemp("anara-teste-banco") / "anara-teste.db")
     engine = create_engine(f"sqlite:///{caminho}", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(engine)
     yield engine
-    os.unlink(caminho)
+    # o diretório é do pytest: ele apaga o banco e os backups juntos
 
 
 @pytest.fixture(scope="session")

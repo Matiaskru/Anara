@@ -15,12 +15,14 @@ from decimais import MARGEM_DO_CENTAVO, MEIO_CENTAVO, aprox  # noqa: E402
 
 
 @pytest.fixture(scope="module")
-def app_teste():
+def app_teste(tmp_path_factory):
     import app.db as db
     import app.seeds as seeds
 
-    fd, caminho = tempfile.mkstemp(suffix=".db", prefix="anara-e2e-")
-    os.close(fd)
+    # `tmp_path_factory`, e não `tempfile`: o backup do banco nasce em `backups/`
+    # AO LADO do arquivo do banco, então o diretório temporário do pytest é o que
+    # mantém a suíte fora de `data/backups/` — e é o pytest que o limpa depois.
+    caminho = str(tmp_path_factory.mktemp("anara-e2e-banco") / "anara-teste.db")
     engine = create_engine(f"sqlite:///{caminho}", connect_args={"check_same_thread": False})
 
     originais = (db.engine, seeds.engine)
@@ -64,7 +66,7 @@ def app_teste():
     yield engine
 
     db.engine, seeds.engine = originais
-    os.unlink(caminho)
+    # o diretório é do pytest: ele apaga o banco e os backups juntos
 
 
 @pytest.fixture

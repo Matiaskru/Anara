@@ -304,26 +304,35 @@ def test_poda_de_backup_usa_idade_e_nao_ordem_alfabetica(tmp_path, monkeypatch):
     import os
     import time
 
+    from sqlmodel import create_engine
+
     import app.migrations as m
 
-    monkeypatch.setattr(m, "BACKUP_DIR", str(tmp_path))
+    # O banco de origem é apontado pelo ENGINE, não por `DB_PATH`. Trocar só o global deixava
+    # `fazer_backup` operando na produção com o `MAX_BACKUPS` deste teste — foi assim que a
+    # poda de 2 arquivos alcançou `data/backups/` e apagou 29 backups reais em 09/09/2026.
+    # O destino é derivado do banco em uso: `<pasta do banco>/backups/`.
+    banco = tmp_path / "origem.db"
+    banco.write_bytes(b"conteudo")
+    monkeypatch.setattr(m, "engine", create_engine(f"sqlite:///{banco}"))
     monkeypatch.setattr(m, "MAX_BACKUPS", 2)
-    monkeypatch.setattr(m, "DB_PATH", str(tmp_path / "origem.db"))
-    (tmp_path / "origem.db").write_bytes(b"conteudo")
+    pasta = tmp_path / "backups"
+    pasta.mkdir()
 
     # 'aaa' é o mais ANTIGO e alfabeticamente o primeiro; 'zzz' é o mais NOVO
-    for nome, idade in (("anara.db.aaa-antigo", 300), ("anara.db.zzz-novo", 10)):
-        alvo = tmp_path / nome
+    for nome, idade in (("origem.db.aaa-antigo", 300), ("origem.db.zzz-novo", 10)):
+        alvo = pasta / nome
         alvo.write_bytes(b"x")
         quando = time.time() - idade
         os.utime(alvo, (quando, quando))
 
+    assert m.pasta_de_backups() == str(pasta), "o destino segue o banco em uso"
     m.fazer_backup("mmm-recente")
-    restantes = sorted(p.name for p in tmp_path.iterdir() if p.name.startswith("anara.db."))
+    restantes = sorted(p.name for p in pasta.iterdir() if p.name.startswith("origem.db."))
 
-    assert "anara.db.aaa-antigo" not in restantes, "o mais velho tinha de sair"
-    assert "anara.db.zzz-novo" in restantes, "o mais novo não pode sair por causa do nome"
-    assert any(n.startswith("anara.db.mmm-recente") for n in restantes), \
+    assert "origem.db.aaa-antigo" not in restantes, "o mais velho tinha de sair"
+    assert "origem.db.zzz-novo" in restantes, "o mais novo não pode sair por causa do nome"
+    assert any(n.startswith("origem.db.mmm-recente") for n in restantes), \
         "o backup recém-criado jamais pode ser apagado pela própria poda"
 
 

@@ -38,18 +38,32 @@ PREFIXO = "anara.db."
 
 
 # ---------------------------------------------------------------------------
-def caminho_backup(motivo: str) -> str:
+def pasta_de_backups(db_path: str = DB_PATH) -> str:
+    """`backups/` ao lado do banco que se está copiando — não ao lado do banco default.
+
+    `restaurar(..., db_path=<cópia>)` chama `fazer_backup` para guardar o estado anterior, e
+    o destino saía do global `BACKUP_DIR`: restaurar uma cópia gravava o backup de segurança
+    dela em `data/backups/`, o diretório da produção. Foi por aqui que a suíte continuou
+    escrevendo na produção mesmo depois de `app/migrations.py` passar a seguir o banco em uso.
+    """
+    return os.path.join(os.path.dirname(db_path) or ".", "backups")
+
+
+def caminho_backup(motivo: str, db_path: str = DB_PATH) -> str:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    return os.path.join(BACKUP_DIR, f"{PREFIXO}{motivo}-{stamp}")
+    return os.path.join(pasta_de_backups(db_path),
+                        f"{os.path.basename(db_path)}.{motivo}-{stamp}")
 
 
 def fazer_backup(motivo: str = "manual", reter: int = 0, db_path: str = DB_PATH) -> dict:
     """Copia o banco e confere o sha256 da cópia. `reter=0` = não apaga nada."""
     if not os.path.exists(db_path):
         raise FileNotFoundError(db_path)
-    os.makedirs(BACKUP_DIR, exist_ok=True)
+    pasta = pasta_de_backups(db_path)
+    prefixo = f"{os.path.basename(db_path)}."
+    os.makedirs(pasta, exist_ok=True)
 
-    destino = caminho_backup(motivo)
+    destino = caminho_backup(motivo, db_path)
     # Usa a API de backup do próprio SQLite: consistente mesmo com a plataforma aberta,
     # o que `cp` não garante. Cai para cópia de arquivo se o banco não abrir.
     try:
@@ -72,9 +86,11 @@ def fazer_backup(motivo: str = "manual", reter: int = 0, db_path: str = DB_PATH)
 
     removidos = []
     if reter > 0:
-        existentes = sorted(f for f in os.listdir(BACKUP_DIR) if f.startswith(PREFIXO))
+        # Prefixo pelo nome do banco de origem, e pasta pela dele: a retenção de uma cópia
+        # jamais pode enxergar — muito menos apagar — os backups da produção.
+        existentes = sorted(f for f in os.listdir(pasta) if f.startswith(prefixo))
         for antigo in existentes[:max(len(existentes) - reter, 0)]:
-            os.remove(os.path.join(BACKUP_DIR, antigo))
+            os.remove(os.path.join(pasta, antigo))
             removidos.append(antigo)
 
     return {
