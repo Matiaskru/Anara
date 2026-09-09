@@ -301,14 +301,18 @@ def test_snapshot_fiscal_fica_gravado_no_item(s):
     assert item.status_fiscal == "OK"
     assert item.encargo_pct == aprox(0.016)
 
-    # SP→RJ não contribuinte: ICMS total 22% = 4% de origem + 16% de DIFAL + 2% de FECP. O
-    # PIS/COFINS efetivo do ITEM sai de 9,25% × (1 − 22%) = 7,215% — e é a carga TOTAL que
-    # entra na exclusão, não só a interestadual de 4% (que daria 8,88%).
+    # SP→RJ não contribuinte: ICMS total 22% = 4% de origem + 16% de DIFAL + 2% de FECP.
+    # O FCP fica NA base de PIS/COFINS até a contabilidade validar, então o que se exclui são
+    # 20% — e o efetivo é 9,25% × (1 − 20%) = 7,40%. O DIFAL entra na exclusão; o FCP, não.
     fiscal = json.loads(item.memoria_json)["fiscal"]
     assert fiscal["pis_cofins_nominal_pct"] == aprox(0.0925)
-    assert fiscal["pis_cofins_icms_excluido_pct"] == aprox(0.22)
-    assert fiscal["pis_cofins_pct"] == aprox(0.07215)
+    assert fiscal["pis_cofins_icms_total_pct"] == aprox(0.22)
+    assert fiscal["pis_cofins_fcp_na_base_pct"] == aprox(0.02)
+    assert fiscal["pis_cofins_icms_excluido_pct"] == aprox(0.20)
+    assert fiscal["pis_cofins_pct"] == aprox(0.074)
     assert fiscal["pis_cofins_pct"] != aprox(0.0759), "7,59% fixo não é mais a regra"
+    # e o FCP continua inteiro na carga que reduz a receita
+    assert item.icms_pct == aprox(0.22)
 
     c = s.get(Cotacao, cotacao_id)
     # O cabeçalho continua sem escalar fiscal: o snapshot dele é gravado na CRIAÇÃO da cotação,

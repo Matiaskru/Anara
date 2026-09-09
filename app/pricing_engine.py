@@ -51,6 +51,63 @@ from app.dinheiro import D, D0, ZERO, dinheiro, divide, para_float
 # ---------------------------------------------------------------------------
 # PIS/COFINS da venda — nominal × exclusão do ICMS da base
 # ---------------------------------------------------------------------------
+def icms_excluido_da_base(icms_pct, fcp_pct) -> Decimal:
+    """A parcela da carga de ICMS que reduz a base de PIS/COFINS: **o total menos o FCP**.
+
+    ## Por que o FCP fica de fora
+
+    O que a contabilidade da Indústria Química Anastacio confirmou em 09/09/2026 foi que *"o
+    percentual de 7,59% muda em função do ICMS"*. Isso estabelece a exclusão do **ICMS** —
+    próprio, interestadual e o DIFAL que a remetente suporta. **Não estabelece** o tratamento
+    do FCP/FECP, que é adicional de destinação específica e tem discussão própria.
+
+    Enquanto essa validação não vier, a política é **conservadora**: o FCP permanece na base
+    de PIS/COFINS. Manter o FCP na base produz uma alíquota efetiva **maior** — ou seja, o
+    sistema reconhece mais imposto, não menos. Se a contabilidade depois confirmar que o FCP
+    também sai da base, o efetivo cai e o preço cai; o caminho inverso teria emitido proposta
+    com imposto subestimado, que é o erro que esta correção inteira existe para não repetir.
+
+    Isto é **política operacional temporária**, não conclusão jurídica.
+
+    ## O que NÃO muda
+
+    O FCP continua entrando **integralmente no gross-up** através de `TaxRuleSet.icms_pct`:
+    ele é tributo que reduz a receita e segue reduzindo. A segregação aqui é exclusivamente
+    sobre *qual parcela da carga reduz a base de outro tributo*.
+
+    ## Como é calculado
+
+    Pelo resultado consolidado do motor fiscal, **subtraindo** o FCP que ele mesmo separou:
+
+        excluído = icms_pct − fcp_pct
+
+    Não se recompõe `interestadual + DIFAL` aqui. Recompor duplicaria a lógica fiscal e é
+    justamente como se conta o FECP do RJ duas vezes — a coluna `aliquota_interna` do RJ vale
+    22% já com o FECP dentro, e a base é 20%.
+
+    Exemplo, SP→RJ não contribuinte (vale para as duas naturezas, que repartem diferente e
+    somam o mesmo):
+
+        KTC importada   4% + 16% DIFAL + 2% FCP = 22% total → excluído 20%
+        nacional       12% +  8% DIFAL + 2% FCP = 22% total → excluído 20%
+    """
+    icms = D(icms_pct)
+    fcp = D(fcp_pct)
+    if icms is None:
+        raise ValueError(
+            "ICMS da operação não resolvido — o cenário fiscal precisa resolver antes de "
+            "formar preço.")
+    if fcp is None:
+        # O motor fiscal devolve `fcp_pct` sempre que resolve o cenário: `ZERO` onde o FCP não
+        # é ônus da Anara, e o valor cadastrado onde é — e **bloqueia** quando o FCP é material
+        # e desconhecido. Se mesmo assim chegar `None` aqui, é cenário que o motor considerou
+        # indeterminado: assumir zero excluiria o FCP da base sem saber se ele existe.
+        raise ValueError(
+            "FCP não resolvido — sem ele não se sabe qual parcela da carga de ICMS reduz a "
+            "base de PIS/COFINS. O cenário fiscal precisa resolver antes de formar preço.")
+    return max(icms - fcp, ZERO)
+
+
 def pis_cofins_efetivo(nominal_pct, icms_pct) -> Decimal:
     """Alíquota EFETIVA de PIS/COFINS sobre a receita, com o ICMS excluído da base.
 
@@ -72,14 +129,12 @@ def pis_cofins_efetivo(nominal_pct, icms_pct) -> Decimal:
         12%  → 9,25% × 0,88 = 8,14%
          7%  → 9,25% × 0,93 = 8,6025%
          4%  → 9,25% × 0,96 = 8,88%
+        20%  → 9,25% × 0,80 = 7,40%    ← RJ não contribuinte: 22% de carga menos 2% de FCP
 
     ## Qual ICMS entra aqui
 
-    O de `ResultadoFiscal.icms_pct` — a carga de ICMS que **efetivamente reduz a receita da
-    Anara**, e que o motor fiscal já resolveu por item. Isso significa que, na venda a não
-    contribuinte, o DIFAL e o FCP recolhidos pela remetente **já estão dentro** desse número e
-    portanto já participam da exclusão. Não se recompõe `interestadual + DIFAL + FCP` aqui:
-    duplicar a lógica fiscal é como se conta o FCP duas vezes.
+    O que `icms_excluido_da_base()` devolve — a carga de ICMS **menos o FCP**. Não é o
+    `ResultadoFiscal.icms_pct` cru: ver a docstring daquela função para o porquê.
 
     `EstadoFiscal.carga_final` **não** entra: ela expressa o diferencial sobre uma base
     anterior à inclusão do ICMS de destino e não é percentual da receita final.

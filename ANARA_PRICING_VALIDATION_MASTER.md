@@ -816,13 +816,13 @@ da alíquota de ICMS da operação.
 
 ### Golden
 
-| ICMS da operação | PIS/COFINS efetivo | Diferença contra os 7,59% antigos |
+| ICMS excluído da base | PIS/COFINS efetivo | Diferença contra os 7,59% antigos |
 |---|---|---|
 | 18% | **7,585%** | −0,005 p.p. |
 | 12% | **8,14%** | **+0,55 p.p.** |
 | 7% | **8,6025%** | **+1,0125 p.p.** |
 | 4% | **8,88%** | **+1,29 p.p.** |
-| 22% (RJ não contribuinte) | **7,215%** | −0,375 p.p. |
+| 20% (RJ não contribuinte: 22% de carga **menos 2% de FCP**) | **7,40%** | −0,19 p.p. |
 
 ### Por que 7,59% estava errado
 
@@ -837,17 +837,46 @@ margem-alvo de 14% entrega **12,99%** numa venda para a Bahia. A margem some no 
 
 ### Qual ICMS é excluído da base
 
-O de **`ResultadoFiscal.icms_pct`** — a carga de ICMS que efetivamente reduz a receita da
-Anara, resolvida por item pelo motor fiscal. Consequências, e as duas primeiras não são
-óbvias:
+**`ResultadoFiscal.icms_pct` menos o `fcp_pct`.** A carga de ICMS que reduz a receita da Anara,
+resolvida por item pelo motor fiscal, **descontado o FCP** — ver a seção seguinte para o
+porquê. Consequências:
 
-- na venda a **não contribuinte**, o **DIFAL** e o **FCP** recolhidos pela remetente já estão
-  dentro desse número e portanto **participam da exclusão**. SP→RJ soma 22% e o efetivo cai
-  para 7,215%: ICMS maior significa base de PIS/COFINS menor;
-- o FCP entra **uma vez só** — o motor fiscal já o consolidou. Recompor
-  `interestadual + DIFAL + FCP` fora do motor contaria o FECP do RJ em dobro;
+- na venda a **não contribuinte**, o **DIFAL** recolhido pela remetente está dentro desse
+  número e **participa da exclusão**: sai do bolso da Anara e reduz a base como qualquer ICMS.
+  SP→RJ soma 22% de carga, exclui 20% e o efetivo cai para 7,40% — ICMS maior significa base
+  de PIS/COFINS menor;
+- o FCP entra **uma vez só** na carga, e **zero vezes** na exclusão. O motor fiscal já o
+  consolidou; recompor `interestadual + DIFAL + FCP` fora dele contaria o FECP do RJ em dobro;
 - **`EstadoFiscal.carga_final` NÃO participa.** Ela expressa o diferencial sobre uma base
   anterior à inclusão do ICMS de destino e não é percentual da receita final.
+
+### O que está validado e o que não está
+
+| | Item | Situação |
+|---|---|---|
+| 🟢 | Alíquota nominal de 9,25% | **VALIDADO** — Brendo Simão, 09/09/2026 |
+| 🟢 | O ICMS é excluído da base de PIS/COFINS | **VALIDADO** — mesma fonte |
+| 🟢 | O efetivo varia por item, conforme a alíquota da operação | **VALIDADO** — mesma fonte |
+| 🟢 | O DIFAL suportado pela Anara é excluído junto | **VALIDADO** — é ICMS, e é ônus dela |
+| 🟡 | O **FCP/FECP** reduz ou não a base | **PENDENTE** — não perguntado, não respondido |
+
+**Política operacional enquanto a validação não vem:**
+
+> Enquanto não houver validação específica da contabilidade da Química Anastacio, **o FCP não
+> reduz a base de PIS/COFINS**.
+
+Isto é escolha **conservadora e temporária**, não conclusão jurídica. Manter o FCP na base
+produz alíquota efetiva **maior** — o sistema reconhece mais imposto, não menos. Se a
+contabilidade confirmar depois que o FCP também sai da base, o efetivo cai de 7,40% para
+7,215% no RJ e o preço acompanha; o caminho inverso teria emitido proposta com imposto
+subestimado, que é o erro que esta correção existe para não repetir.
+
+**Alcance da pendência:** só cenários com FCP cadastrado. Hoje isso é **apenas o RJ**, e
+apenas na venda a não contribuinte — nos demais o `fcp_pct` é zero e excluído == carga total.
+
+> 🟡 **PERGUNTA PARA A CONTABILIDADE:** o FCP/FECP também é excluído da base de PIS/COFINS,
+> como o ICMS próprio e o DIFAL? Se sim, o efetivo do RJ não contribuinte passa de 7,40% para
+> 7,215%.
 
 ### Nominal ≠ efetivo, e nenhum dos dois é o crédito de compra
 

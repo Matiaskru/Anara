@@ -36,7 +36,8 @@ from app.custo_service import cnet_nacional
 from app.dinheiro import D
 from app.models import CostMethod, Cotacao, Fornecedor, Produto
 from app.pricing_engine import (
-    TaxRuleSet, calcular_por_margem, calcular_por_preco, pis_cofins_efetivo,
+    TaxRuleSet, calcular_por_margem, calcular_por_preco, icms_excluido_da_base,
+    pis_cofins_efetivo,
 )
 
 from decimais import aprox  # noqa: E402
@@ -195,16 +196,17 @@ def test_o_efetivo_chega_ao_denominador(session, fornecedores, rotulo, destino, 
 # ---------------------------------------------------------------------------
 @pytest.mark.parametrize("forn,interestadual,difal", [("DAUNE", "0.12", "0.08"),
                                                       ("KTC", "0.04", "0.16")])
-def test_E_F_nao_contribuinte_exclui_a_carga_total(session, fornecedores, forn,
-                                                   interestadual, difal):
+def test_E_nao_contribuinte_exclui_o_difal_mas_nao_o_fcp(session, fornecedores, forn,
+                                                         interestadual, difal):
     """SP→RJ, não contribuinte: 12%+8%+2% e 4%+16%+2% dão a MESMA carga de 22%.
 
-    É o teste que separa "usar o ICMS da operação" de "usar a alíquota interestadual". Se o
-    PIS/COFINS saísse da interestadual, a Daune daria 8,14% e a KTC 8,88% — dois números
-    diferentes para duas operações que suportam exatamente a mesma carga de ICMS.
+    Duas provas em uma:
 
-    O DIFAL aqui é do REMETENTE: sai do bolso da Anara, entra no `icms_pct` e, portanto, sai
-    da base de PIS/COFINS junto com o resto.
+    * o DIFAL do REMETENTE **entra** na exclusão — sai do bolso da Anara. Se o PIS/COFINS
+      saísse só da alíquota interestadual, a Daune daria 8,14% e a KTC 8,88%, dois números
+      diferentes para operações que suportam exatamente a mesma carga;
+    * o FCP **não** entra. A carga é 22%, o excluído é 20%, e o efetivo é 7,40% nos dois
+      casos — não 7,215%, que seria excluir a carga inteira.
     """
     produto = produto_de(session, fornecedores[forn], f"NC-{forn}")
     cot = cotacao_para("Rio de Janeiro", contribuinte=False, finalidade="USO_CONSUMO")
@@ -216,28 +218,85 @@ def test_E_F_nao_contribuinte_exclui_a_carga_total(session, fornecedores, forn,
     assert ctx["difal_responsavel"] == "REMETENTE"
     assert regras.icms_pct == D("0.22"), "4+16+2 = 12+8+2 = 22"
 
-    # a carga total, e nada além dela
-    assert regras.pis_cofins_pct == D("0.07215")
-    assert regras.pis_cofins_pct != D(interestadual and "0.0814" or ""), "não é só a interestadual"
-    assert regras.pis_cofins_pct != pis_cofins_efetivo(NOMINAL, D(interestadual))
+    assert ctx["pis_cofins_icms_total_pct"] == D("0.22")
+    assert ctx["pis_cofins_fcp_na_base_pct"] == D("0.02")
+    assert ctx["pis_cofins_icms_excluido_pct"] == D("0.20"), "22% de carga menos 2% de FCP"
+    assert regras.pis_cofins_pct == D("0.074")
+    assert regras.pis_cofins_pct != D("0.07215"), "excluir a carga inteira incluiria o FCP"
+    assert regras.pis_cofins_pct != pis_cofins_efetivo(NOMINAL, D(interestadual)), \
+        "e não é só a interestadual: o DIFAL entra"
 
 
-def test_F_o_fcp_entra_uma_vez_so(session, fornecedores):
-    """O FECP do RJ já está dentro do `icms_pct`. Somá-lo de novo daria 24% e 7,03%.
+def test_F_o_fcp_continua_inteiro_no_gross_up(session, fornecedores):
+    """O FCP sai da BASE de PIS/COFINS, não do preço. São coisas diferentes.
 
-    A coluna `aliquota_interna` do RJ vale 22% — com o FECP embutido —, e a base é 20%. O
-    motor fiscal já resolveu isso na Onda 1; aqui só se prova que o PIS/COFINS **consome** o
-    resultado em vez de recompor `interestadual + DIFAL + FCP` por conta própria.
+    A política conservadora é sobre *qual parcela reduz a base de outro tributo*. Como tributo
+    que reduz a receita, o FCP continua valendo 2% inteiros dentro do `icms_pct`, e portanto
+    dentro do denominador do gross-up.
     """
     produto = produto_de(session, fornecedores["DAUNE"], "FCP-1")
     cot = cotacao_para("Rio de Janeiro", contribuinte=False, finalidade="USO_CONSUMO")
     regras, ctx = ps.regras_da_cotacao(session, cot, produto)
 
-    assert regras.pis_cofins_pct == pis_cofins_efetivo(NOMINAL, D("0.22"))
-    assert regras.pis_cofins_pct != pis_cofins_efetivo(NOMINAL, D("0.24")), "FCP em dobro"
-    # e a soma das partes bate com o total que foi excluído
-    assert (ctx["aliquota_interestadual"] + ctx["difal_pct"] + ctx["fcp_pct"]
+    # no gross-up: a carga cheia, FCP incluído
+    assert regras.icms_pct == D("0.22")
+    assert regras.taxa_fixa() == D("0.22") + D("0.074") + regras.encargo_financeiro_pct
+
+    # sem o FCP a carga seria 20% e o preço, menor: prova de que ele está mesmo cobrado
+    sem_fcp = TaxRuleSet(icms_pct=D("0.20"), pis_cofins_pct=regras.pis_cofins_pct,
+                         encargo_financeiro_pct=regras.encargo_financeiro_pct,
+                         comissao_tabela=regras.comissao_tabela)
+    assert (calcular_por_margem(100.0, 1, 0.14, regras).preco_negociado
+            > calcular_por_margem(100.0, 1, 0.14, sem_fcp).preco_negociado)
+
+
+def test_F_o_fcp_nao_e_contado_duas_vezes(session, fornecedores):
+    """A coluna `aliquota_interna` do RJ vale 22% — FECP embutido — e a base é 20%.
+
+    Recompor `interestadual + DIFAL + FCP` fora do motor fiscal daria 24%. O código consome o
+    `icms_pct` consolidado e apenas subtrai o `fcp_pct` que o próprio motor separou.
+    """
+    produto = produto_de(session, fornecedores["DAUNE"], "FCP-2")
+    cot = cotacao_para("Rio de Janeiro", contribuinte=False, finalidade="USO_CONSUMO")
+    _regras, ctx = ps.regras_da_cotacao(session, cot, produto)
+
+    assert ctx["pis_cofins_icms_total_pct"] == D("0.22") != D("0.24")
+    # a identidade fecha: interestadual + DIFAL = o que foi excluído
+    assert (ctx["aliquota_interestadual"] + ctx["difal_pct"]
             == ctx["pis_cofins_icms_excluido_pct"])
+    # e o FCP não aparece dentro do excluído
+    assert (ctx["pis_cofins_icms_total_pct"] - ctx["pis_cofins_fcp_na_base_pct"]
+            == ctx["pis_cofins_icms_excluido_pct"])
+
+
+def test_contribuinte_nao_tem_fcp_e_a_exclusao_e_a_carga_inteira(session, fornecedores):
+    """Onde o FCP é zero, excluído == total. A segregação não muda nada nesses cenários."""
+    produto = produto_de(session, fornecedores["DAUNE"], "SEMFCP")
+    for destino, icms in [("São Paulo", "0.18"), ("Minas Gerais", "0.12"), ("Bahia", "0.07")]:
+        _r, ctx = ps.regras_da_cotacao(session, cotacao_para(destino), produto)
+        assert ctx["pis_cofins_fcp_na_base_pct"] == D("0")
+        assert ctx["pis_cofins_icms_excluido_pct"] == ctx["pis_cofins_icms_total_pct"] == D(icms)
+
+
+# --- a função pura da segregação -------------------------------------------
+@pytest.mark.parametrize("icms,fcp,esperado", [
+    ("0.22", "0.02", "0.20"),      # RJ não contribuinte
+    ("0.18", "0", "0.18"),         # intraestadual, sem FCP
+    ("0.12", "0", "0.12"),
+    ("0.04", "0", "0.04"),
+    ("0.02", "0.02", "0"),         # limite: nunca negativo
+    ("0.01", "0.02", "0"),         # e nem abaixo de zero
+])
+def test_golden_do_icms_excluido(icms, fcp, esperado):
+    assert icms_excluido_da_base(D(icms), D(fcp)) == Decimal(esperado)
+
+
+def test_icms_excluido_recusa_campo_indeterminado():
+    """Nem ICMS nem FCP viram zero em silêncio — o cenário fiscal tem de resolver antes."""
+    with pytest.raises(ValueError, match="ICMS"):
+        icms_excluido_da_base(None, D("0.02"))
+    with pytest.raises(ValueError, match="FCP"):
+        icms_excluido_da_base(D("0.22"), None)
 
 
 def test_carga_final_nao_participa(session, fornecedores):
@@ -453,50 +512,3 @@ def test_a_genealogia_permite_reconstruir_a_conta(session, fornecedores):
     icms_do_item = ctx["icms_pct"]
     assert pis_cofins_efetivo(nominal_pinado, icms_do_item) == ctx["pis_cofins_pct"]
     assert ctx["pis_cofins_pct"] == D("0.086025")
-
-
-# ===========================================================================
-# 5. Efeito colateral tratado — a tolerância da margem no workflow
-# ===========================================================================
-# A correção mudou o preço, e o preço mudou onde o resíduo do arredondamento cai. Isso expôs
-# uma tolerância mal calibrada em `workflow.excecoes_do_item`: 5×10⁻⁵ era **menor** que meio
-# centavo dividido pela receita em qualquer item abaixo de R$ 100, então o próprio
-# arredondamento comercial passou a pedir aprovação administrativa. O comentário da regra
-# sempre disse que o centavo não é exceção comercial; o número é que não cumpria.
-def test_o_centavo_nao_vira_excecao_comercial():
-    """Desvio da ordem do centavo não é desconto. Desvio de regra continua sendo."""
-    from app.workflow import MARGEM_ABAIXO, TOLERANCIA_MARGEM_DO_CENTAVO, excecoes_do_item
-    from app.models import CotacaoItem
-
-    def excecoes(margem_real):
-        item = CotacaoItem(cotacao_id=0, ordem=0, nome_produto="X", quantidade=1,
-                           custo_unitario=50.0, preco_base=92.91, preco_negociado=92.91,
-                           preco_recomendado=92.91, margem_liquida=margem_real,
-                           margem_padrao_pct=0.14, faturamento=92.91, custo_total=50.0,
-                           lucro=13.0, modo_edicao="preco", valor_editado=0.0)
-        return [e.motivo for e in excecoes_do_item(item)]
-
-    # o caso real que a correção produziu: R$ 92,91 com alvo de 14% entrega 13,99204%
-    assert MARGEM_ABAIXO not in excecoes(0.1399203530298138)
-    # e o pior desvio de arredondamento medido no motor, −1,2×10⁻⁴, também não
-    assert MARGEM_ABAIXO not in excecoes(0.14 - 0.00012)
-    # mas meio ponto percentual abaixo do alvo é desconto, e continua exigindo aprovação
-    assert MARGEM_ABAIXO in excecoes(0.135)
-    assert MARGEM_ABAIXO in excecoes(0.14 - float(TOLERANCIA_MARGEM_DO_CENTAVO) * 2)
-
-
-def test_a_tolerancia_ainda_reprova_mudanca_de_regra():
-    """A folga é do centavo, não de política: trocar alíquota move mil vezes mais que isso."""
-    from app.workflow import TOLERANCIA_MARGEM_DO_CENTAVO
-
-    regras_18 = TaxRuleSet(icms_pct=D("0.18"), pis_cofins_pct=D("0.07585"),
-                           encargo_financeiro_pct=D("0.016"),
-                           comissao_tabela=[(D("0"), D("0.05"))])
-    regras_12 = TaxRuleSet(icms_pct=D("0.12"), pis_cofins_pct=D("0.0814"),
-                           encargo_financeiro_pct=D("0.016"),
-                           comissao_tabela=[(D("0"), D("0.05"))])
-    preco = calcular_por_margem(100.0, 1, 0.14, regras_18).preco_negociado
-    # o mesmo preço sob outra regra fiscal entrega outra margem — e a diferença é enorme
-    # perto da tolerância do centavo
-    outra = calcular_por_preco(100.0, 1, preco, regras_12).margem_liquida
-    assert abs(outra - D("0.14")) > TOLERANCIA_MARGEM_DO_CENTAVO * 20

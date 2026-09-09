@@ -94,7 +94,7 @@ def test_memoria_do_item_tambem_e_serializavel(session, material):
             "icms_regra", "icms_fonte", "status_fiscal", "motivo_fiscal",
             "status_pagamento", "motivo_pagamento", "encargo_label", "encargo_aviso",
             "uf_origem_fiscal", "uf_destino_fiscal", "finalidade", "origem_fiscal",
-            "difal_responsavel", "motivo_bloqueio",
+            "difal_responsavel", "motivo_bloqueio", "pis_cofins_nota",
         ), f"fiscal.{campo} virou texto: {valor!r}"
 
 

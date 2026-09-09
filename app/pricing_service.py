@@ -35,7 +35,7 @@ from app.dinheiro import D, D0, para_float
 from app.nationalization import PremissasNacionalizacao, nacionalizar
 from app.payment_terms import resolver_encargo
 from app.peso import PesoResolvido, resolver_peso
-from app.pricing_engine import TaxRuleSet, pis_cofins_efetivo
+from app.pricing_engine import TaxRuleSet, icms_excluido_da_base, pis_cofins_efetivo
 
 # Famílias com fórmula industrial demonstrada e validada pela KTC. A fronha entrou na Sessão 2
 # com a geometria do §18; o bottom sheet SEM elástico usa o motor do lençol plano. Lençol com
@@ -181,8 +181,14 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     # derivada por item pela exclusão do ICMS da base. A premissa legada `pis_cofins_pct`
     # (7,59%) NÃO é lida aqui — ela continua no banco para interpretar cotação antiga.
     pis_nominal = cfg.num(session, "pis_cofins_nominal_pct", 0.0925)
-    pis_cofins = (pis_cofins_efetivo(pis_nominal, fiscal.icms_pct)
-                  if fiscal.icms_pct is not None else None)
+    # Duas grandezas, e confundi-las foi o excesso corrigido em seguida à primeira versão
+    # desta regra: `fiscal.icms_pct` é a carga TOTAL que reduz a receita (e continua indo
+    # inteira para o gross-up); `icms_excluido` é só a parcela que reduz a BASE de
+    # PIS/COFINS, hoje sem o FCP, à espera da validação da contabilidade.
+    icms_excluido = (icms_excluido_da_base(fiscal.icms_pct, fiscal.fcp_pct)
+                     if fiscal.icms_pct is not None else None)
+    pis_cofins = (pis_cofins_efetivo(pis_nominal, icms_excluido)
+                  if icms_excluido is not None else None)
     comissao = cfg.tabela_comissao(session)
 
     contexto = {
@@ -197,12 +203,16 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
         "consumidor_final": fiscal.consumidor_final,
         "difal_pct": fiscal.difal_pct, "difal_responsavel": fiscal.difal_responsavel,
         "difal_entra_na_margem": fiscal.difal_entra_na_margem,
-        # Três campos, três significados. `pis_cofins_pct` continua sendo o que incide sobre a
-        # receita — muda só a forma de chegar nele —, e os outros dois deixam a conta aberta na
-        # memória: nominal, ICMS excluído da base, efetivo.
+        # A conta aberta na memória: nominal, carga total de ICMS, FCP mantido na base, a
+        # parcela efetivamente excluída e o resultado. `pis_cofins_pct` continua sendo o que
+        # incide sobre a receita — muda só a forma de chegar nele.
         "pis_cofins_nominal_pct": pis_nominal,
-        "pis_cofins_icms_excluido_pct": fiscal.icms_pct,
+        "pis_cofins_icms_total_pct": fiscal.icms_pct,
+        "pis_cofins_fcp_na_base_pct": fiscal.fcp_pct,
+        "pis_cofins_icms_excluido_pct": icms_excluido,
         "pis_cofins_pct": pis_cofins,
+        "pis_cofins_nota": ("FCP mantido na base de PIS/COFINS até validação específica da "
+                            "contabilidade."),
         "encargo_pct": encargo.pct, "encargo_label": encargo.label,
         "encargo_confirmado": encargo.confirmado, "encargo_aviso": encargo.aviso,
         "status_pagamento": encargo.status, "motivo_pagamento": encargo.motivo,

@@ -131,15 +131,34 @@ function renderMemoria(m) {
   com.push(linha("Custo NET", brlM(custo.net_brl)));
   com.push(linha("ICMS da venda", pctM(fiscal.icms_pct), fiscal.icms_regra));
   // PIS/COFINS: a conta fica aberta porque o efetivo depende do ICMS deste item, e ver só o
-  // resultado ("8,88%") não explica por que o item vizinho tem outro número.
+  // resultado ("8,88%") não explica por que o item vizinho tem outro número. O FCP aparece em
+  // linha própria: ele está na carga total mas NÃO reduz a base — enquanto a contabilidade
+  // não validar, mostrar "22% excluído" seria afirmar o que ainda não se sabe.
+  const temPis = fiscal.pis_cofins_nominal_pct !== null
+    && fiscal.pis_cofins_nominal_pct !== undefined
+    && fiscal.pis_cofins_icms_excluido_pct !== null
+    && fiscal.pis_cofins_icms_excluido_pct !== undefined;
+  if (temPis) {
+    com.push(linha("PIS/COFINS nominal", pctM(fiscal.pis_cofins_nominal_pct, 2)));
+    com.push(linha("ICMS total da operação", pctM(fiscal.pis_cofins_icms_total_pct, 2)));
+    if (fiscal.pis_cofins_fcp_na_base_pct) {
+      com.push(linha("FCP", pctM(fiscal.pis_cofins_fcp_na_base_pct, 2),
+                     "cobrado no preço, mas mantido na base de PIS/COFINS"));
+    }
+    com.push(linha("ICMS/DIFAL excluído da base do PIS/COFINS",
+                   pctM(fiscal.pis_cofins_icms_excluido_pct, 2),
+                   fiscal.pis_cofins_fcp_na_base_pct
+                   ? `${pctM(fiscal.pis_cofins_icms_total_pct, 2)} de carga − `
+                     + `${pctM(fiscal.pis_cofins_fcp_na_base_pct, 2)} de FCP`
+                   : ""));
+  }
   com.push(linha("PIS/COFINS efetivo", pctM(fiscal.pis_cofins_pct, 4),
-                 fiscal.pis_cofins_nominal_pct !== null
-                 && fiscal.pis_cofins_nominal_pct !== undefined
-                 && fiscal.pis_cofins_icms_excluido_pct !== null
-                 && fiscal.pis_cofins_icms_excluido_pct !== undefined
-                 ? `nominal ${pctM(fiscal.pis_cofins_nominal_pct, 2)} × (1 − ICMS `
-                   + `${pctM(fiscal.pis_cofins_icms_excluido_pct, 2)} excluído da base)`
-                 : ""));
+                 temPis ? `nominal ${pctM(fiscal.pis_cofins_nominal_pct, 2)} × (1 − `
+                          + `${pctM(fiscal.pis_cofins_icms_excluido_pct, 2)})`
+                        : ""));
+  if (temPis && fiscal.pis_cofins_fcp_na_base_pct && fiscal.pis_cofins_nota) {
+    com.push(linha("", "", fiscal.pis_cofins_nota));
+  }
   com.push(linha("Encargo financeiro", pctM(fiscal.encargo_pct), fiscal.encargo_label));
   if (comercial) {
     com.push(linha("Comissão", brlM(comercial.comissao)));

@@ -839,14 +839,29 @@ Vira bloqueio só com `exige_confirmacao`. Situações: `APLICA`, `NAO_APLICA`,
 denominador é o **efetivo**, calculado por item em `pricing_engine.pis_cofins_efetivo()`:
 
 ```
-efetivo = nominal × (1 − ResultadoFiscal.icms_pct)
+icms_excluido = ResultadoFiscal.icms_pct − ResultadoFiscal.fcp_pct     (nunca negativo)
+efetivo       = nominal × (1 − icms_excluido)
 ```
 
 O ICMS é excluído da base de PIS/COFINS, então o efetivo depende da alíquota da operação —
 7,585% em ICMS 18%, 8,88% em 4%. Como o ICMS é resolvido por item desde a Onda 1, o
 PIS/COFINS também é: uma cotação com KTC e Daune para o mesmo destino carrega duas alíquotas
-efetivas diferentes. Na venda a não contribuinte o DIFAL e o FCP suportados pela Anara já
-estão dentro do `icms_pct` e participam da exclusão; `EstadoFiscal.carga_final` não participa.
+efetivas diferentes.
+
+**Duas grandezas, e confundi-las foi o excesso corrigido logo depois de `549d407`:**
+
+| Grandeza | O que é | Onde entra |
+|---|---|---|
+| `ResultadoFiscal.icms_pct` | carga **total** de ICMS + FCP que reduz a receita | denominador do gross-up, inteira |
+| `icms_excluido_da_base()` | a parcela que reduz a **base de PIS/COFINS** | só no cálculo do efetivo |
+
+Na venda a não contribuinte o **DIFAL** suportado pela Anara está dentro do `icms_pct` e
+**participa da exclusão**. O **FCP não**: o que a contabilidade validou foi a exclusão do
+ICMS, e o tratamento do FCP tem discussão própria. Enquanto não houver validação específica,
+a política é conservadora — o FCP continua **cobrado integralmente no gross-up** e **mantido
+na base** de PIS/COFINS. SP→RJ não contribuinte: carga 22%, excluído 20%, efetivo **7,40%**.
+
+`EstadoFiscal.carga_final` não participa de nenhuma das duas.
 
 A premissa antiga `pis_cofins_pct = 0,0759` continua no banco, vigente e consultável, para
 interpretar cotação formada antes de 09/09/2026 — **nenhum caminho de precificação a lê**.
