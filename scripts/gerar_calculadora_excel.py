@@ -123,7 +123,9 @@ p = DADOS["premissas"]
 PARAMS = [("fx", "Câmbio USD/BRL", p.get("fx_usd_brl", 5.11)),
           ("frete", "Frete internacional US$/kg", p.get("frete_int_usd_kg", .516)),
           ("desp", "Outras despesas US$/un", p.get("outras_desp_usd_un", .2487532709)),
-          ("pis", "PIS/COFINS", p.get("pis_cofins_pct", .0759)),
+          # NOMINAL. O efetivo é derivado na própria planilha, célula a célula, a partir do
+          # ICMS já calculado — a fórmula é a mesma do motor: nominal × (1 − ICMS).
+          ("pis", "PIS/COFINS nominal", p.get("pis_cofins_nominal_pct", .0925)),
           ("shr_cvc", "Encolhimento CVC", .03), ("shr_cot", "Encolhimento algodão", .05),
           ("waste", "Waste", .03), ("qual", "Perda de 2ª qualidade", .01),
           ("mktc", "Margem da KTC", .15)]
@@ -409,7 +411,10 @@ m("icms", "ICMS da venda",
   f'IF({C("contribuinte")}="SIM",INDEX(FISCAL!$B${EST_INI}:$B${EST_FIM},'
   f'MATCH({C("destino")},{EST_A},0)),INDEX(FISCAL!$D${EST_INI}:$D${EST_FIM},'
   f'MATCH({C("destino")},{EST_A},0)))),0)', PCT2)
-m("pis", "PIS/COFINS", f'={PAR["pis"]}', PCT2)
+# O ICMS é excluído da base de PIS/COFINS, então o efetivo depende da alíquota da operação —
+# e a célula do ICMS logo acima já é essa alíquota. Constante aqui era o erro corrigido em
+# 09/09/2026: 7,59% é só o caso de ICMS 18%.
+m("pis", "PIS/COFINS efetivo", f'={PAR["pis"]}*(1-{V("icms")})', PCT2)
 m("encargo", "Encargo do prazo",
   f'=IFERROR(INDEX(PAGAMENTO!$B${PAG_INI}:$B${PAG_FIM},MATCH({C("pagamento")},{PAG_A},0)),0)',
   PCT2)

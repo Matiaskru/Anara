@@ -49,8 +49,21 @@ PREMISSAS = [
          descricao="Peso de referência do embarque", fonte=FONTE_PLANILHA),
     dict(chave="outras_desp_usd_un", valor_num=0.2487532709, unidade="USD/un",
          descricao="Outras despesas de nacionalização por unidade", fonte=FONTE_PLANILHA),
+    dict(chave="pis_cofins_nominal_pct", valor_num=0.0925, unidade="%",
+         descricao="PIS/COFINS nominal da venda, antes da exclusão do ICMS da base. O "
+                   "percentual efetivo sobre a receita é calculado por item: "
+                   "nominal x (1 - ICMS da operação).",
+         fonte="Brendo Simão — Contabilidade Indústria Química Anastacio — 09/09/2026 — "
+               "planilha \"Fator Cálculo Exclusão ICMS .xlsx\"",
+         notas="PIS 1,65% + COFINS 7,60%. Não editar como se fosse a alíquota efetiva: "
+               "9,25% nunca incide cheio sobre o faturamento."),
+    # LEGADO. Era o efetivo fixo da metodologia anterior — na prática, a aproximação do cenário
+    # de ICMS 18% (7,585%). Continua semeada e vigente porque cotações antigas a pinaram e
+    # precisam continuar interpretáveis; nenhuma precificação nova a lê.
     dict(chave="pis_cofins_pct", valor_num=0.0759, unidade="%",
-         descricao="PIS/COFINS sobre a venda", fonte=FONTE_PLANILHA),
+         descricao="LEGADO — PIS/COFINS efetivo fixo da metodologia anterior (até 09/09/2026). "
+                   "Não alimenta precificação nova: ver pis_cofins_nominal_pct.",
+         fonte=FONTE_PLANILHA),
     # A premissa `icms_fallback_pct` foi APOSENTADA na Onda 1: cenário fiscal que não se
     # resolve vira REVIEW_REQUIRED, não vira 18%. A linha some da semeadura; bases antigas que
     # já a têm continuam com ela guardada, sem efeito — nenhum código a lê mais.

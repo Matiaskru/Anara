@@ -160,7 +160,10 @@ def test_item_entra_com_a_margem_padrao_do_produto(s):
 
     decor = add_item(s, cotacao_id, 3, quantidade=5)
     assert decor["margem_padrao_pct"] == aprox(0.14)
-    assert decor["margem_liquida"] == aprox(0.14, abs=1e-6)
+    # `MARGEM_DO_CENTAVO`, como nas demais linhas deste arquivo: o `1e-6` de antes era mais
+    # apertado que meio centavo dividido pela receita e só passava porque, com a alíquota fixa
+    # de 7,59%, o resíduo do arredondamento caía do lado positivo neste item.
+    assert decor["margem_liquida"] == aprox(0.14, abs=MARGEM_DO_CENTAVO)
 
 
 def test_override_de_margem_guarda_padrao_e_negociada(s):
@@ -298,8 +301,21 @@ def test_snapshot_fiscal_fica_gravado_no_item(s):
     assert item.status_fiscal == "OK"
     assert item.encargo_pct == aprox(0.016)
 
+    # SP→RJ não contribuinte: ICMS total 22% = 4% de origem + 16% de DIFAL + 2% de FECP. O
+    # PIS/COFINS efetivo do ITEM sai de 9,25% × (1 − 22%) = 7,215% — e é a carga TOTAL que
+    # entra na exclusão, não só a interestadual de 4% (que daria 8,88%).
+    fiscal = json.loads(item.memoria_json)["fiscal"]
+    assert fiscal["pis_cofins_nominal_pct"] == aprox(0.0925)
+    assert fiscal["pis_cofins_icms_excluido_pct"] == aprox(0.22)
+    assert fiscal["pis_cofins_pct"] == aprox(0.07215)
+    assert fiscal["pis_cofins_pct"] != aprox(0.0759), "7,59% fixo não é mais a regra"
+
     c = s.get(Cotacao, cotacao_id)
-    assert c.pis_cofins_pct == aprox(0.0759)
+    # O cabeçalho continua sem escalar fiscal: o snapshot dele é gravado na CRIAÇÃO da cotação,
+    # antes de existir item, e sem item não há cenário fiscal resolvido. `icms_aplicado` já era
+    # `None` aqui; o PIS/COFINS agora acompanha, em vez de exibir uma constante que ninguém
+    # aplicou. Os dois andam juntos — é essa a invariante.
+    assert c.icms_aplicado is None and c.pis_cofins_pct is None
     assert c.encargo_financeiro_pct == aprox(0.016)
 
 

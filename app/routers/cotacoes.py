@@ -23,7 +23,7 @@ from app.models import (
 )
 from app.pdf_bridge import gerar_pdf_para_cotacao
 from app.pricing_engine import (
-    TaxRuleSet, calcular_por_margem, calcular_por_markup, calcular_por_preco,
+    TaxRuleSet, calcular_por_margem, calcular_por_markup, calcular_por_preco, pis_cofins_efetivo,
 )
 from app.templating import pagina_de_erro, templates
 from app import rotulos
@@ -369,7 +369,14 @@ def _gravar_snapshot_fiscal(session: Session, cotacao: Cotacao):
     else:
         cotacao.icms_aplicado = contexto.get("icms_pct")
         cotacao.icms_regra = contexto.get("icms_regra") or contexto.get("motivo_fiscal")
-    cotacao.pis_cofins_pct = contexto["pis_cofins_pct"]
+    # PIS/COFINS acompanha o ICMS: desde 09/09/2026 o efetivo é `nominal × (1 − ICMS)`, então
+    # ele é **por item** exatamente na medida em que o ICMS é. Este campo de cabeçalho só pode
+    # dizer a verdade quando os itens concordam — e é o `icms_aplicado` acima que já respondeu
+    # se concordam. Cotação mista fica com `None`, como o ICMS: um escalar aqui seria a taxa de
+    # um item vendida como se fosse a de todos.
+    cotacao.pis_cofins_pct = (
+        para_float(pis_cofins_efetivo(contexto["pis_cofins_nominal_pct"], cotacao.icms_aplicado))
+        if cotacao.icms_aplicado is not None else None)
     cotacao.encargo_financeiro_pct = contexto["encargo_pct"]
     return _regras, contexto
 

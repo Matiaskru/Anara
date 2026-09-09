@@ -120,6 +120,25 @@ FRETE_BLOQUEIA = {"FRETE_A_COTAR", "FRETE_REVIEW_REQUIRED", "FRETE_ICMS_REVIEW_R
 # Motivos estruturados de exceção comercial (§20). Texto livre nunca é a fonte da semântica.
 PRECO_ABAIXO = "PRECO_ABAIXO_RECOMENDADO"
 MARGEM_ABAIXO = "MARGEM_ABAIXO_ALVO"
+
+#: Quanto a margem realizada pode ficar abaixo da alvo sem que isso seja **exceção comercial**.
+#:
+#: O centavo move a margem, e isso é aritmética da Sessão 3B, não desconto. O que o resíduo
+#: absorve não é só o arredondamento do preço: impostos, comissão e as duas parcelas de frete
+#: são quantizados **cada um** sobre o preço já comercial, e o lucro fecha a linha por
+#: diferença. O desvio possível é da ordem de `n × meio centavo ÷ receita`, e cresce quando a
+#: receita é pequena.
+#:
+#: Medido no motor, alvo de 14% e ICMS 18%, variando só o custo: item de R$ 46 de receita
+#: desvia −1,2×10⁻⁴; o de R$ 18, +6,5×10⁻⁵. O valor anterior — 5×10⁻⁵ — era **menor que meio
+#: centavo dividido pela receita** em qualquer item abaixo de R$ 100, ou seja, não cumpria o
+#: que a própria regra dizia cumprir: chamava o aprovador para autorizar o arredondamento.
+#:
+#: 5×10⁻⁴ cobre o pior caso medido com folga de uma ordem de grandeza e continua reprovando
+#: qualquer mudança de REGRA — trocar faixa de comissão, alíquota ou encargo move a margem em
+#: pontos percentuais, mil vezes mais do que isto. É o mesmo raciocínio (e o mesmo número) que
+#: `tests/decimais.py::MARGEM_DO_CENTAVO` já usava do lado dos testes.
+TOLERANCIA_MARGEM_DO_CENTAVO = D("0.0005")
 PREMISSA_VELHA = "PREMISSA_DESATUALIZADA_MANTIDA"
 OUTRA_EXCECAO = "OUTRA_EXCECAO_COMERCIAL"
 
@@ -239,9 +258,7 @@ def excecoes_do_item(item) -> List[Excecao]:
     alvo = D(item.margem_padrao_pct)
     real = D(item.margem_liquida)
     if alvo is not None and real is not None and item.custo_unitario:
-        # tolerância de meio ponto-base: o centavo comercial move a margem, e isso não é
-        # exceção comercial — é o arredondamento da Sessão 3B.
-        if real < alvo - D("0.00005"):
+        if real < alvo - TOLERANCIA_MARGEM_DO_CENTAVO:
             achados.append(Excecao(
                 motivo=MARGEM_ABAIXO, escopo=rotulo,
                 detalhe=(f"Margem real de {real * 100:.2f}% contra alvo de "

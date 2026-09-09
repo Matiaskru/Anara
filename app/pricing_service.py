@@ -35,7 +35,7 @@ from app.dinheiro import D, D0, para_float
 from app.nationalization import PremissasNacionalizacao, nacionalizar
 from app.payment_terms import resolver_encargo
 from app.peso import PesoResolvido, resolver_peso
-from app.pricing_engine import TaxRuleSet
+from app.pricing_engine import TaxRuleSet, pis_cofins_efetivo
 
 # Famílias com fórmula industrial demonstrada e validada pela KTC. A fronha entrou na Sessão 2
 # com a geometria do §18; o bottom sheet SEM elástico usa o motor do lençol plano. Lençol com
@@ -177,7 +177,12 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     condicoes = session.exec(select(CondicaoPagamento)).all()
     encargo = resolver_encargo(condicoes, getattr(cotacao, "condicao_pagamento", None))
     condicao_usada = _condicao_vigente(condicoes, getattr(cotacao, "condicao_pagamento", None))
-    pis_cofins = cfg.num(session, "pis_cofins_pct", 0.0759)
+    # PIS/COFINS: a premissa cadastrada é a NOMINAL. O que entra no denominador é a EFETIVA,
+    # derivada por item pela exclusão do ICMS da base. A premissa legada `pis_cofins_pct`
+    # (7,59%) NÃO é lida aqui — ela continua no banco para interpretar cotação antiga.
+    pis_nominal = cfg.num(session, "pis_cofins_nominal_pct", 0.0925)
+    pis_cofins = (pis_cofins_efetivo(pis_nominal, fiscal.icms_pct)
+                  if fiscal.icms_pct is not None else None)
     comissao = cfg.tabela_comissao(session)
 
     contexto = {
@@ -192,6 +197,11 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
         "consumidor_final": fiscal.consumidor_final,
         "difal_pct": fiscal.difal_pct, "difal_responsavel": fiscal.difal_responsavel,
         "difal_entra_na_margem": fiscal.difal_entra_na_margem,
+        # Três campos, três significados. `pis_cofins_pct` continua sendo o que incide sobre a
+        # receita — muda só a forma de chegar nele —, e os outros dois deixam a conta aberta na
+        # memória: nominal, ICMS excluído da base, efetivo.
+        "pis_cofins_nominal_pct": pis_nominal,
+        "pis_cofins_icms_excluido_pct": fiscal.icms_pct,
         "pis_cofins_pct": pis_cofins,
         "encargo_pct": encargo.pct, "encargo_label": encargo.label,
         "encargo_confirmado": encargo.confirmado, "encargo_aviso": encargo.aviso,
@@ -389,7 +399,13 @@ def calcular_exw(session: Session, produto: Produto):
 # ---------------------------------------------------------------------------
 #: As premissas versionadas que participam da formação do preço e precisam ficar **pinadas**
 #: no item — não só pelo valor, mas pela identidade da versão que produziu aquele valor.
-CHAVES_PINADAS = ("fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un", "pis_cofins_pct")
+#:
+#: `pis_cofins_nominal_pct` substituiu `pis_cofins_pct` aqui em 09/09/2026: o que forma o preço
+#: novo é a nominal, e o efetivo é DERIVADO dela com o `icms_pct` do próprio item — que já está
+#: congelado no snapshot fiscal da linha. Pinar a legada continuaria prendendo a genealogia a
+#: uma premissa que não alimenta mais cálculo nenhum. Itens antigos mantêm o pino que têm.
+CHAVES_PINADAS = ("fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un",
+                  "pis_cofins_nominal_pct")
 
 
 def pinar_premissas(session: Session, ref_data=None) -> dict:

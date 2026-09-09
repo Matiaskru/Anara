@@ -970,7 +970,10 @@ def test_item_pina_a_versao_exata_de_custo(session, daune, ator):
     assert item.margem_regra_id is not None or item.margem_padrao_pct is not None
     assert item.condicao_pagamento_id is not None
     pinos = json.loads(item.premissas_pinadas)
-    assert "pis_cofins_pct" in pinos and pinos["pis_cofins_pct"]["premissa_id"]
+    # A premissa que forma o preço novo é a NOMINAL; o efetivo é derivado dela com o `icms_pct`
+    # do próprio item, que o snapshot fiscal da linha já congela.
+    assert "pis_cofins_nominal_pct" in pinos and pinos["pis_cofins_nominal_pct"]["premissa_id"]
+    assert "pis_cofins_pct" not in pinos, "a legada não prende mais genealogia nenhuma"
 
 
 def test_p0_versao_retroativa_nao_reescreve_a_genealogia(session, daune, ator):
@@ -1014,26 +1017,26 @@ def test_pinning_sobrevive_a_mudanca_de_premissa_global(session, daune, ator):
     """FX novo não reescreve qual versão de premissa formou a cotação de ontem."""
     x = novo_produto(session, daune, "PIN-FX", custo=100.0)
     versionar(session, x, "100.00", fonte="V1", ator=ator)
-    cfg.definir(session, "pis_cofins_pct", valor_num=0.0759, fonte="baseline")
+    cfg.definir(session, "pis_cofins_nominal_pct", valor_num=0.0925, fonte="baseline")
     session.commit()
 
     cot = _nova_cotacao(session, "PIN-0003")
     item = _montar_item(session, cot, x, RequestFalsa(_novo_usuario("ADMIN")))
-    pinado = json.loads(item.premissas_pinadas)["pis_cofins_pct"]
+    pinado = json.loads(item.premissas_pinadas)["pis_cofins_nominal_pct"]
 
-    prop = adm.preview_premissa(session, "pis_cofins_pct", valor_num="0.08",
+    prop = adm.preview_premissa(session, "pis_cofins_nominal_pct", valor_num="0.08",
                                 fonte="mudança de regime")
-    adm.aplicar_premissa(session, "pis_cofins_pct", prop, ator=ator, valor_num=0.08,
+    adm.aplicar_premissa(session, "pis_cofins_nominal_pct", prop, ator=ator, valor_num=0.08,
                          fonte="mudança de regime")
     session.commit()
 
     # a premissa vigente mudou, o pino do item não
-    assert D(cfg.num(session, "pis_cofins_pct")) == D("0.08")
+    assert D(cfg.num(session, "pis_cofins_nominal_pct")) == D("0.08")
     session.refresh(item)
-    assert json.loads(item.premissas_pinadas)["pis_cofins_pct"] == pinado
-    assert D(pinado["valor"]) == D("0.0759")
+    assert json.loads(item.premissas_pinadas)["pis_cofins_nominal_pct"] == pinado
+    assert D(pinado["valor"]) == D("0.0925")
     # restaura para não contaminar as demais suítes
-    cfg.definir(session, "pis_cofins_pct", valor_num=0.0759, fonte="restauro do teste")
+    cfg.definir(session, "pis_cofins_nominal_pct", valor_num=0.0925, fonte="restauro do teste")
     session.commit()
 
 

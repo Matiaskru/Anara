@@ -382,6 +382,7 @@ ALCANCE_PREMISSA = {
     "fx_usd_brl": "todo produto importado (KTC), via nacionalização",
     "frete_int_usd_kg": "todo produto importado (KTC), via nacionalização",
     "outras_desp_usd_un": "todo produto importado (KTC), via nacionalização",
+    "pis_cofins_nominal_pct": "TODOS os produtos, em qualquer cotação",
     "pis_cofins_pct": "TODOS os produtos, em qualquer cotação",
 }
 
@@ -773,7 +774,8 @@ ROTULO_PREMISSA = {
     "fx_usd_brl": "Câmbio do dólar",
     "frete_int_usd_kg": "Frete internacional",
     "outras_desp_usd_un": "Outras despesas de importação",
-    "pis_cofins_pct": "PIS/COFINS",
+    "pis_cofins_nominal_pct": "PIS/COFINS nominal da venda",
+    "pis_cofins_pct": "PIS/COFINS (legado)",
 }
 
 

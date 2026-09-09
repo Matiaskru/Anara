@@ -48,6 +48,61 @@ from typing import List, Optional, Tuple
 from app.dinheiro import D, D0, ZERO, dinheiro, divide, para_float
 
 
+# ---------------------------------------------------------------------------
+# PIS/COFINS da venda — nominal × exclusão do ICMS da base
+# ---------------------------------------------------------------------------
+def pis_cofins_efetivo(nominal_pct, icms_pct) -> Decimal:
+    """Alíquota EFETIVA de PIS/COFINS sobre a receita, com o ICMS excluído da base.
+
+        efetivo = nominal × (1 − ICMS da operação)
+
+    O ICMS é excluído da base de cálculo de PIS/COFINS, então o percentual efetivo **depende
+    da alíquota de ICMS da operação** — não é constante. Confirmado pela contabilidade da
+    Indústria Química Anastacio (Brendo Simão, 09/09/2026), com a planilha
+    "Fator Cálculo Exclusão ICMS .xlsx" como evidência.
+
+    Os 7,59% que o sistema usava como constante global eram apenas a aproximação do cenário
+    de ICMS 18% (7,585%). Aplicá-los a uma venda interestadual — onde o ICMS cai para 12%, 7%
+    ou 4% — subestimava o encargo em até 1,29 ponto percentual.
+
+    É **fórmula, não tabela**: qualquer alíquota de ICMS resolve, inclusive as que ainda não
+    existem no cadastro.
+
+        18%  → 9,25% × 0,82 = 7,585%
+        12%  → 9,25% × 0,88 = 8,14%
+         7%  → 9,25% × 0,93 = 8,6025%
+         4%  → 9,25% × 0,96 = 8,88%
+
+    ## Qual ICMS entra aqui
+
+    O de `ResultadoFiscal.icms_pct` — a carga de ICMS que **efetivamente reduz a receita da
+    Anara**, e que o motor fiscal já resolveu por item. Isso significa que, na venda a não
+    contribuinte, o DIFAL e o FCP recolhidos pela remetente **já estão dentro** desse número e
+    portanto já participam da exclusão. Não se recompõe `interestadual + DIFAL + FCP` aqui:
+    duplicar a lógica fiscal é como se conta o FCP duas vezes.
+
+    `EstadoFiscal.carga_final` **não** entra: ela expressa o diferencial sobre uma base
+    anterior à inclusão do ICMS de destino e não é percentual da receita final.
+
+    ## Precisão
+
+    Nada é quantizado: o resultado é uma alíquota, não dinheiro, e alíquota arredondada no meio
+    da cadeia é exatamente o erro que 7,59% representava. `Decimal` puro, 34 dígitos, até o
+    denominador do gross-up.
+    """
+    nominal = D(nominal_pct)
+    icms = D(icms_pct)
+    if nominal is None:
+        raise ValueError("PIS/COFINS nominal ausente — premissa econômica não se inventa.")
+    if icms is None:
+        # Sem ICMS resolvido não existe efetivo. Devolver o nominal aqui seria assumir ICMS
+        # zero, que é justamente o fallback silencioso que o projeto proíbe.
+        raise ValueError(
+            "ICMS da operação não resolvido — sem ele não há PIS/COFINS efetivo. "
+            "O cenário fiscal precisa resolver antes de formar preço.")
+    return nominal * (D("1") - icms)
+
+
 @dataclass
 class TaxRuleSet:
     icms_pct: Decimal

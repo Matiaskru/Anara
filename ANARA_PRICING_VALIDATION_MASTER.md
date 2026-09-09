@@ -84,7 +84,8 @@ Toda premissa vigente que altera preço, direta ou indiretamente.
 | `frete_int_referencia_usd` | 645 | US$ | 28/08/2026 | idem | origem do 0,516 | — | Logística | 🟡 |
 | `frete_int_referencia_kg` | 1.250 | kg | 28/08/2026 | idem | origem do 0,516 | — | Logística | 🟡 |
 | `outras_desp_usd_un` | **0,2487532709** | US$/un | 28/08/2026 | idem | soma ao NET USD | KTC | Financeiro | 🟡 |
-| `pis_cofins_pct` | **7,59%** | fração | 28/08/2026 | idem | denominador do preço | todos | Fiscal | 🔵 |
+| `pis_cofins_nominal_pct` | **9,25%** | fração | 09/09/2026 | *Brendo Simão — Contabilidade Química Anastacio, 09/09/2026 · planilha "Fator Cálculo Exclusão ICMS .xlsx"* | base do PIS/COFINS **efetivo**, derivado por item | todos | Fiscal | 🟢 |
+| `pis_cofins_pct` | 7,59% | fração | 28/08/2026 | idem | **nenhum** — efetivo fixo da metodologia anterior | — | — | ⬛ legado |
 | `comissao_tabela` | 6 faixas, 5%→10% | — | 28/08/2026 | idem | denominador do preço | todos | Diretoria | 🟡 |
 | `validade_dias` | 5 | dias | 28/08/2026 | *Premissas do site de cotação* | validade da proposta | — | Comercial | 🟢 |
 | `fiscal_uf_origem_padrao` | **SP** | UF | 03/09/2026 | *Decisões de 03/09/2026* | origem fiscal quando não há outra | todos | Fiscal | 🔵 |
@@ -800,19 +801,67 @@ encontrada. Não bloqueia.
 
 # 18. PIS/COFINS da venda
 
+**Corrigido em 09/09/2026.** Até essa data o sistema aplicava **7,59% fixos** a toda venda.
+Não é constante: o ICMS é excluído da base de PIS/COFINS, então o percentual efetivo depende
+da alíquota de ICMS da operação.
+
 | | |
 |---|---|
-| Alíquota vigente | **7,59%** |
-| Desde | 28/08/2026 |
-| Fonte | *Sistema de preços Anara novo.xlsx · 05_Premissas* |
-| Onde entra | **denominador** do gross-up, em toda venda |
+| Alíquota **nominal** | **9,25%** (PIS 1,65% + COFINS 7,60%) |
+| Alíquota **efetiva** | `9,25% × (1 − ICMS da operação)` |
+| Desde | 09/09/2026 |
+| Fonte | Brendo Simão — Contabilidade da Indústria Química Anastacio, 09/09/2026 · planilha *"Fator Cálculo Exclusão ICMS .xlsx"* |
+| Onde entra | o **efetivo** vai ao denominador do gross-up, calculado **por item** |
+| Premissa versionada | `pis_cofins_nominal_pct = 0,0925` |
 
-**Diferença dos créditos de compra:** os 9,25% da Daune são PIS/COFINS que a Anara
-**recupera** ao comprar. Os 7,59% são o que ela **paga** ao vender. Não se compensam dentro
-do sistema — cada um entra na sua etapa.
+### Golden
 
-> 🔵 **VALIDAR COM FISCAL:** 7,59% sugere regime não cumulativo com alguma redução (a
-> alíquota cheia é 9,25%). **NÃO CONFIRMADO** qual é a base dessa alíquota.
+| ICMS da operação | PIS/COFINS efetivo | Diferença contra os 7,59% antigos |
+|---|---|---|
+| 18% | **7,585%** | −0,005 p.p. |
+| 12% | **8,14%** | **+0,55 p.p.** |
+| 7% | **8,6025%** | **+1,0125 p.p.** |
+| 4% | **8,88%** | **+1,29 p.p.** |
+| 22% (RJ não contribuinte) | **7,215%** | −0,375 p.p. |
+
+### Por que 7,59% estava errado
+
+7,59% é a aproximação do cenário de ICMS 18% — 7,585%. Como regra fixa, subestimava o encargo
+em **toda venda interestadual**, que é justamente onde a alíquota cai para 12%, 7% ou 4%.
+Quanto menor o ICMS, maior o erro. Em ICMS 4% o encargo real é 8,88% contra os 7,59%
+aplicados: **1,29 ponto percentual** de imposto a menos no denominador, e portanto preço
+menor do que o necessário para entregar a margem-alvo.
+
+Medido no catálogo real, mantendo o preço antigo com o encargo verdadeiro: um SKU Daune com
+margem-alvo de 14% entrega **12,99%** numa venda para a Bahia. A margem some no imposto.
+
+### Qual ICMS é excluído da base
+
+O de **`ResultadoFiscal.icms_pct`** — a carga de ICMS que efetivamente reduz a receita da
+Anara, resolvida por item pelo motor fiscal. Consequências, e as duas primeiras não são
+óbvias:
+
+- na venda a **não contribuinte**, o **DIFAL** e o **FCP** recolhidos pela remetente já estão
+  dentro desse número e portanto **participam da exclusão**. SP→RJ soma 22% e o efetivo cai
+  para 7,215%: ICMS maior significa base de PIS/COFINS menor;
+- o FCP entra **uma vez só** — o motor fiscal já o consolidou. Recompor
+  `interestadual + DIFAL + FCP` fora do motor contaria o FECP do RJ em dobro;
+- **`EstadoFiscal.carga_final` NÃO participa.** Ela expressa o diferencial sobre uma base
+  anterior à inclusão do ICMS de destino e não é percentual da receita final.
+
+### Nominal ≠ efetivo, e nenhum dos dois é o crédito de compra
+
+Três números de 9,25% e 7,59% circulam pelo sistema e **não se somam**:
+
+| Número | O que é | Onde vive |
+|---|---|---|
+| **9,25% nominal da venda** | base do cálculo do efetivo; **nunca** incide cheio sobre o faturamento | `pis_cofins_nominal_pct` |
+| **7,585%–8,88% efetivo** | o que de fato reduz a receita, por item | derivado, no denominador |
+| **9,25% de crédito de compra** | o que a Anara **recupera** ao comprar da Daune | `DAUNE_PIS_COFINS_CREDITO` |
+| 7,59% legado | efetivo fixo da metodologia anterior | `pis_cofins_pct`, só histórico |
+
+O crédito de compra **não mudou** e não tem relação com esta correção — a exclusão do ICMS já
+acontece na base dele (`bruto − ICMS`), e a alíquota aplicada ali é a cheia.
 
 ---
 
@@ -1064,7 +1113,7 @@ margem =  lucro ÷ faturamento
 | **CF** | custo fixo do embarque rateado ao item | numerador |
 | **E (markup)** | alavanca interna sobre o custo | numerador |
 | **ICMS** | do cenário fiscal do item | denominador |
-| **PIS/COFINS** | 7,59% | denominador |
+| **PIS/COFINS** | efetivo do item: `9,25% × (1 − ICMS)` | denominador |
 | **encargo** | da condição de pagamento | denominador |
 | **RV** | rate variável de frete sobre a NF | denominador |
 | **comissão** | da faixa do markup | denominador |
@@ -1188,10 +1237,10 @@ NET USD            US$ 11,666626
                             ↓
 CÂMBIO             R$ 60,549791    ← CNET                × 5,19
                             ↓
-ICMS 18% · PIS/COFINS 7,59% · encargo 1,6% · comissão 5%
+ICMS 18% · PIS/COFINS 7,585% · encargo 1,6% · comissão 5%
 MARGEM-ALVO 18%    (KTC — Flat Sheet ≥ 300TC)
                             ↓
-PREÇO RECOMENDADO  R$ 121,56
+PREÇO RECOMENDADO  R$ 121,55
 ```
 
 **Decomposição do preço:**
@@ -1276,8 +1325,12 @@ PREÇO RECOMENDADO  R$ 370,09
 ## 29.4 O padrão que aparece nos três
 
 Impostos = **27,2%** da receita nos três exemplos, e comissão = **5,0%**. Isso não é
-coincidência: com ICMS 18% + PIS/COFINS 7,59% + encargo 1,6% no denominador, a carga é a mesma
+coincidência: com ICMS 18% + PIS/COFINS 7,585% + encargo 1,6% no denominador, a carga é a mesma
 independentemente do custo. **O que diferencia os três é a margem-alvo.**
+
+> Os exemplos desta seção são intraestaduais, e é por isso que a correção de 09/09/2026 quase
+> não os move: em ICMS 18% o efetivo passa de 7,59% para 7,585%, um centavo de preço. Fora de
+> SP a história é outra — ver §18.
 
 ---
 
@@ -1329,7 +1382,7 @@ R$ 121,56.
 | 16 | Comissão | 5% a 10% por faixa de markup | planilha | alto | Quase todo item cai em 5%. As faixas superiores servem para quê? | Diretoria | 🟡 |
 | 17 | Encargo financeiro | 1,6% por parcela | planilha | alto | Corresponde a qual custo de capital? | Financeiro | 🟡 |
 | 18 | Sinal e cartão | **sem encargo cadastrado** | — | médio | Qual o encargo? Hoje bloqueiam a cotação | Financeiro | 🔴 |
-| 19 | PIS/COFINS venda | 7,59% | planilha | **alto** | Qual a base dessa alíquota? | Fiscal | 🔵 |
+| 19 | PIS/COFINS venda | **9,25% nominal**, efetivo `× (1 − ICMS)` | Contabilidade Química Anastacio, 09/09/2026 | — | **RESPONDIDA.** A base exclui o ICMS da operação; 7,59% fixo era erro. Ver §18 | Fiscal | 🟢 |
 | 20 | Carga final DIFAL | por estado, do cadastro | fonte não registrada | **altíssimo** | De onde vieram as cargas finais? | Fiscal | 🔵 |
 | 21 | FCP | **só RJ cadastrado** | decisão 03/09 | **alto** | BA, PE e PI têm FEM de 2% e nenhuma regra. Incide? | Fiscal | 🔴 |
 | 22 | Origem fiscal padrão | SP | decisão 03/09 | alto | Toda NF sai de SP? | Fiscal | 🔵 |

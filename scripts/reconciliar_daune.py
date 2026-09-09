@@ -176,6 +176,16 @@ def assinatura_tecnica(texto: str) -> frozenset:
     return frozenset(fichas | percentuais)
 
 
+# LEGADO — NÃO ATUALIZAR PARA A REGRA NOVA.
+#
+# Este denominador existe para **reconstruir** um preço histórico conhecido (gross 406,75 →
+# CNET 324,83055 → preço 615,10) e decidir se um valor legado da planilha é preço de venda ou
+# custo. Ele reproduz a metodologia vigente ATÉ 09/09/2026, quando o PIS/COFINS da venda era
+# a constante de 7,59%. Trocar por 9,25% × (1 − ICMS) faria o reconhecedor deixar de
+# reconhecer justamente os números que ele existe para reconhecer.
+#
+# A regra atual está em `pricing_engine.pis_cofins_efetivo()` e não passa por aqui.
+#
 # Denominador do preço Anara a 14% de margem, ICMS 18%, PIS/COFINS 7,59%, encargo 1,6% e
 # comissão de 6% — a combinação que reproduz o exemplo histórico conhecido
 # (gross 406,75 → CNET 324,83055 → preço 615,10) em cinco casas.

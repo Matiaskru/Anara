@@ -130,7 +130,16 @@ function renderMemoria(m) {
   const com = [];
   com.push(linha("Custo NET", brlM(custo.net_brl)));
   com.push(linha("ICMS da venda", pctM(fiscal.icms_pct), fiscal.icms_regra));
-  com.push(linha("PIS/COFINS", pctM(fiscal.pis_cofins_pct)));
+  // PIS/COFINS: a conta fica aberta porque o efetivo depende do ICMS deste item, e ver só o
+  // resultado ("8,88%") não explica por que o item vizinho tem outro número.
+  com.push(linha("PIS/COFINS efetivo", pctM(fiscal.pis_cofins_pct, 4),
+                 fiscal.pis_cofins_nominal_pct !== null
+                 && fiscal.pis_cofins_nominal_pct !== undefined
+                 && fiscal.pis_cofins_icms_excluido_pct !== null
+                 && fiscal.pis_cofins_icms_excluido_pct !== undefined
+                 ? `nominal ${pctM(fiscal.pis_cofins_nominal_pct, 2)} × (1 − ICMS `
+                   + `${pctM(fiscal.pis_cofins_icms_excluido_pct, 2)} excluído da base)`
+                 : ""));
   com.push(linha("Encargo financeiro", pctM(fiscal.encargo_pct), fiscal.encargo_label));
   if (comercial) {
     com.push(linha("Comissão", brlM(comercial.comissao)));

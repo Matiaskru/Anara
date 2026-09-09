@@ -25,8 +25,19 @@ from app.permissoes import exigir_admin
 
 router = APIRouter()
 
-PREMISSAS_CRITICAS = {"fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un", "pis_cofins_pct",
-                      "icms_fallback_pct"}
+PREMISSAS_CRITICAS = {"fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un",
+                      "pis_cofins_nominal_pct", "pis_cofins_pct", "icms_fallback_pct"}
+
+#: Premissas que continuam no banco por causa do histórico e **não** alimentam mais cálculo.
+#: A tela marca cada uma; sem isso, um administrador vê duas linhas de PIS/COFINS e conclui,
+#: razoavelmente, que as duas somam.
+PREMISSAS_LEGADAS = {
+    "pis_cofins_pct": "Efetivo fixo da metodologia anterior. Desde 09/09/2026 o efetivo é "
+                      "calculado por item a partir de pis_cofins_nominal_pct — esta linha "
+                      "existe para interpretar cotações antigas e não entra em preço novo.",
+    "icms_fallback_pct": "Aposentada na Onda 1: cenário fiscal que não resolve vira "
+                         "REVIEW_REQUIRED, não vira 18%.",
+}
 
 
 @router.get("/configuracoes", response_class=HTMLResponse)
@@ -37,6 +48,7 @@ def painel(request: Request, aba: str = "premissas", session: Session = Depends(
         "active": "configuracoes", "aba": aba,
         "premissas": [p for p in session.exec(select(Premissa).order_by(Premissa.chave)).all()
                       if p.ativo],
+        "premissas_legadas": PREMISSAS_LEGADAS,
         "materiais": cfg.materiais(session),
         "cmts": [c for c in session.exec(select(CmtPreco).order_by(CmtPreco.familia)).all()
                  if c.ativo],

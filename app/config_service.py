@@ -19,6 +19,10 @@ FALLBACKS = {
     "fx_usd_brl": 5.11,
     "frete_int_usd_kg": 0.516,
     "outras_desp_usd_un": 0.2487532709,
+    # NOMINAL. O efetivo da venda é derivado por item — `pricing_engine.pis_cofins_efetivo()`.
+    "pis_cofins_nominal_pct": 0.0925,
+    # LEGADO: efetivo fixo da metodologia anterior, mantido só para ler cotação antiga. Nenhum
+    # caminho de precificação nova lê esta chave desde 09/09/2026.
     "pis_cofins_pct": 0.0759,
     "validade_dias": 5,
     "icms_fallback_pct": 0.18,

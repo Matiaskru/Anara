@@ -22,6 +22,8 @@
   <h3 style="margin-bottom:10px;">Premissas gerais</h3>
   <p style="font-size:11.5px; color:var(--gray); margin-bottom:12px;">
     Câmbio, frete internacional, despesas de nacionalização, PIS/COFINS, validade e termos.
+    As linhas marcadas <strong>LEGADO</strong> ficam para interpretar cotação antiga e
+    <strong>não</strong> entram em preço novo — não são taxas que se somam às vigentes.
     Os índices de algodão e petróleo são <strong>indicadores</strong>: não entram em nenhuma fórmula
     de custo e não atualizam preço sozinhos.
   </p>
@@ -30,7 +32,9 @@
     <tbody>
       {% for p in premissas %}
       <tr>
-        <td><strong>{{ p.chave }}</strong><br><span style="font-size:10.5px; color:var(--gray);">{{ p.descricao or '' }}</span></td>
+        <td><strong>{{ p.chave }}</strong>{% if p.chave in premissas_legadas %} <span style="font-size:9.5px; font-weight:600; color:var(--gray); border:1px solid var(--gray); border-radius:3px; padding:0 4px;">LEGADO</span>{% endif %}
+          <br><span style="font-size:10.5px; color:var(--gray);">{{ p.descricao or '' }}</span>
+          {%- if p.chave in premissas_legadas %}<br><span style="font-size:10.5px; color:var(--gray);"><em>{{ premissas_legadas[p.chave] }}</em></span>{% endif %}</td>
         <td>{% if p.valor_num is not none %}{{ p.valor_num }}{% if p.unidade %} {{ p.unidade }}{% endif %}{% else %}<span style="font-size:10.5px;">{{ (p.valor_txt or '')[:70] }}{% if (p.valor_txt or '')|length > 70 %}…{% endif %}</span>{% endif %}</td>
         <td style="font-size:10.5px; color:var(--gray);">{{ p.fonte or '—' }}<br>desde {{ p.valid_from|data }}</td>
         <td>

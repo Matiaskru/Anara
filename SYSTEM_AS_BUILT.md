@@ -15,7 +15,8 @@ Este documento descreve **o que o código faz**, não o que foi especificado. On
 afirmação não pôde ser comprovada lendo o código, está escrito **NÃO CONFIRMADO NO CÓDIGO**.
 
 > **Premissas vigentes** (não exemplos históricos): câmbio **R$ 5,19** desde 08/09/2026 ·
-> frete internacional US$ 0,516/kg · outras despesas US$ 0,2488/un · PIS/COFINS 7,59%.
+> frete internacional US$ 0,516/kg · outras despesas US$ 0,2488/un · PIS/COFINS nominal 9,25%
+> (efetivo por item: `9,25% × (1 − ICMS)`).
 > A fonte de verdade é sempre Admin → Premissas; esta tabela envelhece.
 
 ---
@@ -285,7 +286,8 @@ memorizar.
 | `fx_usd_brl` | Câmbio USD → BRL | R$/US$ |
 | `frete_int_usd_kg` | Frete internacional | US$/kg |
 | `outras_desp_usd_un` | Outras despesas de importação | US$/un |
-| `pis_cofins_pct` | PIS/COFINS | fração |
+| `pis_cofins_nominal_pct` | PIS/COFINS **nominal** da venda — o efetivo é derivado por item | fração |
+| `pis_cofins_pct` | LEGADO — efetivo fixo da metodologia anterior; não alimenta preço novo | fração |
 
 - **Ações:** POST `/admin/premissa/preview` → `/admin/premissa/aplicar`;
   `/admin/margem/preview` → `/admin/margem/aplicar`
@@ -325,7 +327,9 @@ memorizar.
 - **Versionamento:** cada alteração fecha a linha vigente (`valid_to = hoje`, `ativo=False`)
   e insere uma nova, com `fonte="Painel de configurações"` e nota do valor substituído
 - **Premissas críticas** (`PREMISSAS_CRITICAS`, `configuracoes.py:28`): `fx_usd_brl`,
-  `frete_int_usd_kg`, `outras_desp_usd_un`, `pis_cofins_pct`, `icms_fallback_pct`
+  `frete_int_usd_kg`, `outras_desp_usd_un`, `pis_cofins_nominal_pct`, `pis_cofins_pct`,
+  `icms_fallback_pct`. As duas últimas são **legadas** e a tela as marca como tal — não são
+  taxas que se somam às vigentes
 
 ## 2.7 Relatórios e saúde
 
@@ -831,7 +835,23 @@ Vira bloqueio só com `exige_confirmacao`. Situações: `APLICA`, `NAO_APLICA`,
 > `EstadoFiscal.fem` existe para rastreabilidade da tabela histórica e, nas palavras do
 > próprio código (`models.py:616`), **não alimenta o motor**.
 
-**PIS/COFINS:** premissa versionada `pis_cofins_pct = 0,0759`.
+**PIS/COFINS:** premissa versionada `pis_cofins_nominal_pct = 0,0925`, e o que entra no
+denominador é o **efetivo**, calculado por item em `pricing_engine.pis_cofins_efetivo()`:
+
+```
+efetivo = nominal × (1 − ResultadoFiscal.icms_pct)
+```
+
+O ICMS é excluído da base de PIS/COFINS, então o efetivo depende da alíquota da operação —
+7,585% em ICMS 18%, 8,88% em 4%. Como o ICMS é resolvido por item desde a Onda 1, o
+PIS/COFINS também é: uma cotação com KTC e Daune para o mesmo destino carrega duas alíquotas
+efetivas diferentes. Na venda a não contribuinte o DIFAL e o FCP suportados pela Anara já
+estão dentro do `icms_pct` e participam da exclusão; `EstadoFiscal.carga_final` não participa.
+
+A premissa antiga `pis_cofins_pct = 0,0759` continua no banco, vigente e consultável, para
+interpretar cotação formada antes de 09/09/2026 — **nenhum caminho de precificação a lê**.
+Fonte da correção: Brendo Simão, contabilidade da Indústria Química Anastacio, 09/09/2026,
+planilha "Fator Cálculo Exclusão ICMS .xlsx".
 
 **Créditos de entrada:** só no caminho nacional (seção 5.2). Crédito da **compra** — sem
 relação com o ICMS da **venda**.
@@ -845,6 +865,10 @@ Se e quando esse fallback é efetivamente aplicado na formação de preço:
 `pricing_service.montar_regras()` devolve um `TaxRuleSet` com `icms_pct`,
 `pis_cofins_pct`, `encargo_financeiro_pct`, `comissao_tabela`, `frete_cf_unitario` e
 `frete_rv_pct`. Tudo isso vai para o **denominador** do gross-up, exceto o CF.
+
+O `pis_cofins_pct` que o `TaxRuleSet` recebe é sempre o **efetivo** — a semântica do campo
+não mudou em 09/09/2026, só a forma de chegar nele: antes era a premissa lida direto, agora é
+`pis_cofins_efetivo(nominal, fiscal.icms_pct)`. O motor de precificação não foi tocado.
 
 ---
 

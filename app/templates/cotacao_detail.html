@@ -255,7 +255,10 @@
 
       <div style="grid-column: span 2; font-size:11px; color:var(--gray);">
         Cenário fiscal aplicado agora: <strong>{{ regra_icms_atual }}</strong> —
-        ICMS {{ contexto_fiscal.icms_pct|pct }} · PIS/COFINS {{ contexto_fiscal.pis_cofins_pct|pct }} ·
+        ICMS {{ contexto_fiscal.icms_pct|pct }} ·
+        PIS/COFINS nominal {{ contexto_fiscal.pis_cofins_nominal_pct|pct(2) }}
+        {%- if contexto_fiscal.pis_cofins_pct %}, efetivo {{ contexto_fiscal.pis_cofins_pct|pct(3) }}
+        {%- else %} — o efetivo é por item ({{ contexto_fiscal.pis_cofins_nominal_pct|pct(2) }} menos o ICMS de cada linha){% endif %} ·
         encargo {{ contexto_fiscal.encargo_pct|pct }} ({{ contexto_fiscal.encargo_label }})
         {% if contexto_fiscal.encargo_aviso %}<div class="aviso-inline">{{ contexto_fiscal.encargo_aviso }}</div>{% endif %}
       </div>

@@ -41,12 +41,16 @@ PREMISSAS_EDITAVEIS = [
     ("fx_usd_brl", "Câmbio do dólar", "R$/US$", "num"),
     ("frete_int_usd_kg", "Frete internacional", "US$/kg", "num"),
     ("outras_desp_usd_un", "Outras despesas de importação", "US$/un", "num"),
-    ("pis_cofins_pct", "PIS/COFINS", "fração (0,0759 = 7,59%)", "num"),
+    ("pis_cofins_nominal_pct", "PIS/COFINS nominal da venda", "fração (0,0925 = 9,25%)", "num"),
 ]
 
+#: `pis_cofins_pct` **saiu** desta lista em 09/09/2026. Ela continua no banco, vigente e
+#: consultável, porque cotações antigas a pinaram — mas não forma preço novo, e deixá-la
+#: editável convidaria a corrigir a taxa no lugar errado.
+
 #: Como cada premissa é **lida** na tela, e o que o campo de edição espera.
-#: `dica` é o que aparece sob o campo; sem ela, alguém digita "7,59" onde o sistema quer
-#: "0,0759" e cadastra uma alíquota cem vezes maior sem perceber.
+#: `dica` é o que aparece sob o campo; sem ela, alguém digita "9,25" onde o sistema quer
+#: "0,0925" e cadastra uma alíquota cem vezes maior sem perceber.
 APRESENTACAO_PREMISSA = {
     "fx_usd_brl": {
         "prefixo": "R$ ", "sufixo": "", "casas": 4,
@@ -63,10 +67,14 @@ APRESENTACAO_PREMISSA = {
         "explicacao": "Despesas de importação rateadas por peça.",
         "dica": "Exemplo: 0,2488",
     },
-    "pis_cofins_pct": {
+    "pis_cofins_nominal_pct": {
         "prefixo": "", "sufixo": "", "casas": 4, "percentual": True,
-        "explicacao": "Incide sobre a receita, no denominador do preço.",
-        "dica": "Informe como fração: 0,0759 é 7,59%",
+        "explicacao": "Alíquota NOMINAL (PIS 1,65% + COFINS 7,60%). O que entra no "
+                      "denominador do preço é o EFETIVO, calculado por item depois de "
+                      "excluir o ICMS da operação da base: nominal x (1 - ICMS). "
+                      "Com ICMS 18% dá 7,585%; com 4%, 8,88%.",
+        "dica": "Informe como fração: 0,0925 é 9,25%. Não é o percentual que incide "
+                "sobre o faturamento.",
     },
 }
 
@@ -95,7 +103,7 @@ def _erro(mensagem: str, status: int = 400):
 #: menu lateral oferecia os dois lado a lado, sem dizer qual servia para quê.
 AREAS_ADMIN = [
     ("Premissas e preços", "/admin/premissas",
-     "Câmbio, frete internacional, despesas de importação e PIS/COFINS."),
+     "Câmbio, frete internacional, despesas de importação e PIS/COFINS nominal."),
     ("Catálogo e custos", "/produtos",
      "Os SKUs, o custo de cada um e de onde esse custo veio."),
     ("Motor industrial KTC", "/configuracoes?aba=ktc",

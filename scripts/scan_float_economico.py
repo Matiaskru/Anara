@@ -134,7 +134,7 @@ def varredura_dinamica():
                                 RegraFcp, RegraFiscalVenda)
         from app.nationalization import PremissasNacionalizacao, nacionalizar
         from app.payment_terms import resolver_encargo
-        from app.pricing_engine import TaxRuleSet, calcular_por_margem
+        from app.pricing_engine import TaxRuleSet, calcular_por_margem, pis_cofins_efetivo
         from app.ktc_engine import ParametrosKTC, calcular_flat_sheet
         from decimal import Decimal as Dec
 
@@ -168,7 +168,8 @@ def varredura_dinamica():
 
             confere("custo_service.cnet_nacional.cnet", cs.cnet_nacional(Dec("427.50")).cnet)
 
-            regras = TaxRuleSet(icms_pct=0.18, pis_cofins_pct=0.0759,
+            regras = TaxRuleSet(icms_pct=0.18,
+                                pis_cofins_pct=pis_cofins_efetivo(Dec("0.0925"), Dec("0.18")),
                                 encargo_financeiro_pct=0.016,
                                 comissao_tabela=[(0.0, 0.05), (0.6, 0.06)])
             confere("pricing_engine.taxa_fixa", regras.taxa_fixa())
