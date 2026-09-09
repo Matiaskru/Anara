@@ -33,9 +33,10 @@ resultado. O que grava é `workflow_service`.
 import hashlib
 import json
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import List, Optional, Sequence
 
-from app.dinheiro import D, D0, ZERO, dinheiro, divide, para_float
+from app.dinheiro import CENTAVO, D, D0, ZERO, dinheiro, divide, para_float
 
 # ---------------------------------------------------------------------------
 # Estados
@@ -120,27 +121,48 @@ FRETE_BLOQUEIA = {"FRETE_A_COTAR", "FRETE_REVIEW_REQUIRED", "FRETE_ICMS_REVIEW_R
 # Motivos estruturados de exceção comercial (§20). Texto livre nunca é a fonte da semântica.
 PRECO_ABAIXO = "PRECO_ABAIXO_RECOMENDADO"
 MARGEM_ABAIXO = "MARGEM_ABAIXO_ALVO"
-
-#: Quanto a margem realizada pode ficar abaixo da alvo sem que isso seja **exceção comercial**.
-#:
-#: O centavo move a margem, e isso é aritmética da Sessão 3B, não desconto. O que o resíduo
-#: absorve não é só o arredondamento do preço: impostos, comissão e as duas parcelas de frete
-#: são quantizados **cada um** sobre o preço já comercial, e o lucro fecha a linha por
-#: diferença. O desvio possível é da ordem de `n × meio centavo ÷ receita`, e cresce quando a
-#: receita é pequena.
-#:
-#: Medido no motor, alvo de 14% e ICMS 18%, variando só o custo: item de R$ 46 de receita
-#: desvia −1,2×10⁻⁴; o de R$ 18, +6,5×10⁻⁵. O valor anterior — 5×10⁻⁵ — era **menor que meio
-#: centavo dividido pela receita** em qualquer item abaixo de R$ 100, ou seja, não cumpria o
-#: que a própria regra dizia cumprir: chamava o aprovador para autorizar o arredondamento.
-#:
-#: 5×10⁻⁴ cobre o pior caso medido com folga de uma ordem de grandeza e continua reprovando
-#: qualquer mudança de REGRA — trocar faixa de comissão, alíquota ou encargo move a margem em
-#: pontos percentuais, mil vezes mais do que isto. É o mesmo raciocínio (e o mesmo número) que
-#: `tests/decimais.py::MARGEM_DO_CENTAVO` já usava do lado dos testes.
-TOLERANCIA_MARGEM_DO_CENTAVO = D("0.0005")
 PREMISSA_VELHA = "PREMISSA_DESATUALIZADA_MANTIDA"
 OUTRA_EXCECAO = "OUTRA_EXCECAO_COMERCIAL"
+
+#: Quanto lucro, **em dinheiro e por unidade**, a linha pode ficar abaixo da margem-alvo sem
+#: que isso seja exceção comercial: um centavo.
+#:
+#: ## Por que a tolerância é monetária, e não percentual
+#:
+#: O que se quer perdoar é o **arredondamento comercial**, e arredondamento é um fenômeno em
+#: reais: meio centavo. Uma tolerância expressa em pontos de margem escala errado, porque o
+#: mesmo percentual vale centavos num item barato e reais num item caro.
+#:
+#: A primeira versão desta regra usava 5×10⁻⁴ fixos. Medido no motor: num item de R$ 9.291 a
+#: unidade, uma margem 4,9×10⁻⁴ abaixo do alvo passava sem aprovação — e representava
+#: **R$ 4,55 de lucro por unidade**. O número protegia o centavo do item barato criando um
+#: buraco no item caro, que é exatamente onde o dinheiro está.
+#:
+#: ## Por unidade, porque é essa a unidade do arredondamento
+#:
+#: O preço é quantizado **por unidade** e depois multiplicado pela quantidade, então o resíduo
+#: também se multiplica: a mesma linha com 7 unidades acumula sete vezes o mesmo centavo. Medir
+#: por unidade normaliza isso — e é a única leitura em que a tolerância significa "um centavo".
+#:
+#: A identidade que sustenta a conta, com `faturamento = preço × quantidade`:
+#:
+#:     (faturamento × alvo − lucro) ÷ quantidade  ==  preço × (alvo − margem_real)
+#:
+#: ## O que continua sendo reprovado
+#:
+#: Tudo que não é centavo. Mudança de faixa de comissão, de alíquota ou de encargo move a
+#: margem em pontos percentuais — em qualquer preço, isso é muito mais que um centavo de lucro
+#: por unidade, e continua exigindo aprovação.
+TOLERANCIA_DEFICIT_UNITARIO = CENTAVO
+
+
+def deficit_de_lucro_unitario(preco, margem_alvo, margem_real) -> Decimal:
+    """Quanto lucro falta, em reais e por unidade, para a linha entregar a margem-alvo.
+
+    Positivo quer dizer que falta; zero ou negativo, que a linha entregou o alvo ou passou
+    dele. `Decimal` puro — a comparação é com dinheiro, e dinheiro aqui não é `float`.
+    """
+    return D0(preco) * (D0(margem_alvo) - D0(margem_real))
 
 
 @dataclass
@@ -258,11 +280,18 @@ def excecoes_do_item(item) -> List[Excecao]:
     alvo = D(item.margem_padrao_pct)
     real = D(item.margem_liquida)
     if alvo is not None and real is not None and item.custo_unitario:
-        if real < alvo - TOLERANCIA_MARGEM_DO_CENTAVO:
+        preco = dinheiro(item.preco_negociado) or ZERO
+        deficit = deficit_de_lucro_unitario(preco, alvo, real)
+        # Sem preço não há receita contra a qual medir déficit — e um item nesse estado está
+        # bloqueado por outro motivo, não aprovado por omissão. Mantém-se a comparação estrita.
+        material = deficit > TOLERANCIA_DEFICIT_UNITARIO if preco > ZERO else real < alvo
+        if material:
             achados.append(Excecao(
                 motivo=MARGEM_ABAIXO, escopo=rotulo,
                 detalhe=(f"Margem real de {real * 100:.2f}% contra alvo de "
-                         f"{alvo * 100:.2f}%."),
+                         f"{alvo * 100:.2f}%"
+                         + (f" — R$ {dinheiro(deficit)} de lucro a menos por unidade."
+                            if preco > ZERO else ".")),
                 margem_alvo=str(alvo), margem_real=str(real)))
     return achados
 
