@@ -1,0 +1,15 @@
+{#
+  Abas de Relatórios. Um destino só para o grupo inteiro: antes, "Econômico" era um botão
+  solto no canto da tela comercial e "Qualidade da base" vivia no menu lateral, então cada
+  relatório tinha um caminho próprio e nenhum deles dizia que os outros existiam.
+
+  Saúde não entra aqui — ela é diagnóstico técnico e mora no Admin.
+#}
+<div class="abas" style="margin-bottom:16px;">
+  <a href="/relatorios{{ query or '' }}" class="{{ 'ativa' if aba == 'comercial' else '' }}">Comercial</a>
+  {% if ve_economia(request) %}
+  <a href="/relatorios/economico{{ query or '' }}" class="{{ 'ativa' if aba == 'economico' else '' }}">Econômico</a>
+  {% endif %}
+  <a href="/relatorios/cotacoes{{ query or '' }}" class="{{ 'ativa' if aba == 'cotacoes' else '' }}">Cotações</a>
+  <a href="/relatorios/aprovacoes{{ query or '' }}" class="{{ 'ativa' if aba == 'aprovacoes' else '' }}">Aprovações</a>
+</div>

@@ -5,12 +5,15 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from sqlmodel import Session, select
 
+from app import admin_service as adm
 from app import arquivamento
 from app import config_service as cfg
 from app import pricing_service as ps
 from app.confidencial import item_comercial, sem_confidenciais, totais_comerciais
 from app.db import get_session
-from app.permissoes import exigir_autenticado, exigir_economia, ve_economia
+from app.permissoes import (
+    exigir_autenticado, exigir_economia, usuario_da_request, ve_economia,
+)
 from app import workflow as wf
 from app import workflow_service as ws
 from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
@@ -22,7 +25,8 @@ from app.pdf_bridge import gerar_pdf_para_cotacao
 from app.pricing_engine import (
     TaxRuleSet, calcular_por_margem, calcular_por_markup, calcular_por_preco,
 )
-from app.templating import templates
+from app.templating import pagina_de_erro, templates
+from app import rotulos
 
 router = APIRouter()
 
@@ -30,6 +34,49 @@ router = APIRouter()
 def estados(session: Session):
     linhas = session.exec(select(EstadoFiscal).order_by(EstadoFiscal.estado)).all()
     return [e.estado for e in linhas if e.ativo]
+
+
+def _valor_status(cotacao) -> str:
+    """O status como string, venha ele como enum ou como texto do banco."""
+    s = getattr(cotacao, "status", "")
+    return s.value if hasattr(s, "value") else str(s or "")
+
+
+def _origem_fiscal_da_tela(session: Session, cotacao: Cotacao) -> dict:
+    """A UF de origem FISCAL da operação, e de onde ela veio.
+
+    **Não é a origem logística.** A NF sai de um lugar fiscal que a rota do caminhão não
+    determina: Itajaí-SC ser o ponto de entrada da mercadoria importada não prova a origem
+    fiscal da venda. A tela nomeia as duas coisas por extenso justamente porque um campo
+    chamado só "Origem" fazia quem preenchia não saber qual das duas estava respondendo.
+    """
+    uf, fonte = ps.uf_origem_fiscal(session, cotacao)
+    return {"uf": uf, "fonte": fonte, "definida_na_cotacao": bool(cotacao.uf_origem_fiscal)}
+
+
+def _origens_logisticas(session: Session, cotacao: Cotacao, itens) -> list:
+    """De onde cada grupo de itens embarca — uma linha por origem, sem achatar.
+
+    Uma cotação pode ter itens de fornecedores que saem de lugares diferentes, e o frete de
+    cada embarque é calculado separado. Resumir isso numa "origem da cotação" inventaria
+    uma carga que não existe.
+    """
+    if not itens:
+        return []
+    from app import frete_service as fs
+
+    achados = []
+    for grupo in fs.agrupar_itens(session, cotacao, itens):
+        fornecedor = (session.get(Fornecedor, grupo["fornecedor_id"])
+                      if grupo["fornecedor_id"] else None)
+        achados.append({
+            "cidade": grupo.get("origem_cidade"),
+            "uf": grupo.get("origem_uf"),
+            "fornecedor": fornecedor.nome if fornecedor else None,
+            "itens": len(grupo.get("itens") or []),
+            "conhecida": bool(grupo.get("origem_cidade") and grupo.get("origem_uf")),
+        })
+    return achados
 
 
 def proximo_numero(session: Session) -> str:
@@ -173,43 +220,124 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
         "itens_por_cotacao": {k: len(v) for k, v in itens_por_cotacao.items()},
         "sugestoes_teste": {s["id"] for s in arquivamento.candidatas_a_teste(session)},
         "todos_clientes": sorted(clientes.values(), key=lambda c: c.nome),
+        # Aqui é FILTRO, e por isso a lista é completa: os estados herdados precisam ser
+        # filtráveis para que as cotações antigas continuem encontráveis. Na tela de
+        # detalhe, onde `status_opcoes` vira botão de ação, a lista é outra.
         "status_opcoes": [s.value for s in StatusCotacao],
     })
 
 
 @router.get("/cotacoes/nova", response_class=HTMLResponse)
-def nova_form(request: Request, cliente_id: int = 0, session: Session = Depends(get_session)):
+def nova_form(request: Request, cliente_id: int = 0, oportunidade_id: int = 0,
+              session: Session = Depends(get_session)):
+    """Formulário mínimo. Quando vem de uma oportunidade, já chega com o cliente dela."""
+    from app import crm_service as crm
+    from app.models import Oportunidade
+
+    oportunidade = session.get(Oportunidade, oportunidade_id) if oportunidade_id else None
+    if oportunidade is not None and not cliente_id:
+        cliente_id = oportunidade.cliente_id
+
     clientes = session.exec(select(Cliente).order_by(Cliente.nome)).all()
     return templates.TemplateResponse(request, "cotacao_nova.html", {
         "active": "nova_cotacao", "clientes": clientes,
         "cliente_selecionado": session.get(Cliente, cliente_id) if cliente_id else None,
+        "contatos": crm.contatos_de(session, cliente_id, apenas_ativos=True) if cliente_id else [],
+        "oportunidade": oportunidade,
         "estados_difal": estados(session),
         "condicoes": cfg.condicoes_pagamento(session),
         "tipos_frete": [t.value for t in TipoFrete],
-        "validade_padrao": int(cfg.num(session, "validade_dias", 5)),
     })
+
+
+@router.get("/clientes/{cliente_id}/contatos.json")
+def contatos_do_cliente(request: Request, cliente_id: int,
+                        session: Session = Depends(get_session)):
+    """Contatos de um cliente, para o formulário trocar a lista sem recarregar a página."""
+    from app import crm_service as crm
+
+    return JSONResponse([{"id": c.id, "nome": c.nome, "cargo": c.cargo or ""}
+                         for c in crm.contatos_de(session, cliente_id, apenas_ativos=True)])
+
+
+def _herdar_da_operacao(session: Session, request: Request, cliente_id: int,
+                        oportunidade_id=None, contato_id=None) -> dict:
+    """O que a cotação puxa de quem já sabe — em vez de pedir de novo.
+
+    Contato, cargo e departamento moram em `Contato`; o responsável mora na oportunidade ou
+    é quem está logado. Pedir tudo isso de novo no formulário fazia a mesma informação ser
+    digitada em três lugares, e as três versões divergirem com o tempo.
+
+    **Campo sem origem fica vazio.** Nada de "A definir" nem de nome inventado: um valor
+    fictício num documento comercial é pior que um espaço em branco, porque parece dado.
+    """
+    from app import crm_service as crm
+    from app.models import Contato, Oportunidade
+
+    herdado = {"vendedor": None, "contato_nome": None, "departamento_contato": None}
+
+    contato = None
+    if contato_id:
+        contato = session.get(Contato, contato_id)
+        if contato is not None and contato.cliente_id != cliente_id:
+            contato = None          # contato de outro cliente não entra
+    if contato is None and cliente_id:
+        contato = crm.contato_principal(session, cliente_id)
+    if contato is not None:
+        herdado["contato_nome"] = contato.nome or None
+        herdado["departamento_contato"] = getattr(contato, "cargo", None) or None
+
+    responsavel = None
+    if oportunidade_id:
+        op = session.get(Oportunidade, oportunidade_id)
+        if op is not None and op.responsavel_id:
+            from app.models import Usuario
+            responsavel = session.get(Usuario, op.responsavel_id)
+    if responsavel is None:
+        responsavel = usuario_da_request(request)
+    if responsavel is not None:
+        herdado["vendedor"] = responsavel.nome or None
+
+    return herdado
 
 
 @router.post("/cotacoes")
 def criar(request: Request, cliente_id: int = Form(...), condicao_pagamento: str = Form("30"),
-          estado_destino: str = Form(""), estado_origem: str = Form("São Paulo"),
-          contribuinte_icms: str = Form("sim"), frete: str = Form(""),
-          freight_type: str = Form(TipoFrete.cif.value), prazo_entrega: str = Form(""),
-          contato_nome: str = Form(""), departamento_contato: str = Form(""),
-          validade_dias: int = Form(0), vendedor: str = Form(""), observacoes: str = Form(""),
+          estado_destino: str = Form(""), contribuinte_icms: str = Form("sim"),
+          freight_type: str = Form(TipoFrete.cif.value),
+          contato_id: str = Form(""), oportunidade_id: str = Form(""),
           session: Session = Depends(get_session)):
-    dias = validade_dias or int(cfg.num(session, "validade_dias", 5))
+    """Cria a cotação com o **mínimo** e deriva o resto.
+
+    O formulário pedia dezoito campos, entre eles vendedor, contato, departamento, prazo de
+    entrega, validade, texto do frete e observações — todos preenchíveis depois, e vários já
+    conhecidos por quem cadastrou o cliente ou abriu a oportunidade.
+
+    `estado_origem` saiu de vez: ele é **origem logística**, não fiscal, e o formulário o
+    fixava em "São Paulo" enquanto o modelo trazia "Santa Catarina". Quem preenchia "Origem
+    da venda" não tinha como saber qual das duas coisas estava respondendo. O motor fiscal
+    nunca usou esse campo — ele resolve por `uf_origem_fiscal`, que agora é editável no
+    lugar certo, com o nome certo.
+    """
+    dias = int(cfg.num(session, "validade_dias", 5))
     agora = datetime.utcnow()
+    herdado = _herdar_da_operacao(
+        session, request, cliente_id,
+        oportunidade_id=int(oportunidade_id) if oportunidade_id.isdigit() else None,
+        contato_id=int(contato_id) if contato_id.isdigit() else None)
+
     cotacao = Cotacao(
         criado_em=agora,
-        numero=proximo_numero(session), cliente_id=cliente_id, vendedor=vendedor or None,
+        numero=proximo_numero(session), cliente_id=cliente_id,
+        vendedor=herdado["vendedor"],
+        oportunidade_id=int(oportunidade_id) if oportunidade_id.isdigit() else None,
         condicao_pagamento=condicao_pagamento or "30",
-        estado_destino=estado_destino or None, estado_origem=estado_origem or "São Paulo",
-        contribuinte_icms=(contribuinte_icms == "sim"), frete=frete or None,
+        estado_destino=estado_destino or None,
+        contribuinte_icms=(contribuinte_icms == "sim"),
         freight_type=freight_type or TipoFrete.cif.value,
-        prazo_entrega=prazo_entrega or None, contato_nome=contato_nome or None,
-        departamento_contato=departamento_contato or None,
-        observacoes=observacoes or None, validade_dias=dias,
+        contato_nome=herdado["contato_nome"],
+        departamento_contato=herdado["departamento_contato"],
+        validade_dias=dias,
         validade_em=agora + timedelta(days=dias),
         termos_texto=cfg.txt(session, "termos_padrao"),
     )
@@ -258,17 +386,22 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
     return templates.TemplateResponse(request, "cotacao_detail.html", {
         "active": "cotacoes", "cotacao": cotacao, "cliente": cliente, "itens": itens,
         "totais": _totais(itens, ve_economia(request)),
-        "status_opcoes": [s.value for s in StatusCotacao],
+        "status_opcoes": wf.proximos_estados(_valor_status(cotacao)),
         "estados_difal": estados(session), "regra_icms_atual": regra_icms,
         "contexto_fiscal": contexto, "condicoes": cfg.condicoes_pagamento(session),
         "tipos_frete": [t.value for t in TipoFrete],
+        # Premissa mais nova que a desta cotação. Só detecta; a tela oferece a escolha.
+        "premissas_novas": (adm.premissas_desatualizadas(session, cotacao, itens)
+                            if _valor_status(cotacao) not in wf.ESTADOS_IMUTAVEIS else None),
+        "origem_fiscal": _origem_fiscal_da_tela(session, cotacao),
+        "origens_logisticas": _origens_logisticas(session, cotacao, itens),
         "avisos_exclusao": arquivamento.motivos_para_pensar_duas_vezes(cotacao, len(itens)),
     })
 
 
 @router.post("/cotacoes/{cotacao_id}/atualizar")
 def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
-                        estado_destino: str = Form(""), estado_origem: str = Form("São Paulo"),
+                        estado_destino: str = Form(""), estado_origem: str = Form(""),
                         contribuinte_icms: str = Form("sim"), frete: str = Form(""),
                         freight_type: str = Form(TipoFrete.cif.value),
                         freight_valor: str = Form(""), prazo_entrega: str = Form(""),
@@ -283,14 +416,22 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
         return RedirectResponse(url="/cotacoes", status_code=303)
 
     novo_contribuinte = (contribuinte_icms == "sim")
+    # `estado_origem` saiu da comparação junto com o campo: ele é origem **logística**, o
+    # motor fiscal não o consulta, e mantê-lo aqui fazia todo salvamento parecer mudança de
+    # cenário — o formulário não o envia, então a comparação era sempre contra vazio.
     mudou_precificacao = (cotacao.condicao_pagamento != condicao_pagamento
                           or cotacao.estado_destino != (estado_destino or None)
-                          or cotacao.estado_origem != estado_origem
-                          or cotacao.contribuinte_icms != novo_contribuinte)
+                          or cotacao.contribuinte_icms != novo_contribuinte
+                          or (cotacao.freight_type or "") != (freight_type or ""))
 
     cotacao.condicao_pagamento = condicao_pagamento or "30"
     cotacao.estado_destino = estado_destino or None
-    cotacao.estado_origem = estado_origem or "São Paulo"
+    # O formulário não envia mais `estado_origem` — ele era um campo genérico ("Origem da
+    # venda") que ninguém sabia responder, e cujo default aqui era "São Paulo" enquanto o
+    # modelo trazia "Santa Catarina". Manter o default na rota faria cada salvamento
+    # reescrever silenciosamente o campo. O que não vem, não muda.
+    if estado_origem:
+        cotacao.estado_origem = estado_origem
     cotacao.contribuinte_icms = novo_contribuinte
     cotacao.frete = frete or None
     cotacao.freight_type = freight_type or TipoFrete.cif.value
@@ -311,8 +452,66 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
 
     if mudou_precificacao:
         _recalcular_todos_itens(cotacao, session)
+        return RedirectResponse(url=f"/cotacoes/{cotacao_id}?cenario=atualizado",
+                                status_code=303)
 
-    return RedirectResponse(url=f"/cotacoes/{cotacao_id}", status_code=303)
+    return RedirectResponse(url=f"/cotacoes/{cotacao_id}?salvo=1", status_code=303)
+
+
+@router.post("/cotacoes/{cotacao_id}/premissas/atualizar")
+def atualizar_premissas(request: Request, cotacao_id: int,
+                        session: Session = Depends(get_session)):
+    """Traz o rascunho para as premissas de hoje — **por ação explícita**.
+
+    O contrário desta rota é o comportamento padrão: um rascunho aberto amanhã continua com
+    os números de ontem. Trocar sozinho mudaria o preço debaixo de quem já negociou, e é por
+    isso que a detecção só detecta.
+
+    Aqui o custo é re-resolvido pelo mesmo caminho de um item novo, o preço é reformado, e a
+    memória e os pinos passam a apontar para as versões vigentes. A aprovação anterior cai
+    junto, quando existir: ela era sobre a configuração de antes.
+    """
+    exigir_autenticado(request)
+    cotacao = session.get(Cotacao, cotacao_id)
+    if not cotacao:
+        return RedirectResponse(url="/cotacoes", status_code=303)
+    try:
+        ws.exigir_editavel(cotacao, "atualizar as premissas")
+    except Exception:
+        return pagina_de_erro(
+            request, titulo="Esta cotação não pode mais ser alterada",
+            motivos=["Cotações emitidas ficam congeladas. Para propor com os valores de "
+                     "hoje, crie uma revisão."],
+            voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação")
+
+    itens = session.exec(select(CotacaoItem)
+                         .where(CotacaoItem.cotacao_id == cotacao.id)).all()
+    for it in itens:
+        produto = session.get(Produto, it.produto_id) if it.produto_id else None
+        if produto is None:
+            continue
+        custo, memoria_custo = ps.custo_para_precificar(session, produto)
+        it.custo_unitario = custo or 0.0
+        margem = ps.margem_padrao(session, produto)
+        regras, _regra, ctx = montar_regras(cotacao, session, produto)
+        res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
+                        regras, it.preco_base)
+        _preencher_item(session, it, produto, margem, memoria_custo)
+        _aplicar_resultado(it, res, regras, ctx)
+        it.memoria_json = ps.memoria_json(ps.memoria_do_preco(
+            session, produto, cotacao, preco_negociado=res.preco_negociado,
+            quantidade=it.quantidade))
+        session.add(it)
+
+    cotacao.premissas_mantidas_aprovadas = False
+    session.add(cotacao)
+    session.commit()
+    ws.invalidar_aprovacoes_obsoletas(session, cotacao,
+                                      ator=exigir_autenticado(request),
+                                      motivo="premissas atualizadas pelo usuário")
+    session.commit()
+    return RedirectResponse(url=f"/cotacoes/{cotacao_id}?premissas=atualizadas",
+                            status_code=303)
 
 
 def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
@@ -421,7 +620,10 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
 
     regras, _regra, ctx = montar_regras(cotacao, session, produto)
     margem = ps.margem_padrao(session, produto)
-    if not produto.custo_unitario:
+    # Mesmo custo que `adicionar_item` vai gravar: a prévia da tela e o item salvo não podem
+    # divergir, senão o preço muda ao clicar em "adicionar".
+    custo_vivo = ps.custo_para_precificar(session, produto)[0]
+    if not custo_vivo:
         # Sem custo não há margem, mas o preço exibido continua sendo quantia comercial.
         preco = dinheiro(valor if modo == "preco" else (produto.preco_base or 0))
         sem_custo = {
@@ -437,7 +639,7 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
         return JSONResponse(sem_custo if ve_economia(request)
                             else sem_confidenciais(sem_custo))
 
-    res = _calcular(modo, produto.custo_unitario, quantidade, valor, regras, produto.preco_base)
+    res = _calcular(modo, custo_vivo, quantidade, valor, regras, produto.preco_base)
     # Fronteira da API: `como_dict()` já entrega tudo em float, com o dinheiro em centavos.
     # Serializar Decimal aqui quebraria o JSON (ou, com `default=str`, mandaria dinheiro como
     # string para o JavaScript da tela).
@@ -464,7 +666,8 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
 # ---------------------------------------------------------------------------
 # Itens
 # ---------------------------------------------------------------------------
-def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, margem):
+def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, margem,
+                    memoria_custo: dict = None):
     from app import custo_service as cs
 
     fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
@@ -485,7 +688,13 @@ def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, marge
         item.status_custo_item = vigente.status_custo
         item.confirmation_pending = bool(vigente.confirmation_pending)
     else:
-        item.status_custo_item = produto.custo_confianca
+        # Sem referência versionada, o status vem de **como o custo foi resolvido agora** —
+        # não de `Produto.custo_confianca`, que fala o vocabulário do método (`CALCULATED`,
+        # `QUOTED`, `MANUAL`) e não o dos portões do workflow. Copiar aquele valor para cá
+        # produzia um status que `CUSTO_BLOQUEIA` não reconhecia: 210 SKUs ativos passavam
+        # por todos os gates sem bloquear nem avisar.
+        item.status_custo_item = ps.status_canonico_do_custo(
+            item.custo_unitario, memoria_custo)
         item.confirmation_pending = False
 
 
@@ -505,7 +714,11 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
     if valor is None:
         valor = margem.margem_pct if modo == "margem" else (produto.preco_base or 0)
 
-    custo = produto.custo_unitario or 0.0
+    # O custo do item novo é resolvido AGORA, pelas premissas vigentes — não lido da coluna
+    # `Produto.custo_unitario`, que é gravada quando o custo foi calculado pela última vez e
+    # não acompanha uma troca de câmbio.
+    custo, memoria_custo = ps.custo_para_precificar(session, produto)
+    custo = custo or 0.0
     if custo <= 0:
         # sem custo: cota pelo preço, margem fica em branco (não se inventa margem)
         preco = valor if modo == "preco" else (produto.preco_base or 0)
@@ -522,7 +735,7 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
         categoria=produto.categoria, quantidade=quantidade, custo_unitario=custo,
         preco_base=produto.preco_base or 0.0, modo_edicao=modo, valor_editado=valor,
     )
-    _preencher_item(session, item, produto, margem)
+    _preencher_item(session, item, produto, margem, memoria_custo)
     _aplicar_resultado(item, res, regras, ctx)
     item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
         session, produto, cotacao, preco_negociado=res.preco_negociado, quantidade=quantidade))
@@ -609,17 +822,40 @@ def remover_item(request: Request, cotacao_id: int, item_id: int,
 # Status / aceite / duplicar / PDF
 # ---------------------------------------------------------------------------
 @router.post("/cotacoes/{cotacao_id}/status")
-def mudar_status(cotacao_id: int, status: str = Form(...),
+def mudar_status(request: Request, cotacao_id: int, status: str = Form(...),
                  session: Session = Depends(get_session)):
+    """Muda o estado da cotação — **pelas transições permitidas, e só por elas**.
+
+    Esta rota gravava `StatusCotacao(status)` direto, sem consultar o workflow. Qualquer
+    estado chegava, os três legados inclusive, e a cotação parava num lugar de onde
+    `exigir_transicao` recusa sair. `wf.exigir_transicao` fecha isso: nenhum estado legado
+    é destino de transição nenhuma, então eles deixam de ser alcançáveis por aqui sem que
+    seja preciso mantê-los numa lista de proibidos à parte.
+    """
     cotacao = session.get(Cotacao, cotacao_id)
-    if cotacao:
-        cotacao.status = StatusCotacao(status)
-        if cotacao.status in (StatusCotacao.enviada, StatusCotacao.fechada) and not cotacao.emitida_em:
-            cotacao.emitida_em = datetime.utcnow()
-            if not cotacao.termos_texto:
-                cotacao.termos_texto = cfg.txt(session, "termos_padrao")
-        session.add(cotacao)
-        session.commit()
+    if not cotacao:
+        return RedirectResponse(url="/cotacoes", status_code=303)
+
+    atual = cotacao.status.value if hasattr(cotacao.status, "value") else str(cotacao.status)
+    try:
+        wf.exigir_transicao(atual, status)
+    except wf.TransicaoInvalida:
+        return pagina_de_erro(
+            request, titulo="Não foi possível mudar a situação",
+            introducao="Esta cotação está em:",
+            motivos=[f"{rotulos.cotacao(atual)} — e daqui não é possível ir para "
+                     f"{rotulos.cotacao(status)}."],
+            ajuda=("As situações seguem uma ordem: rascunho, aprovação, emissão e envio. "
+                   "Cotações antigas, importadas do sistema anterior, ficam onde estão."),
+            voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação")
+
+    cotacao.status = StatusCotacao(status)
+    if cotacao.status == StatusCotacao.enviada and not cotacao.emitida_em:
+        cotacao.emitida_em = datetime.utcnow()
+        if not cotacao.termos_texto:
+            cotacao.termos_texto = cfg.txt(session, "termos_padrao")
+    session.add(cotacao)
+    session.commit()
     return RedirectResponse(url=f"/cotacoes/{cotacao_id}", status_code=303)
 
 
@@ -627,8 +863,18 @@ def mudar_status(cotacao_id: int, status: str = Form(...),
 def registrar_aceite(cotacao_id: int, aceite_responsavel: str = Form(""),
                      aceite_cargo: str = Form(""), aceite_departamento: str = Form(""),
                      local_entrega: str = Form(""), endereco_entrega: str = Form(""),
-                     observacoes_pedido: str = Form(""), virar_pedido: str = Form(""),
+                     observacoes_pedido: str = Form(""),
                      session: Session = Depends(get_session)):
+    """Registra o aceite do cliente. **Não muda a situação da cotação.**
+
+    Havia aqui um `virar_pedido` que gravava `StatusCotacao.pedido` direto — um estado
+    herdado do sistema anterior, de onde o workflow não define nenhuma saída. O botão que o
+    acionava ficava ao lado de "Salvar aceite" e foi o primeiro que o usuário clicou.
+
+    Registrar que o cliente aceitou é informação do documento; mover a cotação é decisão do
+    workflow, e passa por `/emitir` e `/enviar`. O resultado comercial do negócio — ganho ou
+    perdido — pertence à oportunidade, não a um atalho de status aqui.
+    """
     cotacao = session.get(Cotacao, cotacao_id)
     if not cotacao:
         return RedirectResponse(url="/cotacoes", status_code=303)
@@ -640,8 +886,6 @@ def registrar_aceite(cotacao_id: int, aceite_responsavel: str = Form(""),
     cotacao.observacoes_pedido = observacoes_pedido or None
     if aceite_responsavel and not cotacao.aceite_em:
         cotacao.aceite_em = datetime.utcnow()
-    if virar_pedido == "sim":
-        cotacao.status = StatusCotacao.pedido
     session.add(cotacao)
     session.commit()
     return RedirectResponse(url=f"/cotacoes/{cotacao_id}", status_code=303)
@@ -681,7 +925,11 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
         produto_atual = session.get(Produto, it.produto_id) if it.produto_id else None
         regras, _regra, ctx = montar_regras(nova, session, produto_atual)
         preco_base_atual = produto_atual.preco_base if produto_atual else it.preco_base
-        custo_atual = (produto_atual.custo_unitario if produto_atual else it.custo_unitario) or 0.0
+        # Duplicar é criar item novo: o custo é reconferido contra as premissas de hoje,
+        # como em qualquer precificação nova. O preço negociado é que se mantém.
+        custo_atual, memoria_custo = (ps.custo_para_precificar(session, produto_atual)
+                                      if produto_atual else (it.custo_unitario, None))
+        custo_atual = custo_atual or 0.0
 
         res = calcular_por_preco(custo_atual, it.quantidade, it.preco_negociado, regras,
                                  preco_base_atual)
@@ -694,7 +942,7 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
         )
         if produto_atual:
             _preencher_item(session, novo_item, produto_atual,
-                            ps.margem_padrao(session, produto_atual))
+                            ps.margem_padrao(session, produto_atual), memoria_custo)
         _aplicar_resultado(novo_item, res, regras, ctx)
         session.add(novo_item)
     session.commit()
@@ -702,7 +950,7 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
 
 
 @router.get("/cotacoes/{cotacao_id}/pdf")
-def gerar_pdf(cotacao_id: int, session: Session = Depends(get_session)):
+def gerar_pdf(request: Request, cotacao_id: int, session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
     if not cotacao:
         return RedirectResponse(url="/cotacoes", status_code=303)
@@ -713,13 +961,19 @@ def gerar_pdf(cotacao_id: int, session: Session = Depends(get_session)):
     # Onda 1: item com cenário fiscal ou condição financeira irresolvida não sai em PDF final.
     # O rascunho continua salvo e editável; o que não acontece é o documento comercial sair com
     # um número que ninguém consegue justificar.
+    # O usuário chega aqui por um clique, não por `fetch`. A recusa precisa ser uma página
+    # que diga o que fazer — não um objeto JSON na barra de endereços, que foi o que ele viu
+    # ao tentar gerar a primeira proposta.
     bloqueios = bloqueios_fiscais(itens)
     if bloqueios:
-        return JSONResponse(
-            {"erro": "PDF bloqueado", "motivos": bloqueios,
-             "detalhe": ("Há item com cenário fiscal ou condição de pagamento não resolvida. "
-                         "Resolva a pendência antes de emitir o documento.")},
-            status_code=409)
+        return pagina_de_erro(
+            request, titulo="Não foi possível gerar o PDF",
+            introducao="Antes de continuar, resolva:",
+            motivos=bloqueios,
+            ajuda=("O rascunho continua salvo e editável. O documento comercial só sai "
+                   "quando todos os itens têm cenário fiscal e condição de pagamento "
+                   "resolvidos."),
+            voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação")
 
     # Sessão 6: preview e documento final são a mesma folha para quem recebe. Enquanto a
     # cotação não estiver emitida, o PDF sai marcado — inclusive (e principalmente) quando

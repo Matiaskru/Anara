@@ -29,9 +29,9 @@ from app.margin_rules import MargemResolvida, resolver_margem
 from app.models import (
     AliquotaInterestadual, CondicaoPagamento, CostConfidence, CostMethod, Cotacao, EstadoFiscal,
     Finalidade, Fornecedor, MargemRegra, NcmRegra, OrigemFiscal, Produto, RegraFcp,
-    RegraFiscalVenda, TipoFornecedor,
+    RegraFiscalVenda, StatusCusto, TipoFornecedor,
 )
-from app.dinheiro import D, para_float
+from app.dinheiro import D, D0, para_float
 from app.nationalization import PremissasNacionalizacao, nacionalizar
 from app.payment_terms import resolver_encargo
 from app.peso import PesoResolvido, resolver_peso
@@ -418,6 +418,91 @@ def premissas_nacionalizacao(session: Session) -> PremissasNacionalizacao:
         fonte="Premissas versionadas (painel de configurações)")
 
 
+#: De onde saiu o CNET que `custo_net` devolve. Existe porque "o número" não basta: um CNET
+#: derivado agora das premissas vigentes e um CNET lido do catálogo são a mesma quantia com
+#: significados diferentes, e só o primeiro reage a uma troca de câmbio.
+CUSTO_DERIVADO_AGORA = "DERIVADO_DAS_PREMISSAS_VIGENTES"
+CUSTO_DO_FORNECEDOR_NACIONAL = "CUSTO_CADASTRADO_DO_FORNECEDOR"
+CUSTO_DO_CATALOGO = "CATALOGO_SEM_EXW"
+
+
+def status_canonico_do_custo(cnet, memoria: dict) -> str:
+    """O `StatusCusto` que corresponde a **como** este custo foi resolvido.
+
+    ## Por que traduzir em vez de copiar
+
+    `CotacaoItem.status_custo_item` é lido pelos portões do workflow — `CUSTO_BLOQUEIA`, o
+    compromisso firme, o WON e a saúde operacional —, e todos esperam o vocabulário
+    canônico: `CONFIRMADO`, `ESTIMADO`, `REVALIDAR`, `A_COTAR`, `REVIEW_REQUIRED`.
+
+    Quando o item não tem `CustoReferencia` versionada, o valor gravado ali vinha de
+    `Produto.custo_confianca`, que fala **outra língua**: `CALCULATED`, `QUOTED`, `MANUAL`,
+    `LEGACY`. Esses termos descrevem o *método* pelo qual o custo foi obtido, não se ele
+    sustenta um compromisso — e nenhum portão os reconhece. O efeito era um bypass
+    silencioso: 210 SKUs ativos com `QUOTED` ou `CALCULATED` produziam um status que não
+    bloqueava nem avisava. Que os 121 com `REVIEW_REQUIRED` bloqueassem era coincidência de
+    string: o mesmo texto existe nos dois vocabulários.
+
+    O método continua registrado, onde sempre esteve — `cost_method`, `custo_confianca` e a
+    memória do preço. O que ele deixa de fazer é competir com o status operacional.
+
+    ## A regra
+
+    * custo **derivado das premissas vigentes** ou **cadastrado pelo fornecedor nacional**,
+      com valor positivo → `CONFIRMADO`: existe evidência viva e rastreável;
+    * custo **lido do catálogo** porque não há EXW para nacionalizar → `REVIEW_REQUIRED`.
+      Há um número, mas nada que diga de onde ele veio nem se ainda vale. Não é `A_COTAR`
+      (que é a ausência de número), e não é `CONFIRMADO` (que exige evidência);
+    * **sem valor nenhum** → `A_COTAR`, qualquer que seja a origem.
+
+    Note que "não há EXW" nunca vira `CONFIRMADO`. Preço direto e rastreável da KTC entra
+    por `exw_cotado_usd` e é nacionalizado normalmente — esse caminho é derivado, não
+    catálogo. O que cai aqui é dado legado sem evidência, e ele não passa pelos portões.
+    """
+    if not cnet or D0(cnet) <= 0:
+        return StatusCusto.a_cotar.value
+    fonte = (memoria or {}).get("net_fonte")
+    if fonte == CUSTO_DO_CATALOGO:
+        return StatusCusto.review_required.value
+    if fonte in (CUSTO_DERIVADO_AGORA, CUSTO_DO_FORNECEDOR_NACIONAL):
+        return StatusCusto.confirmado.value
+    # Origem não declarada: não se inventa confiança para ela.
+    return StatusCusto.review_required.value
+
+
+def custo_para_precificar(session: Session, produto: Produto):
+    """O CNET que deve formar o preço de um item **novo**, com a memória de como se chegou nele.
+
+    ## Por que esta função existe
+
+    `Produto.custo_unitario` é uma coluna persistida, gravada quando o custo foi calculado
+    pela última vez. Ela **não** é recalculada quando uma premissa versionada muda — e o
+    câmbio é premissa versionada. Em 08/09/2026 o câmbio passou de R$ 5,11 para R$ 5,19 e
+    170 dos 241 SKUs KTC com custo ficaram com a coluna defasada.
+
+    O efeito era um item que se contradizia: `custo_unitario` gravado com o custo de 5,11,
+    `memoria_json` recalculado com 5,19 e `premissas_pinadas` apontando para a versão 5,19.
+    O documento afirmava ter sido formado com um câmbio que não formou o preço dele.
+
+    ## O que muda, e o que não muda
+
+    `custo_net()` já resolvia o custo pelo caminho certo de cada fornecedor. Para fornecedor
+    nacional e para SKU KTC sem EXW conhecido ele devolve **exatamente**
+    `produto.custo_unitario` — então esses dois casos continuam idênticos. Só muda o SKU KTC
+    com EXW em dólar, que é justamente aquele cujo custo depende do câmbio e que, por isso,
+    deveria ter mudado desde o começo.
+
+    ## O que NÃO fazer com o retorno
+
+    Quando `net_brl` vem `None`, o custo vivo não pôde ser resolvido. O chamador **não** deve
+    cair para `produto.custo_unitario` para conseguir cotar assim mesmo: o status canônico
+    (`A_COTAR`, `REVIEW_REQUIRED`) é a resposta certa, e mascarar a falha com um valor antigo
+    é o erro que esta função existe para não repetir.
+    """
+    memoria = custo_net(session, produto)
+    return memoria.get("net_brl"), memoria
+
+
 def custo_net(session: Session, produto: Produto) -> dict:
     """Devolve o CUSTO NET em R$ do produto e como se chegou nele.
 
@@ -454,6 +539,7 @@ def custo_net(session: Session, produto: Produto) -> dict:
                 "Produto de fornecedor nacional sem custo NET cadastrado. Continua cotável "
                 "pelo preço, mas a margem não pode ser calculada até o custo entrar.")
         memoria["net_brl"] = produto.custo_unitario
+        memoria["net_fonte"] = CUSTO_DO_FORNECEDOR_NACIONAL
         return memoria
 
     # --- KTC ---
@@ -501,6 +587,7 @@ def custo_net(session: Session, produto: Produto) -> dict:
         memoria["avisos"].append("Sem EXW conhecido — custo NET não pode ser recalculado; "
                                  "mantido o custo que já estava no catálogo.")
         memoria["net_brl"] = produto.custo_unitario
+        memoria["net_fonte"] = CUSTO_DO_CATALOGO
         return memoria
 
     # produto sem peso gravado (o caso da calculadora, e de SKU novo) tem o peso estimado aqui.
@@ -518,6 +605,7 @@ def custo_net(session: Session, produto: Produto) -> dict:
     memoria["avisos"].extend(nac.avisos)
     memoria["net_brl"] = para_float(nac.net_brl)
     memoria["net_usd"] = para_float(nac.net_usd)
+    memoria["net_fonte"] = CUSTO_DERIVADO_AGORA
     memoria["caminho"] = ("Especificação → motor industrial KTC → EXW → nacionalização → NET"
                           if metodo == CostMethod.ktc_calculated.value
                           else "Último preço KTC válido → nacionalização → NET")

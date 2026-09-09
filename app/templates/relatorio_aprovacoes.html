@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Relatório de aprovações — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Aprovações</h1>
+    <div class="subtitle">{{ periodo.rotulo }}. Quantas exceções comerciais foram pedidas,
+      decididas e em quanto tempo.</div></div>
+  <a href="/aprovacoes" class="btn btn-ghost">Ver fila</a>
+</div>
+
+{% with aba = 'aprovacoes' %}{% include "_abas_relatorios.html" %}{% endwith %}
+
+<div class="card" style="margin-bottom:14px;">
+  <form method="get" class="grid-4" style="margin-bottom:0;">
+    <div class="field"><label>Período</label>
+      <select name="periodo" onchange="this.form.submit()">
+        <option value="" {{ 'selected' if not atalho else '' }}>Todo o período</option>
+        <option value="mes" {{ 'selected' if atalho == 'mes' else '' }}>Este mês</option>
+        <option value="30d" {{ 'selected' if atalho == '30d' else '' }}>Últimos 30 dias</option>
+        <option value="ano" {{ 'selected' if atalho == 'ano' else '' }}>Este ano</option>
+      </select></div>
+    <div class="field"><label>De</label><input type="date" name="inicio" value="{{ inicio }}"></div>
+    <div class="field"><label>Até</label><input type="date" name="fim" value="{{ fim }}"></div>
+    <div class="field" style="display:flex;align-items:flex-end;">
+      <button class="btn btn-ghost btn-sm" type="submit">Aplicar</button></div>
+  </form>
+</div>
+
+<div class="grid-4">
+  <div class="card"><div class="rotulo">Aguardando decisão</div>
+    <div class="numero">{{ aprovacoes.pendentes }}</div></div>
+  <div class="card"><div class="rotulo">Aprovadas</div>
+    <div class="numero">{{ aprovacoes.aprovadas }}</div></div>
+  <div class="card"><div class="rotulo">Rejeitadas</div>
+    <div class="numero">{{ aprovacoes.rejeitadas }}</div></div>
+  <div class="card"><div class="rotulo">Tempo médio até decidir</div>
+    <div class="numero">{% if aprovacoes.horas_ate_decisao_media is not none %}{{ aprovacoes.horas_ate_decisao_media }} h{% else %}—{% endif %}</div></div>
+</div>
+
+{% if aprovacoes.mais_antigo_pendente_dias %}
+<div class="card" style="margin-top:14px; background:#F6E2D8;">
+  O pedido mais antigo está esperando há {{ aprovacoes.mais_antigo_pendente_dias }} dia(s).
+</div>
+{% endif %}
+
+{% if not aprovacoes.pendentes and not aprovacoes.aprovadas and not aprovacoes.rejeitadas %}
+<div class="card" style="margin-top:14px;">
+  <p class="vazio">Nenhum pedido de aprovação neste período. Aparece aqui quando alguém
+    negocia abaixo do preço recomendado.</p>
+</div>
+{% endif %}
+{% endblock %}

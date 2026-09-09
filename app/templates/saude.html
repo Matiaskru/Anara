@@ -23,17 +23,23 @@
   <h3 style="margin-top:0;">Bloqueios — impedem emitir documento</h3>
   <p style="color:var(--gray);font-size:12px;">Falta dado econômico. Nenhuma alçada dispensa
     isso: aprovação comercial não cria o número que falta.</p>
-  {% set rotulos = {'cotacoes_com_a_cotar': 'Cotações com item A_COTAR',
-                    'cotacoes_com_review_required': 'Cotações com REVIEW_REQUIRED (custo ou fiscal)',
-                    'cotacoes_com_pagamento_irresolvido': 'Cotações com condição de pagamento irresolvida'} %}
+  {# Descrição humana primeiro; o código técnico fica ao lado, para quem for procurar
+     no log ou na trilha. Esta é área técnica — o código pode aparecer, mas não sozinho. #}
+  {% set rotulos = {'cotacoes_com_a_cotar': 'Cotações com item sob consulta',
+                    'cotacoes_com_review_required': 'Cotações com item aguardando revisão (custo ou fiscal)',
+                    'cotacoes_com_pagamento_irresolvido': 'Cotações com condição de pagamento a resolver'} %}
+  {% set codigos = {'cotacoes_com_a_cotar': 'A_COTAR',
+                    'cotacoes_com_review_required': 'REVIEW_REQUIRED',
+                    'cotacoes_com_pagamento_irresolvido': 'PAGAMENTO_REVIEW_REQUIRED'} %}
   {% for chave, lista in saude.blockers.items() %}
   <h4 style="margin:10px 0 4px; font-size:13px;">{{ rotulos.get(chave, chave) }}
-    <span style="color:var(--gray);">({{ lista|length }} cotação(ões))</span></h4>
+    <span style="color:var(--gray);">({{ lista|length }} cotação(ões))</span>
+    {% if codigos.get(chave) %}<code style="font-size:10.5px;color:var(--gray);font-weight:400;">{{ codigos[chave] }}</code>{% endif %}</h4>
   {% if lista %}
   <table class="compacta">
     <tbody>{% for c in lista %}
       <tr><td><a href="/cotacoes/{{ c.cotacao_id }}">{{ c.numero or c.cotacao_id }}</a></td>
-        <td><span class="tag">{{ c.status.replace('_',' ') }}</span></td>
+        <td><span class="tag">{{ c.status|rotulo_cotacao }}</span></td>
         <td style="font-size:11px;">{{ c.itens }} item(ns) afetado(s)</td></tr>
     {% endfor %}</tbody>
   </table>
@@ -43,8 +49,8 @@
 
 <div class="card">
   <h3 style="margin-top:0;">Avisos — acompanhar, não travam</h3>
-  {% set rotulos_a = {'cotacoes_com_estimado_pendente': 'Cotações com custo ESTIMADO a confirmar (proposta sai; compromisso firme, não)',
-                      'cotacoes_com_revalidar': 'Cotações com custo em REVALIDAR (reconfirmar antes de fechar)'} %}
+  {% set rotulos_a = {'cotacoes_com_estimado_pendente': 'Custo estimado a confirmar — a proposta sai, o compromisso firme não',
+                      'cotacoes_com_revalidar': 'Custo a revalidar — reconfirmar antes de fechar'} %}
   {% for chave, lista in saude.avisos.items() %}
   <h4 style="margin:10px 0 4px; font-size:13px;">{{ rotulos_a.get(chave, chave) }}
     <span style="color:var(--gray);">({{ lista|length }})</span></h4>
@@ -67,7 +73,7 @@
       <tr><td>SKUs sem custo cadastrado</td><td class="num">{{ saude.catalogo.skus_sem_custo }}</td></tr>
       <tr><td>Referências de custo versionadas</td><td class="num">{{ saude.catalogo.referencias_versionadas }}</td></tr>
       {% for status, n in saude.catalogo.referencias_vigentes_por_status.items() %}
-      <tr><td style="padding-left:20px;">referências vigentes · {{ status }}</td><td class="num">{{ n }}</td></tr>
+      <tr><td style="padding-left:20px;">referências vigentes · {{ status|rotulo_custo }}</td><td class="num">{{ n }}</td></tr>
       {% endfor %}
     </tbody>
   </table>
@@ -77,12 +83,22 @@
   <h3 style="margin-top:0;">Pendências conhecidas do projeto</h3>
   <p style="color:var(--gray);font-size:12px;">Estas <strong>não</strong> são resolvidas pelo
     sistema e não viram zero. Aparecem aqui para não serem esquecidas.</p>
+  {# Agrupado por assunto: quem lê quer saber "o que falta no frete", não percorrer uma
+     lista plana de códigos. O código fica pequeno, ao lado da descrição. #}
+  {% set por_assunto = {} %}
+  {% for p in saude.pendencias_conhecidas %}
+    {% set _ = por_assunto.setdefault(p.assunto or 'Outros', []).append(p) %}
+  {% endfor %}
+  {% for assunto, itens in por_assunto.items() %}
+  <h4 style="margin:14px 0 4px; font-size:12px; text-transform:uppercase;
+             letter-spacing:.08em; color:var(--gray);">{{ assunto }}</h4>
   <table class="compacta">
-    <thead><tr><th>ID</th><th>Assunto</th><th>Situação</th></tr></thead>
-    <tbody>{% for p in saude.pendencias_conhecidas %}
-      <tr><td><code>{{ p.id }}</code></td><td>{{ p.titulo }}</td>
+    <tbody>{% for p in itens %}
+      <tr><td style="width:38%;"><strong>{{ p.titulo }}</strong>
+            <code style="font-size:10px;color:var(--gray);">{{ p.id }}</code></td>
         <td style="font-size:11.5px;">{{ p.situacao }}</td></tr>
     {% endfor %}</tbody>
   </table>
+  {% endfor %}
 </div>
 {% endblock %}

@@ -55,7 +55,7 @@ def relatorios(request: Request, periodo: str = "", inicio: str = "", fim: str =
     painel = mx.painel_comercial(session, janela,
                                  responsavel_id=_filtros(request, responsavel))
     return templates.TemplateResponse(request, "relatorios.html", {
-        "active": "relatorios", "painel": painel, "periodo": janela,
+        "active": "relatorios", "aba": "comercial", "painel": painel, "periodo": janela,
         "atalho": periodo, "inicio": inicio, "fim": fim, "responsavel": responsavel,
         "cotacoes": mx.painel_de_cotacoes(session, janela),
         "aprovacoes": mx.painel_de_aprovacoes(session, janela),
@@ -75,7 +75,7 @@ def economico(request: Request, periodo: str = "", inicio: str = "", fim: str = 
     exigir_economia(request)
     janela = _periodo(periodo, inicio, fim)
     return templates.TemplateResponse(request, "relatorio_economico.html", {
-        "active": "relatorios", "periodo": janela, "atalho": periodo,
+        "active": "relatorios", "aba": "economico", "periodo": janela, "atalho": periodo,
         "inicio": inicio, "fim": fim,
         "economico": mx.painel_economico(session, janela),
         "saude": mx.saude_operacional(session),
@@ -88,6 +88,39 @@ def saude(request: Request, session: Session = Depends(get_session)):
     exigir_economia(request)
     return templates.TemplateResponse(request, "saude.html", {
         "active": "saude", "saude": mx.saude_operacional(session),
+    })
+
+
+# ---------------------------------------------------------------------------
+# Cotações e aprovações — destinos próprios dentro de Relatórios
+# ---------------------------------------------------------------------------
+@router.get("/relatorios/cotacoes", response_class=HTMLResponse)
+def relatorio_cotacoes(request: Request, periodo: str = "", inicio: str = "", fim: str = "",
+                       session: Session = Depends(get_session)):
+    """Relatório de **documentos**: cada revisão é uma linha.
+
+    Os dados já existiam — vinham dentro da tela comercial e saíam por CSV. O que faltava
+    era um destino: quem queria "o relatório de cotações" não tinha para onde ir.
+    """
+    exigir_autenticado(request)
+    janela = _periodo(periodo, inicio, fim)
+    return templates.TemplateResponse(request, "relatorio_cotacoes.html", {
+        "active": "relatorios", "aba": "cotacoes", "periodo": janela,
+        "atalho": periodo, "inicio": inicio, "fim": fim,
+        "cotacoes": mx.painel_de_cotacoes(session, janela),
+    })
+
+
+@router.get("/relatorios/aprovacoes", response_class=HTMLResponse)
+def relatorio_aprovacoes(request: Request, periodo: str = "", inicio: str = "", fim: str = "",
+                         session: Session = Depends(get_session)):
+    """Quantas exceções foram pedidas, decididas e em quanto tempo."""
+    exigir_autenticado(request)
+    janela = _periodo(periodo, inicio, fim)
+    return templates.TemplateResponse(request, "relatorio_aprovacoes.html", {
+        "active": "relatorios", "aba": "aprovacoes", "periodo": janela,
+        "atalho": periodo, "inicio": inicio, "fim": fim,
+        "aprovacoes": mx.painel_de_aprovacoes(session, janela),
     })
 
 

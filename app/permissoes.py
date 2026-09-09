@@ -73,6 +73,24 @@ def gerencia_usuarios(request: Request) -> bool:
     return bool(u and u.gerencia_usuarios)
 
 
+def aprova_cotacoes(request: Request) -> bool:
+    """Tem alçada para decidir sobre exceção comercial.
+
+    **Independente de `ve_economia` e de `gerencia_economia`**, e é isso que importa aqui.
+    Ver o custo é uma permissão; versionar a premissa é outra; autorizar abrir mão de
+    receita numa venda específica é uma terceira. Quem mantém o cadastro do câmbio não
+    herda, por isso, o direito de aprovar um desconto.
+
+    Serve para a **navegação** — a fila é o painel de quem decide, e anunciá-la a quem não
+    decide oferece uma tela que não leva a lugar nenhum. A autorização de verdade continua
+    em `workflow_service._exigir_alcada`, no servidor, e a fila permanece legível em modo
+    consulta para os papéis econômicos: ela mostra preço e margem, e há quem precise
+    acompanhar sem decidir.
+    """
+    u = usuario_da_request(request)
+    return bool(u and u.aprova_cotacoes)
+
+
 def opera_cotacao(request: Request) -> bool:
     """Pode montar e editar cotação. Todos os papéis autenticados podem — o que muda entre
     eles não é o direito de cotar, é o que a resposta carrega de volta."""

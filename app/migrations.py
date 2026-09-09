@@ -9,6 +9,7 @@ Roda sozinho no startup da aplicação (`init_db`), e também pode ser chamado d
     python3 -m app.migrations
 """
 import os
+import re
 import shutil
 from datetime import datetime
 
@@ -30,16 +31,55 @@ def fazer_backup(motivo: str = "migration") -> str:
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     destino = os.path.join(BACKUP_DIR, f"anara.db.{motivo}-{stamp}")
     shutil.copy2(DB_PATH, destino)
-    # Ordenar por DATA DE MODIFICAÇÃO, não pelo nome. O nome começa pelo motivo
-    # ("exclusao", "migration", "fase0-pre"...), então a ordem alfabética fazia o motivo decidir
-    # quem era apagado: um backup recém-criado com motivo de letra baixa era destruído na hora,
-    # enquanto um antigo com motivo de letra alta sobrevivia. Encontrado em 03/09/2026, quando
-    # a suíte apagou o próprio backup que acabara de criar.
-    caminhos = [os.path.join(BACKUP_DIR, f) for f in os.listdir(BACKUP_DIR)
-                if f.startswith("anara.db.")]
-    for antigo in sorted(caminhos, key=os.path.getmtime)[:-MAX_BACKUPS]:
-        os.remove(antigo)
+    _podar_backups(preservar=destino)
     return destino
+
+
+#: `anara.db.<motivo>-AAAAMMDD-HHMMSS`. O carimbo é o que ordena; o motivo é texto livre e
+#: não pode participar da decisão de quem é apagado.
+_CARIMBO = re.compile(r"-(\d{8}-\d{6})$")
+
+
+def _idade_do_backup(caminho: str):
+    """Chave de ordenação: o carimbo do nome, com o mtime como desempate.
+
+    **B-18.** A poda ordenava por `os.path.getmtime`, e `shutil.copy2` **preserva o mtime da
+    origem** — então todas as cópias do mesmo `anara.db` ficavam com o mesmo mtime. Com o
+    empate, quem decidia era a ordem arbitrária de `os.listdir`, e o arquivo recém-criado
+    podia ser justamente o removido. Foi o que aconteceu quando o diretório passou de 30
+    arquivos: o backup de segurança desta sessão desapareceu no instante em que foi feito.
+
+    Antes disso a ordenação era alfabética, e aí o **motivo** decidia — um backup com motivo
+    de letra baixa morria na frente de um antigo com letra alta. Trocar nome por mtime moveu
+    o problema em vez de encerrá-lo; a informação correta sempre esteve no carimbo.
+    """
+    achado = _CARIMBO.search(os.path.basename(caminho))
+    return (achado.group(1) if achado else "", os.path.getmtime(caminho))
+
+
+def _podar_backups(preservar: str = "", pasta: str = "", maximo: int = 0) -> list:
+    """Mantém os `maximo` backups mais recentes. Nunca remove `preservar`.
+
+    `pasta` e `maximo` são parâmetros — e não leitura dos globais — para que o teste
+    exercite a função num diretório próprio sem trocar o estado do módulo. Trocar global em
+    teste vaza para quem rodar depois, e neste módulo o global é o caminho do banco.
+    """
+    pasta = pasta or BACKUP_DIR
+    maximo = maximo or MAX_BACKUPS
+    if not os.path.isdir(pasta):
+        return []
+    caminhos = [os.path.join(pasta, f) for f in os.listdir(pasta)
+                if f.startswith("anara.db.")]
+    if len(caminhos) <= maximo:
+        return []
+    alvo = os.path.abspath(preservar) if preservar else None
+    removidos = []
+    for antigo in sorted(caminhos, key=_idade_do_backup)[:-maximo]:
+        if alvo and os.path.abspath(antigo) == alvo:
+            continue          # o recém-criado nunca é o descartado
+        os.remove(antigo)
+        removidos.append(antigo)
+    return removidos
 
 
 def _sqlite_tipo(coluna) -> str:

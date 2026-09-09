@@ -40,7 +40,7 @@
       {% for c in cotacoes %}
       <tr onclick="window.location='/cotacoes/{{ c.id }}'" style="cursor:pointer;">
         <td>{{ c.criado_em|data }}</td>
-        <td><span class="badge badge-{{ c.status.value }}">{{ c.status.value }}</span></td>
+        <td><span class="badge badge-{{ c.status|rotulo_cotacao }}">{{ c.status|rotulo_cotacao }}</span></td>
         <td>{{ c.condicao_pagamento }}</td>
         <td class="num">{{ totais.get(c.id)|brl }}</td>
         <td><a href="/cotacoes/{{ c.id }}" class="btn btn-ghost btn-sm">Abrir</a></td>
@@ -94,7 +94,7 @@
     <tbody>
     {% for o in abertas %}
       <tr><td><a href="/oportunidades/{{ o.id }}">{{ o.titulo }}</a></td>
-        <td><span class="tag">{{ o.etapa }}</span></td>
+        <td><span class="tag">{{ o.etapa|rotulo_etapa }}</span></td>
         <td style="font-size:11px;">{{ o.responsavel or '—' }}</td>
         <td class="num">{{ (o.valor_cotado or o.valor_estimado)|brl }}</td>
         <td style="font-size:11px;">{% if o.proxima_atividade %}{{ o.proxima_atividade.titulo }}
@@ -122,7 +122,7 @@
     <tbody>
     {% for o in fechadas %}
       <tr><td><a href="/oportunidades/{{ o.id }}">{{ o.titulo }}</a></td>
-        <td><span class="tag {{ 'tag-calc' if o.status == 'GANHA' else 'tag-review' }}">{{ o.status }}</span></td>
+        <td><span class="tag {{ 'tag-calc' if o.status == 'GANHA' else 'tag-review' }}">{{ o.status|rotulo_oportunidade }}</span></td>
         <td class="num">{{ (o.valor_fechado or o.valor_cotado)|brl }}</td></tr>
     {% endfor %}
     </tbody>
@@ -138,7 +138,7 @@
     {% for a in atividades %}
       <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
         <td style="font-size:11px;">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
-        <td><span class="tag">{{ a.tipo }}</span></td>
+        <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td>
         <td>{{ a.titulo }}</td>
         <td style="font-size:11px;">{{ 'concluída' if a.concluida_em else 'pendente' }}</td></tr>
     {% endfor %}

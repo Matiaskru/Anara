@@ -4,10 +4,11 @@
 <div class="page-head">
   <div><h1>Meu dia</h1>
     <div class="sub">O que precisa de atenção agora.</div></div>
-  <div>
-    <a href="/pipeline" class="btn btn-ghost">Pipeline</a>
-    <a href="/oportunidades" class="btn btn-ghost">Oportunidades</a>
-    <a href="/clientes" class="btn btn-ghost">Clientes</a>
+  {# Atalhos são AÇÕES, não navegação: o menu lateral já leva às listas. #}
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <a href="/clientes" class="btn btn-ghost">Novo cliente</a>
+    <a href="/oportunidades" class="btn btn-ghost">Nova oportunidade</a>
+    <a href="/cotacoes/nova" class="btn btn-copper">Nova cotação</a>
   </div>
 </div>
 
@@ -19,14 +20,14 @@
     <tbody>
     {% for a in atrasadas %}
       <tr><td style="font-size:11px;color:var(--copper);">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
-        <td><span class="tag">{{ a.tipo }}</span></td>
+        <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td>
         <td>{{ a.titulo }}
           {% if a.oportunidade_id %}<a href="/oportunidades/{{ a.oportunidade_id }}" style="font-size:11px;">ver negócio</a>{% endif %}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="concluir({{ a.id }})">Concluir</button></td></tr>
     {% endfor %}
     </tbody>
   </table>
-  {% else %}<p style="color:var(--gray);">Nada atrasado.</p>{% endif %}
+  {% else %}<p class="vazio">Nada atrasado. </p>{% endif %}
 </div>
 
 <div class="card">
@@ -36,12 +37,12 @@
     <tbody>
     {% for a in hoje %}
       <tr><td style="font-size:11px;">{{ a.due_em.strftime('%H:%M') if a.due_em else '—' }}</td>
-        <td><span class="tag">{{ a.tipo }}</span></td><td>{{ a.titulo }}</td>
+        <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td><td>{{ a.titulo }}</td>
         <td><button class="btn btn-ghost btn-sm" onclick="concluir({{ a.id }})">Concluir</button></td></tr>
     {% endfor %}
     </tbody>
   </table>
-  {% else %}<p style="color:var(--gray);">Nada agendado para hoje.</p>{% endif %}
+  {% else %}<p class="vazio">Você não tem atividades para hoje.</p>{% endif %}
 </div>
 
 <div class="card">
@@ -55,12 +56,12 @@
     {% for c in sem_atividade %}
       <tr><td>{{ c.cliente }}</td>
         <td><a href="/oportunidades/{{ c.id }}">{{ c.titulo }}</a></td>
-        <td><span class="tag">{{ c.etapa }}</span></td>
+        <td><span class="tag">{{ c.etapa|rotulo_etapa }}</span></td>
         <td class="num">{{ (c.valor_cotado or c.valor_estimado)|brl }}</td></tr>
     {% endfor %}
     </tbody>
   </table>
-  {% else %}<p style="color:var(--gray);">Todos os seus negócios têm próximo passo.</p>{% endif %}
+  {% else %}<p class="vazio">Todos os seus negócios têm próximo passo combinado.</p>{% endif %}
 </div>
 
 <div class="card">
@@ -72,7 +73,7 @@
     {% for c in minhas %}
       <tr><td>{{ c.cliente }}</td>
         <td><a href="/oportunidades/{{ c.id }}">{{ c.titulo }}</a></td>
-        <td><span class="tag">{{ c.etapa }}</span></td>
+        <td><span class="tag">{{ c.etapa|rotulo_etapa }}</span></td>
         <td class="num">{{ (c.valor_cotado or c.valor_estimado)|brl }}</td>
         <td style="font-size:11px;">
           {% if c.proxima_atividade %}
@@ -81,7 +82,10 @@
           {% else %}<span style="color:var(--gray);">Sem próxima atividade</span>{% endif %}</td>
         <td style="font-size:11px;">{{ c.previsao|data if c.previsao else '—' }}</td></tr>
     {% else %}
-      <tr><td colspan="6" style="color:var(--gray);">Nenhuma oportunidade sua em aberto.</td></tr>
+      <tr><td colspan="6">
+        <p class="vazio">Nenhum negócio seu em aberto.<br>
+          <a href="/oportunidades">Abra uma oportunidade</a> para começar a acompanhar.</p>
+      </td></tr>
     {% endfor %}
     </tbody>
   </table>
@@ -95,7 +99,7 @@
     {% for p in aprovacoes %}
       <tr><td><code>{{ p.cotacao.numero or p.cotacao.id }}</code></td>
         <td>{{ p.cliente or '—' }}</td>
-        <td>{% for m in p.motivos %}<span class="tag tag-review">{{ m.replace('_',' ')|lower }}</span> {% endfor %}</td>
+        <td>{% for m in p.motivos %}<span class="tag tag-review">{{ m|rotulo_excecao }}</span> {% endfor %}</td>
         <td><a class="btn btn-ghost btn-sm" href="/aprovacoes/{{ p.pedido.id }}">Analisar</a></td></tr>
     {% endfor %}
     </tbody>

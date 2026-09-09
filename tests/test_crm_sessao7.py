@@ -21,6 +21,7 @@ from app.models import (
     Oportunidade, OportunidadeEtapaHistorico, Produto, StatusCotacao, StatusOportunidade,
     Usuario,
 )
+import legado
 from conftest import RequestFalsa, _novo_usuario
 
 AGORA = datetime.utcnow()
@@ -727,22 +728,31 @@ def test_anonimo_nao_entra_no_crm(session, owner):
 # ===========================================================================
 # P0 §68 — legado
 # ===========================================================================
+@legado.sem_baseline
 def test_p0_historico_legado_nao_ganha_oportunidade_ficticia(session):
-    """§16 e §68: nenhuma das 18 cotações passou pelo funil. Não inventar que passou."""
+    """§16 e §68: nenhuma das cotações herdadas passou pelo funil. Não inventar que passou.
+
+    O que este teste **deixou de afirmar**, de propósito: que o CRM está vazio. Ele estava,
+    quando o sistema não era usado, e afirmar isso era barato. Agora que o Matias usa o
+    sistema, `Oportunidade`, `Contato` e `AtividadeComercial` legitimamente têm linhas — e
+    exigir tabela vazia transformaria uso normal em suíte vermelha.
+
+    O que continua sendo afirmado é a única coisa que o legado promete: **nenhuma cotação
+    herdada aponta para oportunidade nenhuma**. Como toda `AtividadeComercial` e todo
+    `OportunidadeEtapaHistorico` pendem de uma oportunidade, e nenhuma oportunidade alcança
+    uma cotação herdada, o funil continua provadamente sem retroencaixe.
+    """
     from sqlalchemy import create_engine
     from sqlmodel import Session as S
     import os
 
     eng = create_engine(f"sqlite:///file:{os.path.abspath('data/anara.db')}?mode=ro&uri=true")
     with S(eng) as prod:
-        cotacoes = prod.exec(select(Cotacao)).all()
-        assert len(cotacoes) == 18
+        cotacoes = legado.somente_cotacoes(prod.exec(select(Cotacao)).all())
+        assert len(cotacoes) == len(legado.COTACOES), "cotação herdada sumiu do banco"
         assert all(c.oportunidade_id is None for c in cotacoes)
-        assert len(prod.exec(select(CotacaoItem)).all()) == 45
-        assert prod.exec(select(Oportunidade)).all() == []
-        assert prod.exec(select(Contato)).all() == []
-        assert prod.exec(select(AtividadeComercial)).all() == []
-        assert prod.exec(select(OportunidadeEtapaHistorico)).all() == []
+        itens = legado.somente_por_cotacao(prod.exec(select(CotacaoItem)).all())
+        assert len(itens) == len(legado.ITENS), "item de cotação herdada sumiu do banco"
 
 
 # ===========================================================================

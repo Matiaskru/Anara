@@ -1,206 +1,184 @@
 # Anara — prontidão para o piloto
 
-Escrito ao fim da Sessão 8. O objetivo aqui não é vender o sistema: é dizer com precisão o
-que ele faz, o que ele não faz, e o que ainda não se deve confiar. Um documento de prontidão
-que esconde pendência atrapalha mais do que ajuda.
-
-**Manual completo virá depois.** Este é o mínimo para você abrir o sistema, usar de verdade e
-descobrir o que precisa mudar.
+Atualizado em 09/09/2026, ao fim do Product Cleanup. O objetivo não é vender o sistema: é
+dizer com precisão o que ele faz, o que não faz, e o que ainda não se deve confiar. Um
+documento de prontidão que esconde pendência atrapalha mais do que ajuda.
 
 ---
 
-## 1. Como subir o sistema
-
-Cinco passos, com os comandos reais do projeto.
-
-**1. Configurar o ambiente**
+## Como subir
 
 ```bash
-cp .env.example .env
-```
-
-Gere a chave de sessão e cole no `.env`:
-
-```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-Só `ANARA_SECRET_KEY` é realmente necessária. Sem ela, em desenvolvimento, o sistema sobe com
-uma chave aleatória por processo — funciona, mas cada reinício derruba as sessões abertas.
-
-**2. Fazer backup antes de qualquer coisa**
-
-```bash
-python3 scripts/backup_banco.py backup --motivo antes-do-piloto
-```
-
-**3. Aplicar as migrations**
-
-```bash
-python3 -m alembic upgrade head
-```
-
-Deve terminar em `0017`.
-
-**4. Criar o primeiro OWNER** — ainda não existe nenhum usuário
-
-```bash
-python3 scripts/criar_usuario.py --email voce@anara.com.br --nome "Matias" --papel OWNER --gerencia-usuarios
-```
-
-A senha é digitada sem aparecer na tela. Não passe senha por argumento: ela ficaria no
-histórico do shell e no `ps`.
-
-Para se dar alçada de aprovação de descontos, rode depois:
-
-```bash
-python3 scripts/criar_usuario.py --email voce@anara.com.br --papel OWNER
-```
-
-(OWNER já aprova por padrão; a flag `can_approve_quotes` existe para separar ADMINs.)
-
-**5. Subir o servidor**
-
-```bash
+cd ~/Anara-Cotacao
 python3 -m uvicorn app.main:app --host 127.0.0.1 --port 8420 --reload
 ```
 
-Abra **http://127.0.0.1:8420** — cai na tela de login.
+Abra **http://127.0.0.1:8420**. Sem nenhuma conta no banco, a tela de login leva ao
+**primeiro acesso**, onde o primeiro OWNER é criado pelo navegador. Depois disso, usuários se
+gerenciam em **Admin → Usuários** — o terminal deixou de ser necessário para isso.
 
-> O ícone "Plataforma Anara" e o `iniciar_plataforma.py` continuam funcionando; o comando
-> acima é o equivalente explícito.
-
-**Conferir que está no ar**, de outro terminal:
+Conferir que está no ar:
 
 ```bash
 curl -s http://127.0.0.1:8420/health
 ```
 
-Deve responder `{"status":"ok","database":"ok"}`.
-
 ---
 
-## 2. Como verificar tudo antes de confiar
+## O QUE CONFIAR
 
-```bash
-python3 -m pytest -q
-```
-715 testes, todos passando.
+### Precificação
 
-```bash
-python3 scripts/smoke_test.py
-```
-Sobe o servidor de verdade numa **cópia** do banco, faz login, percorre 23 rotas, executa dois
-fluxos de ponta a ponta, gera PDF e confere que o banco de produção não foi tocado. 60
-verificações. Ele **aborta** se não conseguir provar o isolamento — ver o B-21 abaixo.
-
-```bash
-python3 scripts/comparar_baseline_sessao3b.py
-```
-Prova que nenhum preço mudou.
-
----
-
-## 3. O que está pronto
-
-| Área | Situação |
+| | |
 |---|---|
-| **Precificação** | Motor KTC industrial, nacionalização, Daune, Decor, fronha §18, waterfall completo |
-| **Fiscal** | ICMS por item, origem fiscal por operação, DIFAL, FCP, 5 condições de pagamento |
-| **Frete comercial** | TRANSAL, grupos logísticos, CF no numerador e RV no denominador |
-| **Precisão** | `Decimal` no núcleo, `ROUND_HALF_UP`, reconciliação ao centavo, rateio sem perda |
-| **Acesso** | Login por pessoa com argon2, 4 papéis, confidencialidade econômica no servidor |
-| **Admin** | Versionamento de premissas com preview/apply, vigência futura, trilha de auditoria |
-| **Workflow** | Aprovação por fingerprint, emissão imutável, revisões, compromisso firme |
-| **CRM** | Clientes, contatos, oportunidades, pipeline, atividades, ganho/perda |
-| **Relatórios** | Painel comercial, econômico, saúde operacional, CSV |
+| Motor KTC industrial | tecido, CMT, waste, encolhimento, 2ª qualidade, margem KTC |
+| Nacionalização | frete internacional, I.I., outras despesas, câmbio |
+| Fornecedor nacional | bruto → créditos de compra → CNET |
+| Precisão | `Decimal` no núcleo, `ROUND_HALF_UP`, reconciliação ao centavo |
+| **Premissa vigente** | **precificação nova sempre usa a versão vigente** — corrigido nesta rodada |
+| Histórico | cotação emitida nunca muda; snapshot e pinos congelados |
 
----
+**Prova viva:** trocar o câmbio em Admin → Premissas e criar uma cotação nova resulta em
+preço diferente, com `custo_unitario`, `memoria_json` e `premissas_pinadas` **coerentes entre
+si**. Cotação anterior não se mexe.
 
-## 4. O que NÃO usar ainda
+### Fiscal
 
-**Frete CIF.** As pendências abaixo estão abertas e o sistema **bloqueia** a emissão de
-cotação CIF em vez de inventar um número. Para o piloto, use **FOB** — o frete fica com o
-cliente e nada bloqueia.
+ICMS por item, origem fiscal por operação, DIFAL, FCP por regra cadastrada, 5 condições de
+pagamento. Origem fiscal e origem logística são conceitos separados e nomeados por extenso na
+tela.
 
-| ID | Pendência | Quem responde |
+### Comercial
+
+CRM com clientes, contatos, oportunidades, pipeline e atividades. Cotação com workflow
+completo: rascunho → aprovação → emissão → envio, com revisões e genealogia. Aprovação por
+fingerprint. PDF de rascunho marcado.
+
+### Acesso
+
+Login por pessoa com argon2id. Quatro papéis e três permissões granulares, independentes
+entre si. Vendedor não vê custo, margem, lucro nem markup — **na resposta da API**, não só na
+tela.
+
+### Premissas vigentes hoje
+
+| Premissa | Valor | Vigente desde |
 |---|---|---|
-| C-NEW-01 | ICMS da prestação: incluso ou gross-up? Três evidências não reconciliadas | TRANSAL |
-| C-NEW-02 | O GRIS de 0,10% incide sempre? | TRANSAL |
-| C-NEW-06 | O fiel depositário de 0,5% da NF incide quando? | TRANSAL |
-| C-NEW-08 | Pedágio incide sobre peso real ou taxado? | TRANSAL |
-| C-NEW-04 | Volume por SKU — cadastro ausente | Operação |
-| Q-L | De onde Daune e Decor embarcam? | Você |
-| C-NEW-03 | Passo Fundo-RS: região sem tarifa | TRANSAL |
+| Câmbio USD → BRL | **R$ 5,19** | 08/09/2026 |
+| Frete internacional | US$ 0,516 /kg | 28/08/2026 |
+| Outras despesas de importação | US$ 0,2488 /un | 28/08/2026 |
+| PIS/COFINS | 7,59% | 28/08/2026 |
 
-**Custos em `A_COTAR` e `REVIEW_REQUIRED`.** O sistema não forma preço para eles e não deixa
-emitir. Isso é o comportamento correto, não um defeito — mas significa que parte do catálogo
-ainda não está cotável. Veja quais em **Saúde operacional**.
-
-**121 SKUs com `REVIEW_REQUIRED` legado.** O rótulo antigo tem sentido diferente do canônico;
-a reclassificação exige o gate de reconciliação e ainda não foi feita.
-
-**WON não vira pedido.** Marcar uma oportunidade como ganha registra o resultado comercial e
-nada mais: não existe PO, faturamento nem integração com ERP.
+> Estes são os **valores vigentes**, não exemplos. Quando o dólar mudar, esta tabela fica
+> desatualizada — a fonte de verdade é sempre Admin → Premissas.
 
 ---
 
-## 5. Pendências conhecidas
+## O QUE AINDA ESTÁ PENDENTE
+
+### Frete CIF — use FOB no piloto
+
+O sistema **bloqueia** a emissão CIF em vez de inventar um número. Quatro perguntas para a
+TRANSAL, três delas sobre o mesmo termo da equação:
+
+| ID | Pergunta | Peso |
+|---|---|---|
+| **C-NEW-01** | O ICMS da prestação já está incluso, ou o valor sofre gross-up de ÷(1−12%)? | **P0** |
+| **C-NEW-06** | A taxa de fiel depositário de 0,5% da NF incide sempre? | **P0** |
+| C-NEW-02 | O GRIS de 0,10% incide sempre? | P1 |
+| C-NEW-08 | O pedágio incide sobre peso real ou taxado? | P1 |
+
+Composição hoje: ADV 0,20% (confirmado) + GRIS 0,10% (aberto) + fiel depositário 0,5%
+(aberto). Se o fiel depositário incidir sempre, a taxa variável salta de 0,30% para 0,80%.
+
+**Mais duas, de outra natureza:**
+
+- **C-NEW-03** — Passo Fundo-RS existe na tabela sem tarifa, mínimo ou prazo. Cidade fora das
+  238 cobertas fica a cotar, sem aproximar por região vizinha.
+- **C-NEW-07** — a tabela TRANSAL **vence em 31/12/2026**. Vencida sem substituta, bloqueia.
+
+### Origem logística de Daune e Decor — Q-L
+
+Ambas embarcam de **São Paulo**. A única tabela de frete cadastrada tem origem **Itajaí-SC**.
+Não existe tarifa saindo de São Paulo, então o CIF desses dois fornecedores fica a cotar — e o
+sistema está certo em travar.
+
+Destravar exige uma tabela de frete com origem São Paulo, de qualquer transportadora.
+
+### 45 SKUs sem custo
+
+De 340 ativos. Sem custo não há o que derivar; os outros 295 cotam normalmente.
+
+| Fornecedor | SKUs | | Família | SKUs |
+|---|---|---|---|---|
+| Kazareen (KTC) | 29 | | Duvet Insert | 14 |
+| Daune | 15 | | Fitted Sheet · Pool Towel · Bathrobe | 18 |
+| Decor Tricot | 1 | | Duvet Cover · Pillow Case | 8 |
+
+### Outras pendências registradas
 
 | ID | O quê | Impacto no piloto |
 |---|---|---|
-| **B-18** | A poda de `data/backups/` pode apagar o backup recém-criado, porque `copy2` preserva o mtime e o desempate cai na ordem do `listdir` | Baixo. Mitigação: os marcos ficam em `~/Anara-Cotacao-Backups/`, onde nada poda |
-| **B-19** | `classificar_base.py` e `importar_fornecedores_nacionais.py` quebram com cenário fiscal bloqueado; `comparar_regressao.py` importa função removida na Onda 1 | Nenhum no uso normal — são scripts de manutenção |
-| **B-20** | `GET /logout` muda estado via GET; um link de terceiro clicado derruba a sessão | Baixo. Não vaza dado; a pessoa loga de novo |
-| **B-21** | `ANARA_DB_URL` não isolava a aplicação — só o Alembic a lia. **Corrigido nesta sessão** | Nenhum agora. Foi descoberto porque o smoke test escreveu 21 linhas no banco histórico; o banco foi restaurado do backup e as 18 cotações e 45 itens estavam byte a byte idênticos |
+| **B-17** | Duas fontes Daune com bases diferentes — razão constante de 1,5123 entre os documentos | Confirmar com a Daune qual é a base da planilha Trousseau |
+| **B-16** | Gramatura não estruturada: 28 de 31 SKUs de Duvet Insert sem `gsm` | Casamento por campos estruturados impossível nessa família |
+| **B-13** | 21 divergências entre `models.py` e o esquema real do banco | Nenhum no uso normal |
+| **B-19** | Dois scripts de manutenção quebram com cenário fiscal bloqueado | Nenhum no uso normal |
+| **B-20** | `GET /logout` muda estado via GET | Baixo: a pessoa loga de novo |
+| **B-22** | `scripts/backup_banco.py` não aplica o limite de retenção | **Não bloqueante.** O diretório cresce; a poda do `app/migrations.py` funciona |
+| **C-NEW-04** | Volume por SKU ausente | Só importa no CIF, quando peso real e taxado divergem |
 
-### Publicação remota: BLOQUEADA
+**B-18 está resolvido** — a poda deixou de apagar o backup recém-criado.
 
-A senha compartilhada saiu do código na Sessão 4, mas continua nos commits `413d6bd` e
-`165d75e`. Enquanto ela estiver no histórico: **sem remote, sem push, sem GitHub**. Some-se
-que `referencia/` versiona tabela de preço de fornecedor.
+### 121 SKUs com `REVIEW_REQUIRED` legado
 
-Liberar exige sanitização do histórico ou decisão explícita de que a credencial aposentada é
-inócua. É assunto para **antes** da primeira publicação, não durante o piloto local.
+O rótulo antigo tem sentido diferente do canônico. A reclassificação exige o gate de
+reconciliação e não foi feita.
+
+### WON não vira pedido
+
+Marcar uma oportunidade como ganha registra o resultado comercial e nada mais. Não existe PO,
+faturamento nem integração com ERP.
 
 ---
 
-## 6. Checklist antes do primeiro uso real
+## Publicação remota: BLOQUEADA
 
-- [ ] `cp .env.example .env` e gerar a `ANARA_SECRET_KEY`
-- [ ] `python3 scripts/backup_banco.py backup --motivo antes-do-piloto`
-- [ ] `python3 -m alembic upgrade head` → termina em `0017`
-- [ ] `python3 scripts/criar_usuario.py ...` → criar o OWNER
-- [ ] `python3 -m pytest -q` → 715 passando
-- [ ] `python3 scripts/smoke_test.py` → 60 ok, 0 falhas
-- [ ] Subir o servidor e fazer login
-- [ ] Abrir **Saúde operacional** e ver o que está bloqueado no catálogo
+Uma senha compartilhada saiu do código na Sessão 4, mas continua nos commits `413d6bd` e
+`165d75e`. Além disso, `referencia/` versiona tabela de preço de fornecedor.
+
+**Piloto local: permitido. Push e publicação: bloqueados** até o histórico ser sanitizado ou
+haver decisão explícita de que a credencial aposentada é inócua.
+
+---
+
+## Antes do primeiro uso real
+
+- [ ] Fazer backup: `python3 scripts/backup_banco.py backup --motivo antes-do-piloto`
+- [ ] Subir o servidor e entrar
+- [ ] Abrir **Admin → Saúde do sistema** e ver o que está travado
 - [ ] Fazer **uma cotação FOB de teste** ponta a ponta e conferir o PDF
-- [ ] Conferir que o vendedor **não** vê custo nem margem (entrar com um usuário
-      `VENDEDOR_INTERNO` e olhar as mesmas telas)
+- [ ] Criar um usuário `VENDEDOR_INTERNO` em Admin → Usuários e conferir que ele **não** vê
+      custo nem margem nas mesmas telas
+- [ ] Mandar as 4 perguntas para a TRANSAL
+- [ ] Pedir cotação de frete com origem São Paulo
 
 ---
 
-## 7. Por onde começar a olhar
+## Por onde começar
 
 | Tela | Para quê |
 |---|---|
-| `/comercial` | O dia: atrasadas, para hoje, negócios sem próximo passo |
-| `/pipeline` | O funil por etapa |
-| `/cotacoes/nova` | Montar uma proposta |
-| `/relatorios` | Painel comercial |
-| `/saude` | O que está travado, e por quê |
-| `/admin` | Trocar câmbio, custo de um SKU, margem — sempre com preview |
-| `/aprovacoes` | Descontos aguardando decisão |
+| **Meu dia** | O que precisa de atenção agora |
+| **Pipeline** | O funil por etapa |
+| **Cotações → Nova** | Montar uma proposta em cinco campos |
+| **Relatórios** | Comercial, econômico, cotações, aprovações |
+| **Admin** | Premissas, catálogo, usuários, auditoria, saúde |
 
----
+## O que fazer com o que você encontrar
 
-## 8. O que fazer com o que você encontrar
+Este piloto existe para simplificar. Se uma tela pedir informação demais, se um caminho tiver
+cliques a mais, se um termo não for o que você usa no dia a dia — anote.
 
-Este piloto existe para **simplificar**. Se uma tela pedir informação demais, se um caminho
-tiver cliques a mais, se um termo não for o que você usa no dia a dia — anote. A camada
-técnica está sólida e testada; a interface é V1 e foi feita para mudar depois que você usar.
-
-O que **não** deve mudar sem uma sessão própria: as regras econômicas, fiscais e de
-aprovação. Elas têm baseline, testes de regressão e trilha, e cada mudança nelas é medida
-contra o histórico.
+O que **não** deve mudar sem uma sessão própria: as regras econômicas, fiscais e de aprovação.
+Elas têm baseline, testes de regressão e trilha, e cada mudança nelas é medida contra o
+histórico.

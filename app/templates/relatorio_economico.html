@@ -4,6 +4,8 @@
 <div class="page-head">
   <div><h1>Indicadores econômicos</h1>
     <div class="sub">{{ periodo.rotulo }} · restrito a quem tem acesso à economia.</div></div>
+
+{% with aba = 'economico' %}{% include "_abas_relatorios.html" %}{% endwith %}
   <a href="/relatorios" class="btn btn-ghost">Relatórios comerciais</a>
 </div>
 

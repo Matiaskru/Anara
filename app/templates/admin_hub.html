@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Administração — Anara{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Administração</h1>
+    <div class="subtitle">
+      Tudo que forma preço, quem tem acesso e o que precisa de atenção.
+      Alteração de premissa abre uma versão nova — cotação já emitida não muda.
+    </div>
+  </div>
+</div>
+
+<div class="admin-hub">
+  {% for titulo, href, descricao in areas %}
+  <a class="admin-area" href="{{ href }}">
+    <div class="admin-area-titulo">{{ titulo }}</div>
+    <div class="admin-area-desc">{{ descricao }}</div>
+  </a>
+  {% endfor %}
+</div>
+
+<div class="card" style="margin-top:22px;">
+  <div style="display:flex; gap:36px; flex-wrap:wrap; font-size:13px;">
+    <div>
+      <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--gray);">Produtos ativos</div>
+      <div style="font-size:20px; font-weight:600;">{{ resumo.skus }}</div>
+    </div>
+    <div>
+      <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--gray);">Usuários ativos</div>
+      <div style="font-size:20px; font-weight:600;">{{ resumo.usuarios }}</div>
+    </div>
+    <div>
+      <div style="font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--gray);">Registros na auditoria</div>
+      <div style="font-size:20px; font-weight:600;">{{ resumo.eventos }}</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .admin-hub {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+    gap: 12px;
+  }
+  .admin-area {
+    display: block;
+    background: #fff;
+    border: 1px solid var(--sand);
+    border-radius: var(--radius);
+    padding: 15px 17px;
+    text-decoration: none;
+    color: var(--midnight);
+    transition: border-color .12s, transform .12s;
+  }
+  .admin-area:hover { border-color: var(--copper); transform: translateY(-1px); }
+  .admin-area:focus-visible { outline: 2px solid var(--copper); outline-offset: 2px; }
+  .admin-area-titulo { font-weight: 600; font-size: 13.5px; margin-bottom: 5px; }
+  .admin-area-desc { font-size: 12px; color: var(--gray); line-height: 1.45; }
+</style>
+
+{% endblock %}

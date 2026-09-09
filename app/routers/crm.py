@@ -85,7 +85,10 @@ def home(request: Request, session: Session = Depends(get_session)):
             if a.due_em and not crm.esta_atrasada(a, agora)
             and a.due_em.date() == agora.date()]
 
-    aprovacoes = ws.fila_de_aprovacao(session) if ve_economia(request) else []
+    # A fila é de quem **decide**. Ver economia não é ter alçada — mostrar pedidos a quem
+    # não pode aprová-los oferece uma tarefa que a pessoa não consegue concluir.
+    from app.permissoes import aprova_cotacoes
+    aprovacoes = ws.fila_de_aprovacao(session) if aprova_cotacoes(request) else []
     return templates.TemplateResponse(request, "crm_home.html", {
         "active": "comercial",
         "minhas": [crm.cartao(session, o) for o in minhas[:20]],

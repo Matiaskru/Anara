@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Usuários — Anara{% endblock %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Usuários</h1>
+    <div class="subtitle">
+      Quem entra, com qual papel e com quais permissões. Desativar tira o acesso e preserva
+      o histórico da pessoa.
+    </div>
+  </div>
+  <a href="/admin" class="btn btn-ghost">Voltar para Admin</a>
+</div>
+
+{% set avisos = {'criado': 'Acesso criado.', 'papel': 'Papel atualizado.',
+                 'permissao': 'Permissão atualizada.', 'situacao': 'Situação atualizada.',
+                 'senha': 'Senha definida. As sessões abertas dessa pessoa foram encerradas.'} %}
+{% if request.query_params.get('ok') in avisos %}
+<div class="card" style="background:#E7F0E9; margin-bottom:14px;">
+  {{ avisos[request.query_params.get('ok')] }}
+</div>
+{% endif %}
+
+<div class="tw card" style="padding:0; overflow-x:auto;">
+  <table style="margin:0;">
+    <thead>
+      <tr>
+        <th>Pessoa</th>
+        <th>Papel</th>
+        <th>Permissões</th>
+        <th>Situação</th>
+        <th>Último acesso</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for u in usuarios %}
+      <tr {% if not u.ativo %}style="opacity:.55;"{% endif %}>
+        <td>
+          <div style="font-weight:600;">{{ u.nome }}{% if eu and u.id == eu.id %}
+            <span style="font-weight:400;color:var(--gray);">(você)</span>{% endif %}</div>
+          <div style="font-size:11px;color:var(--gray);">{{ u.email }}</div>
+        </td>
+
+        <td>
+          <form method="post" action="/admin/usuarios/{{ u.id }}/papel"
+                style="display:flex; gap:6px; align-items:center;">
+            <select name="papel" style="min-width:150px;">
+              {% for p in papeis %}
+              <option value="{{ p }}" {{ 'selected' if p == u.papel else '' }}>{{ p|rotulo_papel }}</option>
+              {% endfor %}
+            </select>
+            <button class="btn btn-ghost btn-sm" type="submit">Aplicar</button>
+          </form>
+        </td>
+
+        <td>
+          {% if u.papel in ('OWNER', 'ADMIN') %}
+            {% for chave, rotulo in flags %}
+            <form method="post" action="/admin/usuarios/{{ u.id }}/permissao"
+                  style="display:block; margin-bottom:3px;">
+              <input type="hidden" name="flag" value="{{ chave }}">
+              <input type="hidden" name="valor" value="{{ 'nao' if u[chave] else 'sim' }}">
+              <button type="submit" class="chip {{ 'chip-on' if u[chave] else '' }}"
+                      title="{{ 'Remover' if u[chave] else 'Conceder' }}">
+                {{ '✓' if u[chave] else '·' }} {{ rotulo }}
+              </button>
+            </form>
+            {% endfor %}
+            {% if u.papel == 'OWNER' %}
+            <div style="font-size:10.5px;color:var(--gray);margin-top:4px;">
+              Dono pode tudo, independente das marcações.
+            </div>
+            {% endif %}
+          {% else %}
+            <span style="font-size:11.5px;color:var(--gray);">
+              Vendedor não vê custo, margem nem lucro.
+            </span>
+          {% endif %}
+        </td>
+
+        <td>
+          <form method="post" action="/admin/usuarios/{{ u.id }}/situacao">
+            <input type="hidden" name="ativo" value="{{ 'nao' if u.ativo else 'sim' }}">
+            <button class="btn btn-sm {{ 'btn-ghost' if u.ativo else 'btn-copper' }}"
+                    type="submit">{{ 'Desativar' if u.ativo else 'Reativar' }}</button>
+          </form>
+          <div style="font-size:11px;color:var(--gray);margin-top:4px;">
+            {{ 'Ativo' if u.ativo else 'Sem acesso' }}
+          </div>
+        </td>
+
+        <td style="font-size:11.5px;color:var(--gray);">
+          {{ u.ultimo_login_em|data if u.ultimo_login_em else 'nunca entrou' }}
+        </td>
+
+        <td>
+          <details>
+            <summary class="btn btn-ghost btn-sm" style="display:inline-block;">Trocar senha</summary>
+            <form method="post" action="/admin/usuarios/{{ u.id }}/senha"
+                  style="margin-top:8px; display:flex; gap:6px;">
+              <input type="password" name="senha" placeholder="nova senha"
+                     minlength="8" required autocomplete="new-password" style="width:150px;">
+              <button class="btn btn-ghost btn-sm" type="submit">Definir</button>
+            </form>
+            <div style="font-size:10.5px;color:var(--gray);margin-top:4px;max-width:180px;">
+              Mínimo 8 caracteres. As sessões abertas dessa pessoa caem.
+            </div>
+          </details>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" style="color:var(--gray);">Nenhum usuário cadastrado.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card" style="margin-top:18px; max-width:640px;">
+  <h3 style="margin-top:0;">Criar acesso</h3>
+  <form method="post" action="/admin/usuarios" class="grid-2">
+    <div class="field"><label>Nome</label><input name="nome" required></div>
+    <div class="field"><label>E-mail</label><input name="email" type="email" required></div>
+    <div class="field">
+      <label>Papel</label>
+      <select name="papel" required>
+        <option value="">Selecione...</option>
+        {% for p in papeis %}<option value="{{ p }}">{{ p|rotulo_papel }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="field">
+      <label>Senha inicial</label>
+      <input type="password" name="senha" minlength="8" required autocomplete="new-password">
+      <small style="color:var(--gray);font-size:11px;">
+        Mínimo 8 caracteres. Combine com a pessoa e peça que ela troque depois.
+      </small>
+    </div>
+    <div style="grid-column: span 2;">
+      <button class="btn btn-copper btn-sm" type="submit">Criar acesso</button>
+    </div>
+  </form>
+</div>
+
+<style>
+  .chip { background:var(--row-alt); border:1px solid transparent; border-radius:5px;
+          font-size:11px; padding:3px 8px; cursor:pointer; color:var(--gray);
+          font-family:inherit; }
+  .chip:hover { border-color:var(--sand); }
+  .chip-on { background:rgba(196,146,129,.28); color:var(--midnight); font-weight:600; }
+  td > details > summary { list-style:none; cursor:pointer; }
+  td > details > summary::-webkit-details-marker { display:none; }
+</style>
+
+{% endblock %}

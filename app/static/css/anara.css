@@ -277,3 +277,51 @@ table.compacta td, table.compacta th { padding: 6px 8px; font-size: 11.5px; }
 input.margem-abaixo { color: #A2452A; font-weight: 700; border-color: #E0BCB0; }
 input.margem-ok { color: #2F6B45; font-weight: 700; }
 input:disabled { background: #F1EBE6; color: var(--gray); }
+
+/* ---------------------------------------------------------------------------
+   Polimento — hierarquia e consistência (Lote B)
+
+   Nada de redesign: o que muda é a régua. Antes, tamanho e peso de fonte eram
+   escolhidos por `style=` em cada tela, então o mesmo tipo de informação aparecia
+   com aparência diferente dependendo de onde estava.
+   --------------------------------------------------------------------------- */
+
+/* Rótulo + número: o par que os painéis repetem. */
+.rotulo {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--gray); margin-bottom: 5px;
+}
+.numero {
+  font-size: 24px; font-weight: 600; line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.nota { font-size: 11px; color: var(--gray); margin-top: 4px; line-height: 1.4; }
+
+/* Estado vazio: uma frase que diz o que fazer, não um espaço em branco. */
+.vazio {
+  color: var(--gray); font-size: 13px; line-height: 1.55; margin: 0;
+  padding: 18px 0; text-align: center;
+}
+
+/* Ações perigosas ficam separadas do resto por uma linha, não só pela cor. */
+.zona-de-risco {
+  margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--row-alt);
+}
+
+/* Cabeçalho de página: as duas variações que conviviam viram uma. */
+.page-head, .page-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.page-head h1, .page-header h1 { margin: 0; }
+.page-head .sub, .page-head .subtitle,
+.page-header .sub, .page-header .subtitle {
+  color: var(--gray); font-size: 13px; margin-top: 4px; max-width: 68ch; line-height: 1.5;
+}
+
+/* Tabela com muitas colunas rola dentro do próprio bloco; a página nunca rola de lado. */
+.tw { overflow-x: auto; }
+
+/* Formulário não deve esticar até a largura da tela. */
+form.grid-2 { max-width: 100%; }
+.field small { display: block; color: var(--gray); font-size: 10.5px; margin-top: 3px; }

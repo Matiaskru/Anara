@@ -139,8 +139,29 @@ def classificar_celula(antes, depois):
     }
 
 
-def classificar_campo_produto(nome, a, d):
-    """Campos econômicos do próprio SKU (custo, preço-base)."""
+def classificar_campo_produto(nome, a, d, razao_cambial=None):
+    """Campos econômicos do próprio SKU (custo, preço-base).
+
+    ## `custo_net_recalculado` é recálculo, não histórico
+
+    Os outros campos comparados aqui são valores **guardados**: `custo_unitario` e
+    `preco_base` estão em colunas, e mudar significa que alguém os reescreveu.
+    `custo_net_recalculado` é diferente — ele é o custo **derivado agora**, com as premissas
+    que estiverem vigentes no momento em que o script roda.
+
+    Isso importa porque câmbio é premissa versionada. Quando ele muda, todo SKU importado
+    passa a ter outro custo derivado — e isso é o sistema funcionando, não regressão. Cravar
+    "tem de reproduzir o número do baseline" exigiria que uma precificação nova com o câmbio
+    de hoje devolvesse o preço do câmbio de ontem, que é justamente o defeito que a Sessão
+    de limpeza encontrou e corrigiu.
+
+    Por isso a diferença é aceita **apenas quando é exatamente a razão cambial**. Se o custo
+    derivado mudou por qualquer outro motivo — ou por um fator diferente do câmbio — a
+    classificação continua `NAO_EXPLICADA`, e o guardião continua guardando.
+
+    O histórico não passa por aqui: cotações, itens e snapshots emitidos são comparados na
+    seção própria, campo a campo, e nada nesta função os afeta.
+    """
     if a == d:
         return "IGUAL"
     if a is None or d is None:
@@ -149,9 +170,30 @@ def classificar_campo_produto(nome, a, d):
         return "DECIMAL_REPRESENTATION_ONLY"
     if nome == "preco_base" and abs(a - d) <= MEIO_CENTAVO:
         return "ROUNDING_CORRIGIDO"
-    if nome in ("custo_unitario", "custo_net_recalculado") and abs(a - d) <= TOL_REPRESENTACAO:
-        return "DECIMAL_REPRESENTATION_ONLY"
+    if nome == "custo_net_recalculado" and razao_cambial and a:
+        # tolerância de meio centavo sobre o valor esperado: o câmbio explica a diferença
+        # inteira ou não explica nada.
+        if abs(d - a * razao_cambial) <= MEIO_CENTAVO:
+            return "PREMISSA_CAMBIAL_NOVA"
     return "NAO_EXPLICADA"
+
+
+def razao_cambial_do_baseline(baseline, fx_atual):
+    """Quanto o câmbio andou entre o baseline e agora. `None` se não deu para saber.
+
+    O baseline guarda as premissas como a lista de linhas da tabela; a que interessa é a
+    que estava **vigente** quando ele foi gerado.
+    """
+    linhas = ((baseline.get("premissas") or {}).get("premissa")) or []
+    vigentes = [l for l in linhas
+                if l.get("chave") == "fx_usd_brl" and l.get("ativo")
+                and not l.get("valid_to")]
+    if not vigentes or not fx_atual:
+        return None
+    fx_base = vigentes[-1].get("valor_num")
+    if not fx_base:
+        return None
+    return fx_atual / fx_base
 
 
 # ---------------------------------------------------------------------------
@@ -230,6 +272,13 @@ def comparar(entrada_path: str = ENTRADA) -> dict:
     campos_sku = Counter()
     campos_sku_detalhe = []
 
+    # Quanto o câmbio andou desde o baseline. Só o custo derivado agora depende disso.
+    fx_atual = None
+    for linha in ((depois.get("premissas") or {}).get("premissa")) or []:
+        if linha.get("chave") == "fx_usd_brl" and linha.get("ativo") and not linha.get("valid_to"):
+            fx_atual = linha.get("valor_num")
+    razao_fx = razao_cambial_do_baseline(antes, fx_atual)
+
     for p in depois["produtos"]:
         a = por_sku_antes.get(p["sku"])
         if a is None:
@@ -237,7 +286,8 @@ def comparar(entrada_path: str = ENTRADA) -> dict:
             continue
 
         for campo in ("custo_unitario", "preco_base", "custo_net_recalculado"):
-            classe = classificar_campo_produto(campo, a.get(campo), p.get(campo))
+            classe = classificar_campo_produto(campo, a.get(campo), p.get(campo),
+                                               razao_cambial=razao_fx)
             campos_sku[f"{campo}:{classe}"] += 1
             if classe not in ("IGUAL", "DECIMAL_REPRESENTATION_ONLY"):
                 campos_sku_detalhe.append({"sku": p["sku"], "campo": campo,

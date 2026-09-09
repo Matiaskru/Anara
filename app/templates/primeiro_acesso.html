@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anara Cotações — Primeiro acesso</title>
+  <link rel="stylesheet" href="/static/css/anara.css">
+  <link rel="icon" href="/static/img/anara_mark_copper.png">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <img src="/static/img/anara_mark_copper.png" alt="Anara">
+      <div class="word">ANARA</div>
+      <div class="tagline">A Higher Standard of Comfort</div>
+
+      <p style="margin:18px 0 4px; font-size:13px; line-height:1.5; opacity:.75">
+        Nenhuma conta existe ainda. Crie o acesso do administrador — esta tela só aparece
+        uma vez.
+      </p>
+
+      <form method="post" action="/primeiro-acesso">
+        <div class="field" style="text-align:left">
+          <label>Nome</label>
+          <input type="text" name="nome" value="{{ nome or '' }}" autocomplete="name"
+                 autofocus required>
+        </div>
+        <div class="field" style="text-align:left">
+          <label>E-mail</label>
+          <input type="email" name="email" value="{{ email or '' }}"
+                 autocomplete="username" required>
+        </div>
+        <div class="field" style="text-align:left">
+          <label>Senha</label>
+          <input type="password" name="senha" autocomplete="new-password"
+                 minlength="8" required>
+          <div style="font-size:12px; opacity:.6; margin-top:4px">Mínimo de 8 caracteres.</div>
+        </div>
+        <div class="field" style="text-align:left">
+          <label>Repita a senha</label>
+          <input type="password" name="confirmar" autocomplete="new-password"
+                 minlength="8" required>
+        </div>
+        <button class="btn btn-copper" type="submit"
+                style="width:100%; justify-content:center;">Criar acesso e entrar</button>
+        {% if erro %}<div class="erro">{{ erro }}</div>{% endif %}
+      </form>
+    </div>
+  </div>
+</body>
+</html>

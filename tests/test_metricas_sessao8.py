@@ -573,11 +573,24 @@ def test_p0_saude_separa_bloqueio_de_aviso(session, owner, cliente):
 
 
 def test_saude_mostra_as_pendencias_conhecidas_sem_resolve_las(session):
-    """§31: mostrar que existem é o oposto de transformá-las em zero."""
+    """§31: mostrar que existem é o oposto de transformá-las em zero.
+
+    `B-18` saiu da lista porque foi **corrigido** — a poda de backups ordena pelo carimbo do
+    nome e preserva o arquivo recém-criado, com `tests/test_backup_b18.py` guardando isso.
+    Pendência resolvida que continua na lista de pendências é ruído: quem lê a tela deixa de
+    distinguir o que ainda precisa de atenção.
+    """
     saude = mx.saude_operacional(session)
     ids = {p["id"] for p in saude["pendencias_conhecidas"]}
-    for esperado in ("C-NEW-01", "C-NEW-02", "C-NEW-06", "B-18", "B-19", "B-20"):
-        assert esperado in ids
+    for esperado in ("C-NEW-01", "C-NEW-02", "C-NEW-06", "C-NEW-08", "Q-L",
+                     "B-19", "B-20"):
+        assert esperado in ids, f"{esperado} sumiu da lista de pendências"
+    assert "B-18" not in ids, "B-18 foi corrigido e não deveria mais aparecer"
+
+    # toda pendência declara assunto e situação — a tela agrupa por assunto
+    for p in saude["pendencias_conhecidas"]:
+        assert p.get("assunto"), f"{p['id']} sem assunto"
+        assert p.get("situacao"), f"{p['id']} sem situação"
 
 
 # ===========================================================================

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Relatório de cotações — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Cotações</h1>
+    <div class="subtitle">{{ periodo.rotulo }}. Cada revisão é um documento — R1 e R2 da
+      mesma proposta contam separado aqui, e como um só negócio no pipeline.</div></div>
+  <a href="/relatorios/cotacoes.csv?periodo={{ atalho }}&inicio={{ inicio }}&fim={{ fim }}"
+     class="btn btn-ghost">Baixar CSV</a>
+</div>
+
+{% with aba = 'cotacoes' %}{% include "_abas_relatorios.html" %}{% endwith %}
+
+<div class="card" style="margin-bottom:14px;">
+  <form method="get" class="grid-4" style="margin-bottom:0;">
+    <div class="field"><label>Período</label>
+      <select name="periodo" onchange="this.form.submit()">
+        <option value="" {{ 'selected' if not atalho else '' }}>Todo o período</option>
+        <option value="mes" {{ 'selected' if atalho == 'mes' else '' }}>Este mês</option>
+        <option value="30d" {{ 'selected' if atalho == '30d' else '' }}>Últimos 30 dias</option>
+        <option value="ano" {{ 'selected' if atalho == 'ano' else '' }}>Este ano</option>
+      </select></div>
+    <div class="field"><label>De</label><input type="date" name="inicio" value="{{ inicio }}"></div>
+    <div class="field"><label>Até</label><input type="date" name="fim" value="{{ fim }}"></div>
+    <div class="field" style="display:flex;align-items:flex-end;">
+      <button class="btn btn-ghost btn-sm" type="submit">Aplicar</button></div>
+  </form>
+</div>
+
+<div class="grid-4" style="margin-bottom:16px;">
+  <div class="card"><div class="rotulo">Documentos</div>
+    <div class="numero">{{ cotacoes.documentos }}</div></div>
+  <div class="card"><div class="rotulo">Revisões</div>
+    <div class="numero">{{ cotacoes.revisoes }}</div>
+    <div class="nota">propostas que voltaram para a mesa</div></div>
+  <div class="card"><div class="rotulo">Valor comercial</div>
+    <div class="numero">{{ cotacoes.valor_comercial|brl if cotacoes.valor_comercial is not none else '—' }}</div></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Por situação</h3>
+  {% if cotacoes.por_status %}
+  <table class="compacta">
+    <thead><tr><th>Situação</th><th class="num">Documentos</th></tr></thead>
+    <tbody>
+    {% for chave, quantos in cotacoes.por_status.items() %}
+      <tr><td><span class="badge badge-{{ chave }}">{{ chave|rotulo_cotacao }}</span></td>
+          <td class="num">{{ quantos }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="vazio">Nenhuma cotação neste período.</p>
+  {% endif %}
+</div>
+{% endblock %}

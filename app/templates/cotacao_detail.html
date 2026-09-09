@@ -6,11 +6,16 @@
     <h1>{{ cotacao.numero or ('Cotação #' ~ cotacao.id) }}</h1>
     <div class="subtitle">
       <a href="/clientes/{{ cliente.id }}">{{ cliente.nome if cliente else '—' }}</a>
-      · criada em {{ cotacao.criado_em|data }} · validade {{ cotacao.validade_em|data }}
-      · <span class="badge badge-{{ cotacao.status.value }}">{{ cotacao.status.value }}</span>
+      {% if cotacao.contato_nome %} · {{ cotacao.contato_nome }}{% endif %}
+      · <span class="badge badge-{{ cotacao.status.value }}">{{ cotacao.status|rotulo_cotacao }}</span>
+      · <strong>{{ totais.faturamento|brl }}</strong>
+      <div style="font-size:11.5px;margin-top:3px;">
+        criada em {{ cotacao.criado_em|data }} · validade {{ cotacao.validade_em|data }}
+        {%- if cotacao.revisao and cotacao.revisao > 1 %} · revisão {{ cotacao.revisao }}{% endif %}
+      </div>
     </div>
   </div>
-  <div style="display:flex; gap:8px;">
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
     <form method="post" action="/cotacoes/{{ cotacao.id }}/duplicar" style="display:inline;">
       <button class="btn btn-ghost" type="submit">Duplicar</button>
     </form>
@@ -18,113 +23,66 @@
   </div>
 </div>
 
-<div class="grid-2">
-  <div class="card">
-    <h3 style="margin-bottom:12px;">Dados da cotação</h3>
-    <form method="post" action="/cotacoes/{{ cotacao.id }}/atualizar" class="grid-2">
-      <div class="field">
-        <label>Condição de pagamento</label>
-        <select name="condicao_pagamento">
-          {% for c in condicoes %}
-          <option value="{{ c.codigo }}" {{ 'selected' if c.codigo == cotacao.condicao_pagamento else '' }}>
-            {{ c.label }}{% if c.encargo_pct is not none %} · {{ c.encargo_pct|pct }}{% else %} · a confirmar{% endif %}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field"><label>Prazo de entrega</label><input name="prazo_entrega" value="{{ cotacao.prazo_entrega or '' }}" placeholder="ex.: 30 dias"></div>
-      <div class="field">
-        <label>Origem da venda</label>
-        <select name="estado_origem">
-          {% for uf in estados_difal %}
-          <option value="{{ uf }}" {{ 'selected' if uf == cotacao.estado_origem else '' }}>{{ uf }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label>Destino da venda</label>
-        <select name="estado_destino">
-          <option value="">Usar ICMS padrão</option>
-          {% for uf in estados_difal %}
-          <option value="{{ uf }}" {{ 'selected' if uf == cotacao.estado_destino else '' }}>{{ uf }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label>Cliente é contribuinte de ICMS?</label>
-        <div class="mode-toggle">
-          <button type="button" class="{{ 'active' if cotacao.contribuinte_icms else '' }}" data-contribuinte="sim" onclick="setContribuinte(this,'sim')">SIM</button>
-          <button type="button" class="{{ '' if cotacao.contribuinte_icms else 'active' }}" data-contribuinte="nao" onclick="setContribuinte(this,'nao')">NÃO</button>
-        </div>
-        <input type="hidden" name="contribuinte_icms" id="contribuinte_icms_input" value="{{ 'sim' if cotacao.contribuinte_icms else 'nao' }}">
-      </div>
-      <div class="field"><label>Vendedor</label><input name="vendedor" value="{{ cotacao.vendedor or '' }}"></div>
-      <div class="field"><label>Contato</label><input name="contato_nome" value="{{ cotacao.contato_nome or '' }}"></div>
-      <div class="field"><label>Departamento</label><input name="departamento_contato" value="{{ cotacao.departamento_contato or '' }}" list="departamentos">
-        <datalist id="departamentos"><option>Compras</option><option>Governança</option><option>Operações</option><option>Financeiro</option><option>Diretoria</option></datalist>
-      </div>
-      <div class="field">
-        <label>Tipo de frete</label>
-        <select name="freight_type">
-          {% for t in tipos_frete %}<option value="{{ t }}" {{ 'selected' if t == cotacao.freight_type else '' }}>{{ t }}</option>{% endfor %}
-        </select>
-      </div>
-      <div class="field"><label>Frete (texto na proposta)</label><input name="frete" value="{{ cotacao.frete or '' }}" placeholder="Incluso / A combinar"></div>
-      <div class="field"><label>Validade (dias)</label><input type="number" name="validade_dias" min="1" value="{{ cotacao.validade_dias or 5 }}"></div>
-      <div class="field"><label>Validade calculada</label><input value="{{ cotacao.validade_em|data }}" disabled></div>
-      <div class="field" style="grid-column: span 2;"><label>Observações</label><textarea name="observacoes" rows="2">{{ cotacao.observacoes or '' }}</textarea></div>
-      <div class="field" style="grid-column: span 2;"><label>Termos e condições (vão para o PDF)</label><textarea name="termos_texto" rows="4">{{ cotacao.termos_texto or '' }}</textarea></div>
-      <div style="grid-column: span 2; font-size:11px; color:var(--gray);">
-        Cenário fiscal aplicado agora: <strong>{{ regra_icms_atual }}</strong> —
-        ICMS {{ contexto_fiscal.icms_pct|pct }} · PIS/COFINS {{ contexto_fiscal.pis_cofins_pct|pct }} ·
-        encargo {{ contexto_fiscal.encargo_pct|pct }} ({{ contexto_fiscal.encargo_label }})
-        {% if contexto_fiscal.encargo_aviso %}<div class="aviso-inline">{{ contexto_fiscal.encargo_aviso }}</div>{% endif %}
-      </div>
-      <div style="grid-column: span 2;"><button class="btn btn-ghost btn-sm" type="submit">Salvar dados da cotação</button></div>
-    </form>
-    {% if not cotacao.arquivada_em %}
-    <form method="post" action="/cotacoes/{{ cotacao.id }}/arquivar" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--row-alt); display:flex; gap:8px; align-items:flex-end;">
-      <div class="field" style="flex:1; margin:0;">
-        <label style="font-size:10.5px;">Arquivar esta cotação (sai da lista e dos totais; dá para restaurar)</label>
-        <input name="motivo" placeholder="motivo — opcional, ex.: teste">
-      </div>
-      <button class="btn btn-ghost btn-sm" type="submit">Arquivar</button>
-    </form>
-    {% endif %}
+{% if request.query_params.get('premissas') == 'atualizadas' %}
+<div class="card" style="background:#E7F0E9; margin-bottom:14px;">
+  Premissas atualizadas e preços recalculados.
+</div>
+{% elif request.query_params.get('cenario') == 'atualizado' %}
+<div class="card" style="background:#E7F0E9; margin-bottom:14px;">
+  Cenário atualizado e preços recalculados.
+</div>
+{% elif request.query_params.get('salvo') %}
+<div class="card" style="background:#E7F0E9; margin-bottom:14px;">
+  Dados salvos. Nada que mudasse o cálculo foi alterado, então os preços seguem os mesmos.
+</div>
+{% endif %}
+
+{#
+  Premissa mais recente que a desta cotação. Nada foi alterado — a escolha é de quem
+  negocia. Manter é decisão comercial e vira exceção na aprovação; atualizar recalcula.
+#}
+{% if premissas_novas and premissas_novas.desatualizado %}
+<div class="card aviso-premissas" style="margin-bottom:14px;">
+  <div style="font-weight:600; margin-bottom:8px;">
+    Existem premissas mais recentes disponíveis
   </div>
 
-  <div>
-    <div class="card" style="margin-bottom:14px;">
-      <h3 style="margin-bottom:12px;">Status</h3>
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        {% for s in status_opcoes %}
-        <form method="post" action="/cotacoes/{{ cotacao.id }}/status" style="display:inline;">
-          <input type="hidden" name="status" value="{{ s }}">
-          <button class="btn {{ 'btn-copper' if s == cotacao.status.value else 'btn-ghost' }} btn-sm" type="submit">{{ s }}</button>
-        </form>
-        {% endfor %}
-      </div>
-    </div>
+  {% for p in premissas_novas.premissas %}
+  <div style="font-size:13px; margin-bottom:4px;">
+    <strong>{{ p.rotulo }}</strong> — esta cotação usa <strong>{{ p.no_item }}</strong>,
+    e o valor atual é <strong>{{ p.vigente }}</strong>{% if p.vigente_desde %},
+    desde {{ p.vigente_desde }}{% endif %}.
+  </div>
+  {% endfor %}
 
-    <div class="card">
-      <h3 style="margin-bottom:12px;">Aceite / pedido</h3>
-      <form method="post" action="/cotacoes/{{ cotacao.id }}/aceite" class="grid-2">
-        <div class="field"><label>Responsável pelo aceite</label><input name="aceite_responsavel" value="{{ cotacao.aceite_responsavel or '' }}"></div>
-        <div class="field"><label>Cargo</label><input name="aceite_cargo" value="{{ cotacao.aceite_cargo or '' }}"></div>
-        <div class="field"><label>Departamento</label><input name="aceite_departamento" value="{{ cotacao.aceite_departamento or '' }}"></div>
-        <div class="field"><label>Local de entrega</label><input name="local_entrega" value="{{ cotacao.local_entrega or '' }}"></div>
-        <div class="field" style="grid-column: span 2;"><label>Endereço de entrega</label><input name="endereco_entrega" value="{{ cotacao.endereco_entrega or '' }}"></div>
-        <div class="field" style="grid-column: span 2;"><label>Observações do pedido</label><textarea name="observacoes_pedido" rows="2">{{ cotacao.observacoes_pedido or '' }}</textarea></div>
-        <div style="grid-column: span 2; display:flex; gap:8px; align-items:center;">
-          <button class="btn btn-ghost btn-sm" type="submit">Salvar aceite</button>
-          <button class="btn btn-copper btn-sm" type="submit" name="virar_pedido" value="sim">Salvar e virar pedido</button>
-          {% if cotacao.aceite_em %}<span style="font-size:11px; color:var(--gray);">Aceite em {{ cotacao.aceite_em|data }}</span>{% endif %}
-        </div>
-      </form>
-    </div>
+  {% if premissas_novas.itens and ve_economia(request) %}
+  <div style="font-size:13px; margin-top:6px;">
+    {{ premissas_novas.itens|length }} item(ns) usam custo anterior ao vigente.
+  </div>
+  {% endif %}
+
+  <div style="font-size:12px; color:var(--gray); margin:10px 0 12px; line-height:1.5;">
+    Nada mudou sozinho. Manter os valores desta cotação é uma decisão comercial e passa
+    pela aprovação; atualizar recalcula os preços com os valores de hoje.
+  </div>
+
+  <div style="display:flex; gap:8px; flex-wrap:wrap;">
+    <form method="post" action="/cotacoes/{{ cotacao.id }}/premissas/atualizar"
+          style="display:inline;">
+      <button class="btn btn-copper btn-sm" type="submit">Atualizar e recalcular</button>
+    </form>
+    <button class="btn btn-ghost btn-sm" type="button"
+            onclick="manterPremissas({{ cotacao.id }})">Manter premissas desta cotação</button>
   </div>
 </div>
+{% endif %}
 
+{#
+  Ordem por hierarquia de uso, não pela ordem em que as telas foram construídas.
+  Quem abre uma cotação vem ver e mexer nos PRODUTOS; os dados da venda são
+  preenchidos uma vez e revisitados raramente. Antes, o formulário do cabeçalho
+  ocupava a primeira dobra inteira e os itens ficavam abaixo dele.
+#}
 {% if cotacao.arquivada_em %}
 <div class="card" style="background:#F3E7E4;">
   <strong>Esta cotação está arquivada</strong> desde {{ cotacao.arquivada_em|data }}.
@@ -186,7 +144,7 @@
 </div>
 
 <div class="card">
-  <h3 style="margin-bottom:12px;">Itens da cotação</h3>
+  <h3 style="margin-bottom:12px;">Produtos</h3>
   <table id="tabela-itens">
     <thead>
       <tr>
@@ -244,7 +202,7 @@
 </div>
 
 <div class="card">
-  <h3 style="margin-bottom:12px;">Totais</h3>
+  <h3 style="margin-bottom:12px;">Resumo comercial</h3>
   <div class="kpi-grid" id="totais-resumo" style="grid-template-columns: repeat(4,1fr);">
     <div class="kpi"><div class="label">Faturamento</div><div class="value" id="tot-faturamento">{{ totais.faturamento|brl }}</div></div>
     {% if ve_economia(request) %}
@@ -255,6 +213,166 @@
   </div>
 </div>
 
+
+<h2 class="secao">Dados da venda</h2>
+<div class="grid-2">
+  <div class="card">
+    <h3 style="margin-bottom:12px;">Cenário comercial e fiscal</h3>
+    <form method="post" action="/cotacoes/{{ cotacao.id }}/atualizar" class="grid-2">
+      <div class="field">
+        <label>Condição de pagamento</label>
+        <select name="condicao_pagamento" data-material>
+          {% for c in condicoes %}
+          <option value="{{ c.codigo }}" {{ 'selected' if c.codigo == cotacao.condicao_pagamento else '' }}>
+            {{ c.label }}{% if c.encargo_pct is not none %} · {{ c.encargo_pct|pct }}{% else %} · a confirmar{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>Destino da venda</label>
+        <select name="estado_destino" data-material>
+          <option value="">Definir depois</option>
+          {% for uf in estados_difal %}
+          <option value="{{ uf }}" {{ 'selected' if uf == cotacao.estado_destino else '' }}>{{ uf }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="field">
+        <label>Cliente é contribuinte de ICMS?</label>
+        <div class="mode-toggle">
+          <button type="button" class="{{ 'active' if cotacao.contribuinte_icms else '' }}" data-contribuinte="sim" onclick="setContribuinte(this,'sim')">SIM</button>
+          <button type="button" class="{{ '' if cotacao.contribuinte_icms else 'active' }}" data-contribuinte="nao" onclick="setContribuinte(this,'nao')">NÃO</button>
+        </div>
+        <input type="hidden" name="contribuinte_icms" id="contribuinte_icms_input" data-material value="{{ 'sim' if cotacao.contribuinte_icms else 'nao' }}">
+      </div>
+      <div class="field">
+        <label>Tipo de frete</label>
+        <select name="freight_type" data-material>
+          {% for t in tipos_frete %}<option value="{{ t }}" {{ 'selected' if t == cotacao.freight_type else '' }}>{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+
+      <div style="grid-column: span 2; font-size:11px; color:var(--gray);">
+        Cenário fiscal aplicado agora: <strong>{{ regra_icms_atual }}</strong> —
+        ICMS {{ contexto_fiscal.icms_pct|pct }} · PIS/COFINS {{ contexto_fiscal.pis_cofins_pct|pct }} ·
+        encargo {{ contexto_fiscal.encargo_pct|pct }} ({{ contexto_fiscal.encargo_label }})
+        {% if contexto_fiscal.encargo_aviso %}<div class="aviso-inline">{{ contexto_fiscal.encargo_aviso }}</div>{% endif %}
+      </div>
+
+      {# Estado explícito do bloco 10: campo material mexido e ainda não aplicado. #}
+      <div id="pendente" class="pendente" style="grid-column: span 2;" hidden>
+        <strong>Há alterações ainda não aplicadas ao cálculo.</strong>
+        Os preços abaixo pertencem ao cenário anterior.
+      </div>
+
+      <div style="grid-column: span 2; display:flex; gap:8px; align-items:center;">
+        <button class="btn btn-copper btn-sm" type="submit" id="btn-salvar">Atualizar cenário e recalcular</button>
+        <span style="font-size:11px; color:var(--gray);">Salva os dados e reforma os preços.</span>
+      </div>
+
+      <details class="mais-detalhes" style="grid-column: span 2;">
+        <summary>Mais detalhes</summary>
+        <div class="grid-2" style="margin-top:12px;">
+          <div class="field"><label>Prazo de entrega</label><input name="prazo_entrega" value="{{ cotacao.prazo_entrega or '' }}" placeholder="ex.: 30 dias"></div>
+          <div class="field"><label>Validade (dias)</label><input type="number" name="validade_dias" min="1" value="{{ cotacao.validade_dias or 5 }}"></div>
+          <div class="field"><label>Responsável</label><input name="vendedor" value="{{ cotacao.vendedor or '' }}" placeholder="Não informado"></div>
+          <div class="field"><label>Contato</label><input name="contato_nome" value="{{ cotacao.contato_nome or '' }}" placeholder="Não informado"></div>
+          <div class="field"><label>Departamento</label><input name="departamento_contato" value="{{ cotacao.departamento_contato or '' }}" list="departamentos" placeholder="Não informado">
+            <datalist id="departamentos"><option>Compras</option><option>Governança</option><option>Operações</option><option>Financeiro</option><option>Diretoria</option></datalist>
+          </div>
+          <div class="field"><label>Frete (texto na proposta)</label><input name="frete" value="{{ cotacao.frete or '' }}" placeholder="Incluso / A combinar"></div>
+
+          {#
+            Duas coisas diferentes, nomeadas por extenso. A origem fiscal decide o imposto;
+            a origem logística decide o frete. Uma não se infere da outra — Itajaí-SC ser o
+            ponto de entrada da mercadoria importada não prova a origem fiscal da venda.
+          #}
+          <div class="field" style="grid-column: span 2;">
+            <label>Origem fiscal da NF</label>
+            <div class="valor-derivado">
+              {% if origem_fiscal.uf %}<strong>{{ origem_fiscal.uf }}</strong>{% else %}<em>não definida</em>{% endif %}
+              <span style="color:var(--gray);"> — {{ origem_fiscal.fonte }}</span>
+            </div>
+          </div>
+
+          <div class="field" style="grid-column: span 2;">
+            <label>Origem logística do embarque</label>
+            {% if origens_logisticas %}
+              {% for o in origens_logisticas %}
+              <div class="valor-derivado">
+                {% if o.conhecida %}<strong>{{ o.cidade }} — {{ o.uf }}</strong>
+                {% else %}<em>não cadastrada</em>{% endif %}
+                <span style="color:var(--gray);">
+                  · {{ o.fornecedor or 'sem fornecedor' }} · {{ o.itens }} item{{ '' if o.itens == 1 else 'ns' }}</span>
+              </div>
+              {% endfor %}
+              {% if origens_logisticas|length > 1 %}
+              <small style="color:var(--gray);">Embarques distintos: o frete de cada um é calculado à parte.</small>
+              {% endif %}
+            {% else %}
+              <div class="valor-derivado"><em>sem itens</em></div>
+            {% endif %}
+          </div>
+
+          <div class="field" style="grid-column: span 2;"><label>Observações</label><textarea name="observacoes" rows="2">{{ cotacao.observacoes or '' }}</textarea></div>
+          <div class="field" style="grid-column: span 2;"><label>Termos e condições (vão para o PDF)</label><textarea name="termos_texto" rows="4">{{ cotacao.termos_texto or '' }}</textarea></div>
+        </div>
+      </details>
+
+    </form>
+    {% if not cotacao.arquivada_em %}
+    <form method="post" action="/cotacoes/{{ cotacao.id }}/arquivar" class="zona-de-risco" style="display:flex; gap:8px; align-items:flex-end;">
+      <div class="field" style="flex:1; margin:0;">
+        <label style="font-size:10.5px;">Arquivar esta cotação (sai da lista e dos totais; dá para restaurar)</label>
+        <input name="motivo" placeholder="motivo — opcional, ex.: teste">
+      </div>
+      <button class="btn btn-ghost btn-sm" type="submit">Arquivar</button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="card" style="margin-bottom:14px;">
+      <h3 style="margin-bottom:10px;">Situação</h3>
+      <div style="margin-bottom:14px;">
+        <span class="badge badge-{{ cotacao.status.value }}">{{ cotacao.status|rotulo_cotacao }}</span>
+      </div>
+      {% if status_opcoes %}
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        {% for s in status_opcoes %}
+        <form method="post" action="/cotacoes/{{ cotacao.id }}/status" style="display:inline;">
+          <input type="hidden" name="status" value="{{ s }}">
+          <button class="btn {{ 'btn-danger' if s == 'cancelada' else 'btn-ghost' }} btn-sm"
+                  type="submit">{{ s|rotulo_acao }}</button>
+        </form>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="font-size:12px; color:var(--gray); line-height:1.5;">
+        Esta cotação veio do sistema anterior e fica como está. Para propor de novo, duplique-a.
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h3 style="margin-bottom:12px;">Aceite / pedido</h3>
+      <form method="post" action="/cotacoes/{{ cotacao.id }}/aceite" class="grid-2">
+        <div class="field"><label>Responsável pelo aceite</label><input name="aceite_responsavel" value="{{ cotacao.aceite_responsavel or '' }}"></div>
+        <div class="field"><label>Cargo</label><input name="aceite_cargo" value="{{ cotacao.aceite_cargo or '' }}"></div>
+        <div class="field"><label>Departamento</label><input name="aceite_departamento" value="{{ cotacao.aceite_departamento or '' }}"></div>
+        <div class="field"><label>Local de entrega</label><input name="local_entrega" value="{{ cotacao.local_entrega or '' }}"></div>
+        <div class="field" style="grid-column: span 2;"><label>Endereço de entrega</label><input name="endereco_entrega" value="{{ cotacao.endereco_entrega or '' }}"></div>
+        <div class="field" style="grid-column: span 2;"><label>Observações do pedido</label><textarea name="observacoes_pedido" rows="2">{{ cotacao.observacoes_pedido or '' }}</textarea></div>
+        <div style="grid-column: span 2; display:flex; gap:8px; align-items:center;">
+          <button class="btn btn-ghost btn-sm" type="submit">Salvar aceite</button>
+          {% if cotacao.aceite_em %}<span style="font-size:11px; color:var(--gray);">Aceite em {{ cotacao.aceite_em|data }}</span>{% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <div class="drawer-fundo" id="drawer-fundo" onclick="fecharMemoria()"></div>
 <div class="drawer" id="drawer-memoria">
   <button class="fechar" onclick="fecharMemoria()">×</button>
@@ -262,9 +380,96 @@
 </div>
 {% endblock %}
 
+<style>
+  .secao { font-size:15px; font-weight:600; margin:26px 0 12px;
+           padding-bottom:6px; border-bottom:1px solid var(--sand); }
+  .pendente { background:#F6E2D8; border-left:3px solid var(--danger); border-radius:0 7px 7px 0;
+              padding:11px 14px; font-size:13px; line-height:1.5; }
+  .mais-detalhes { border-top:1px solid var(--row-alt); padding-top:10px; }
+  .mais-detalhes > summary { cursor:pointer; font-size:12px; font-weight:600;
+                             color:var(--gray); list-style:none; }
+  .mais-detalhes > summary::-webkit-details-marker { display:none; }
+  .mais-detalhes > summary::before { content:"▸ "; }
+  .mais-detalhes[open] > summary::before { content:"▾ "; }
+  .valor-derivado { font-size:13px; padding:6px 0; }
+  /* Enquanto o cenário não foi aplicado, as ações de saída ficam inertes: emitir ou gerar
+     PDF agora usaria números do cenário anterior. */
+  body.cenario-pendente .btn-copper[href$="/pdf"],
+  body.cenario-pendente .acao-de-saida {
+    pointer-events:none; opacity:.4;
+  }
+</style>
+
 {% block extra_scripts %}
 <script>
 const COTACAO_ID = {{ cotacao.id }};
+
+/*
+  Manter as premissas desta cotação é uma decisão comercial registrada: o servidor grava a
+  escolha e ela vira exceção na hora de aprovar. Não é o mesmo que ignorar o aviso — por
+  isso passa por confirmação e some da tela depois.
+*/
+/*
+  Bloco 10 — alterações pendentes.
+
+  Mexer no destino, na condição de pagamento, no contribuinte ou no tipo de frete muda o
+  cenário econômico, mas os preços na tela continuam sendo os do cenário anterior até o
+  servidor recalcular. Sem sinal nenhum, os dois pareciam pertencer ao mesmo cálculo — foi
+  exatamente o que aconteceu no primeiro uso, com o destino trocado e o PDF saindo pelo
+  cenário velho.
+
+  Nada de autosave nem de recálculo a cada tecla: o aviso aparece, as ações de saída ficam
+  bloqueadas, e o recálculo continua sendo um clique explícito.
+
+  Isto é diferente do aviso de premissa global mais nova, logo acima na tela: aquele diz
+  "o mundo mudou", este diz "você mudou e ainda não aplicou".
+*/
+(function vigiarCenario() {
+  const form = document.querySelector('form[action$="/atualizar"]');
+  if (!form) return;
+  const aviso = document.getElementById('pendente');
+  const materiais = form.querySelectorAll('[data-material]');
+  const inicial = new Map();
+  materiais.forEach(c => inicial.set(c, c.value));
+
+  function conferir() {
+    const mudou = [...materiais].some(c => c.value !== inicial.get(c));
+    if (aviso) aviso.hidden = !mudou;
+    document.body.classList.toggle('cenario-pendente', mudou);
+  }
+
+  materiais.forEach(c => {
+    c.addEventListener('change', conferir);
+    c.addEventListener('input', conferir);
+  });
+  // O contribuinte é um input escondido trocado por botão: `change` não dispara sozinho.
+  form.querySelectorAll('[data-contribuinte]').forEach(
+    b => b.addEventListener('click', () => setTimeout(conferir, 0)));
+
+  // Sair da tela com alteração pendente perde o que foi mexido — melhor perguntar.
+  window.addEventListener('beforeunload', evento => {
+    if (document.body.classList.contains('cenario-pendente')) {
+      evento.preventDefault();
+      evento.returnValue = '';
+    }
+  });
+  form.addEventListener('submit', () => document.body.classList.remove('cenario-pendente'));
+})();
+
+async function manterPremissas(id) {
+  if (!confirm('Manter os valores desta cotação?\n\n'
+             + 'Os preços não mudam. A decisão fica registrada e entra na aprovação.')) {
+    return;
+  }
+  const r = await fetch(`/cotacoes/${id}/premissas/manter`, {method: 'POST'});
+  const j = await r.json();
+  if (j.erro) { alert(j.erro); return; }
+  const aviso = document.querySelector('.aviso-premissas');
+  if (aviso) {
+    aviso.innerHTML = '<div style="font-size:13px;">Decisão registrada: esta cotação '
+                    + 'mantém as premissas atuais.</div>';
+  }
+}
 </script>
 <script src="/static/js/cotacao.js"></script>
 <script src="/static/js/memoria.js"></script>

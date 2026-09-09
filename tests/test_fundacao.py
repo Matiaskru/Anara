@@ -203,9 +203,16 @@ def test_migration_e_idempotente(copia_do_banco):
     """Reaplicar não duplica dado, e o ciclo downgrade → upgrade devolve o mesmo conteúdo."""
     import sqlite3
 
-    # a cópia vem do banco de produção, que está na cabeça do projeto; volta-se a 0002 para
-    # exercitar a ponte e só ela
-    alembic("downgrade 0002", copia_do_banco)
+    # A cópia vem do banco de produção. Os DOIS lados da comparação precisam ser pontes
+    # recém-construídas: idempotência é "reaplicar produz o mesmo resultado", e a ponte
+    # armazenada no banco foi construída em 03/09, com o câmbio que valia naquele dia.
+    #
+    # Comparar a ponte guardada contra uma reconstruída hoje media outra coisa: mede se
+    # alguma premissa mudou desde que a ponte foi montada. Em 08/09 o câmbio passou de
+    # R$ 5,11 para R$ 5,19 pela tela de administração — exatamente o que o sistema existe
+    # para permitir — e o teste acusou "migration não idempotente" por causa disso.
+    alembic("downgrade 0001", copia_do_banco)
+    alembic("upgrade 0002", copia_do_banco)
     primeiro = estado_banco(copia_do_banco)
 
     alembic("downgrade 0001", copia_do_banco)
@@ -215,10 +222,15 @@ def test_migration_e_idempotente(copia_do_banco):
     comp = comparar_estados(primeiro, segundo)
     assert comp["tabelas_novas"] == [] and comp["tabelas_removidas"] == []
     assert comp["contagens_alteradas"] == {}
-    # A ÚNICA diferença aceitável entre duas execuções é `criado_em` da própria ponte:
-    # é o carimbo de quando a linha de ponte foi construída, não conteúdo do negócio.
-    # Qualquer outra coluna diferente significa migration não idempotente.
-    assert comp["colunas_alteradas"] == {"basepremissaponte": ["criado_em"]}, comp
+    # A única diferença ACEITÁVEL entre duas execuções é `criado_em` da própria ponte: é o
+    # carimbo de quando a linha foi construída, não conteúdo do negócio. Qualquer outra
+    # coluna diferente significa migration não idempotente.
+    #
+    # "Aceitável" e não "obrigatória": quando as duas reconstruções caem no mesmo segundo,
+    # o carimbo é idêntico e não há diferença nenhuma — que é o resultado melhor, não pior.
+    # Exigir a diferença tornava o teste dependente de quanto tempo o Alembic levou.
+    assert set(comp["colunas_alteradas"]) <= {"basepremissaponte"}, comp
+    assert set(comp["colunas_alteradas"].get("basepremissaponte", [])) <= {"criado_em"}, comp
 
     for tabela in primeiro["digests"]:
         if tabela == "basepremissaponte":
@@ -233,15 +245,23 @@ def test_migration_e_idempotente(copia_do_banco):
 
 @sem_banco
 def test_downgrade_devolve_o_banco_ao_estado_anterior(copia_do_banco):
-    """Rollback de esquema não pode levar dado junto."""
+    """Rollback de esquema não pode levar dado junto.
+
+    A comparação é **antes contra depois da mesma cópia**, e não contra contagens fixas: o
+    que este teste promete é que o downgrade não perde linha, e isso vale para 18 cotações
+    ou para 18 mil. Cravar `== 18` media o tamanho do banco de produção, que muda toda vez
+    que alguém usa o sistema — e a suíte ficava vermelha por uso normal, sem que o
+    downgrade tivesse feito nada de errado.
+    """
+    antes = estado_banco(copia_do_banco)
     alembic("downgrade 0001", copia_do_banco)
     apos_downgrade = estado_banco(copia_do_banco)
 
     assert "basepremissaponte" not in apos_downgrade["digests"]
     assert "valid_from" not in apos_downgrade["digests"]["baseimportacao"]["colunas"]
-    assert apos_downgrade["contagens"]["baseimportacao"] == 4
-    assert apos_downgrade["contagens"]["cotacao"] == 18
-    assert apos_downgrade["contagens"]["cotacaoitem"] == 45
+    for tabela in ("baseimportacao", "cotacao", "cotacaoitem"):
+        assert apos_downgrade["contagens"][tabela] == antes["contagens"][tabela], \
+            f"o downgrade perdeu linha em {tabela}"
     assert apos_downgrade["integridade"] == "ok"
 
 
@@ -332,10 +352,23 @@ def test_cotacoes_e_itens_historicos_nao_mudaram(baseline):
 
     agora = json.loads(json.dumps(gerar(com_estado_banco=False), ensure_ascii=False))
 
-    assert agora["cotacoes"] == baseline["cotacoes"]
-    assert agora["itens"] == baseline["itens"]
-    assert len(agora["itens"]) == 45
-    for antes, depois in zip(baseline["itens"], agora["itens"]):
+    # O baseline é a fotografia do que existia antes da Fase 0, e não se regenera. Cotação
+    # criada depois dele não é regressão — é uso do sistema. Comparar a lista inteira faria
+    # cada cotação nova parecer histórico alterado, que é o oposto do que este teste vigia.
+    ids_cot = {c["id"] for c in baseline["cotacoes"]}
+    ids_item = {i["id"] for i in baseline["itens"]}
+    cot_agora = sorted((c for c in agora["cotacoes"] if c["id"] in ids_cot),
+                       key=lambda c: c["id"])
+    itens_agora = sorted((i for i in agora["itens"] if i["id"] in ids_item),
+                         key=lambda i: i["id"])
+    cot_base = sorted(baseline["cotacoes"], key=lambda c: c["id"])
+    itens_base = sorted(baseline["itens"], key=lambda i: i["id"])
+
+    assert len(cot_agora) == len(cot_base), "cotação do baseline sumiu do banco"
+    assert len(itens_agora) == len(itens_base), "item do baseline sumiu do banco"
+    assert cot_agora == cot_base
+    assert itens_agora == itens_base
+    for antes, depois in zip(itens_base, itens_agora):
         assert antes["memoria_sha256"] == depois["memoria_sha256"]
         assert antes["preco_negociado"] == depois["preco_negociado"]
         assert antes["margem_liquida"] == depois["margem_liquida"]

@@ -46,12 +46,14 @@
     <div class="field"><label>CNET (R$)</label><input id="c-cnet" type="text"></div>
     <div class="field"><label>Valor bruto do fornecedor (opcional)</label><input id="c-bruto" type="text"></div>
     <div class="field"><label>Status</label>
+      {# O código continua sendo o `value` — é ele que o servidor grava. O que muda é o
+         texto que a pessoa lê. #}
       <select id="c-status">
-        <option value="CONFIRMADO">CONFIRMADO</option>
-        <option value="ESTIMADO">ESTIMADO</option>
-        <option value="REVALIDAR">REVALIDAR</option>
-        <option value="A_COTAR">A_COTAR</option>
-        <option value="REVIEW_REQUIRED">REVIEW_REQUIRED</option>
+        <option value="CONFIRMADO">{{ 'CONFIRMADO'|rotulo_custo }}</option>
+        <option value="ESTIMADO">{{ 'ESTIMADO'|rotulo_custo }}</option>
+        <option value="REVALIDAR">{{ 'REVALIDAR'|rotulo_custo }}</option>
+        <option value="A_COTAR">{{ 'A_COTAR'|rotulo_custo }}</option>
+        <option value="REVIEW_REQUIRED">{{ 'REVIEW_REQUIRED'|rotulo_custo }}</option>
       </select></div>
   </div>
   <div class="grid-3">

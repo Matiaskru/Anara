@@ -4,7 +4,7 @@
 <div class="page-header">
   <div>
     <h1>Nova cotação</h1>
-    <div class="subtitle">Cliente, condição comercial e cenário fiscal. Os produtos entram na tela seguinte — de qualquer fornecedor.</div>
+    <div class="subtitle">O essencial para começar. Os produtos e o resto dos dados entram na tela seguinte.</div>
   </div>
 </div>
 
@@ -15,30 +15,47 @@
   </div>
 
   <div id="painel-existente">
+    {#
+      Cinco campos. Eram dezoito — com vendedor, contato, departamento, prazo, validade,
+      texto do frete e observações, todos preenchíveis depois e vários já conhecidos por
+      quem cadastrou o cliente. O que dá para herdar, a cotação herda; o resto abre na
+      tela seguinte, onde tem contexto.
+    #}
     <form method="post" action="/cotacoes">
-      <div class="grid-2">
-        <div class="field">
-          <label>Cliente</label>
-          <select name="cliente_id" required>
-            <option value="">Selecione...</option>
-            {% for c in clientes %}
-            <option value="{{ c.id }}" {{ 'selected' if cliente_selecionado and cliente_selecionado.id == c.id else '' }}>{{ c.nome }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="field"><label>Vendedor</label><input name="vendedor"></div>
-        <div class="field"><label>Contato</label><input name="contato_nome" placeholder="Quem está pedindo"></div>
-        <div class="field">
-          <label>Departamento do contato</label>
-          <input name="departamento_contato" list="departamentos" placeholder="Compras, Governança, ...">
-          <datalist id="departamentos">
-            <option>Compras</option><option>Governança</option><option>Operações</option>
-            <option>Financeiro</option><option>Diretoria</option>
-          </datalist>
-        </div>
+      {% if oportunidade %}<input type="hidden" name="oportunidade_id" value="{{ oportunidade.id }}">{% endif %}
+
+      <div class="field">
+        <label>Cliente</label>
+        <select name="cliente_id" id="campo-cliente" required onchange="carregarContatos()">
+          <option value="">Selecione...</option>
+          {% for c in clientes %}
+          <option value="{{ c.id }}" {{ 'selected' if cliente_selecionado and cliente_selecionado.id == c.id else '' }}>{{ c.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Contato</label>
+        <select name="contato_id" id="campo-contato">
+          <option value="">Usar o contato principal do cliente</option>
+          {% for ct in contatos or [] %}
+          <option value="{{ ct.id }}">{{ ct.nome }}{% if ct.cargo %} — {{ ct.cargo }}{% endif %}</option>
+          {% endfor %}
+        </select>
+        <small style="color:var(--gray);font-size:11px;">Nome e cargo vêm do cadastro do contato.</small>
       </div>
 
       <div class="grid-2">
+        <div class="field">
+          <label>Destino da venda</label>
+          <select name="estado_destino">
+            <option value="">Definir depois</option>
+            {% for uf in estados_difal %}
+            <option value="{{ uf }}">{{ uf }}</option>
+            {% endfor %}
+          </select>
+          <small style="color:var(--gray);font-size:11px;">Define ICMS, DIFAL e FCP do preço.</small>
+        </div>
         <div class="field">
           <label>Condição de pagamento</label>
           <select name="condicao_pagamento">
@@ -49,30 +66,17 @@
             {% endfor %}
           </select>
         </div>
-        <div class="field"><label>Prazo de entrega</label><input name="prazo_entrega" placeholder="ex.: 30 dias após confirmação"></div>
       </div>
 
       <div class="grid-2">
         <div class="field">
-          <label>Origem da venda</label>
-          <select name="estado_origem">
-            {% for uf in estados_difal %}
-            <option value="{{ uf }}" {{ 'selected' if uf == 'São Paulo' else '' }}>{{ uf }}</option>
+          <label>Tipo de frete</label>
+          <select name="freight_type">
+            {% for t in tipos_frete %}
+            <option value="{{ t }}" {{ 'selected' if t == 'FOB' else '' }}>{{ t }}</option>
             {% endfor %}
           </select>
         </div>
-        <div class="field">
-          <label>Destino da venda</label>
-          <select name="estado_destino">
-            <option value="">Usar ICMS padrão</option>
-            {% for uf in estados_difal %}
-            <option value="{{ uf }}">{{ uf }}</option>
-            {% endfor %}
-          </select>
-        </div>
-      </div>
-
-      <div class="grid-2">
         <div class="field">
           <label>Cliente é contribuinte de ICMS?</label>
           <div class="mode-toggle">
@@ -81,26 +85,12 @@
           </div>
           <input type="hidden" name="contribuinte_icms" id="contribuinte_icms_input" value="sim">
         </div>
-        <div class="field">
-          <label>Validade da proposta (dias)</label>
-          <input type="number" name="validade_dias" min="1" value="{{ validade_padrao }}">
-        </div>
       </div>
 
-      <div class="grid-2">
-        <div class="field">
-          <label>Tipo de frete</label>
-          <select name="freight_type">
-            {% for t in tipos_frete %}
-            <option value="{{ t }}" {{ 'selected' if t == 'CIF' else '' }}>{{ t }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="field"><label>Frete (texto na proposta)</label><input name="frete" placeholder="Incluso / A combinar"></div>
+      <button class="btn btn-copper" type="submit">Criar cotação</button>
+      <div style="font-size:11.5px;color:var(--gray);margin-top:10px;line-height:1.5;">
+        Prazo de entrega, validade, observações e termos ficam na cotação, depois de criada.
       </div>
-
-      <div class="field"><label>Observações</label><textarea name="observacoes" rows="2"></textarea></div>
-      <button class="btn btn-copper" type="submit">Iniciar cotação</button>
     </form>
   </div>
 
@@ -130,6 +120,23 @@ function setContribuinte(btn, valor) {
   document.getElementById('contribuinte_icms_input').value = valor;
   btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+}
+
+// Trocar de cliente troca a lista de contatos. Sem isso, o campo ofereceria o contato de
+// outro cliente — que o servidor recusa, mas só depois de o usuário ter escolhido.
+async function carregarContatos() {
+  const cliente = document.getElementById('campo-cliente').value;
+  const alvo = document.getElementById('campo-contato');
+  alvo.innerHTML = '<option value="">Usar o contato principal do cliente</option>';
+  if (!cliente) return;
+  const r = await fetch(`/clientes/${cliente}/contatos.json`);
+  if (!r.ok) return;
+  for (const c of await r.json()) {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = c.cargo ? `${c.nome} — ${c.cargo}` : c.nome;
+    alvo.appendChild(o);
+  }
 }
 </script>
 {% endblock %}

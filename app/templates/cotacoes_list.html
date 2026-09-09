@@ -109,7 +109,7 @@ function marcarTestes() {
         <td>{{ c.criado_em|data }}</td>
         <td>{{ clientes.get(c.cliente_id).nome if clientes.get(c.cliente_id) else '—' }}</td>
         <td>{{ c.vendedor or '—' }}</td>
-        <td><span class="badge badge-{{ c.status.value }}">{{ c.status.value }}</span></td>
+        <td><span class="badge badge-{{ c.status|rotulo_cotacao }}">{{ c.status|rotulo_cotacao }}</span></td>
         <td>{{ c.condicao_pagamento }}</td>
         <td class="num">{{ totais.get(c.id, {}).get('faturamento')|brl }}</td>
         {% if ve_economia(request) %}

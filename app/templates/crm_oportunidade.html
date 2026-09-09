@@ -5,8 +5,8 @@
   <div><h1>{{ op.titulo }}</h1>
     <div class="sub">
       <a href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a>
-      · <span class="tag">{{ op.etapa }}</span>
-      · <span class="tag {{ 'tag-calc' if op.status == 'GANHA' else ('tag-review' if op.status == 'PERDIDA' else '') }}">{{ op.status }}</span>
+      · <span class="tag">{{ op.etapa|rotulo_etapa }}</span>
+      · <span class="tag {{ 'tag-calc' if op.status == 'GANHA' else ('tag-review' if op.status == 'PERDIDA' else '') }}">{{ op.status|rotulo_oportunidade }}</span>
       · {{ responsavel.nome if responsavel else 'sem responsável' }}
       {% if op.data_prevista_fechamento %} · previsão {{ op.data_prevista_fechamento|data }}{% endif %}
     </div></div>
@@ -55,7 +55,7 @@
       <select id="op-vencedora">
         <option value="">Selecione a proposta aceita…</option>
         {% for c in cotacoes %}{% if c.status in ('emitida', 'enviada') %}
-        <option value="{{ c.id }}">{{ c.numero }} r{{ c.revisao }} — {{ c.status }}</option>
+        <option value="{{ c.id }}">{{ c.numero }} r{{ c.revisao }} — {{ c.status|rotulo_cotacao }}</option>
         {% endif %}{% endfor %}
       </select>
       <button class="btn btn-copper btn-sm" style="margin-top:6px;" onclick="ganhar()">Marcar ganha</button></div>
@@ -69,7 +69,7 @@
   </div>
   {% elif op.status == 'PERDIDA' %}
   <p style="font-size:12px;">Perdida em {{ op.lost_em.strftime('%d/%m/%Y') if op.lost_em else '—' }}
-     por {{ op.lost_por or '—' }} · motivo <span class="tag tag-review">{{ op.motivo_perda }}</span>
+     por {{ op.lost_por or '—' }} · motivo <span class="tag tag-review">{{ op.motivo_perda|rotulo_motivo }}</span>
      {% if op.comentario_perda %}<br><em>{{ op.comentario_perda }}</em>{% endif %}</p>
   <button class="btn btn-ghost" onclick="reabrir()">Reabrir oportunidade</button>
   {% else %}
@@ -92,7 +92,7 @@
       <tr {% if cotacao_atual and c.id == cotacao_atual.id %}style="background:var(--row-alt);font-weight:600;"{% endif %}>
         <td><code>{{ c.numero or c.id }}</code></td>
         <td class="num">{{ c.revisao }}</td>
-        <td><span class="tag">{{ c.status.replace('_',' ') }}</span>
+        <td><span class="tag">{{ c.status|rotulo_cotacao }}</span>
             {% if cotacao_atual and c.id == cotacao_atual.id %}<span class="tag tag-calc">mais recente</span>{% endif %}</td>
         <td><a class="btn btn-ghost btn-sm" href="/cotacoes/{{ c.id }}">Abrir</a></td></tr>
     {% else %}
@@ -105,7 +105,7 @@
 <div class="card">
   <h3 style="margin-top:0;">Próxima atividade</h3>
   {% if proxima %}
-  <p><span class="tag">{{ proxima.tipo }}</span> <strong>{{ proxima.titulo }}</strong>
+  <p><span class="tag">{{ proxima.tipo|rotulo_atividade }}</span> <strong>{{ proxima.titulo }}</strong>
      · {{ proxima.due_em.strftime('%d/%m/%Y %H:%M') if proxima.due_em else 'sem data' }}
      {% if atrasada(proxima) %}<span class="tag tag-review">atrasada</span>{% endif %}
      <button class="btn btn-ghost btn-sm" onclick="concluir({{ proxima.id }})">Concluir</button></p>
@@ -126,7 +126,7 @@
     {% for a in atividades %}
       <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
         <td style="font-size:11px;">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
-        <td><span class="tag">{{ a.tipo }}</span></td>
+        <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td>
         <td>{{ a.titulo }}</td>
         <td style="font-size:11px;">
           {% if a.concluida_em %}concluída {{ a.concluida_em.strftime('%d/%m') }}
@@ -162,7 +162,7 @@
     <tbody>
     {% for e in timeline %}
       <tr><td style="font-size:11px;white-space:nowrap;">{{ e.quando.strftime('%d/%m/%Y %H:%M') }}</td>
-        <td><span class="tag">{{ e.tipo }}</span></td>
+        <td><span class="tag">{{ e.tipo|rotulo_atividade }}</span></td>
         <td style="font-size:12px;">{{ e.texto }}</td></tr>
     {% endfor %}
     </tbody>

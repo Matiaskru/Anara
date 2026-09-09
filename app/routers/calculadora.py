@@ -84,7 +84,9 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
     regras, _regra, _ctx = montar_regras(cotacao, session)
     margem = ps.margem_padrao(session, produto)
     quantidade = dados["quantidade"] or 1
-    custo = produto.custo_unitario or 0.0
+    # Item novo: custo resolvido pelas premissas vigentes, igual ao caminho da cotação.
+    custo, memoria_custo = ps.custo_para_precificar(session, produto)
+    custo = custo or 0.0
 
     if custo > 0:
         modo, valor = "margem", (dados["margem_override"] or margem.margem_pct)
@@ -100,7 +102,7 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
         nome_produto=produto.nome, especificacao=produto.especificacao,
         categoria=produto.categoria, quantidade=quantidade, custo_unitario=custo,
         preco_base=produto.preco_base or 0.0, modo_edicao=modo, valor_editado=valor)
-    _preencher_item(session, item, produto, margem)
+    _preencher_item(session, item, produto, margem, memoria_custo)
     _aplicar_resultado(item, resultado, regras)
     item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
         session, produto, cotacao, preco_negociado=resultado.preco_negociado,

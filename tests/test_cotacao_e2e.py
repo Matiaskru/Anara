@@ -324,29 +324,60 @@ def test_memoria_de_fornecedor_nacional_nao_tem_nacionalizacao(s):
     assert "nacional" in m["custo"]["caminho"].lower()
 
 
-def test_aceite_vira_pedido(s):
+def test_aceite_registra_sem_mudar_a_situacao(s):
+    """O aceite é informação do documento; mover a cotação é decisão do workflow.
+
+    Este teste afirmava o contrário: que `virar_pedido=sim` gravava `pedido`. Aquele
+    caminho ia direto para um estado herdado do sistema anterior, do qual
+    `exigir_transicao` recusa sair — a cotação ficava sem aprovação, sem emissão, sem
+    snapshot e sem volta. O parâmetro foi removido da rota; o que continua valendo é o
+    registro do aceite.
+    """
     from app.models import Cotacao
     from app.routers.cotacoes import registrar_aceite
     cotacao_id = criar_cotacao(s)
+    antes = s.get(Cotacao, cotacao_id).status.value
+
     chamar(registrar_aceite, cotacao_id=cotacao_id, aceite_responsavel="Fulano",
            aceite_cargo="Governanta", aceite_departamento="Governança",
            local_entrega="Hotel Teste", endereco_entrega="Rua X, 100",
-           observacoes_pedido="Entregar pela manhã", virar_pedido="sim", session=s)
+           observacoes_pedido="Entregar pela manhã", session=s)
+
     c = s.get(Cotacao, cotacao_id)
     s.refresh(c)
-    assert c.status.value == "pedido" and c.aceite_em and c.aceite_responsavel == "Fulano"
+    assert c.aceite_em and c.aceite_responsavel == "Fulano"
+    assert c.aceite_cargo == "Governanta" and c.endereco_entrega == "Rua X, 100"
+    assert c.observacoes_pedido == "Entregar pela manhã"
+    assert c.status.value == antes, "registrar aceite não pode mover a cotação"
+    assert c.status.value not in ("pedido", "fechada", "perdida")
 
 
 def test_duplicar_reconfere_custo_e_mantem_preco_negociado(s):
-    from app.models import CotacaoItem
+    """Duplicar cria item novo: o custo é reconferido, o preço negociado é herdado.
+
+    A asserção anterior era `custo_unitario == 50.0` — o valor da coluna
+    `Produto.custo_unitario`. Ou seja, verificava exatamente o oposto do que o nome do
+    teste promete: que o custo **não** era reconferido, e sim relido do catálogo.
+
+    Reconferir significa resolver contra as premissas vigentes, que é o que
+    `custo_para_precificar` faz. Para este SKU, cotado em dólar, o resultado depende do
+    câmbio — e é por isso que ele não bate com a coluna gravada num câmbio anterior.
+    """
+    from app.models import CotacaoItem, Produto
     from app.routers.cotacoes import duplicar
+    from app import pricing_service as ps
+
     cotacao_id = criar_cotacao(s)
     original = add_item(s, cotacao_id, 1)
     resposta = chamar(duplicar, cotacao_id=cotacao_id, session=s)
     nova_id = int(resposta.headers["location"].rsplit("/", 1)[1])
     novo = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == nova_id)).first()
+
     assert novo.preco_negociado == aprox(original["preco_negociado"])
-    assert novo.custo_unitario == aprox(50.0)
+
+    produto = s.get(Produto, novo.produto_id)
+    esperado, _ = ps.custo_para_precificar(s, produto)
+    assert novo.custo_unitario == aprox(esperado)
 
 
 def test_pdf_nao_mostra_informacao_interna(s):

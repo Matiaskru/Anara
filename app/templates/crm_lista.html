@@ -48,8 +48,8 @@
       <tr>
         <td>{{ c.cliente }}</td>
         <td><a href="/oportunidades/{{ c.id }}">{{ c.titulo }}</a></td>
-        <td><span class="tag">{{ c.etapa }}</span></td>
-        <td><span class="tag {{ 'tag-calc' if c.status == 'GANHA' else ('tag-review' if c.status == 'PERDIDA' else '') }}">{{ c.status }}</span></td>
+        <td><span class="tag">{{ c.etapa|rotulo_etapa }}</span></td>
+        <td><span class="tag {{ 'tag-calc' if c.status == 'GANHA' else ('tag-review' if c.status == 'PERDIDA' else '') }}">{{ c.status|rotulo_oportunidade }}</span></td>
         <td style="font-size:11px;">{{ c.responsavel or '—' }}</td>
         <td class="num">{{ (c.valor_fechado or c.valor_cotado or c.valor_estimado)|brl }}</td>
         <td style="font-size:11px;">

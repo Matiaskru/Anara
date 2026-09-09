@@ -22,6 +22,7 @@ from app.models import (
     AprovacaoCotacao, Cliente, CostMethod, Cotacao, CotacaoItem, Fornecedor, Produto,
     SnapshotEmissao, StatusCotacao, Usuario,
 )
+import legado
 from conftest import RequestFalsa, _novo_usuario
 
 HOJE = date.today()
@@ -845,8 +846,15 @@ def test_pdf_de_rascunho_e_marcado_e_nao_vaza_economia(session, daune, cliente):
 # ===========================================================================
 # §66 — histórico legado
 # ===========================================================================
+@legado.sem_baseline
 def test_historico_legado_nao_e_falsificado(session):
-    """Cotações de 2026 não passaram por approval workflow. Não inventar que passaram."""
+    """Cotações de 2026 não passaram por approval workflow. Não inventar que passaram.
+
+    O escopo é o conjunto herdado (`tests/legado.py`), não a tabela inteira: cotação criada
+    depois da Fase 0 pode legitimamente ser aprovada, emitida e revisada, e não é assunto
+    deste teste. O que ele guarda continua igual — nenhuma das herdadas ganhou aprovação,
+    snapshot, revisão nem carimbo de emissão que não tinha.
+    """
     from sqlalchemy import create_engine
     import os
     from sqlmodel import Session as S
@@ -854,16 +862,16 @@ def test_historico_legado_nao_e_falsificado(session):
     caminho = os.path.abspath("data/anara.db")
     eng = create_engine(f"sqlite:///file:{caminho}?mode=ro&uri=true")
     with S(eng) as prod:
-        cotacoes = prod.exec(select(Cotacao)).all()
-        assert len(cotacoes) == 18
+        cotacoes = legado.somente_cotacoes(prod.exec(select(Cotacao)).all())
+        assert len(cotacoes) == len(legado.COTACOES), "cotação herdada sumiu do banco"
         assert {c.status for c in cotacoes} <= {"rascunho", "perdida"}
         assert all(c.revisao == 1 for c in cotacoes)
         assert all(c.fingerprint is None for c in cotacoes)
         assert all(c.issued_em is None and c.sent_em is None for c in cotacoes)
-        assert prod.exec(select(AprovacaoCotacao)).all() == []
-        assert prod.exec(select(SnapshotEmissao)).all() == []
-        itens = prod.exec(select(CotacaoItem)).all()
-        assert len(itens) == 45
+        assert legado.somente_por_cotacao(prod.exec(select(AprovacaoCotacao)).all()) == []
+        assert legado.somente_por_cotacao(prod.exec(select(SnapshotEmissao)).all()) == []
+        itens = legado.somente_por_cotacao(prod.exec(select(CotacaoItem)).all())
+        assert len(itens) == len(legado.ITENS), "item de cotação herdada sumiu do banco"
         assert all(i.status_custo_item is None for i in itens)
 
 

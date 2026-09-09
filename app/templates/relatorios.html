@@ -2,15 +2,14 @@
 {% block title %}Relatórios — Anara{% endblock %}
 {% block content %}
 <div class="page-head">
-  <div><h1>Relatórios comerciais</h1>
+  <div><h1>Relatórios</h1>
     <div class="sub">{{ periodo.rotulo }}. Métricas de <strong>estado atual</strong>:
       um negócio perdido e reaberto conta como aberto, não como perdido.</div></div>
-  <div>
-    {% if ve_eco %}<a href="/relatorios/economico" class="btn btn-ghost">Econômico</a>{% endif %}
-    <a href="/relatorios/oportunidades.csv?periodo={{ atalho }}&inicio={{ inicio }}&fim={{ fim }}&responsavel={{ responsavel }}"
-       class="btn btn-ghost">CSV</a>
-  </div>
+  <a href="/relatorios/oportunidades.csv?periodo={{ atalho }}&inicio={{ inicio }}&fim={{ fim }}&responsavel={{ responsavel }}"
+     class="btn btn-ghost">Baixar CSV</a>
 </div>
+
+{% with aba = 'comercial' %}{% include "_abas_relatorios.html" %}{% endwith %}
 
 <div class="card">
   <form method="get" class="grid-4" style="margin-bottom:0;">

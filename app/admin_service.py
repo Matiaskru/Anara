@@ -724,8 +724,19 @@ def premissas_desatualizadas(session: Session, cotacao, itens: Sequence[CotacaoI
     **Só detecta. Não recalcula.** Um rascunho aberto amanhã continua exatamente com os
     números de ontem — trocar sozinho seria mudar o preço debaixo de quem já negociou. A
     atualização é ato explícito.
+
+    Duas coisas podem ter envelhecido, e são diferentes:
+
+    * a **referência de custo** do SKU ganhou versão nova — alguém cadastrou outro custo;
+    * uma **premissa versionada** ganhou versão nova — o câmbio mudou, por exemplo.
+
+    A segunda não aparecia aqui, e é a que mais acontece: trocar o câmbio não cria
+    `CustoReferencia` nenhuma, então um rascunho de SKU importado continuava dizendo que
+    estava tudo em dia enquanto o dólar já era outro. Os pinos do item guardam exatamente
+    qual versão formou aquele preço, e é contra eles que a comparação é feita.
     """
     desatualizados = []
+    premissas_novas = _premissas_mais_novas(session, itens)
     for it in itens:
         if not it.produto_id:
             continue
@@ -742,10 +753,72 @@ def premissas_desatualizadas(session: Session, cotacao, itens: Sequence[CotacaoI
                 "custo_vigente": para_float(D(vigente.cnet_brl)),
                 "versao_vigente": vigente.versao,
             })
-    return {"desatualizado": bool(desatualizados), "itens": desatualizados,
-            "texto": (f"{len(desatualizados)} item(ns) usam custo anterior ao vigente. "
-                      "Nada foi alterado — atualizar é uma ação explícita."
-                      if desatualizados else "Todas as premissas do rascunho estão vigentes.")}
+    partes = []
+    if desatualizados:
+        partes.append(f"{len(desatualizados)} item(ns) usam custo anterior ao vigente.")
+    for p in premissas_novas:
+        partes.append(f"{p['rotulo']}: esta cotação usa {p['no_item']}, "
+                      f"e o valor atual é {p['vigente']}.")
+
+    return {"desatualizado": bool(desatualizados or premissas_novas),
+            "itens": desatualizados,
+            "premissas": premissas_novas,
+            "texto": (" ".join(partes) + " Nada foi alterado — atualizar é uma ação explícita."
+                      if partes else "Todas as premissas do rascunho estão vigentes.")}
+
+
+#: As premissas que a tela nomeia quando avisa que há versão mais nova. A chave técnica
+#: não serve: "fx_usd_brl mudou" não diz nada a quem vende.
+ROTULO_PREMISSA = {
+    "fx_usd_brl": "Câmbio do dólar",
+    "frete_int_usd_kg": "Frete internacional",
+    "outras_desp_usd_un": "Outras despesas de importação",
+    "pis_cofins_pct": "PIS/COFINS",
+}
+
+
+def _premissas_mais_novas(session: Session, itens: Sequence[CotacaoItem]) -> list:
+    """Premissas pinadas nos itens que já têm versão mais recente vigente.
+
+    Compara **id de versão**, não valor. Uma versão nova com o mesmo número continua sendo
+    outra versão — foi reconfirmada por outra fonte, e essa é justamente a informação que a
+    Sessão 5 decidiu não descartar.
+    """
+    achados = {}
+    for it in itens:
+        if not it.premissas_pinadas:
+            continue
+        try:
+            pinos = json.loads(it.premissas_pinadas)
+        except (TypeError, ValueError):
+            continue
+        for chave, pino in (pinos or {}).items():
+            if chave in achados or not isinstance(pino, dict):
+                continue
+            vigente = cfg.premissa(session, chave)
+            if vigente is None or vigente.id == pino.get("premissa_id"):
+                continue
+            achados[chave] = {
+                "chave": chave,
+                "rotulo": ROTULO_PREMISSA.get(chave, chave),
+                "no_item": _formatar_premissa(chave, pino.get("valor")),
+                "vigente": _formatar_premissa(chave, vigente.valor_num),
+                "vigente_desde": (vigente.valid_from.isoformat()
+                                  if vigente.valid_from else None),
+            }
+    return list(achados.values())
+
+
+def _formatar_premissa(chave: str, valor) -> str:
+    """Premissa em texto de gente. Câmbio nunca perde os centavos: "R$ 5,00", não "R$ 5"."""
+    if valor is None:
+        return "—"
+    if chave.endswith("_pct"):
+        return f"{D(valor) * 100:.2f}%".replace(".", ",")
+    if chave == "fx_usd_brl":
+        return f"R$ {D(valor):.2f}".replace(".", ",")
+    texto = f"{D(valor):.4f}".rstrip("0").rstrip(".") or "0"
+    return texto.replace(".", ",")
 
 
 # ---------------------------------------------------------------------------

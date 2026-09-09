@@ -38,11 +38,37 @@ router = APIRouter()
 #: As premissas que a tela oferece. Lista fechada de propósito: um formulário genérico
 #: sobre `Premissa.chave` deixaria alguém criar "icms = banana" e achar que configurou algo.
 PREMISSAS_EDITAVEIS = [
-    ("fx_usd_brl", "Câmbio USD → BRL", "R$/US$", "num"),
+    ("fx_usd_brl", "Câmbio do dólar", "R$/US$", "num"),
     ("frete_int_usd_kg", "Frete internacional", "US$/kg", "num"),
     ("outras_desp_usd_un", "Outras despesas de importação", "US$/un", "num"),
     ("pis_cofins_pct", "PIS/COFINS", "fração (0,0759 = 7,59%)", "num"),
 ]
+
+#: Como cada premissa é **lida** na tela, e o que o campo de edição espera.
+#: `dica` é o que aparece sob o campo; sem ela, alguém digita "7,59" onde o sistema quer
+#: "0,0759" e cadastra uma alíquota cem vezes maior sem perceber.
+APRESENTACAO_PREMISSA = {
+    "fx_usd_brl": {
+        "prefixo": "R$ ", "sufixo": "", "casas": 4,
+        "explicacao": "Multiplica todo o custo em dólar da KTC.",
+        "dica": "Use ponto ou vírgula. Exemplo: 5,23",
+    },
+    "frete_int_usd_kg": {
+        "prefixo": "US$ ", "sufixo": " / kg", "casas": 4,
+        "explicacao": "Frete do Egito até a nacionalização, por quilo.",
+        "dica": "Exemplo: 0,516",
+    },
+    "outras_desp_usd_un": {
+        "prefixo": "US$ ", "sufixo": " / un", "casas": 4,
+        "explicacao": "Despesas de importação rateadas por peça.",
+        "dica": "Exemplo: 0,2488",
+    },
+    "pis_cofins_pct": {
+        "prefixo": "", "sufixo": "", "casas": 4, "percentual": True,
+        "explicacao": "Incide sobre a receita, no denominador do preço.",
+        "dica": "Informe como fração: 0,0759 é 7,59%",
+    },
+}
 
 
 def _data(valor: Optional[str]) -> Optional[date]:
@@ -61,9 +87,68 @@ def _erro(mensagem: str, status: int = 400):
 
 
 # ---------------------------------------------------------------------------
-# Painel
+# Hub da administração
 # ---------------------------------------------------------------------------
+#: As áreas do Admin, na ordem em que aparecem. Existe uma lista só porque existia o
+#: problema: `/admin` e `/configuracoes` eram dois destinos concorrentes para as mesmas
+#: quatro premissas, com rigor diferente — o mais fácil de achar era o menos auditado — e o
+#: menu lateral oferecia os dois lado a lado, sem dizer qual servia para quê.
+AREAS_ADMIN = [
+    ("Premissas e preços", "/admin/premissas",
+     "Câmbio, frete internacional, despesas de importação e PIS/COFINS."),
+    ("Catálogo e custos", "/produtos",
+     "Os SKUs, o custo de cada um e de onde esse custo veio."),
+    ("Motor industrial KTC", "/configuracoes?aba=ktc",
+     "Preço do tecido por m², CMT e parâmetros de produção."),
+    ("Margens", "/configuracoes?aba=margens",
+     "Margem-alvo por fornecedor, família ou item."),
+    ("Condições de pagamento", "/configuracoes?aba=pagamento",
+     "Prazos e o encargo financeiro de cada um."),
+    ("Fiscal", "/configuracoes?aba=fiscal",
+     "Alíquota interna e carga final por estado, NCM e imposto de importação."),
+    ("Estimativa de peso", "/configuracoes?aba=peso",
+     "Como o peso é resolvido quando o SKU não tem medida."),
+    ("Importar planilha", "/importar",
+     "Subir tabela de fornecedor, com conferência antes de gravar."),
+    ("Calculadora", "/calculadora",
+     "Simular um preço sem criar cotação."),
+    ("Usuários", "/admin/usuarios",
+     "Quem entra, com qual papel e com quais permissões."),
+    ("Auditoria", "/admin/trilha",
+     "Quem mudou o quê, quando e por quê."),
+    ("Saúde do sistema", "/saude",
+     "O que está travado no catálogo, e por quê."),
+    ("Qualidade da base", "/relatorios/qualidade",
+     "Cadastro incompleto e inconsistências do catálogo."),
+]
+
+
 @router.get("/admin", response_class=HTMLResponse)
+def hub(request: Request, session: Session = Depends(get_session)):
+    """Porta única da administração.
+
+    O usuário não deveria precisar decidir se algo "fica no Admin ou em Configurações".
+    Daqui saem todos os caminhos; `/configuracoes` continua existindo e servindo suas abas,
+    mas deixou de ser um segundo endereço a memorizar.
+    """
+    exigir_admin(request)
+    from app.models import Produto, Usuario
+
+    return templates.TemplateResponse(request, "admin_hub.html", {
+        "active": "admin", "areas": AREAS_ADMIN,
+        "resumo": {
+            "skus": len(session.exec(select(Produto).where(Produto.ativo == True)).all()),  # noqa: E712
+            "usuarios": len(session.exec(
+                select(Usuario).where(Usuario.ativo == True)).all()),  # noqa: E712
+            "eventos": len(adm.trilha(session, limite=500)),
+        },
+    })
+
+
+# ---------------------------------------------------------------------------
+# Premissas e versões
+# ---------------------------------------------------------------------------
+@router.get("/admin/premissas", response_class=HTMLResponse)
 def painel(request: Request, session: Session = Depends(get_session)):
     exigir_admin(request)
     premissas = []
@@ -75,6 +160,7 @@ def painel(request: Request, session: Session = Depends(get_session)):
             "desde": atual.valid_from if atual else None,
             "fonte": atual.fonte if atual else None,
             "escopo": adm.escopo_da_premissa(session, chave),
+            **APRESENTACAO_PREMISSA.get(chave, {}),
         })
     margens = sorted(session.exec(select(MargemRegra)).all(),
                      key=lambda r: (r.prioridade, r.id or 0))

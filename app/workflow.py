@@ -82,6 +82,24 @@ def pode_transicionar(de: str, para: str) -> bool:
     return para in TRANSICOES.get(de, set())
 
 
+def proximos_estados(atual: str) -> tuple:
+    """Os estados que a tela pode oferecer a partir do atual.
+
+    Existe para a interface não precisar decidir isso sozinha. Antes, a tela de detalhe
+    listava `StatusCotacao` inteiro como botões — os três legados incluídos — e um clique
+    gravava `pedido` direto, sem passar por nenhuma transição. A cotação caía num estado do
+    qual `exigir_transicao` recusa sair, e não havia caminho de volta.
+
+    Estado legado não oferece saída porque não existe transição definida a partir dele: o
+    que aquele estado significava no sistema antigo não está registrado em lugar nenhum, e
+    inventar a semântica agora reescreveria história.
+    """
+    if atual in ESTADOS_LEGADOS:
+        return ()
+    return tuple(e for e in ESTADOS_DO_WORKFLOW
+                 if e in TRANSICOES.get(atual, set()) and e not in ESTADOS_LEGADOS)
+
+
 def exigir_transicao(de: str, para: str):
     if de in ESTADOS_LEGADOS:
         raise TransicaoInvalida(

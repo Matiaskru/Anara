@@ -9,10 +9,1031 @@
  "campos_do_sku": {
   "custo_unitario:IGUAL": 348,
   "preco_base:IGUAL": 348,
-  "custo_net_recalculado:IGUAL": 244,
-  "custo_net_recalculado:DECIMAL_REPRESENTATION_ONLY": 104
+  "custo_net_recalculado:PREMISSA_CAMBIAL_NOVA": 170,
+  "custo_net_recalculado:IGUAL": 178
  },
- "campos_do_sku_fora_do_esperado": [],
+ "campos_do_sku_fora_do_esperado": [
+  {
+   "sku": "Bath Mat 50x80 670g  ·  50x80 · 670 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 14.759219903099,
+   "depois": 14.990284011171
+  },
+  {
+   "sku": "Bath Mat 50x80 750g  ·  50x80 · 750 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 16.369738194299,
+   "depois": 16.626015895971
+  },
+  {
+   "sku": "Bath Mat 50x80 950g  ·  50x80 · 950 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 20.396033922299,
+   "depois": 20.715345607971
+  },
+  {
+   "sku": "Bath Mat A 48x80 600g  ·  48x80 · 600 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 12.866860910939,
+   "depois": 13.068299046531
+  },
+  {
+   "sku": "Bath Mat C 45x80 500g  ·  45x80 · 500 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 10.330294602299,
+   "depois": 10.492021327971
+  },
+  {
+   "sku": "Bath Towel 90x150 670g  ·  90x150 · 670 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 44.40155287649901,
+   "depois": 45.096684819771
+  },
+  {
+   "sku": "Bath Towel A 70x150 500g  ·  70x150 · 500 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 26.305371804299007,
+   "depois": 26.717197585971
+  },
+  {
+   "sku": "Bath Towel C 70x135 400g  ·  70x135 · 400 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 19.295783879099,
+   "depois": 19.597870515171
+  },
+  {
+   "sku": "Bath Towel D 70x135 330g  ·  70x135 · 330 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 16.141469312759,
+   "depois": 16.394173333311
+  },
+  {
+   "sku": "Bed Runner Verde 58x150  ·  58x150 · 400 GSM · CVC 60/40",
+   "campo": "custo_net_recalculado",
+   "antes": 34.641487931099,
+   "depois": 35.183820423171
+  },
+  {
+   "sku": "Bed Sheet Healthcare 180x280  ·  180x280 · 120 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 30.8323139658926,
+   "depois": 31.3150116405054
+  },
+  {
+   "sku": "Capa duvet 160x230  ·  160x230 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 79.73104113938615,
+   "depois": 80.97927661710646
+  },
+  {
+   "sku": "Capa duvet 160x230  ·  160x230 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 82.36900930463892,
+   "depois": 83.65854369688374
+  },
+  {
+   "sku": "Capa duvet 160x230  ·  160x230 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 90.54126509870032,
+   "depois": 91.95874087323965
+  },
+  {
+   "sku": "Capa duvet 160x230  ·  160x230 · 300 fios · 100% algodão · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 93.28267324479437,
+   "depois": 94.74306734647412
+  },
+  {
+   "sku": "Capa duvet 160x230  ·  160x230 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 96.02408139088844,
+   "depois": 97.52739381970859
+  },
+  {
+   "sku": "Capa duvet 220x230  ·  220x230 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 105.01498663096139,
+   "depois": 106.6590568717592
+  },
+  {
+   "sku": "Capa duvet 220x230  ·  220x230 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 108.6180651005749,
+   "depois": 110.31854361486963
+  },
+  {
+   "sku": "Capa duvet 220x230  ·  220x230 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 119.7801705753905,
+   "depois": 121.6553982947704
+  },
+  {
+   "sku": "Capa duvet 220x230  ·  220x230 · 300 fios · 100% algodão · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 123.52453292127507,
+   "depois": 125.45838079479796
+  },
+  {
+   "sku": "Capa duvet 220x230  ·  220x230 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 127.2688952671596,
+   "depois": 129.26136329482551
+  },
+  {
+   "sku": "Capa duvet 240x230  ·  240x230 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 113.44296846148643,
+   "depois": 115.21898362331011
+  },
+  {
+   "sku": "Capa duvet 240x230  ·  240x230 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 117.36775036588692,
+   "depois": 119.20521025419825
+  },
+  {
+   "sku": "Capa duvet 240x230  ·  240x230 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 129.5264724009539,
+   "depois": 131.5542841019473
+  },
+  {
+   "sku": "Capa duvet 240x230  ·  240x230 · 300 fios · 100% algodão · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 133.60515281343532,
+   "depois": 135.6968186109059
+  },
+  {
+   "sku": "Capa duvet 240x230  ·  240x230 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 137.68383322591671,
+   "depois": 139.83935311986448
+  },
+  {
+   "sku": "Double Sheet Hotel 240x295  ·  240x295 · 180 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 46.09427191296621,
+   "depois": 46.8159043499598
+  },
+  {
+   "sku": "Duvet Cover King 270x275  ·  270x275 · 250 fios · CVC 70/30 · listrado · open bag",
+   "campo": "custo_net_recalculado",
+   "antes": 153.6029252552572,
+   "depois": 156.00766772500677
+  },
+  {
+   "sku": "Duvet Cover King 270x275 300TC  ·  270x275 · 300 fios · 100% algodão · open bag",
+   "campo": "custo_net_recalculado",
+   "antes": 169.88227345290204,
+   "depois": 172.5418785167439
+  },
+  {
+   "sku": "Duvet Cover Queen 250x260  ·  250x260 · 250 fios · CVC 70/30 · listrado · open bag",
+   "campo": "custo_net_recalculado",
+   "antes": 136.00201542720606,
+   "depois": 138.13120549260256
+  },
+  {
+   "sku": "Duvet Cover Queen 250x260 300TC  ·  250x260 · 300 fios · 100% algodão · open bag",
+   "campo": "custo_net_recalculado",
+   "antes": 150.28174193665416,
+   "depois": 152.63448936423387
+  },
+  {
+   "sku": "Duvet Cover Single 190x260  ·  190x260 · 250 fios · CVC 70/30 · listrado · open bag",
+   "campo": "custo_net_recalculado",
+   "antes": 106.32758986595678,
+   "depois": 107.99220966816351
+  },
+  {
+   "sku": "Duvet Cover Single 190x260 300TC  ·  190x260 · 300 fios · 100% algodão · open bag",
+   "campo": "custo_net_recalculado",
+   "antes": 117.2341526330156,
+   "depois": 119.06952097169292
+  },
+  {
+   "sku": "Duvet cover 180x240  ·  180x240 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 90.25253897708302,
+   "depois": 91.665494577507
+  },
+  {
+   "sku": "Duvet cover 180x240  ·  180x240 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 96.70493597708301,
+   "depois": 98.218907577507
+  },
+  {
+   "sku": "Duvet cover 180x240  ·  180x240 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 158.002707477083,
+   "depois": 160.476331077507
+  },
+  {
+   "sku": "Duvet cover 220x240  ·  220x240 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 107.928275091035,
+   "depois": 109.617954544515
+  },
+  {
+   "sku": "Duvet cover 220x240  ·  220x240 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 115.75577309103501,
+   "depois": 117.567996544515
+  },
+  {
+   "sku": "Duvet cover 220x240  ·  220x240 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 190.38144659103497,
+   "depois": 193.361978044515
+  },
+  {
+   "sku": "Duvet cover 240x260  ·  240x260 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 125.604011204987,
+   "depois": 127.570414511523
+  },
+  {
+   "sku": "Duvet cover 240x260  ·  240x260 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 134.859498704987,
+   "depois": 136.970802011523
+  },
+  {
+   "sku": "Duvet cover 240x260  ·  240x260 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 222.81307420498698,
+   "depois": 226.301341511523
+  },
+  {
+   "sku": "Duvet cover 260x280  ·  260x280 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 144.721873703435,
+   "depois": 146.987578184115
+  },
+  {
+   "sku": "Duvet cover 260x280  ·  260x280 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 155.51112770343502,
+   "depois": 157.945744184115
+  },
+  {
+   "sku": "Duvet cover 260x280  ·  260x280 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 257.903263703435,
+   "depois": 261.940888184115
+  },
+  {
+   "sku": "Face Towel 45x85 670g  ·  45x85 · 670 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 14.169115935463998,
+   "depois": 14.390941625256
+  },
+  {
+   "sku": "French Rib Bathrobe  ·  L · 360 GSM",
+   "campo": "custo_net_recalculado",
+   "antes": 130.364934121499,
+   "depois": 132.405872424771
+  },
+  {
+   "sku": "Fronha com aba 50x70  ·  50x70 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 14.668844034299001,
+   "depois": 14.898493255971
+  },
+  {
+   "sku": "Fronha com aba 50x70  ·  50x70 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 12.069857660189001,
+   "depois": 12.258818249781
+  },
+  {
+   "sku": "Fronha com aba 50x70  ·  50x70 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 18.152035160189,
+   "depois": 18.436215749781
+  },
+  {
+   "sku": "Fronha com aba 50x90  ·  50x90 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 17.057288694299,
+   "depois": 17.324330395971
+  },
+  {
+   "sku": "Fronha com aba 50x90  ·  50x90 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 14.248548644729,
+   "depois": 14.471617899441
+  },
+  {
+   "sku": "Fronha com aba 50x90  ·  50x90 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 21.811604144729,
+   "depois": 22.153077399441
+  },
+  {
+   "sku": "Fronha sem aba 50x70  ·  50x70 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 10.483202660189,
+   "depois": 10.647323249781
+  },
+  {
+   "sku": "Fronha sem aba 50x70  ·  50x70 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 11.064976160189,
+   "depois": 11.238204749781
+  },
+  {
+   "sku": "Fronha sem aba 50x70  ·  50x70 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 16.406714660189003,
+   "depois": 16.663571249781
+  },
+  {
+   "sku": "Fronha sem aba 50x90  ·  50x90 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 12.556116644729,
+   "depois": 12.752689899441
+  },
+  {
+   "sku": "Fronha sem aba 50x90  ·  50x90 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 13.243667144729,
+   "depois": 13.451004399441
+  },
+  {
+   "sku": "Fronha sem aba 50x90  ·  50x90 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 20.066283644729,
+   "depois": 20.380432899441
+  },
+  {
+   "sku": "Hand Towel 50x85 550g  ·  50x85 · 550 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 13.025228119799003,
+   "depois": 13.229145585471
+  },
+  {
+   "sku": "Hand Towel 50x85 650g  ·  50x85 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 15.184665574799002,
+   "depois": 15.422390280471
+  },
+  {
+   "sku": "Hand Towel A 48x85 500g  ·  48x85 · 500 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 11.538183320699,
+   "depois": 11.718820241571
+  },
+  {
+   "sku": "Hand Towel C 45x75 400g  ·  45x75 · 400 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 8.065503255299001,
+   "depois": 8.191773364971
+  },
+  {
+   "sku": "Hand Towel D 45x70 330g  ·  45x70 · 330 GSM · 90/10",
+   "campo": "custo_net_recalculado",
+   "antes": 6.502797225869,
+   "depois": 6.604602270501
+  },
+  {
+   "sku": "King Bottom Sheet 280x290  ·  280x290 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 81.084106794299,
+   "depois": 82.353525295971
+  },
+  {
+   "sku": "King Bottom Sheet 280x290 300TC  ·  280x290 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 89.969374794299,
+   "depois": 91.377897295971
+  },
+  {
+   "sku": "King Sheet Hotel 325x295  ·  325x295 · 180 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 60.44638688957751,
+   "depois": 61.3927099719975
+  },
+  {
+   "sku": "King Top Sheet 260x250  ·  260x250 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 68.63657232075252,
+   "depois": 69.71111748428679
+  },
+  {
+   "sku": "King Top Sheet 260x250 300TC  ·  260x250 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 75.77643557547658,
+   "depois": 76.96275942010243
+  },
+  {
+   "sku": "Lençol 180x280  ·  180x280 · 233 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 42.46778396589261,
+   "depois": 43.1326416405054
+  },
+  {
+   "sku": "Lençol 180x280  ·  180x280 · 233 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 43.5255539658926,
+   "depois": 44.2069716405054
+  },
+  {
+   "sku": "Lençol 180x280  ·  180x280 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 53.05084178920149,
+   "depois": 53.88138334363126
+  },
+  {
+   "sku": "Lençol 180x280  ·  180x280 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 60.4108983768855,
+   "depois": 61.3566658661518
+  },
+  {
+   "sku": "Lençol 180x280  ·  180x280 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 64.14383104527957,
+   "depois": 65.14803975048942
+  },
+  {
+   "sku": "Lençol 190x290  ·  190x290 · 233 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 45.84298337526741,
+   "depois": 46.5606817451346
+  },
+  {
+   "sku": "Lençol 190x290  ·  190x290 · 233 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 47.05941887526741,
+   "depois": 47.7961612451346
+  },
+  {
+   "sku": "Lençol 190x290  ·  190x290 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 57.35994919612303,
+   "depois": 58.257952314653316
+  },
+  {
+   "sku": "Lençol 190x290  ·  190x290 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 65.39325039665779,
+   "depois": 66.41701948310252
+  },
+  {
+   "sku": "Lençol 190x290  ·  190x290 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 69.46764468008026,
+   "depois": 70.55520076117737
+  },
+  {
+   "sku": "Lençol 240x280  ·  240x280 · 233 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 54.666235716423806,
+   "depois": 55.5220671953502
+  },
+  {
+   "sku": "Lençol 240x280  ·  240x280 · 233 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 56.094225216423794,
+   "depois": 56.9724126953502
+  },
+  {
+   "sku": "Lençol 240x280  ·  240x280 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 68.41411972554778,
+   "depois": 69.48518226528239
+  },
+  {
+   "sku": "Lençol 240x280  ·  240x280 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 78.17419476573743,
+   "depois": 79.3980569147118
+  },
+  {
+   "sku": "Lençol 240x280  ·  240x280 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 83.12438808686869,
+   "depois": 84.42574837002907
+  },
+  {
+   "sku": "Lençol 260x280  ·  260x280 · 233 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 58.71475679993419,
+   "depois": 59.6339702136318
+  },
+  {
+   "sku": "Lençol 260x280  ·  260x280 · 233 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 60.248523299934206,
+   "depois": 61.1917487136318
+  },
+  {
+   "sku": "Lençol 260x280  ·  260x280 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 73.53521237099656,
+   "depois": 74.68644857249943
+  },
+  {
+   "sku": "Lençol 260x280  ·  260x280 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 84.09529356202141,
+   "depois": 85.41185393089846
+  },
+  {
+   "sku": "Lençol 260x280  ·  260x280 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 89.45124043406511,
+   "depois": 90.85165124320895
+  },
+  {
+   "sku": "Lençol 300x300  ·  300x300 · 233 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 71.194833127859,
+   "depois": 72.309429341211
+  },
+  {
+   "sku": "Lençol 300x300  ·  300x300 · 233 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 73.098819127859,
+   "depois": 74.243223341211
+  },
+  {
+   "sku": "Lençol 300x300  ·  300x300 · 250 fios · CVC 70/30",
+   "campo": "custo_net_recalculado",
+   "antes": 89.2593726355772,
+   "depois": 90.65677964357056
+  },
+  {
+   "sku": "Lençol 300x300  ·  300x300 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 102.27581074043411,
+   "depois": 103.8769976013411
+  },
+  {
+   "sku": "Lençol 300x300  ·  300x300 · 400 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 108.87759245894124,
+   "depois": 110.58213402385613
+  },
+  {
+   "sku": "Lençol plano 180x280  ·  180x280 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 54.84688181999481,
+   "depois": 55.7055414179595
+  },
+  {
+   "sku": "Lençol plano 180x280  ·  180x280 · 300 fios · 100% algodão · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 62.27736471108253,
+   "depois": 63.2523528083206
+  },
+  {
+   "sku": "Lençol plano 240x280  ·  240x280 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 70.79582498377371,
+   "depois": 71.90417449428288
+  },
+  {
+   "sku": "Lençol plano 240x280  ·  240x280 · 300 fios · 100% algodão · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 80.64929142630307,
+   "depois": 81.91190264237044
+  },
+  {
+   "sku": "Light Waffle Bathrobe  ·  L · 240 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 129.644465819099,
+   "depois": 131.674124775171
+  },
+  {
+   "sku": "Maca Sheet Healthcare 120x280  ·  120x280 · 120 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 22.4418342153614,
+   "depois": 22.7931740856606
+  },
+  {
+   "sku": "Microfiber Fleece Robe  ·  L · 100% poliéster",
+   "campo": "custo_net_recalculado",
+   "antes": 119.426999970299,
+   "depois": 121.296698599971
+  },
+  {
+   "sku": "Oversized Bath Towel 86x150 550g  ·  86x150 · 550 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 35.10448443779901,
+   "depois": 35.654065407471
+  },
+  {
+   "sku": "Oversized Bath Towel 90x160 650g  ·  90x160 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 45.91452361829901,
+   "depois": 46.633341991971
+  },
+  {
+   "sku": "Pillow Case 50x70+5  ·  50x70+5 · 250 fios · CVC 70/30 · listrado · oxford 5cm + aba 20cm",
+   "campo": "custo_net_recalculado",
+   "antes": 13.611074034299003,
+   "depois": 13.824163255971
+  },
+  {
+   "sku": "Pillow Case 50x90+5  ·  50x90+5 · 250 fios · CVC 70/30 · listrado · oxford 5cm + aba 20cm",
+   "campo": "custo_net_recalculado",
+   "antes": 15.787964694299,
+   "depois": 16.035134395971
+  },
+  {
+   "sku": "Pillow Case Healthcare 50x80  ·  50x80 · 120 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 7.923241652459,
+   "depois": 8.047284574611
+  },
+  {
+   "sku": "Pillow Case c/Aba Bordada 50x70+5  ·  50x70+5 · 300 fios · 100% algodão · bordado",
+   "campo": "custo_net_recalculado",
+   "antes": 21.748453160189,
+   "depois": 22.088937749781
+  },
+  {
+   "sku": "Pillow Sham Verde 50x70+5  ·  50x70+5 · 400 GSM · CVC 60/40",
+   "campo": "custo_net_recalculado",
+   "antes": 40.999867160189005,
+   "depois": 41.641743749781
+  },
+  {
+   "sku": "Pillow case Hotel Large 50x90  ·  50x90 · 180 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 9.171252644729002,
+   "depois": 9.314833899441
+  },
+  {
+   "sku": "Pillow case Hotel small 50x70  ·  50x70 · 180 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 7.891666160189001,
+   "depois": 8.015214749781
+  },
+  {
+   "sku": "Plain Bathrobe  ·  L · 420 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 132.16064678429902,
+   "depois": 134.229698005971
+  },
+  {
+   "sku": "Plain Velour Bathrobe XL  ·  XL · 420 GSM · 100% algodão · shawl collar",
+   "campo": "custo_net_recalculado",
+   "antes": 138.268210764299,
+   "depois": 140.432879425971
+  },
+  {
+   "sku": "Pool Towel 90x170 550g Navy  ·  90x170 · 550 GSM · 100% algodão · navy blue",
+   "campo": "custo_net_recalculado",
+   "antes": 65.871470208299,
+   "depois": 66.902726101971
+  },
+  {
+   "sku": "Pool Towel 90x170 550g Taupe  ·  90x170 · 550 GSM · 100% algodão · taupe",
+   "campo": "custo_net_recalculado",
+   "antes": 65.871470208299,
+   "depois": 66.902726101971
+  },
+  {
+   "sku": "Protetor colchão 158x198  ·  158x198 · 200 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 104.46651155264718,
+   "depois": 106.10199509945964
+  },
+  {
+   "sku": "Protetor colchão 158x198  ·  158x198 · 700 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 169.5690800085176,
+   "depois": 172.22378184818123
+  },
+  {
+   "sku": "Protetor colchão 193x203  ·  193x203 · 200 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 130.54194381599197,
+   "depois": 132.58565330821884
+  },
+  {
+   "sku": "Protetor colchão 193x203  ·  193x203 · 700 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 212.07286995022434,
+   "depois": 215.39299315883844
+  },
+  {
+   "sku": "Protetor colchão 88x188  ·  88x188 · 200 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 58.55132659170957,
+   "depois": 59.46798141114924
+  },
+  {
+   "sku": "Protetor colchão 88x188  ·  88x188 · 700 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 92.96303713523595,
+   "depois": 94.41842714909484
+  },
+  {
+   "sku": "Protetor colchão 96x203  ·  96x203 · 200 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 68.73116336985612,
+   "depois": 69.80718941087147
+  },
+  {
+   "sku": "Protetor colchão 96x203  ·  96x203 · 700 GSM · Microfibra",
+   "campo": "custo_net_recalculado",
+   "antes": 109.30128072874894,
+   "depois": 111.01245537812268
+  },
+  {
+   "sku": "Protetor de fronha 50x70  ·  50x70 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 10.972895166149,
+   "depois": 11.144682174621
+  },
+  {
+   "sku": "Protetor de fronha 50x70  ·  50x70 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 11.568996160799001,
+   "depois": 11.750115474471
+  },
+  {
+   "sku": "Protetor de fronha 50x70  ·  50x70 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 16.925062155449,
+   "depois": 17.190033774321
+  },
+  {
+   "sku": "Protetor de fronha 50x90  ·  50x90 · 300 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 12.913723295249,
+   "depois": 13.115895088521
+  },
+  {
+   "sku": "Protetor de fronha 50x90  ·  50x90 · 400 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 13.619694859798999,
+   "depois": 13.832919045471
+  },
+  {
+   "sku": "Protetor de fronha 50x90  ·  50x90 · 500 fios",
+   "campo": "custo_net_recalculado",
+   "antes": 20.460732424349004,
+   "depois": 20.781057002421
+  },
+  {
+   "sku": "Queen Bottom Sheet 250x290  ·  250x290 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 72.92235347429902,
+   "depois": 74.063995015971
+  },
+  {
+   "sku": "Queen Bottom Sheet 250x290 300TC  ·  250x290 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 80.85562847429901,
+   "depois": 82.121470015971
+  },
+  {
+   "sku": "Queen Sheet Hotel 280x295  ·  280x295 · 180 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 52.84198619607741,
+   "depois": 53.6692579956246
+  },
+  {
+   "sku": "Queen Top Sheet 240x250  ·  240x250 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 63.82407474764814,
+   "depois": 64.82327748342345
+  },
+  {
+   "sku": "Queen Top Sheet 240x250 300TC  ·  240x250 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 70.42303927095371,
+   "depois": 71.52555260591973
+  },
+  {
+   "sku": "Single Bed Sheet Bordado 160x310  ·  160x310 · 300 fios · 100% algodão · bordado",
+   "campo": "custo_net_recalculado",
+   "antes": 65.81013681110541,
+   "depois": 66.8404324950366
+  },
+  {
+   "sku": "Single Bottom Sheet 200x290  ·  200x290 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 59.577527154299005,
+   "depois": 60.510247735971
+  },
+  {
+   "sku": "Single Bottom Sheet 200x290 300TC  ·  200x290 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 65.977035654299,
+   "depois": 67.009944235971
+  },
+  {
+   "sku": "Single Sheet Hotel 180x295  ·  180x295 · 180 fios · CVC 50/50",
+   "campo": "custo_net_recalculado",
+   "antes": 36.025588988299404,
+   "depois": 36.5895903814626
+  },
+  {
+   "sku": "Single Top Sheet 190x250  ·  190x250 · 250 fios · CVC 70/30 · listrado",
+   "campo": "custo_net_recalculado",
+   "antes": 52.20218780488725,
+   "depois": 53.01944319126512
+  },
+  {
+   "sku": "Single Top Sheet 190x250 300TC  ·  190x250 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 57.448905499646614,
+   "depois": 58.34830128046298
+  },
+  {
+   "sku": "Slippers  ·  L · 100% poliéster",
+   "campo": "custo_net_recalculado",
+   "antes": 7.762663704298999,
+   "depois": 7.884192685971
+  },
+  {
+   "sku": "Spa Bathrobe  ·  L · 160 GSM externo 85% poliéster/15% nylon · forro 110 GSM 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 145.03070361749903,
+   "depois": 147.301243008771
+  },
+  {
+   "sku": "Standard Single Bed Sheet 160x310  ·  160x310 · 300 fios · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 59.61646066898071,
+   "depois": 60.54979077730133
+  },
+  {
+   "sku": "Terry Bathrobe  ·  L · 450 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 120.32758534829902,
+   "depois": 122.211383161971
+  },
+  {
+   "sku": "Toalha banho 100x150  ·  100x150 · 450 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 33.45801254429901,
+   "depois": 33.981817045971
+  },
+  {
+   "sku": "Toalha banho 100x150  ·  100x150 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 47.76329402429901,
+   "depois": 48.511055965971
+  },
+  {
+   "sku": "Toalha banho 70x140  ·  70x140 · 450 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 22.299892989899,
+   "depois": 22.649010688371
+  },
+  {
+   "sku": "Toalha banho 70x140  ·  70x140 · 550 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 26.972951606699002,
+   "depois": 27.395228735571
+  },
+  {
+   "sku": "Toalha banho 70x140  ·  70x140 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 31.646010223499005,
+   "depois": 32.141446782771
+  },
+  {
+   "sku": "Toalha banho 70x140  ·  70x140 · 750 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 36.319068840299,
+   "depois": 36.887664829971
+  },
+  {
+   "sku": "Toalha banho 86x150  ·  86x150 · 450 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 28.951848878099007,
+   "depois": 29.405106786171
+  },
+  {
+   "sku": "Toalha banho 86x150  ·  86x150 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 41.25439095089901,
+   "depois": 41.900252257371
+  },
+  {
+   "sku": "Toalha lavabo 30x30  ·  30x30 · 450 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 3.309441426599,
+   "depois": 3.361252642671
+  },
+  {
+   "sku": "Toalha lavabo 30x30  ·  30x30 · 550 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 3.762399695999,
+   "depois": 3.821302235271
+  },
+  {
+   "sku": "Toalha lavabo 30x30  ·  30x30 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 4.215357965399001,
+   "depois": 4.281351827871
+  },
+  {
+   "sku": "Toalha lavabo 30x30  ·  30x30 · 750 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 4.668316234799001,
+   "depois": 4.741401420471
+  },
+  {
+   "sku": "Toalha piscina listrada 70x150  ·  70x150 · 500 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 41.57692617929901,
+   "depois": 42.227836960971
+  },
+  {
+   "sku": "Toalha piso 50x70  ·  50x70 · 750 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 14.482412071799002,
+   "depois": 14.709142593471
+  },
+  {
+   "sku": "Toalha piso 50x70  ·  50x70 · 950 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 18.005420833799,
+   "depois": 18.287306091471
+  },
+  {
+   "sku": "Toalha piso 50x90  ·  50x90 · 750 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 18.257064316799003,
+   "depois": 18.542889198471
+  },
+  {
+   "sku": "Toalha piso 50x90  ·  50x90 · 950 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 22.786647010798998,
+   "depois": 23.143385124471
+  },
+  {
+   "sku": "Toalha rosto 50x100  ·  50x100 · 450 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 12.595085949299,
+   "depois": 12.792269290971
+  },
+  {
+   "sku": "Toalha rosto 50x100  ·  50x100 · 550 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 15.111520779299001,
+   "depois": 15.348100360971
+  },
+  {
+   "sku": "Toalha rosto 50x100  ·  50x100 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 17.627955609299004,
+   "depois": 17.903931430971
+  },
+  {
+   "sku": "Toalha rosto 50x100  ·  50x100 · 750 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 20.144390439299002,
+   "depois": 20.459762500971
+  },
+  {
+   "sku": "Toalha rosto 50x90  ·  50x90 · 450 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 11.462690275799003,
+   "depois": 11.642145309471
+  },
+  {
+   "sku": "Toalha rosto 50x90  ·  50x90 · 650 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 15.992272969799002,
+   "depois": 16.242641235471
+  },
+  {
+   "sku": "Waffle Pique Bathrobe  ·  L · 240 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 97.91136581909902,
+   "depois": 99.444224775171
+  },
+  {
+   "sku": "Waffle Slippers  ·  L · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 9.613761204299001,
+   "depois": 9.764270185971
+  },
+  {
+   "sku": "Waffle Velour Bathrobe  ·  L · 420 GSM · 100% algodão",
+   "campo": "custo_net_recalculado",
+   "antes": 137.44949678429901,
+   "depois": 139.601348005971
+  },
+  {
+   "sku": "Waffle Velour Bathrobe XL  ·  XL · 420 GSM · 100% algodão · shawl collar",
+   "campo": "custo_net_recalculado",
+   "antes": 143.557060764299,
+   "depois": 145.804529425971
+  }
+ ],
  "maiores_diferencas": [
   {
    "sku": "Bed Sheet Healthcare 180x280  ·  180x280 · 120 fios · CVC 50/50",
@@ -4643,7 +5664,7 @@
   "cotacoes": {
    "resumo": {
     "linhas_antes": 18,
-    "linhas_depois": 18,
+    "linhas_depois": 19,
     "IGUAL": 54
    },
    "mudancas_economicas": [],
@@ -4652,7 +5673,7 @@
   "itens": {
    "resumo": {
     "linhas_antes": 45,
-    "linhas_depois": 45,
+    "linhas_depois": 48,
     "IGUAL": 765
    },
    "mudancas_economicas": [],

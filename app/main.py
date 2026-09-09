@@ -12,14 +12,17 @@ from app.migrations import backfill, migrar
 from app.seeds import semear
 from app.routers import (
     admin, calculadora, clientes, configuracoes, cotacoes, crm, dashboard, importar,
-    login, produtos, relatorios, relatorios_comerciais, workflow,
+    login, produtos, relatorios, relatorios_comerciais, usuarios, workflow,
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI(title="Anara Cotações")
 
-PUBLIC_PATHS = {"/login", "/logout", "/health"}
+#: `/primeiro-acesso` é público porque só existe quando **não há** conta alguma — não há
+#: cookie possível para autenticá-lo. A própria rota se recusa a responder assim que a
+#: primeira conta é criada; o portão é o estado do banco, não esta lista.
+PUBLIC_PATHS = {"/login", "/logout", "/health", "/primeiro-acesso"}
 
 
 def _usuario_do_cookie(request: Request):
@@ -81,12 +84,26 @@ async def tratar_http_exception(request: Request, exc: HTTPException):
     redirect = resposta_de_negacao(exc)
     if redirect is not None:
         return redirect
-    if exc.status_code == 403:
-        aceita_html = "text/html" in (request.headers.get("accept") or "")
-        if aceita_html:
-            from app.templating import templates
-            return templates.TemplateResponse(
-                request, "403.html", {"detalhe": exc.detail}, status_code=403)
+
+    aceita_html = "text/html" in (request.headers.get("accept") or "")
+    if exc.status_code == 403 and aceita_html:
+        from app.templating import templates
+        return templates.TemplateResponse(
+            request, "403.html", {"detalhe": exc.detail}, status_code=403)
+
+    # Um clique numa tela não pode terminar em `{"erro": ...}` na barra de endereços. Quem
+    # chamou por `fetch` continua recebendo JSON — a diferença está em quem pediu, não no
+    # tipo do erro. O `Accept` do navegador em navegação de topo traz `text/html`; o de uma
+    # chamada de JavaScript, não.
+    if aceita_html:
+        from app.templating import pagina_de_erro
+
+        return pagina_de_erro(
+            request, titulo="Não foi possível concluir a ação",
+            motivos=[str(exc.detail)],
+            voltar=request.headers.get("referer") or "/",
+            rotulo_voltar="Voltar",
+            status_code=exc.status_code)
     return JSONResponse({"erro": exc.detail}, status_code=exc.status_code)
 
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
@@ -104,6 +121,7 @@ app.include_router(admin.router)
 app.include_router(workflow.router)
 app.include_router(crm.router)
 app.include_router(relatorios_comerciais.router)
+app.include_router(usuarios.router)
 
 
 @app.on_event("startup")
