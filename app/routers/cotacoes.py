@@ -19,7 +19,7 @@ from app import workflow_service as ws
 from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
 from app.models import (
     Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Produto,
-    StatusCotacao, TipoFrete,
+    SnapshotEmissao, StatusCotacao, TipoFrete,
 )
 from app.pdf_bridge import gerar_pdf_para_cotacao
 from app.pricing_engine import (
@@ -1077,9 +1077,32 @@ def gerar_pdf(request: Request, cotacao_id: int, session: Session = Depends(get_
     # Sessão 6: preview e documento final são a mesma folha para quem recebe. Enquanto a
     # cotação não estiver emitida, o PDF sai marcado — inclusive (e principalmente) quando
     # há aprovação pendente. Emitir de verdade é a rota `/emitir`.
-    prontidao = ws.avaliar(session, cotacao)
     rascunho = cotacao.status not in (StatusCotacao.emitida.value,
                                       StatusCotacao.enviada.value)
+
+    # **C-NEW-10.** O PDF final não sai por confiar no campo `status`. Sair sem marca d'água
+    # é afirmar que existe um documento emitido, e documento emitido é o `SnapshotEmissao`:
+    # `ws.emitir()` revalida blockers e exceções e congela a revisão. Se o snapshot não
+    # existe, a emissão não aconteceu — o campo chegou ali por outro caminho, que foi
+    # exatamente o C-NEW-09 (cotação "emitida" com item de R$ 0,00 e PDF final).
+    #
+    # É defesa em profundidade: com a rota de status fechada, `emitida` só se alcança pela
+    # emissão canônica. Esta conferência é o que impede o próximo atalho de virar documento.
+    if not rascunho:
+        emissao = session.exec(
+            select(SnapshotEmissao)
+            .where(SnapshotEmissao.cotacao_id == cotacao.id)
+            .where(SnapshotEmissao.revisao == cotacao.revisao)).first()
+        if emissao is None:
+            return pagina_de_erro(
+                request, titulo="Não foi possível gerar o PDF final",
+                introducao=f"A cotação está como {rotulos.cotacao(_valor_status(cotacao))}, "
+                           "mas não existe emissão registrada para esta revisão:",
+                motivos=["Sem o registro da emissão não há documento congelado — e o PDF "
+                         "final afirma que ele existe."],
+                ajuda=("Use a ação Emitir na cotação. Ela revalida os impedimentos, confere "
+                       "as aprovações e congela o documento antes de ele virar proposta."),
+                voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação")
 
     if not cotacao.termos_texto:
         cotacao.termos_texto = cfg.txt(session, "termos_padrao")
