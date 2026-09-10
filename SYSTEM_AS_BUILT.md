@@ -1054,6 +1054,61 @@ tela explica que a cotação veio do sistema anterior.
 `FISCAL_REVIEW_REQUIRED` · `PAGAMENTO_REVIEW_REQUIRED` · `CUSTO_A_COTAR` ·
 `CUSTO_REVIEW_REQUIRED` · `SEM_PRECO` · `SEM_ITENS` · os três de frete CIF · `FRETE_GRUPO`.
 
+## 9.4 Blocker técnico × exceção aprovável × estado emitível
+
+Três conceitos que se parecem num relatório e não se parecem em nada na decisão. A distinção
+é o que impede uma aprovação humana de liberar o que tecnicamente não pode ser emitido.
+
+| | **Blocker técnico** | **Exceção aprovável** |
+|---|---|---|
+| O que é | falta informação para formar o documento | há informação, e ela foge da política |
+| Exemplos | `SEM_PRECO`, `CUSTO_A_COTAR`, fiscal irresolvido, frete CIF sem tarifa | preço abaixo do recomendado, margem abaixo da alvo, premissa antiga mantida |
+| Quem resolve | quem tem o dado | quem tem alçada (`can_approve_quotes`) |
+| Aprovação dispensa? | **não** — nenhuma alçada cria o número que falta | é exatamente para isso que ela existe |
+| Onde vive | `wf.blockers_da_cotacao()` | `wf.excecoes_da_cotacao()` |
+
+**Cotação SEM exceção não passa por aprovação.** `wf.avaliar` define
+`precisa_aprovacao = bool(excecoes)`: sem exceção, `pode_emitir` é verdadeiro assim que não
+houver blocker, e a emissão sai com `SnapshotEmissao.aprovacao_id = None`. Não existe ritual
+de "aprovar a própria cotação" — e `solicitar_aprovacao` **recusa** abrir pedido quando não
+há exceção ("Não há o que aprovar"), então nem forçando a rota se cria a autoaprovação.
+
+**Estado emitível** é derivado, nunca digitado:
+
+```
+pode_emitir = sem blocker
+              e (sem exceção  ou  exceção com aprovação vigente do fingerprint atual)
+              e estado não imutável
+```
+
+## 9.5 Cada estado tem um dono canônico
+
+**C-NEW-09.** `POST /cotacoes/{id}/status` validava a transição e nada mais. Como `TRANSICOES`
+permite `rascunho → aguardando_aprovacao → aprovada → emitida → enviada`, um vendedor
+comissionado percorria a cadeia inteira por ali — sem `can_approve_quotes`, sem
+`AprovacaoCotacao`, sem fingerprint, sem `ws.avaliar()` e sem `SnapshotEmissao`. A cotação
+ficava "emitida" com o documento congelado inexistente, e o PDF saía **final**.
+
+O estado deixou de ser um campo que se escolhe:
+
+| Estado | Dono canônico | O que ele confere |
+|---|---|---|
+| `aguardando_aprovacao` | `ws.solicitar_aprovacao` | que existe exceção, e registra o fingerprint |
+| `aprovada` | `ws.decidir` | alçada, fingerprint visto, e grava a decisão |
+| `emitida` | `ws.emitir` | revalida blockers e exceções, congela em `SnapshotEmissao` |
+| `enviada` | `ws.marcar_enviada` | que houve emissão antes |
+| `cancelada` | `ws.cancelar` | registra o motivo |
+| `rascunho` | `POST /status` | **única** transição que sobrou — retira privilégio |
+
+A tela deriva os botões da `Prontidao` (`cotacoes.acoes_do_workflow`), não da tabela de
+estados: "Emitir" só aparece quando `pode_emitir`; enquanto houver impedimento, o que aparece
+é o motivo. Blockers e exceções são exibidos no card de Situação — antes o sistema sabia do
+item sem preço e não contava a ninguém.
+
+**PDF final exige `SnapshotEmissao`** (C-NEW-10). Sair sem marca d'água afirma que existe
+documento emitido; a prova disso é o snapshot, não o campo `status`. A prévia de rascunho
+continua saindo marcada, mesmo com item incompleto — é ferramenta de trabalho.
+
 ---
 
 # 10. Aprovação

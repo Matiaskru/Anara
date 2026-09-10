@@ -600,9 +600,32 @@ DESCONHECIDO). Enquanto for DESCONHECIDO, o cálculo segue quando peso real e pe
 coincidem — a ambiguidade não muda o número — e **bloqueia** quando eles diferem, que é
 exatamente quando ela passa a importar. Proporcional, e sem escolher por conveniência.
 
-### C-NEW-09 — `POST /cotacoes/{id}/status` alcança `aprovada` sem alçada e sem trilha (P0, ALTO) — **NOVO em 09/09/2026**
+### C-NEW-09 — `POST /cotacoes/{id}/status` alcança `aprovada` sem alçada e sem trilha (P0, ALTO) — **RESOLVIDO em 09/09/2026**
 
-**Bloqueador operacional. Não corrigido — evidência preservada na cotação 21.**
+**Alcance real: maior que o registrado inicialmente.** Reproduzido em banco temporário, um
+VENDEDOR_COMISSIONADO percorria a cadeia inteira pela rota genérica — `aguardando_aprovacao`,
+`aprovada`, `emitida` e `enviada`, todas atingidas —, deixando `AprovacaoCotacao` e
+`SnapshotEmissao` com zero registros. A cotação ficava "emitida" **sem o documento congelado
+existir**, e o PDF saía final, sem marca d'água, com item de R$ 0,00 dentro.
+
+A causa da exposição era a tela: `cotacao_detail.html` renderizava `wf.proximos_estados()`
+como botões que postavam o estado desejado nessa rota, e **nenhuma rota canônica era chamada
+por aquela tela**. O único caminho que o usuário tinha era o bypass.
+
+**Correção.** `DONOS_CANONICOS_DO_ESTADO` recusa todo destino privilegiado nomeando a ação
+certa; da rota genérica sobrou `→ rascunho`, que retira privilégio. A tela passou a chamar as
+ações canônicas, com os botões derivados da `Prontidao`, e as rotas de workflow respondem a
+form HTML com redirect (JSON continua para `fetch`). Ver `SYSTEM_AS_BUILT.md` §9.5.
+
+**Provado por** `tests/test_workflow_bypass_p0.py`: os cinco estados privilegiados recusados
+para os quatro papéis, a cadeia completa passo a passo, vendedor não aprovando a própria
+exceção, OWNER precisando da mesma trilha, invalidação pós-alteração intacta, e nenhuma ação
+da tela postando estado privilegiado.
+
+**A cotação ANARA-2026-0021 permanece exatamente como estava** — é a evidência do defeito e
+não foi corrigida retroativamente.
+
+<details><summary>Registro original da investigação</summary>
 
 Descoberto no uso real do sistema em 09/09/2026: a `ANARA-2026-0021` está com
 `status = "aprovada"` e a tabela `aprovacaocotacao` tem **zero linhas**. O log do servidor
@@ -639,9 +662,28 @@ As opções aparentes, sem escolher nenhuma: exigir `can_approve_quotes` para o 
 ou remover `aprovada` dos destinos alcançáveis por esta rota, deixando-o só para
 `workflow_service.decidir`; ou fazer a rota delegar a `ws.avaliar()` antes de aceitar o destino.
 
-### C-NEW-10 — Item com preço zero dentro de cotação aprovada (P0, ALTO) — **NOVO em 09/09/2026**
+</details>
 
-**Bloqueador operacional. Não corrigido — evidência preservada.**
+### C-NEW-10 — Item com preço zero dentro de cotação aprovada (P0, ALTO) — **RESOLVIDO em 09/09/2026**
+
+**A regra já existia.** `wf.blockers_do_item` tem `SEM_PRECO` desde a Sessão 6 e `ws.avaliar()`
+sempre devolveu `pode_emitir=False` para esse item. Não faltava regra: faltava alguém
+perguntar — e quem não perguntava era a rota do C-NEW-09.
+
+**Correção.** Fechado o bypass, a pergunta passa a ser feita em cada porta. Somou-se defesa em
+profundidade: o **PDF final exige `SnapshotEmissao`** da revisão, em vez de confiar no campo
+`status`. Sair sem marca d'água afirma que existe documento emitido, e a prova disso é o
+snapshot que `ws.emitir()` cria depois de revalidar tudo.
+
+**A fronteira ficou explícita:** rascunho **aceita** o item sem preço — é assim que se monta
+uma cotação; nada além de rascunho aceita. Forçar o pedido de aprovação também não resolve,
+porque `solicitar_aprovacao` recusa abrir pedido sobre o que não é decisão de alçada. Preço
+válido abaixo do recomendado continua sendo exceção normal, com aprovação e trilha.
+
+**Provado por** `tests/test_emissao_item_invalido.py` (casos A a F). A cotação 21 não foi
+alterada.
+
+<details><summary>Registro original da investigação</summary>
 
 Item 49 da `ANARA-2026-0021`:
 
@@ -667,6 +709,12 @@ perguntado. É a consequência direta de C-NEW-09 — a rota que mudou o status 
 1. item com `preco_negociado = 0` deveria ser **blocker duro** (como `A_COTAR`) em vez de
    exceção comercial? Preço zero não é desconto — é ausência de preço;
 2. o PDF deveria sair com uma linha de R$ 0,00? Hoje sai.
+
+</details>
+
+> **Pergunta que continua aberta:** o PDF de **prévia** segue exibindo a linha de R$ 0,00.
+> Isso é deliberado — a prévia existe para montar a proposta e precisa mostrar o que ainda
+> falta —, mas se a preferência for omitir a linha ou marcá-la, é decisão de produto.
 
 ### C-NEW-03 — Região Passo Fundo-RS sem tarifa (P1, BAIXO)
 
