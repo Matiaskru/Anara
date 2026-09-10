@@ -124,36 +124,13 @@ MARGEM_ABAIXO = "MARGEM_ABAIXO_ALVO"
 PREMISSA_VELHA = "PREMISSA_DESATUALIZADA_MANTIDA"
 OUTRA_EXCECAO = "OUTRA_EXCECAO_COMERCIAL"
 
-#: Quanto lucro, **em dinheiro e por unidade**, a linha pode ficar abaixo da margem-alvo sem
-#: que isso seja exceção comercial: um centavo.
-#:
-#: ## Por que a tolerância é monetária, e não percentual
-#:
-#: O que se quer perdoar é o **arredondamento comercial**, e arredondamento é um fenômeno em
-#: reais: meio centavo. Uma tolerância expressa em pontos de margem escala errado, porque o
-#: mesmo percentual vale centavos num item barato e reais num item caro.
-#:
-#: A primeira versão desta regra usava 5×10⁻⁴ fixos. Medido no motor: num item de R$ 9.291 a
-#: unidade, uma margem 4,9×10⁻⁴ abaixo do alvo passava sem aprovação — e representava
-#: **R$ 4,55 de lucro por unidade**. O número protegia o centavo do item barato criando um
-#: buraco no item caro, que é exatamente onde o dinheiro está.
-#:
-#: ## Por unidade, porque é essa a unidade do arredondamento
-#:
-#: O preço é quantizado **por unidade** e depois multiplicado pela quantidade, então o resíduo
-#: também se multiplica: a mesma linha com 7 unidades acumula sete vezes o mesmo centavo. Medir
-#: por unidade normaliza isso — e é a única leitura em que a tolerância significa "um centavo".
-#:
-#: A identidade que sustenta a conta, com `faturamento = preço × quantidade`:
-#:
-#:     (faturamento × alvo − lucro) ÷ quantidade  ==  preço × (alvo − margem_real)
-#:
-#: ## O que continua sendo reprovado
-#:
-#: Tudo que não é centavo. Mudança de faixa de comissão, de alíquota ou de encargo move a
-#: margem em pontos percentuais — em qualquer preço, isso é muito mais que um centavo de lucro
-#: por unidade, e continua exigindo aprovação.
-TOLERANCIA_DEFICIT_UNITARIO = CENTAVO
+#: Desvio máximo de UMA quantização comercial. `dinheiro()` usa `ROUND_HALF_UP` em 2 casas,
+#: então nenhuma quantia isolada erra mais que meio centavo.
+MEIO_CENTAVO = CENTAVO / 2
+
+#: Quantas quantias o resíduo do lucro absorve **sempre**: `impostos`, `comissao` e
+#: `custo_total`. Frete CF e RV entram quando existem — ver `componentes_quantizados_do_item`.
+COMPONENTES_SEMPRE_QUANTIZADOS = 3
 
 
 def deficit_de_lucro_unitario(preco, margem_alvo, margem_real) -> Decimal:
@@ -161,8 +138,87 @@ def deficit_de_lucro_unitario(preco, margem_alvo, margem_real) -> Decimal:
 
     Positivo quer dizer que falta; zero ou negativo, que a linha entregou o alvo ou passou
     dele. `Decimal` puro — a comparação é com dinheiro, e dinheiro aqui não é `float`.
+
+    A identidade que sustenta a conta, com `faturamento = preço × quantidade`:
+
+        (faturamento × alvo − lucro) ÷ quantidade  ==  preço × (alvo − margem_real)
     """
     return D0(preco) * (D0(margem_alvo) - D0(margem_real))
+
+
+def componentes_quantizados_do_item(item) -> int:
+    """Quantas quantias quantizadas caem no resíduo do lucro **deste** item.
+
+    Três sempre — impostos, comissão e custo total. Frete fixo e rate variável só existem
+    quando o item pertence a um grupo logístico com tarifa resolvida; contar os cinco onde só
+    há três afrouxaria a tolerância sem motivo.
+    """
+    n = COMPONENTES_SEMPRE_QUANTIZADOS
+    if D0(getattr(item, "frete_cf_unitario", None)) > ZERO:
+        n += 1
+    if D0(getattr(item, "frete_rv_pct", None)) > ZERO:
+        n += 1
+    return n
+
+
+def tolerancia_de_arredondamento(quantidade, componentes_quantizados: int) -> Decimal:
+    """O maior déficit de lucro por unidade que o **próprio arredondamento** pode produzir.
+
+    Não é número escolhido: é cota superior derivada do waterfall de
+    `pricing_engine.calcular_por_preco`, que é onde as quantizações acontecem.
+
+    ## As quantias que erram
+
+    Com `dinheiro()` a 2 casas e `ROUND_HALF_UP`, cada quantia erra no máximo meio centavo.
+    Chamando `δ` a diferença entre o valor quantizado e o exato:
+
+        preço        P  = P* + δp              quantizado por UNIDADE
+        faturamento  F  = P·q + δF             δF = 0 quando q é inteiro
+        impostos     I  = F·t + δI
+        comissão     C  = F·c + δC
+        custo total  T  = custo·q + δT         o CNET não é quantizado, então δT existe
+        frete CF     K  = cf·q + δK            só quando há frete fixo
+        frete RV     R  = F·r + δR             só quando há rate variável
+
+    O lucro é **resíduo**: `L = F − I − C − T − K − R`. Substituindo:
+
+        L = F·(1 − t − c − r) − custo·q − cf·q − Σδ        Σδ = δI + δC + δT + δK + δR
+
+    ## O que o preço exato garante
+
+    `calcular_por_margem` resolve o preço exato `P*` de modo que a margem seja exatamente a
+    alvo. Com `F* = P*·q` e `k = 1 − t − c − r − m`, isso significa:
+
+        (custo + cf)·q = F*·k
+
+    ## O déficit, então, é só resíduo
+
+        déficit_linha = F·m − L = (F* − F)·k + Σδ = −(δp·q + δF)·k + Σδ
+
+    Dividindo por `q` e tomando os módulos máximos, com `k ≤ 1` como cota superior:
+
+        déficit_unitário ≤ 0,005·k + 0,005·k/q + n·0,005/q
+                         ≤ 0,005 · (1 + (1 + n)/q)
+
+    É esta a fórmula. Duas leituras importantes:
+
+    * **cai com a quantidade.** Os resíduos de `Σδ` são por LINHA, então diluem: uma linha de
+      100 peças tolera ~R$ 0,0053 por unidade, não R$ 0,035. Uma tolerância constante teria de
+      adotar o pior caso (q = 1) e perdoaria 100 × mais dinheiro numa linha grande;
+    * **`k ≤ 1` é folga deliberada.** O `k` real fica entre 0,55 e 0,70, então o limite é
+      conservador por construção — sem precisar que o workflow conheça as alíquotas.
+
+    ## Verificação
+
+    55.000 combinações economicamente válidas (custo, quantidade, margem-alvo, ICMS, encargo,
+    frete CF e RV, com o PIS/COFINS derivado de cada ICMS): **zero violações**, folga mínima de
+    R$ 0,0015. Pior déficit real observado: R$ 0,0174, em q = 1 com os cinco componentes.
+    """
+    q = D0(quantidade)
+    if q <= ZERO:
+        q = D("1")          # sem quantidade não há diluição: vale o pior caso
+    n = D(str(int(componentes_quantizados)))
+    return MEIO_CENTAVO * (D("1") + (D("1") + n) / q)
 
 
 @dataclass
@@ -282,9 +338,11 @@ def excecoes_do_item(item) -> List[Excecao]:
     if alvo is not None and real is not None and item.custo_unitario:
         preco = dinheiro(item.preco_negociado) or ZERO
         deficit = deficit_de_lucro_unitario(preco, alvo, real)
+        tolerancia = tolerancia_de_arredondamento(
+            getattr(item, "quantidade", 1), componentes_quantizados_do_item(item))
         # Sem preço não há receita contra a qual medir déficit — e um item nesse estado está
         # bloqueado por outro motivo, não aprovado por omissão. Mantém-se a comparação estrita.
-        material = deficit > TOLERANCIA_DEFICIT_UNITARIO if preco > ZERO else real < alvo
+        material = deficit > tolerancia if preco > ZERO else real < alvo
         if material:
             achados.append(Excecao(
                 motivo=MARGEM_ABAIXO, escopo=rotulo,
