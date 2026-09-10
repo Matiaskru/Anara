@@ -31,17 +31,27 @@ def _cotacao(session: Session, cotacao_id: int) -> Cotacao:
     return cot
 
 
-def _frete(session: Session, cotacao: Cotacao) -> Optional[dict]:
-    """Frete da cotação, quando CIF. FOB não forma frete da Anara e não bloqueia."""
-    if (cotacao.freight_type or "").upper() != "CIF":
-        return None
-    from app import frete_service as fs
-    try:
-        return fs.frete_da_cotacao(session, cotacao, ws.itens_de(session, cotacao.id))
-    except Exception as erro:                      # noqa: BLE001
-        # Frete que não resolve é bloqueio, não exceção de Python vazando para a tela.
-        return {"cif": True, "status": "FRETE_REVIEW_REQUIRED",
-                "motivo": f"O frete não pôde ser resolvido: {erro}"}
+def _veio_de_um_clique(request: Request) -> bool:
+    """A chamada nasceu de um form na tela, ou de `fetch`?
+
+    Mesma distinção que `templating.pagina_de_erro` já fazia para os erros: navegação de
+    topo manda `Accept: text/html`; JavaScript, não. A recusa dessas rotas já saía em HTML
+    pelo handler global de `HTTPException` — o que faltava era o **sucesso**, que devolvia
+    JSON e deixava o usuário olhando para um objeto na barra de endereços.
+    """
+    return "text/html" in (request.headers.get("accept") or "")
+
+
+def _resposta(request: Request, cotacao_id: int, payload: dict):
+    """JSON para quem chamou por `fetch`; volta para a cotação para quem clicou."""
+    if _veio_de_um_clique(request):
+        return RedirectResponse(url=f"/cotacoes/{cotacao_id}", status_code=303)
+    return JSONResponse(payload)
+
+
+#: O frete entra na avaliação, e a **tela** precisa avaliar exatamente como a emissão avalia
+#: — senão ela promete um botão que a emissão recusa. Por isso a resolução mora no serviço.
+_frete = ws.frete_para_avaliar
 
 
 # ---------------------------------------------------------------------------
@@ -97,9 +107,10 @@ def solicitar(request: Request, cotacao_id: int, justificativa: str = Form(""),
     pedido = ws.solicitar_aprovacao(session, cot, ator=ator, justificativa=justificativa,
                                     frete=_frete(session, cot))
     session.commit()
-    return JSONResponse({"pedido_id": pedido.id, "status": pedido.status,
-                         "fingerprint": pedido.fingerprint,
-                         "mensagem": "Pedido de aprovação registrado."})
+    return _resposta(request, cotacao_id,
+                     {"pedido_id": pedido.id, "status": pedido.status,
+                      "fingerprint": pedido.fingerprint,
+                      "mensagem": "Pedido de aprovação registrado."})
 
 
 @router.post("/cotacoes/{cotacao_id}/aprovacao/{pedido_id}/aprovar")
@@ -110,8 +121,9 @@ def aprovar(request: Request, cotacao_id: int, pedido_id: int, comentario: str =
     pedido = ws.decidir(session, cot, pedido_id, ator=ator, aprovar=True,
                         comentario=comentario, fingerprint_visto=fingerprint or None)
     session.commit()
-    return JSONResponse({"pedido_id": pedido.id, "status": pedido.status,
-                         "mensagem": "Exceção aprovada para esta configuração."})
+    return _resposta(request, cotacao_id,
+                     {"pedido_id": pedido.id, "status": pedido.status,
+                      "mensagem": "Exceção aprovada para esta configuração."})
 
 
 @router.post("/cotacoes/{cotacao_id}/aprovacao/{pedido_id}/rejeitar")
@@ -122,8 +134,9 @@ def rejeitar(request: Request, cotacao_id: int, pedido_id: int, comentario: str 
     pedido = ws.decidir(session, cot, pedido_id, ator=ator, aprovar=False,
                         comentario=comentario, fingerprint_visto=fingerprint or None)
     session.commit()
-    return JSONResponse({"pedido_id": pedido.id, "status": pedido.status,
-                         "mensagem": "Pedido rejeitado. A cotação voltou a ser editável."})
+    return _resposta(request, cotacao_id,
+                     {"pedido_id": pedido.id, "status": pedido.status,
+                      "mensagem": "Pedido rejeitado. A cotação voltou a ser editável."})
 
 
 @router.post("/cotacoes/{cotacao_id}/premissas/manter")
@@ -147,9 +160,10 @@ def emitir(request: Request, cotacao_id: int, session: Session = Depends(get_ses
     cot = _cotacao(session, cotacao_id)
     snapshot = ws.emitir(session, cot, ator=ator, frete=_frete(session, cot))
     session.commit()
-    return JSONResponse({"snapshot_id": snapshot.id, "status": cot.status,
-                         "revisao": cot.revisao, "fingerprint": snapshot.fingerprint,
-                         "mensagem": "Cotação emitida e congelada."})
+    return _resposta(request, cotacao_id,
+                     {"snapshot_id": snapshot.id, "status": cot.status,
+                      "revisao": cot.revisao, "fingerprint": snapshot.fingerprint,
+                      "mensagem": "Cotação emitida e congelada."})
 
 
 @router.post("/cotacoes/{cotacao_id}/enviar")
@@ -158,7 +172,8 @@ def enviar(request: Request, cotacao_id: int, session: Session = Depends(get_ses
     cot = _cotacao(session, cotacao_id)
     ws.marcar_enviada(session, cot, ator=ator)
     session.commit()
-    return JSONResponse({"status": cot.status, "mensagem": "Marcada como enviada."})
+    return _resposta(request, cotacao_id,
+                     {"status": cot.status, "mensagem": "Marcada como enviada."})
 
 
 @router.post("/cotacoes/{cotacao_id}/cancelar")
@@ -168,8 +183,8 @@ def cancelar(request: Request, cotacao_id: int, motivo: str = Form(""),
     cot = _cotacao(session, cotacao_id)
     ws.cancelar(session, cot, ator=ator, motivo=motivo)
     session.commit()
-    return JSONResponse({"status": cot.status,
-                         "mensagem": "Cancelada. Nada foi apagado."})
+    return _resposta(request, cotacao_id,
+                     {"status": cot.status, "mensagem": "Cancelada. Nada foi apagado."})
 
 
 @router.post("/cotacoes/{cotacao_id}/revisao")
@@ -179,9 +194,11 @@ def nova_revisao(request: Request, cotacao_id: int,
     cot = _cotacao(session, cotacao_id)
     nova = ws.criar_revisao(session, cot, ator=ator)
     session.commit()
-    return JSONResponse({"cotacao_id": nova.id, "revisao": nova.revisao,
-                         "mensagem": f"Revisão {nova.revisao} criada em rascunho. "
-                                     "A emitida continua íntegra."})
+    # A revisão é uma cotação NOVA: quem clicou vai para ela, não para a que ficou congelada.
+    return _resposta(request, nova.id,
+                     {"cotacao_id": nova.id, "revisao": nova.revisao,
+                      "mensagem": f"Revisão {nova.revisao} criada em rascunho. "
+                                  "A emitida continua íntegra."})
 
 
 # ---------------------------------------------------------------------------

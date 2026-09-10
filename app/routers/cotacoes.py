@@ -388,6 +388,54 @@ def _gravar_snapshot_fiscal(session: Session, cotacao: Cotacao):
     return _regras, contexto
 
 
+def acoes_do_workflow(cotacao, prontidao) -> list:
+    """As ações que fazem sentido AGORA, cada uma apontando para o seu dono canônico.
+
+    Existe porque a tela oferecia `wf.proximos_estados()` como botões que postavam o estado
+    desejado numa rota genérica — e era esse o bypass do C-NEW-09. O estado deixou de ser
+    escolha: é consequência de uma ação, e cada ação sabe o que precisa conferir.
+
+    A lista é derivada da `Prontidao`, então a tela não decide nada. "Emitir" só aparece
+    quando `pode_emitir` é verdadeiro; enquanto houver blocker ou exceção pendente, o que
+    aparece é o motivo.
+    """
+    estado = _valor_status(cotacao)
+    if estado in wf.ESTADOS_LEGADOS:
+        return []
+
+    acoes = []
+    imutavel = estado in wf.ESTADOS_IMUTAVEIS
+    if not imutavel:
+        if prontidao.precisa_aprovacao and not prontidao.aprovacao_valida \
+                and estado == wf.DRAFT and not prontidao.blockers:
+            acoes.append({"rota": f"/cotacoes/{cotacao.id}/aprovacao/solicitar",
+                          "rotulo": "Pedir aprovação", "estilo": "btn-ghost",
+                          # `solicitar_aprovacao` exige justificativa: quem decide precisa
+                          # saber por quê. O campo é do botão, senão o clique morre em 400.
+                          "justificativa": True,
+                          "ajuda": "Registra o pedido com o fingerprint desta configuração."})
+        if prontidao.pode_emitir:
+            acoes.append({"rota": f"/cotacoes/{cotacao.id}/emitir",
+                          "rotulo": "Emitir", "estilo": "btn-primary",
+                          "ajuda": "Congela o documento. Depois disso, só por revisão."})
+        if estado in (wf.PENDING_APPROVAL, wf.APPROVED):
+            acoes.append({"rota": f"/cotacoes/{cotacao.id}/status", "estado": wf.DRAFT,
+                          "rotulo": "Reabrir para edição", "estilo": "btn-ghost",
+                          "ajuda": "Volta ao rascunho para mexer nos valores."})
+        acoes.append({"rota": f"/cotacoes/{cotacao.id}/cancelar", "motivo": True,
+                      "rotulo": "Cancelar", "estilo": "btn-danger",
+                      "ajuda": "Nada é apagado — a cotação fica registrada como cancelada."})
+    if estado == wf.ISSUED:
+        acoes.append({"rota": f"/cotacoes/{cotacao.id}/enviar",
+                      "rotulo": "Marcar como enviada", "estilo": "btn-primary",
+                      "ajuda": "Registra que a proposta foi ao cliente."})
+    if imutavel and estado != wf.CANCELLED:
+        acoes.append({"rota": f"/cotacoes/{cotacao.id}/revisao",
+                      "rotulo": "Criar revisão", "estilo": "btn-ghost",
+                      "ajuda": "A emitida continua íntegra; a revisão nasce em rascunho."})
+    return acoes
+
+
 @router.get("/cotacoes/{cotacao_id}", response_class=HTMLResponse)
 def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
@@ -397,10 +445,13 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)
                          .order_by(CotacaoItem.ordem)).all()
     _regras, regra_icms, contexto = montar_regras(cotacao, session)
+    # A mesma avaliação que a emissão faz — a tela não pode prometer o que a emissão recusa.
+    prontidao = ws.avaliar(session, cotacao, frete=ws.frete_para_avaliar(session, cotacao))
     return templates.TemplateResponse(request, "cotacao_detail.html", {
         "active": "cotacoes", "cotacao": cotacao, "cliente": cliente, "itens": itens,
         "totais": _totais(itens, ve_economia(request)),
-        "status_opcoes": wf.proximos_estados(_valor_status(cotacao)),
+        "prontidao": prontidao,
+        "acoes_workflow": acoes_do_workflow(cotacao, prontidao),
         "estados_difal": estados(session), "regra_icms_atual": regra_icms,
         "contexto_fiscal": contexto, "condicoes": cfg.condicoes_pagamento(session),
         "tipos_frete": [t.value for t in TipoFrete],
@@ -835,20 +886,58 @@ def remover_item(request: Request, cotacao_id: int, item_id: int,
 # ---------------------------------------------------------------------------
 # Status / aceite / duplicar / PDF
 # ---------------------------------------------------------------------------
+#: Cada estado do workflow tem **um** dono canônico, e nenhum deles é esta rota. O valor é a
+#: ação que o usuário precisa usar — a recusa nomeia o caminho certo em vez de só dizer não.
+#:
+#: **C-NEW-09.** Esta rota validava a transição e nada mais. Como `TRANSICOES` permite
+#: `rascunho → aguardando_aprovacao → aprovada → emitida → enviada`, um vendedor
+#: comissionado percorria a cadeia inteira por aqui: sem `can_approve_quotes`, sem registro
+#: em `AprovacaoCotacao`, sem conferência de fingerprint, sem `ws.avaliar()` — e sem
+#: `SnapshotEmissao`, de modo que a cotação ficava "emitida" sem o documento congelado
+#: existir. O PDF saía **final**, sem marca d'água, com item de R$ 0,00 dentro.
+#:
+#: O estado não é mais alcançável por aqui: a rota concede apenas o que **retira**
+#: privilégio, que é voltar para rascunho.
+DONOS_CANONICOS_DO_ESTADO = {
+    "aguardando_aprovacao": ("Pedir aprovação", "solicita o pedido e registra o fingerprint "
+                             "do estado que o aprovador vai ver"),
+    "aprovada": ("Aprovar", "exige alçada de aprovação e grava a decisão com o fingerprint "
+                 "da configuração aprovada"),
+    "emitida": ("Emitir", "revalida blockers e exceções agora e congela o documento num "
+                "snapshot"),
+    "enviada": ("Marcar como enviada", "só depois de emitida"),
+    "cancelada": ("Cancelar", "registra o motivo do cancelamento"),
+}
+
+
 @router.post("/cotacoes/{cotacao_id}/status")
 def mudar_status(request: Request, cotacao_id: int, status: str = Form(...),
                  session: Session = Depends(get_session)):
-    """Muda o estado da cotação — **pelas transições permitidas, e só por elas**.
+    """Reabre a cotação para edição. **Não concede estado privilegiado** — ver C-NEW-09.
 
-    Esta rota gravava `StatusCotacao(status)` direto, sem consultar o workflow. Qualquer
-    estado chegava, os três legados inclusive, e a cotação parava num lugar de onde
-    `exigir_transicao` recusa sair. `wf.exigir_transicao` fecha isso: nenhum estado legado
-    é destino de transição nenhuma, então eles deixam de ser alcançáveis por aqui sem que
-    seja preciso mantê-los numa lista de proibidos à parte.
+    Sobrou desta rota exatamente uma transição: voltar para `rascunho`. Ela retira
+    privilégio em vez de conceder, então não precisa de alçada nem de trilha própria — a
+    decisão que existia continua registrada em `AprovacaoCotacao`, e volta a valer apenas se
+    o fingerprint bater de novo.
+
+    Todo o resto tem dono canônico em `workflow_service`, e é para lá que a recusa aponta.
+    Duplicar aqui qualquer pedaço daquelas regras seria recriar o bypass com outro nome.
     """
     cotacao = session.get(Cotacao, cotacao_id)
     if not cotacao:
         return RedirectResponse(url="/cotacoes", status_code=303)
+
+    if status in DONOS_CANONICOS_DO_ESTADO:
+        acao, porque = DONOS_CANONICOS_DO_ESTADO[status]
+        return pagina_de_erro(
+            request, titulo="Esta ação não muda a situação diretamente",
+            introducao=f"Para deixar a cotação como {rotulos.cotacao(status)}, use:",
+            motivos=[f"{acao} — {porque}."],
+            ajuda=("A situação de uma cotação é consequência de uma decisão registrada, não "
+                   "um campo que se escolhe. Cada ação confere o que precisa ser conferido e "
+                   "deixa a trilha de quem decidiu o quê."),
+            voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação",
+            status_code=403)
 
     atual = cotacao.status.value if hasattr(cotacao.status, "value") else str(cotacao.status)
     try:
@@ -864,10 +953,6 @@ def mudar_status(request: Request, cotacao_id: int, status: str = Form(...),
             voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação")
 
     cotacao.status = StatusCotacao(status)
-    if cotacao.status == StatusCotacao.enviada and not cotacao.emitida_em:
-        cotacao.emitida_em = datetime.utcnow()
-        if not cotacao.termos_texto:
-            cotacao.termos_texto = cfg.txt(session, "termos_padrao")
     session.add(cotacao)
     session.commit()
     return RedirectResponse(url=f"/cotacoes/{cotacao_id}", status_code=303)

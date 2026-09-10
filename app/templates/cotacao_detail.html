@@ -341,19 +341,56 @@
       <div style="margin-bottom:14px;">
         <span class="badge badge-{{ cotacao.status.value }}">{{ cotacao.status|rotulo_cotacao }}</span>
       </div>
-      {% if status_opcoes %}
+      {# C-NEW-09/C-NEW-10: o estado deixou de ser um campo que se escolhe. Cada botão chama a
+         ação canônica, que confere o que precisa e deixa a trilha. E o que estiver impedindo
+         aparece aqui — o sistema sabia do item sem preço e não contava a ninguém. #}
+      {% if prontidao and prontidao.blockers %}
+      <div class="aviso-inline" style="margin-bottom:12px;">
+        <strong>Falta informação para emitir.</strong>
+        <div style="font-size:11px; margin-top:2px;">Aprovação não resolve isto — o número
+          não existe ainda.</div>
+        <ul style="margin:6px 0 0 16px; padding:0; font-size:11.5px;">
+          {% for b in prontidao.blockers %}
+          <li><strong>{{ b.escopo }}</strong> — {{ b.detalhe }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if prontidao and prontidao.excecoes and ve_economia(request) %}
+      <div class="aviso-inline" style="margin-bottom:12px;">
+        <strong>
+          {% if prontidao.aprovacao_valida %}Exceção aprovada para esta configuração.
+          {% else %}Exige aprovação de quem tem alçada.{% endif %}
+        </strong>
+        <ul style="margin:6px 0 0 16px; padding:0; font-size:11.5px;">
+          {% for e in prontidao.excecoes %}
+          <li><strong>{{ e.escopo }}</strong> — {{ e.detalhe }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      {% if acoes_workflow %}
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        {% for s in status_opcoes %}
-        <form method="post" action="/cotacoes/{{ cotacao.id }}/status" style="display:inline;">
-          <input type="hidden" name="status" value="{{ s }}">
-          <button class="btn {{ 'btn-danger' if s == 'cancelada' else 'btn-ghost' }} btn-sm"
-                  type="submit">{{ s|rotulo_acao }}</button>
+        {% for a in acoes_workflow %}
+        <form method="post" action="{{ a.rota }}" title="{{ a.ajuda }}"
+              style="display:flex; gap:6px; align-items:center;">
+          {% if a.estado %}<input type="hidden" name="status" value="{{ a.estado }}">{% endif %}
+          {% if a.motivo %}<input name="motivo" placeholder="motivo — opcional" style="width:150px;">{% endif %}
+          {% if a.justificativa %}<input name="justificativa" required
+                 placeholder="por que a exceção?" style="width:190px;">{% endif %}
+          <button class="btn {{ a.estilo }} btn-sm" type="submit">{{ a.rotulo }}</button>
         </form>
         {% endfor %}
       </div>
-      {% else %}
+      {% elif cotacao.status.value in ('fechada', 'pedido', 'perdida') %}
       <div style="font-size:12px; color:var(--gray); line-height:1.5;">
         Esta cotação veio do sistema anterior e fica como está. Para propor de novo, duplique-a.
+      </div>
+      {% else %}
+      <div style="font-size:12px; color:var(--gray); line-height:1.5;">
+        Não há ação disponível para esta cotação agora.
       </div>
       {% endif %}
     </div>

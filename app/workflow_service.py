@@ -75,6 +75,24 @@ def estado_desatualizado(session: Session, cotacao: Cotacao,
     return bool(adm.premissas_desatualizadas(session, cotacao, itens)["desatualizado"])
 
 
+def frete_para_avaliar(session: Session, cotacao: Cotacao) -> Optional[dict]:
+    """Frete da cotação, quando CIF. FOB não forma frete da Anara e não bloqueia.
+
+    Vive aqui, e não no router, porque a tela de detalhe e a emissão têm de avaliar a MESMA
+    coisa: uma tela que ignora o frete oferece um botão que a emissão recusa, e o usuário
+    descobre no clique.
+    """
+    if (getattr(cotacao, "freight_type", "") or "").upper() != "CIF":
+        return None
+    from app import frete_service as fs
+    try:
+        return fs.frete_da_cotacao(session, cotacao, itens_de(session, cotacao.id))
+    except Exception as erro:                      # noqa: BLE001
+        # Frete que não resolve é bloqueio, não exceção de Python vazando para a tela.
+        return {"cif": True, "status": "FRETE_REVIEW_REQUIRED",
+                "motivo": f"O frete não pôde ser resolvido: {erro}"}
+
+
 def avaliar(session: Session, cotacao: Cotacao, *, frete: Optional[dict] = None
             ) -> wf.Prontidao:
     """Prontidão da cotação agora, com a aprovação vigente resolvida do banco."""
