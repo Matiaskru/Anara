@@ -600,6 +600,74 @@ DESCONHECIDO). Enquanto for DESCONHECIDO, o cálculo segue quando peso real e pe
 coincidem — a ambiguidade não muda o número — e **bloqueia** quando eles diferem, que é
 exatamente quando ela passa a importar. Proporcional, e sem escolher por conveniência.
 
+### C-NEW-09 — `POST /cotacoes/{id}/status` alcança `aprovada` sem alçada e sem trilha (P0, ALTO) — **NOVO em 09/09/2026**
+
+**Bloqueador operacional. Não corrigido — evidência preservada na cotação 21.**
+
+Descoberto no uso real do sistema em 09/09/2026: a `ANARA-2026-0021` está com
+`status = "aprovada"` e a tabela `aprovacaocotacao` tem **zero linhas**. O log do servidor
+mostra dois `POST /cotacoes/21/status` e nenhuma chamada a `/aprovacao/`.
+
+**O caminho.** `cotacoes.py::mudar_status` valida a **transição** com `wf.exigir_transicao` — e
+só isso. `TRANSICOES[aguardando_aprovacao]` contém `aprovada`, então
+`rascunho → aguardando_aprovacao → aprovada` são dois passos legais na tabela de estados. O que
+a rota **não** faz:
+
+| Garantia | Rota `/aprovacao/{id}/aprovar` | Rota `/status` |
+|---|---|---|
+| `can_approve_quotes` (`_exigir_alcada`) | sim | **não** |
+| Registro `AprovacaoCotacao` | sim | **não** |
+| Conferência do `fingerprint` visto | sim | **não** |
+| Genealogia da decisão | sim | **não** |
+| `ws.avaliar()` — exceções e blockers | sim | **não** |
+
+Autenticação está garantida (o `AuthMiddleware` cobre toda rota não pública), então não é buraco
+aberto. É buraco de **autorização**: qualquer pessoa autenticada, `VENDEDOR_COMISSIONADO`
+inclusive, chega a `aprovada` por aqui. E a Sessão 6 é explícita — *"aprovação aprova uma
+CONFIGURAÇÃO, não uma cotação"*; um estado `aprovada` sem fingerprint não diz **o que** foi
+aprovado.
+
+Correlato de B-20 (`GET /logout` muda estado via GET): rota que muda estado sem o portão que o
+estado pressupõe.
+
+**Consequência prática.** `aprovada` é pré-requisito de `emitir`. Uma cotação pode chegar à
+emissão sem que exceção comercial nenhuma tenha sido avaliada — ver C-NEW-10, que é exatamente
+esse caso acontecendo.
+
+**Não reabrir por conta própria.** Workflow é fase fechada; corrigir exige autorização explícita.
+As opções aparentes, sem escolher nenhuma: exigir `can_approve_quotes` para o destino `aprovada`;
+ou remover `aprovada` dos destinos alcançáveis por esta rota, deixando-o só para
+`workflow_service.decidir`; ou fazer a rota delegar a `ws.avaliar()` antes de aceitar o destino.
+
+### C-NEW-10 — Item com preço zero dentro de cotação aprovada (P0, ALTO) — **NOVO em 09/09/2026**
+
+**Bloqueador operacional. Não corrigido — evidência preservada.**
+
+Item 49 da `ANARA-2026-0021`:
+
+```
+Lençol plano 240x250 · 300 fios · 100% algodão   qtd 10
+custo_unitario     R$  71,5255526059197     status_custo_item CONFIRMADO
+preco_recomendado  R$ 153,44                status_fiscal     OK
+preco_negociado    R$   0,00                modo_edicao       preco
+faturamento/lucro  R$   0,00                valor_editado     0.0
+```
+
+Não é bloqueio de custo nem de fiscal: os dois estão resolvidos. O item entrou, o preço nunca
+foi digitado, e `modo_edicao="preco"` com `valor_editado=0` formou uma linha de receita zero. A
+cotação foi para `aprovada` e teve **PDF gerado seis vezes** com ele assim.
+
+O `excecoes_do_item` **enxerga** o problema — devolve `MARGEM_ABAIXO_ALVO` para esse item, com
+margem realizada 0% contra alvo de 18%. O que falhou não foi a detecção: foi ninguém ter
+perguntado. É a consequência direta de C-NEW-09 — a rota que mudou o status não chama
+`ws.avaliar()`.
+
+**Duas perguntas em aberto, nenhuma decidida aqui:**
+
+1. item com `preco_negociado = 0` deveria ser **blocker duro** (como `A_COTAR`) em vez de
+   exceção comercial? Preço zero não é desconto — é ausência de preço;
+2. o PDF deveria sair com uma linha de R$ 0,00? Hoje sai.
+
 ### C-NEW-03 — Região Passo Fundo-RS sem tarifa (P1, BAIXO)
 
 A linha existe na tabela mas sem tarifa, mínimo ou prazo, e **nenhuma cidade da aba de cobertura
