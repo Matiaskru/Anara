@@ -1,0 +1,1071 @@
+{
+ "gerado_em": "2026-09-13",
+ "fonte": "/Users/matiaskrueder/Downloads/Projeto Anastacio (1).xlsx",
+ "abas": [
+  "Cotação 24.06.26",
+  "Nova Cotação 05.08.26"
+ ],
+ "linhas_na_aba_nova": 42,
+ "linhas_na_aba_antiga": 32,
+ "por_classe": {
+  "EXACT_SAME": 8,
+  "CONFLICT": 20,
+  "EXACT_NEW": 14
+ },
+ "aplicadas": [
+  {
+   "sku": 320,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 250x260",
+   "versao": 1,
+   "bruto": 1137.5,
+   "cnet": 908.4075,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 321,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 270x265",
+   "versao": 1,
+   "bruto": 1216.35,
+   "cnet": 971.37711,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 324,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 190x260",
+   "versao": 1,
+   "bruto": 469.3,
+   "cnet": 374.78298,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 325,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 250x260",
+   "versao": 1,
+   "bruto": 585.0,
+   "cnet": 467.181,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 326,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 270x265",
+   "versao": 1,
+   "bruto": 643.95,
+   "cnet": 514.25847,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 327,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 285x265",
+   "versao": 1,
+   "bruto": 679.72,
+   "cnet": 542.824392,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 328,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 290x260",
+   "versao": 1,
+   "bruto": 678.6,
+   "cnet": 541.92996,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 330,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 250x260",
+   "versao": 1,
+   "bruto": 1235.0,
+   "cnet": 986.271,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 331,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 270x265",
+   "versao": 1,
+   "bruto": 1359.45,
+   "cnet": 1085.65677,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 334,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 190x260",
+   "versao": 1,
+   "bruto": 518.7,
+   "cnet": 414.23382,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 335,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 250x260",
+   "versao": 1,
+   "bruto": 682.5,
+   "cnet": 545.0445,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 336,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 270x265",
+   "versao": 1,
+   "bruto": 751.27,
+   "cnet": 599.964222,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 337,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 285x265",
+   "versao": 1,
+   "bruto": 793.01,
+   "cnet": 633.297786,
+   "classe": "EXACT_NEW"
+  },
+  {
+   "sku": 338,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 290x260",
+   "versao": 1,
+   "bruto": 791.7,
+   "cnet": 632.25162,
+   "classe": "EXACT_NEW"
+  }
+ ],
+ "conflitos_estruturais": [
+  {
+   "sku": 341,
+   "sku_key": "DAUNE · Edredom / Insert · 100% fibras de poliéster · 280 g · 190x260",
+   "gsm_catalogo": 280,
+   "gsm_fonte": 180,
+   "bruto": "469.3",
+   "fonte_catalogo": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "linha_fonte": 31,
+   "motivo": "o catálogo rotula este SKU como 280 g e a fonte do fornecedor traz o mesmo bruto R$ 469.3 na mesma medida como 180GSM. Mesmo preço, gramaturas diferentes: um dos rótulos está errado, e decidir qual é decisão humana"
+  },
+  {
+   "sku": 346,
+   "sku_key": "DAUNE · Edredom / Insert · 100% fibras de poliéster · 280 g · 285x265",
+   "gsm_catalogo": 280,
+   "gsm_fonte": 180,
+   "bruto": "679.72",
+   "fonte_catalogo": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "linha_fonte": 34,
+   "motivo": "o catálogo rotula este SKU como 280 g e a fonte do fornecedor traz o mesmo bruto R$ 679.72 na mesma medida como 180GSM. Mesmo preço, gramaturas diferentes: um dos rótulos está errado, e decidir qual é decisão humana"
+  },
+  {
+   "sku": 348,
+   "sku_key": "DAUNE · Edredom / Insert · 100% fibras de poliéster · 280 g · 290x260",
+   "gsm_catalogo": 280,
+   "gsm_fonte": 180,
+   "bruto": "678.6",
+   "fonte_catalogo": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "linha_fonte": 35,
+   "motivo": "o catálogo rotula este SKU como 280 g e a fonte do fornecedor traz o mesmo bruto R$ 678.6 na mesma medida como 180GSM. Mesmo preço, gramaturas diferentes: um dos rótulos está errado, e decidir qual é decisão humana"
+  }
+ ],
+ "linhas": [
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 4,
+   "produto": "Capa Protetora para Travesseiros",
+   "especificacao": "100% algodão 200 fios",
+   "dimensao": "50x70",
+   "preco": "22.8",
+   "familia": "Pillow Protector",
+   "composicao": "100% algodao 200 fios",
+   "gsm": null,
+   "dims": [
+    50,
+    70
+   ],
+   "construcao": null,
+   "sku": 252,
+   "sku_key": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 22.8,
+   "cnet_anterior": 18.20808,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 5,
+   "produto": "Capa Protetora para Travesseiros",
+   "especificacao": "100% algodão 200 fios",
+   "dimensao": "50x90",
+   "preco": "32.26",
+   "familia": "Pillow Protector",
+   "composicao": "100% algodao 200 fios",
+   "gsm": null,
+   "dims": [
+    50,
+    90
+   ],
+   "construcao": null,
+   "sku": 253,
+   "sku_key": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 32.26,
+   "cnet_anterior": 25.762836,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 6,
+   "produto": "Protetor de Colchão Single",
+   "especificacao": "Matelassado com alça",
+   "dimensao": "1,00x2,00",
+   "preco": "120.91",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com alca",
+   "gsm": null,
+   "dims": [
+    100,
+    200
+   ],
+   "construcao": "matelassado com alca",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 7,
+   "produto": "Protetor de Colchão Queen",
+   "especificacao": "Matelassado com alça",
+   "dimensao": "1,60x2,00",
+   "preco": "157.49",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com alca",
+   "gsm": null,
+   "dims": [
+    160,
+    200
+   ],
+   "construcao": "matelassado com alca",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 8,
+   "produto": "Protetor de Colchão King",
+   "especificacao": "Matelassado com alça",
+   "dimensao": "1,80x2,00",
+   "preco": "171.24",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com alca",
+   "gsm": null,
+   "dims": [
+    180,
+    200
+   ],
+   "construcao": "matelassado com alca",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 9,
+   "produto": "Protetor de Colchão Super King",
+   "especificacao": "Matelassado com alça",
+   "dimensao": "1,93x2,03",
+   "preco": "212.43",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com alca",
+   "gsm": null,
+   "dims": [
+    193,
+    203
+   ],
+   "construcao": "matelassado com alca",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 10,
+   "produto": "Protetor de Colchão Super King",
+   "especificacao": "Matelassado com alça",
+   "dimensao": "2,00x2,00",
+   "preco": "216.87",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com alca",
+   "gsm": null,
+   "dims": [
+    200,
+    200
+   ],
+   "construcao": "matelassado com alca",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 11,
+   "produto": "Protetor de Colchão Single",
+   "especificacao": "Matelassado com slip",
+   "dimensao": "1,00x2,00",
+   "preco": "134.21",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com slip",
+   "gsm": null,
+   "dims": [
+    100,
+    200
+   ],
+   "construcao": "matelassado com slip",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 12,
+   "produto": "Protetor de Colchão Queen",
+   "especificacao": "Matelassado com slip",
+   "dimensao": "1,60x2,00",
+   "preco": "174.82",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com slip",
+   "gsm": null,
+   "dims": [
+    160,
+    200
+   ],
+   "construcao": "matelassado com slip",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 13,
+   "produto": "Protetor de Colchão King",
+   "especificacao": "Matelassado com slip",
+   "dimensao": "1,80x2,00",
+   "preco": "190.08",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com slip",
+   "gsm": null,
+   "dims": [
+    180,
+    200
+   ],
+   "construcao": "matelassado com slip",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 14,
+   "produto": "Protetor de Colchão Super King",
+   "especificacao": "Matelassado com slip",
+   "dimensao": "1,93x2,03",
+   "preco": "235.8",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com slip",
+   "gsm": null,
+   "dims": [
+    193,
+    203
+   ],
+   "construcao": "matelassado com slip",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 15,
+   "produto": "Protetor de Colchão Super King",
+   "especificacao": "Matelassado com slip",
+   "dimensao": "2,00x2,00",
+   "preco": "240.72",
+   "familia": "Mattress Protector",
+   "composicao": "matelassado com slip",
+   "gsm": null,
+   "dims": [
+    200,
+    200
+   ],
+   "construcao": "matelassado com slip",
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte descreve construção 'matelassado com alça/slip' e o catálogo 'Manta 120 grs impermeavel'; e as medidas não coincidem (catálogo 100/140/160/200×200, fonte 100/160/180/193×203/200). Coincidência de preço não é match de produto"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 16,
+   "produto": "Pillow Top Single",
+   "especificacao": "90% pena e 10% plumas",
+   "dimensao": "1,03x2,03",
+   "preco": "551.88",
+   "familia": "Mattress Topper",
+   "composicao": "90% pena 10% pluma",
+   "gsm": null,
+   "dims": [
+    103,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 17,
+   "produto": "Pillow Top Queen",
+   "especificacao": "90% pena e 10% plumas",
+   "dimensao": "1,63x2,03",
+   "preco": "760.18",
+   "familia": "Mattress Topper",
+   "composicao": "90% pena 10% pluma",
+   "gsm": null,
+   "dims": [
+    163,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 18,
+   "produto": "Pillow Top King",
+   "especificacao": "90% pena e 10% plumas",
+   "dimensao": "1,83x2,03",
+   "preco": "993.39",
+   "familia": "Mattress Topper",
+   "composicao": "90% pena 10% pluma",
+   "gsm": null,
+   "dims": [
+    183,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 19,
+   "produto": "Pillow Top Super King",
+   "especificacao": "90% pena e 10% plumas",
+   "dimensao": "1,93x2,03",
+   "preco": "1103.79",
+   "familia": "Mattress Topper",
+   "composicao": "90% pena 10% pluma",
+   "gsm": null,
+   "dims": [
+    193,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 20,
+   "produto": "Pillow Top Super King",
+   "especificacao": "90% pena e 10% plumas",
+   "dimensao": "2,03x2,03",
+   "preco": "1103.203",
+   "familia": "Mattress Topper",
+   "composicao": "90% pena 10% pluma",
+   "gsm": null,
+   "dims": [
+    203,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 21,
+   "produto": "Pillow Top Single",
+   "especificacao": "100% fibras de poliester",
+   "dimensao": "1,03x2,03",
+   "preco": "405.39",
+   "familia": "Mattress Topper",
+   "composicao": "100% fibras de poliester",
+   "gsm": null,
+   "dims": [
+    103,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 22,
+   "produto": "Pillow Top Queen",
+   "especificacao": "100% fibras de poliester",
+   "dimensao": "1,63x2,03",
+   "preco": "530.18",
+   "familia": "Mattress Topper",
+   "composicao": "100% fibras de poliester",
+   "gsm": null,
+   "dims": [
+    163,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 23,
+   "produto": "Pillow Top King",
+   "especificacao": "100% fibras de poliester",
+   "dimensao": "1,83x2,03",
+   "preco": "736.5",
+   "familia": "Mattress Topper",
+   "composicao": "100% fibras de poliester",
+   "gsm": null,
+   "dims": [
+    183,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 24,
+   "produto": "Pillow Top Super King",
+   "especificacao": "100% fibras de poliester",
+   "dimensao": "1,93x2,03",
+   "preco": "829.18",
+   "familia": "Mattress Topper",
+   "composicao": "100% fibras de poliester",
+   "gsm": null,
+   "dims": [
+    193,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 25,
+   "produto": "Pillow Top Super King",
+   "especificacao": "100% fibras de poliester",
+   "dimensao": "2,03x2,03",
+   "preco": "829.18",
+   "familia": "Mattress Topper",
+   "composicao": "100% fibras de poliester",
+   "gsm": null,
+   "dims": [
+    203,
+    203
+   ],
+   "construcao": null,
+   "classe": "CONFLICT",
+   "sku": null,
+   "motivo": "a fonte declara medidas 1,03/1,63/1,83/1,93/2,03 × 2,03 e o catálogo tem 100/140/180/200 × 200 com os mesmos preços. Medida é atributo material: não se mapeia por preço"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 26,
+   "produto": "Edredom Single (Duvet)",
+   "especificacao": "180GSM 100% pluma de ganso",
+   "dimensao": "1,90x2,60",
+   "preco": "863.51",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 180,
+   "dims": [
+    190,
+    260
+   ],
+   "construcao": null,
+   "sku": 319,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 863.51,
+   "cnet_anterior": 689.5990859999999,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 27,
+   "produto": "Edredom Queen (Duvet)",
+   "especificacao": "180GSM 100% pluma de ganso",
+   "dimensao": "2,50x2,60",
+   "preco": "1137.5",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 180,
+   "dims": [
+    250,
+    260
+   ],
+   "construcao": null,
+   "sku": 320,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 250x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 28,
+   "produto": "Edredom King (Duvet)",
+   "especificacao": "180GSM 100% pluma de ganso",
+   "dimensao": "2,70x2,65",
+   "preco": "1216.35",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 180,
+   "dims": [
+    270,
+    265
+   ],
+   "construcao": null,
+   "sku": 321,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 270x265",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 29,
+   "produto": "Edredom Super King (Duvet)",
+   "especificacao": "180GSM 100% pluma de ganso",
+   "dimensao": "2,85x2,65",
+   "preco": "1320.17",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 180,
+   "dims": [
+    285,
+    265
+   ],
+   "construcao": null,
+   "sku": 322,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 1320.17,
+   "cnet_anterior": 1054.2877620000002,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 30,
+   "produto": "Edredom Super King (Duvet)",
+   "especificacao": "180GSM 100% pluma de ganso",
+   "dimensao": "2,90x2,60",
+   "preco": "1219.82",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 180,
+   "dims": [
+    290,
+    260
+   ],
+   "construcao": null,
+   "sku": 323,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 1219.82,
+   "cnet_anterior": 974.1482519999998,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 31,
+   "produto": "Edredom Single (Duvet)",
+   "especificacao": "180GSM 100% fibras de poliester",
+   "dimensao": "1,90x2,60",
+   "preco": "469.3",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 180,
+   "dims": [
+    190,
+    260
+   ],
+   "construcao": null,
+   "sku": 324,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 190x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 32,
+   "produto": "Edredom Queen (Duvet)",
+   "especificacao": "180GSM 100% fibras de poliester",
+   "dimensao": "2,50x2,60",
+   "preco": "585",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 180,
+   "dims": [
+    250,
+    260
+   ],
+   "construcao": null,
+   "sku": 325,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 250x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 33,
+   "produto": "Edredom King (Duvet)",
+   "especificacao": "180GSM 100% fibras de poliester",
+   "dimensao": "2,70x2,65",
+   "preco": "643.95",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 180,
+   "dims": [
+    270,
+    265
+   ],
+   "construcao": null,
+   "sku": 326,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 270x265",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 34,
+   "produto": "Edredom Super King (Duvet)",
+   "especificacao": "180GSM 100% fibras de poliester",
+   "dimensao": "2,85x2,65",
+   "preco": "679.72",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 180,
+   "dims": [
+    285,
+    265
+   ],
+   "construcao": null,
+   "sku": 327,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 285x265",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 35,
+   "produto": "Edredom Super King( Duvet)",
+   "especificacao": "180GSM 100% fibras de poliester",
+   "dimensao": "2,90x2,60",
+   "preco": "678.6",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 180,
+   "dims": [
+    290,
+    260
+   ],
+   "construcao": null,
+   "sku": 328,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 290x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 36,
+   "produto": "Edredom Single (Duvet)",
+   "especificacao": "250GSM 100% pluma de ganso",
+   "dimensao": "1,90x2,60",
+   "preco": "938.6",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 250,
+   "dims": [
+    190,
+    260
+   ],
+   "construcao": null,
+   "sku": 329,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 938.6,
+   "cnet_anterior": 749.5659600000001,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 37,
+   "produto": "Edredom Queen (Duvet)",
+   "especificacao": "250GSM 100% pluma de ganso",
+   "dimensao": "2,50x2,60",
+   "preco": "1235",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 250,
+   "dims": [
+    250,
+    260
+   ],
+   "construcao": null,
+   "sku": 330,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 250x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 38,
+   "produto": "Edredom King (Duvet)",
+   "especificacao": "250GSM 100% pluma de ganso",
+   "dimensao": "2,70x2,65",
+   "preco": "1359.45",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 250,
+   "dims": [
+    270,
+    265
+   ],
+   "construcao": null,
+   "sku": 331,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 270x265",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 39,
+   "produto": "Edredom Super King (Duvet)",
+   "especificacao": "250GSM 100% pluma de ganso",
+   "dimensao": "2,85x2,65",
+   "preco": "1434.97",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 250,
+   "dims": [
+    285,
+    265
+   ],
+   "construcao": null,
+   "sku": 332,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 1434.97,
+   "cnet_anterior": 1145.967042,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 40,
+   "produto": "Edredom Super King (Duvet)",
+   "especificacao": "250GSM 100% pluma de ganso",
+   "dimensao": "2,90x2,60",
+   "preco": "1325.9",
+   "familia": "Duvet Insert",
+   "composicao": "100% pluma de ganso",
+   "gsm": 250,
+   "dims": [
+    290,
+    260
+   ],
+   "construcao": null,
+   "sku": 333,
+   "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+   "status_anterior": "CONFIRMADO",
+   "bruto_anterior": 1325.9,
+   "cnet_anterior": 1058.8637400000002,
+   "fonte_anterior": "Linha Hotelaria - Daune - 12.08.26.xlsx",
+   "classe": "EXACT_SAME",
+   "motivo": "referência direta vigente com o mesmo bruto (Linha Hotelaria - Daune - 12.08.26.xlsx)"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 41,
+   "produto": "Edredom Single (Duvet)",
+   "especificacao": "250GSM 100% fibras de poliester",
+   "dimensao": "1,90x2,60",
+   "preco": "518.7",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 250,
+   "dims": [
+    190,
+    260
+   ],
+   "construcao": null,
+   "sku": 334,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 190x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 42,
+   "produto": "Edredom Queen (Duvet)",
+   "especificacao": "250GSM 100% fibras de poliester",
+   "dimensao": "2,50x2,60",
+   "preco": "682.5",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 250,
+   "dims": [
+    250,
+    260
+   ],
+   "construcao": null,
+   "sku": 335,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 250x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 43,
+   "produto": "Edredom King (Duvet)",
+   "especificacao": "250GSM 100% fibras de poliester",
+   "dimensao": "2,70x2,65",
+   "preco": "751.27",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 250,
+   "dims": [
+    270,
+    265
+   ],
+   "construcao": null,
+   "sku": 336,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 270x265",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 44,
+   "produto": "Edredom Super King (Duvet)",
+   "especificacao": "250GSM 100% fibras de poliester",
+   "dimensao": "2,85x2,65",
+   "preco": "793.01",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 250,
+   "dims": [
+    285,
+    265
+   ],
+   "construcao": null,
+   "sku": 337,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 285x265",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  },
+  {
+   "aba": "Nova Cotação 05.08.26",
+   "linha": 45,
+   "produto": "Edredom Super King( Duvet)",
+   "especificacao": "250GSM 100% fibras de poliester",
+   "dimensao": "2,90x2,60",
+   "preco": "791.7",
+   "familia": "Duvet Insert",
+   "composicao": "100% fibras de poliester",
+   "gsm": 250,
+   "dims": [
+    290,
+    260
+   ],
+   "construcao": null,
+   "sku": 338,
+   "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 290x260",
+   "status_anterior": "A_COTAR (sem referência)",
+   "bruto_anterior": null,
+   "cnet_anterior": null,
+   "fonte_anterior": null,
+   "classe": "EXACT_NEW",
+   "motivo": "SKU sem referência direta: a fonte fecha o A_COTAR"
+  }
+ ]
+}

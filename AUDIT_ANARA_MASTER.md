@@ -323,6 +323,8 @@ calculado.**
 
 > **280 g é uma linha própria.** Não é 180 g. Não é 250 g. **Não converter silenciosamente uma
 > gramatura na outra.**
+>
+> **13/09/2026 — a fonte escrita do fornecedor contradiz este rótulo.** Ver C-NEW-11.
 
 **Preços BRUTOS DO FORNECEDOR** — nove dimensões:
 
@@ -715,6 +717,47 @@ perguntado. É a consequência direta de C-NEW-09 — a rota que mudou o status 
 > **Pergunta que continua aberta:** o PDF de **prévia** segue exibindo a linha de R$ 0,00.
 > Isso é deliberado — a prévia existe para montar a proposta e precisa mostrar o que ainda
 > falta —, mas se a preferência for omitir a linha ou marcá-la, é decisão de produto.
+
+### C-NEW-11 — Edredom de poliéster: rótulo 280 g do catálogo contra 180GSM da fonte escrita (P1, MÉDIO) — **NOVO em 13/09/2026**
+
+**Decisão de fornecedor pendente. Nada foi alterado nos SKUs 340–348.**
+
+O tarifário "Projeto Anastacio.xlsx" (aba `Nova Cotação 05.08.26`) traz a linha
+**180GSM 100% fibras de poliéster** com estes brutos: 190×260 = R$ 469,30 · 285×265 = R$ 679,72
+· 290×260 = R$ 678,60. São **exatamente** os brutos que o catálogo guarda nos SKUs 341, 346 e
+348 sob o rótulo **280 g** — rótulo que veio de informação verbal/imagem de 03/09/2026
+(§2.2.1), não de documento do fornecedor. A fonte de 12.08.26 que sustenta esses SKUs também não
+declara gramatura para poliéster.
+
+Mesmo preço, mesma medida, dois rótulos de gramatura. Uma das duas coisas é verdade:
+
+1. a Daune tem duas linhas de poliéster (180 g e 280 g) com preço idêntico nessas medidas; ou
+2. a informação de 03/09 era a linha de 180 g, e os nove SKUs de 280 g são um rótulo errado.
+
+**O sistema não escolheu.** Os SKUs de 180 g (324, 327, 328) receberam a linha que o
+fornecedor rotulou como 180GSM — é o que a evidência escrita diz. Os de 280 g ficaram como
+estavam. Se a resposta for (2), os nove SKUs 340–348 precisam ser desativados ou refeitos,
+e as seis medidas que só existem neles (180×250, 220×250, 230×260, 250×250, 260×260, 290×245)
+passam a ser 180 g.
+
+**Pergunta para a Daune:** existe uma linha de edredom de poliéster de 280 g? Se sim, com os
+mesmos preços da de 180 g?
+
+### C-NEW-12 — Protetor de colchão e Pillow Top: a fonte nova reespecifica construção e medidas (P1, MÉDIO) — **NOVO em 13/09/2026**
+
+**Não aplicado. 20 linhas da fonte ficaram como CONFLICT.**
+
+- **Protetor de colchão:** o catálogo (SKUs 254–257) descreve *Manta 120 grs impermeável* nas
+  medidas 100/140/160/200 × 200. A fonte descreve *matelassado com alça* e *matelassado com
+  slip*, nas medidas 100/160/180/193×203/200. Os preços 157,49 e 171,24 aparecem nos dois, mas
+  em medidas **diferentes** (catálogo 140 e 160; fonte 160 e 180). Construção e grade mudaram.
+- **Pillow Top:** os oito preços do catálogo (SKUs 258–265) reaparecem idênticos, mas a fonte
+  declara 1,03/1,63/1,83/1,93/2,03 × 2,03 onde o catálogo tem 100/140/180/200 × 200. E há uma
+  quinta medida por composição (1,93 e 2,03), com o valor de três casas R$ 1.103,203.
+
+Coincidência de preço não é match de produto. Mapear por preço fundiria medidas que a regra
+manda manter distintas. **Pergunta para a Daune:** as medidas atuais dos protetores e pillow
+tops são as da aba nova? A linha "manta impermeável" continua existindo?
 
 ### C-NEW-03 — Região Passo Fundo-RS sem tarifa (P1, BAIXO)
 

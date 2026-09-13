@@ -483,10 +483,56 @@ os dois foi um bug registrado (B-09) e corrigido.
 
 | | |
 |---|---|
-| Referências vigentes com bruto e CNET | **38**, todas `CONFIRMADO`, método `DAUNE_DIRECT` |
-| SKUs ativos sem custo | 15 |
+| Referências vigentes com bruto e CNET | **52**, todas `CONFIRMADO`, método `DAUNE_DIRECT` |
+| SKUs ativos sem custo | **1** — o protetor de colchão 100×200 (modelo indeterminado) |
 | Margem-alvo | 14% |
 | Origem logística cadastrada | **vazia** — ver §22 |
+
+## 9.4 Fonte de 13/09/2026 — "Projeto Anastacio.xlsx"
+
+Atualização de tarifário encaminhada pelo fornecedor, com os preços que haviam sido
+solicitados por estarem faltando. Duas abas: `Cotação 24.06.26` (histórica) e
+`Nova Cotação 05.08.26` (a mais nova para o que ela contém). Reconciliada por campos
+estruturados — família, gramatura, medida — mais composição por igualdade exata de token.
+
+**Fechou a pendência dos edredons.** A fonte anterior não distinguia 180 g de 250 g, e 14 SKUs
+ficaram sem referência em vez de receber gramatura inventada. A nova aba traz as duas
+gramaturas explícitas, e cada SKU recebeu a **sua** linha:
+
+| Composição | 180 g · bruto | 250 g · bruto |
+|---|---|---|
+| Pluma 250×260 | R$ 1.137,50 | R$ 1.235,00 |
+| Pluma 270×265 | R$ 1.216,35 | R$ 1.359,45 |
+| Poliéster 190×260 | R$ 469,30 | R$ 518,70 |
+| Poliéster 250×260 | R$ 585,00 | R$ 682,50 |
+| Poliéster 270×265 | R$ 643,95 | R$ 751,27 |
+| Poliéster 285×265 | R$ 679,72 | R$ 793,01 |
+| Poliéster 290×260 | R$ 678,60 | R$ 791,70 |
+
+Os seis edredons de pluma que já tinham referência (190×260, 285×265, 290×260, nas duas
+gramaturas) vieram com o **mesmo bruto** da fonte anterior — sem versão nova. O fornecedor
+precifica por área a R$/m² constante: poliéster 180 g a R$ 90, 250 g a R$ 105, pluma 250 g a
+R$ 190. Única anomalia entre os 14: pluma 180 g 270×265 a R$ 170/m² contra 175 dos vizinhos
+— sinalizada, não corrigida.
+
+**O que a fonte NÃO fechou — e por quê:**
+
+- **Protetor de colchão (10 linhas):** a fonte descreve *matelassado com alça / com slip*; o
+  catálogo tem *manta 120 g impermeável*. E as medidas não coincidem (catálogo 140×200 e
+  160×200; fonte 160×200 e 180×200, com os preços deslocados uma medida). É outra construção
+  e outra grade — **CONFLICT**, intacto.
+- **Pillow Top (10 linhas):** os preços são os mesmos do catálogo, mas a fonte declara
+  1,03/1,63/1,83/1,93/2,03 × 2,03 onde o catálogo tem 100/140/180/200 × 200. Medida é atributo
+  material: **CONFLICT**, intacto. Inclui o valor de três casas, R$ 1.103,203, no 2,03×2,03.
+- **Os 280 g (SKUs 340–348):** ver AUDIT §2.2.1 e C-NEW-11.
+
+> 🟠 **DECISÃO PENDENTE — 280 g × 180GSM.** O catálogo tem edredons de poliéster rotulados
+> **280 g** a partir de informação verbal/imagem de 03/09/2026. A fonte escrita do fornecedor
+> traz, nas mesmas três medidas e com **exatamente os mesmos brutos** (R$ 469,30 · 679,72 ·
+> 678,60), a linha **180GSM**. Mesmo preço, dois rótulos. Um dos dois está errado, e o sistema
+> não escolheu: os 280 g ficaram como estavam, e os 180 g receberam a linha que o fornecedor
+> rotulou como 180. **Pergunta para a Daune:** existe uma linha de 280 g de poliéster com o
+> mesmo preço da de 180 g, ou a informação de 03/09 era a linha de 180 g?
 
 > 🔵 **VALIDAR COM FISCAL/CONTABILIDADE:** os 12% e os 9,25% estão marcados no código como
 > *"créditos de ENTRADA aprovados"*, mas **NÃO CONFIRMADO** por quem aprovou nem quando. A
@@ -1547,12 +1593,12 @@ Registradas para completude, fora da apresentação principal:
 
 ---
 
-# 37. Os 45 SKUs sem custo
+# 37. Os SKUs sem custo — 45 no snapshot, **31 desde 13/09/2026**
 
 | Fornecedor | SKUs | | Família | SKUs |
 |---|---|---|---|---|
-| Kazareen (KTC) | 29 | | Duvet Insert | 14 |
-| Daune | 15 | | Fitted Sheet | 6 |
+| Kazareen (KTC) | 29 | | Duvet Insert | 0 — **fechados em 13/09/2026, ver §9.4** |
+| Daune | **1** | | Fitted Sheet | 6 |
 | Decor Tricot | 1 | | Pool Towel | 6 |
 | | | | Bathrobe | 6 |
 | | | | Duvet Cover · Pillow Case | 8 |
@@ -1560,7 +1606,7 @@ Registradas para completude, fora da apresentação principal:
 
 **Causas prováveis, por família:**
 
-- **Duvet Insert (14)** — sem I.I. confiável e sem preço de material; ver A4
+- **Duvet Insert** — os 14 Daune receberam referência direta em 13/09/2026 (§9.4)
 - **Fitted Sheet (6)** — fora do motor industrial, sem EXW cotado
 - **Bathrobe (6)** — idem
 - **Pool Towel (6)** — tem preço por kg (US$ 14,00), mas **NÃO CONFIRMADO** por que não formam
