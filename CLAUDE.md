@@ -266,6 +266,38 @@ Sessão 6; a venda tem **um status comercial só**, e são coisas diferentes:
 - **Confidencialidade não muda porque o dado virou card.** Preço e total comerciais podem
   aparecer no pipeline; custo, margem, lucro e markup, não
 
+## Interface comercial e PDF cliente (Fase 3C — 16/09/2026)
+
+**O frontend não calcula economia.** Toda tela redesenhada chama o endpoint canônico e
+pinta a resposta: negociação (`/cotacoes/{id}/negociacao[/preview]`), item
+(`PUT /cotacoes/{id}/itens/{item}`), situação/ações (`GET /cotacoes/{id}/painel`, HTML
+derivado de `ws.avaliar`). Fórmula em template ou JavaScript é regressão.
+
+- **Menu por papel**: vendedora Vendas · Clientes · Cotações · Produtos; OWNER/ADMIN +
+  Dashboard (`/`), Aprovações (alçada) e Admin. Relatórios mora no Admin. Sem saudação
+- **Uma linguagem visual** (`app/static/css/anara.css`, `app/static/js/ui.js`): sidebar
+  compacta, topbar baixa, tabelas densas, pills, modais/popovers, timeline, stepper, kanban,
+  painel sticky, gráficos em SVG sem CDN. Telas antigas herdam a régua
+- **Status da venda é inline** (popover/drag-and-drop → `POST /vendas/{id}/status`);
+  Vendido/Perdido são ações explícitas. Timeline única e em português — nunca enum, ID,
+  rota, fingerprint ou AuditLog bruto (`rotulos.EVENTO_TIMELINE`)
+- **Cotação**: dados comerciais em grid, tabela Produto/Qtd./Recomendado/Seu preço/
+  Desconto/Total, Daune "🔒 fixo" sem explicar margem/comissão, painel sticky com Produtos,
+  Frete, TOTAL, Desconto, Sua comissão estimada e ✓/⚠ de autonomia. OWNER/ADMIN abrem
+  "Economia da proposta" (fechada por padrão). `observacoes` é **interna** e nunca vai ao
+  PDF; `observacao_cliente` (migration 0020) é o que o cliente lê
+- **Dashboard OWNER/ADMIN** consome `metrics_service.dashboard_admin` e `serie_mensal`
+  (filtros período/vendedora/cliente/fornecedor/família). Vendido ≠ faturado ≠ pago; sem
+  dado é `None`/"—", nunca zero inventado
+- **PDF = PROPOSTA COMERCIAL ANARA** (`app/pdf_bridge.py` → `app/pdf_proposta.py`): lista
+  de permissão explícita (`CAMPOS_HEADER/ITEM/TOTAIS`) + varredura de códigos
+  (`PdfInseguro`); final nasce do `SnapshotEmissao`; rascunho sai com faixa e marca d'água
+  "RASCUNHO — NÃO ENVIAR AO CLIENTE"; preço negociado final, sem recomendado, tabela,
+  desconto, fornecedor, custo, margem, comissão ou código (`A_COTAR`, `REVIEW_REQUIRED`…);
+  frete por extenso. Há teste que extrai o texto e falha se algo disso aparecer
+- **Demonstração só em cópia**: `scripts/demo_3c.py --db <cópia> --serve <porta>`;
+  inspeção visual `scripts/visual_3c.py`. Nunca apontar para `data/anara.db`
+
 ## Relatórios e runtime (Sessão 8)
 
 **As definições métricas moram em `app/metrics_service.py`, um lugar só.** Dashboard, CSV e
@@ -384,8 +416,12 @@ Alembic em `0013` (`auditlog`, vigência da condição de pagamento, `can_manage
 **Fase 3A — política comercial canônica (16/09/2026): EXECUTADA.** Alembic em `0018`.
 
 **Fase 3B — CRM comercial simples, Cliente 360 e pós-venda (16/09/2026): EXECUTADA.**
-Alembic em `0019`. 1176 testes. Próxima: **Fase 3C** (Dashboard Admin + redesign completo da
-UX + PDF cliente final) — não iniciada, não autorizada.
+Alembic em `0019`.
+
+**Fase 3C — redesign da plataforma comercial, Dashboard OWNER/ADMIN e PDF cliente
+(16/09/2026): EXECUTADA.** Alembic em `0020` (`cotacao.observacao_cliente`, aditiva).
+1200 testes. Próximas (não iniciadas, não autorizadas): frete nacional definitivo, cadastro
+fiscal pendente, offline V3, produção/deploy.
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

@@ -1,78 +1,66 @@
-from collections import Counter
-from datetime import datetime, timedelta
+"""Dashboard OWNER/ADMIN (Fase 3C) — gestão comercial, com economia.
+
+A raiz `/` é o dashboard para quem vê economia; a vendedora é redirecionada para Vendas
+(a raiz é o que se digita para "abrir o sistema", então redirecionar é melhor que negar).
+
+Nenhum número é calculado aqui: tudo vem de `metrics_service.dashboard_admin` e
+`metrics_service.serie_mensal`, as mesmas definições dos relatórios e dos testes.
+"""
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlmodel import Session, select
 
+from app import metrics_service as mx
 from app.db import get_session
-from app.models import Cliente, Cotacao, CotacaoItem, StatusCotacao
+from app.models import Cliente, Fornecedor, Produto, Usuario
+from app.permissoes import exigir_autenticado, ve_economia
 from app.templating import templates
 
 router = APIRouter()
 
+#: Atalhos de período do dashboard. "Personalizado" é qualquer combinação de `inicio`/`fim`.
+ATALHOS = [("mes", "Mês"), ("trimestre", "Trimestre"), ("ano", "Ano"), ("12m", "12 meses")]
+
+
+def _int_ou_none(valor: str) -> Optional[int]:
+    return int(valor) if (valor or "").isdigit() else None
+
 
 @router.get("/", response_class=HTMLResponse)
-def dashboard(request: Request, session: Session = Depends(get_session)):
-    # Fase 3B: o dashboard é administrativo/econômico. A vendedora cai em Vendas — a raiz
-    # redireciona em vez de negar, porque `/` é o que se digita para "abrir o sistema".
-    from fastapi.responses import RedirectResponse
-    from app.permissoes import exigir_autenticado, ve_economia
+def dashboard(request: Request, periodo: str = "12m", inicio: str = "", fim: str = "",
+              vendedora: str = "", cliente_id: str = "", fornecedor_id: str = "",
+              familia: str = "", session: Session = Depends(get_session)):
     exigir_autenticado(request)
     if not ve_economia(request):
         return RedirectResponse(url="/vendas", status_code=303)
-    # cotação arquivada não conta em nada: é teste ou lixo que o Matias tirou da vista
-    cotacoes = [c for c in session.exec(select(Cotacao)).all() if not c.arquivada_em]
-    itens = session.exec(select(CotacaoItem)).all()
-    clientes = {c.id: c for c in session.exec(select(Cliente)).all()}
 
-    itens_por_cotacao = {}
-    for it in itens:
-        itens_por_cotacao.setdefault(it.cotacao_id, []).append(it)
+    personalizado = bool(inicio or fim)
+    try:
+        janela = mx.periodo_de("" if personalizado else periodo, inicio or None, fim or None)
+    except ValueError:
+        janela = mx.periodo_de(periodo)
+        personalizado = False
+    filtros = mx.FiltrosDashboard(
+        responsavel_id=_int_ou_none(vendedora), cliente_id=_int_ou_none(cliente_id),
+        fornecedor_id=_int_ou_none(fornecedor_id), familia=familia or None)
 
-    valor_total = 0.0
-    lucro_total = 0.0
-    faturamento_total_para_margem = 0.0
-    lucro_total_para_margem = 0.0
-    diffs = []
-    tickets = []
-    por_status = Counter()
-    por_cliente = Counter()
-    por_produto = Counter()
-    por_mes = Counter()
+    painel = mx.dashboard_admin(session, janela, filtros)
+    serie = mx.serie_mensal(session, meses=12, fim=janela.fim, filtros=filtros)
 
-    for c in cotacoes:
-        por_status[c.status.value if hasattr(c.status, "value") else c.status] += 1
-        seus_itens = itens_por_cotacao.get(c.id, [])
-        total_cotacao = sum(i.faturamento for i in seus_itens)
-        valor_total += total_cotacao
-        lucro_total += sum(i.lucro for i in seus_itens)
-        faturamento_total_para_margem += total_cotacao
-        lucro_total_para_margem += sum(i.lucro for i in seus_itens)
-        if total_cotacao:
-            tickets.append(total_cotacao)
-        if c.cliente_id in clientes:
-            por_cliente[clientes[c.cliente_id].nome] += total_cotacao
-        mes_key = c.criado_em.strftime("%Y-%m") if c.criado_em else "—"
-        por_mes[mes_key] += total_cotacao
-        for i in seus_itens:
-            por_produto[i.nome_produto] += i.quantidade
-            if i.diferenca_pct_vs_base is not None:
-                diffs.append(i.diferenca_pct_vs_base)
-
-    margem_media_ponderada = (lucro_total_para_margem / faturamento_total_para_margem) if faturamento_total_para_margem else 0.0
-    ticket_medio = (sum(tickets) / len(tickets)) if tickets else 0.0
-    diferenca_media = (sum(diffs) / len(diffs)) if diffs else 0.0
-
-    principais_clientes = por_cliente.most_common(5)
-    produtos_mais_cotados = por_produto.most_common(5)
-    comparacao_mensal = sorted(por_mes.items())[-6:]
-
+    produtos = session.exec(select(Produto).where(Produto.ativo == True)).all()  # noqa: E712
     return templates.TemplateResponse(request, "dashboard.html", {
-        "active": "dashboard",
-        "valor_total": valor_total, "lucro_total": lucro_total,
-        "margem_media_ponderada": margem_media_ponderada, "ticket_medio": ticket_medio,
-        "num_cotacoes": len(cotacoes), "por_status": dict(por_status),
-        "principais_clientes": principais_clientes, "produtos_mais_cotados": produtos_mais_cotados,
-        "comparacao_mensal": comparacao_mensal, "diferenca_media": diferenca_media,
+        "active": "dashboard", "painel": painel, "serie": serie, "periodo": janela,
+        "atalho": "" if personalizado else periodo, "personalizado": personalizado,
+        "inicio": inicio, "fim": fim, "atalhos": ATALHOS,
+        "filtros": {"vendedora": vendedora, "cliente_id": cliente_id,
+                    "fornecedor_id": fornecedor_id, "familia": familia},
+        "usuarios": session.exec(select(Usuario).where(Usuario.ativo == True)  # noqa: E712
+                                 .order_by(Usuario.nome)).all(),
+        "clientes": session.exec(select(Cliente).where(Cliente.ativo == True)  # noqa: E712
+                                 .order_by(Cliente.nome)).all(),
+        "fornecedores": session.exec(select(Fornecedor).order_by(Fornecedor.nome)).all(),
+        "familias": sorted({p.familia for p in produtos if p.familia}),
+        "qs": getattr(request.url, "query", ""),
     })

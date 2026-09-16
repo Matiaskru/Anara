@@ -15,11 +15,29 @@ from app.templating import templates
 router = APIRouter()
 
 
+def situacao_comercial(produto: Produto) -> str:
+    """O que a vendedora precisa saber do item, sem economia: dá para cotar agora?
+
+    `DISPONIVEL` tem custo e forma preço; `SOB_CONSULTA` não tem base de custo (o preço
+    precisa ser cotado com o fornecedor); `REVISAR` tem custo mas o cadastro pede atenção.
+    """
+    if not produto.custo_unitario or (produto.status_custo or "").upper() == "A_COTAR":
+        return "SOB_CONSULTA"
+    if produto.precisa_revisao or (produto.status_custo or "").upper() == "REVIEW_REQUIRED":
+        return "REVISAR"
+    return "DISPONIVEL"
+
+
+ROTULO_SITUACAO = {"DISPONIVEL": "Disponível", "SOB_CONSULTA": "Sob consulta", "REVISAR": "Revisar"}
+
+
 @router.get("/produtos", response_class=HTMLResponse)
 def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = "",
-           revisao: str = "", session: Session = Depends(get_session)):
-    produtos = session.exec(select(Produto).where(Produto.ativo == True)  # noqa: E712
-                            .order_by(Produto.categoria, Produto.nome)).all()
+           revisao: str = "", familia: str = "", situacao: str = "",
+           session: Session = Depends(get_session)):
+    todos = session.exec(select(Produto).where(Produto.ativo == True)  # noqa: E712
+                         .order_by(Produto.categoria, Produto.nome)).all()
+    produtos = list(todos)
     fornecedores = {f.id: f for f in session.exec(select(Fornecedor)).all()}
 
     if q:
@@ -30,8 +48,13 @@ def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = ""
         produtos = [p for p in produtos
                     if fornecedores.get(p.fornecedor_id)
                     and fornecedores[p.fornecedor_id].codigo == fornecedor]
-    if metodo:
+    if familia:
+        produtos = [p for p in produtos if (p.familia or "") == familia]
+    if metodo and ve_economia(request):
         produtos = [p for p in produtos if (p.cost_method or "") == metodo]
+    if situacao:
+        produtos = [p for p in produtos if situacao_comercial(p) == situacao]
+    # compatibilidade com os filtros anteriores da tela
     if revisao == "sim":
         produtos = [p for p in produtos if p.precisa_revisao]
     elif revisao == "sem_custo":
@@ -45,9 +68,13 @@ def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = ""
         "fornecedores": sorted(fornecedores.values(), key=lambda f: f.nome),
         "fornecedor_por_id": fornecedores, "fornecedor_filtro": fornecedor,
         "metodo_filtro": metodo, "revisao_filtro": revisao,
-        "metodos": sorted({p.cost_method for p in session.exec(select(Produto)).all()
-                           if p.cost_method}),
+        "familia_filtro": familia, "situacao_filtro": situacao,
+        "familias": sorted({p.familia for p in todos if p.familia}),
+        "situacoes": list(ROTULO_SITUACAO.items()),
+        "situacao_de": situacao_comercial, "rotulo_situacao": ROTULO_SITUACAO,
+        "metodos": sorted({p.cost_method for p in todos if p.cost_method}),
         "ultima_importacao": ultima_importacao,
+        "total_catalogo": len(todos),
     })
 
 

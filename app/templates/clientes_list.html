@@ -1,64 +1,73 @@
 {% extends "base.html" %}
-{% block title %}Clientes — Anara Cotações{% endblock %}
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1>Clientes</h1>
-    <div class="subtitle">{{ clientes|length }} cadastrado(s)</div>
-  </div>
-  <div style="display:flex; gap:8px;">
+{% block title %}Clientes — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Clientes</h1><span class="contexto">{{ clientes|length }} {{ 'cadastrado' if clientes|length == 1 else 'cadastrados' }}{% if mostrar_arquivados %} · arquivados{% endif %}</span></div>
+  <form method="get" class="flex" role="search">
+    {% if mostrar_arquivados %}<input type="hidden" name="arquivados" value="sim">{% endif %}
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar cliente" aria-label="Buscar cliente" style="width:260px;">
+  </form>
+  <div class="acoes">
     {% if mostrar_arquivados %}
     <a href="/clientes" class="btn btn-ghost">Ver ativos</a>
-    {% else %}
+    {% elif total_arquivados %}
     <a href="/clientes?arquivados=sim" class="btn btn-ghost">Arquivados ({{ total_arquivados }})</a>
     {% endif %}
-    <button class="btn btn-copper" onclick="const el=document.getElementById('novo-cliente'); el.style.display = el.style.display==='none' ? 'block' : 'none';">+ Novo cliente</button>
+    <button class="btn btn-copper" type="button" data-modal="modal-novo-cliente">+ Novo cliente</button>
   </div>
 </div>
+{% endblock %}
 
-<div id="novo-cliente" class="card" style="display:none;">
-  <form method="post" action="/clientes" class="grid-2">
-    <div class="field"><label>Nome *</label><input name="nome" required></div>
-    <div class="field"><label>CNPJ/CPF</label><input name="cnpj_cpf"></div>
-    <div class="field"><label>Cidade/UF</label><input name="cidade_uf"></div>
-    <div class="field"><label>Telefone</label><input name="telefone"></div>
-    <div class="field" style="grid-column: span 2;"><label>E-mail</label><input name="email" type="email"></div>
-    <div style="grid-column: span 2;"><button class="btn btn-copper" type="submit">Salvar cliente</button></div>
-  </form>
-</div>
-
-<div class="card">
-  <form method="get" style="margin-bottom:14px;">
-    <input type="text" name="q" placeholder="Buscar por nome..." value="{{ q }}">
-  </form>
-  {% if clientes %}
+{% block content %}
+<div class="card flush">
   <table>
-    <thead><tr><th>Nome</th><th>Cidade/UF</th><th>Telefone</th><th>E-mail</th><th></th></tr></thead>
+    <thead><tr>
+      <th>Cliente</th><th>Cidade/UF</th><th class="num">Total comprado</th><th class="num">Nº vendas</th>
+      <th>Última compra</th><th class="num">Em aberto</th><th>Status financeiro</th><th></th>
+    </tr></thead>
     <tbody>
-      {% for c in clientes %}
-      <tr onclick="window.location='/clientes/{{ c.id }}'" style="cursor:pointer;">
-        <td><strong>{{ c.nome }}</strong></td>
+    {% for c in clientes %}
+      {% set r = resumo.get(c.id, {}) %}
+      <tr class="clicavel" data-href="/clientes/{{ c.id }}">
+        <td class="primaria">{{ c.nome }}{% if c.cnpj_cpf %}<span class="sub">{{ c.cnpj_cpf }}</span>{% endif %}</td>
         <td>{{ c.cidade_uf or '—' }}</td>
-        <td>{{ c.telefone or '—' }}</td>
-        <td>{{ c.email or '—' }}</td>
-        <td style="white-space:nowrap;" onclick="event.stopPropagation();">
+        <td class="num">{{ r.total_comprado|brl if r.get('total_comprado') is not none else '—' }}</td>
+        <td class="num">{{ r.get('quantidade_vendas') or '—' }}{% if r.get('vendas_em_andamento') %}<span class="sub">{{ r.vendas_em_andamento }} em andamento</span>{% endif %}</td>
+        <td>{{ r.ultima_compra|data if r.get('ultima_compra') else '—' }}</td>
+        <td class="num">{{ r.valor_em_aberto|brl if r.get('valor_em_aberto') is not none else '—' }}</td>
+        <td>{% if r.get('status_financeiro') %}<span class="pill sem-ponto {{ pill_financeiro(r.status_financeiro) }}">{{ r.status_financeiro|rotulo_financeiro }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="right nowrap">
           {% if mostrar_arquivados %}
-          <form method="post" action="/clientes/{{ c.id }}/restaurar" style="display:inline;">
-            <button class="btn btn-ghost btn-sm" type="submit">Restaurar</button>
-          </form>
+          <form method="post" action="/clientes/{{ c.id }}/restaurar" style="display:inline;"><button class="btn btn-ghost btn-xs" type="submit">Restaurar</button></form>
           {% else %}
           <form method="post" action="/clientes/{{ c.id }}/arquivar" style="display:inline;"
-                onsubmit="return confirm('Arquivar {{ c.nome }}? Ele sai da lista; as cotações dele continuam.');">
-            <button class="btn btn-ghost btn-sm" type="submit">Arquivar</button>
-          </form>
+                onsubmit="return confirm('Arquivar {{ c.nome|e }}? Ele sai da lista; as vendas e cotações continuam.');">
+            <button class="btn btn-ghost btn-xs" type="submit">Arquivar</button></form>
           {% endif %}
         </td>
       </tr>
-      {% endfor %}
+    {% else %}
+      <tr><td colspan="8" class="tbl-vazia">{% if q %}Nenhum cliente encontrado para "{{ q }}".{% else %}Nenhum cliente ainda.
+        <br><button class="btn btn-copper btn-sm mt-8" type="button" data-modal="modal-novo-cliente">Cadastrar o primeiro cliente</button>{% endif %}</td></tr>
+    {% endfor %}
     </tbody>
   </table>
-  {% else %}
-  <div class="empty-state"><h3>Nenhum cliente ainda</h3><p>Cadastre o primeiro cliente pra começar.</p></div>
-  {% endif %}
+</div>
+<p class="nota">Total comprado = vendas marcadas como vendidas. Cotação enviada não é compra; revisões não somam.</p>
+
+<div class="modal-bg" id="modal-novo-cliente" role="dialog" aria-modal="true" aria-labelledby="titulo-novo-cliente">
+  <form class="modal" method="post" action="/clientes">
+    <div class="modal-head"><h2 id="titulo-novo-cliente">Novo cliente</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="grid-2">
+      <div class="field span-2"><label for="nc-nome">Nome</label><input id="nc-nome" name="nome" required autofocus></div>
+      <div class="field"><label for="nc-cnpj">CNPJ/CPF</label><input id="nc-cnpj" name="cnpj_cpf"></div>
+      <div class="field"><label for="nc-cidade">Cidade/UF</label><input id="nc-cidade" name="cidade_uf" placeholder="ex.: São Paulo"></div>
+      <div class="field"><label for="nc-tel">Telefone</label><input id="nc-tel" name="telefone"></div>
+      <div class="field"><label for="nc-email">E-mail</label><input id="nc-email" name="email" type="email"></div>
+    </div>
+    <p class="nota">Só o nome é obrigatório. Para emitir cotação, cidade/UF e finalidade entram no cadastro depois.</p>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Salvar cliente</button></div>
+  </form>
 </div>
 {% endblock %}

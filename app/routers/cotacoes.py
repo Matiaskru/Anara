@@ -19,8 +19,8 @@ from app import workflow as wf
 from app import workflow_service as ws
 from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
 from app.models import (
-    Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Produto,
-    SnapshotEmissao, StatusCotacao, TipoFrete,
+    Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Oportunidade,
+    Produto, SnapshotEmissao, StatusCotacao, TipoFrete,
 )
 from app.pdf_bridge import gerar_pdf_para_cotacao
 from app.pricing_engine import (
@@ -207,9 +207,15 @@ def _totais(itens: list, pode_ver_economia: bool = True) -> dict:
 # ---------------------------------------------------------------------------
 # Listagem / criação / detalhe
 # ---------------------------------------------------------------------------
+#: Atalhos de período da lista de cotações (Fase 3C) — pela data de criação.
+PERIODOS_LISTA = [("", "Qualquer data"), ("mes", "Este mês"), ("trimestre", "Este trimestre"),
+                  ("ano", "Este ano"), ("12m", "Últimos 12 meses")]
+
+
 @router.get("/cotacoes", response_class=HTMLResponse)
 def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: str = "",
-           categoria: str = "", arquivadas: str = "", session: Session = Depends(get_session)):
+           categoria: str = "", arquivadas: str = "", periodo: str = "", busca: str = "",
+           session: Session = Depends(get_session)):
     todas = session.exec(select(Cotacao).order_by(Cotacao.criado_em.desc())).all()
     itens_por_cotacao = {}
     for it in session.exec(select(CotacaoItem)).all():
@@ -220,7 +226,7 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
     total_arquivadas = sum(1 for c in todas if c.arquivada_em)
 
     if status:
-        cotacoes = [c for c in cotacoes if c.status.value == status]
+        cotacoes = [c for c in cotacoes if _valor_status(c) == status]
     if cliente_id:
         cotacoes = [c for c in cotacoes if str(c.cliente_id) == cliente_id]
     if vendedor:
@@ -229,8 +235,17 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
     if categoria:
         cotacoes = [c for c in cotacoes
                     if any((i.categoria or "") == categoria for i in itens_por_cotacao.get(c.id, []))]
+    if periodo:
+        from app import metrics_service as mx
+        janela = mx.periodo_de(periodo)
+        cotacoes = [c for c in cotacoes if janela.contem(c.criado_em)]
 
     clientes = {c.id: c for c in session.exec(select(Cliente)).all()}
+    if busca:
+        alvo = busca.strip().lower()
+        cotacoes = [c for c in cotacoes
+                    if alvo in (c.numero or "").lower()
+                    or alvo in (getattr(clientes.get(c.cliente_id), "nome", "") or "").lower()]
     economia = ve_economia(request)
     totais = {c.id: _totais(itens_por_cotacao.get(c.id, []), economia) for c in cotacoes}
     # Fase 3B: a venda de cada cotação. Cotação sem venda é legado — e a tela diz isso.
@@ -243,6 +258,7 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
         "active": "cotacoes", "cotacoes": cotacoes, "clientes": clientes, "totais": totais,
         "status_filtro": status, "cliente_filtro": cliente_id, "vendedor_filtro": vendedor,
         "categoria_filtro": categoria, "categorias": categorias, "vendedores": vendedores,
+        "periodo_filtro": periodo, "busca": busca, "periodos": PERIODOS_LISTA,
         "mostrar_arquivadas": mostrar_arquivadas, "total_arquivadas": total_arquivadas,
         "itens_por_cotacao": {k: len(v) for k, v in itens_por_cotacao.items()},
         "sugestoes_teste": {s["id"] for s in arquivamento.candidatas_a_teste(session)},
@@ -251,7 +267,7 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
         # Aqui é FILTRO, e por isso a lista é completa: os estados herdados precisam ser
         # filtráveis para que as cotações antigas continuem encontráveis. Na tela de
         # detalhe, onde `status_opcoes` vira botão de ação, a lista é outra.
-        "status_opcoes": [s.value for s in StatusCotacao],
+        "status_opcoes": [(s.value, rotulos.cotacao(s.value)) for s in StatusCotacao],
     })
 
 
@@ -475,6 +491,21 @@ def _gravar_snapshot_fiscal(session: Session, cotacao: Cotacao):
     return _regras, contexto
 
 
+def _negociacao_inicial(session: Session, cotacao: Cotacao, itens, economia: bool):
+    """O payload do painel de negociação para a primeira pintura da tela.
+
+    Cotação anterior à política sem as premissas de comissão cadastradas não derruba a
+    tela: o painel fica vazio e a proposta continua legível.
+    """
+    if not itens:
+        return None
+    try:
+        av = com.avaliar_negociacao(session, cotacao, itens)
+    except Exception:                                   # noqa: BLE001
+        return None
+    return com.payload_admin(av) if economia else com.payload_vendedora(av)
+
+
 def acoes_do_workflow(cotacao, prontidao) -> list:
     """As ações que fazem sentido AGORA, cada uma apontando para o seu dono canônico.
 
@@ -534,11 +565,21 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
     _regras, regra_icms, contexto = montar_regras(cotacao, session)
     # A mesma avaliação que a emissão faz — a tela não pode prometer o que a emissão recusa.
     prontidao = ws.avaliar(session, cotacao, frete=ws.frete_para_avaliar(session, cotacao))
+    economia = ve_economia(request)
     return templates.TemplateResponse(request, "cotacao_detail.html", {
         "active": "cotacoes", "cotacao": cotacao, "cliente": cliente, "itens": itens,
-        "totais": _totais(itens, ve_economia(request)),
+        "totais": _totais(itens, economia),
         "prontidao": prontidao,
         "acoes_workflow": acoes_do_workflow(cotacao, prontidao),
+        # Fase 3C — o painel de negociação nasce já preenchido pelo mesmo payload que o
+        # JavaScript recebe do preview: a vendedora vê o comercial; OWNER/ADMIN, a economia.
+        "negociacao": _negociacao_inicial(session, cotacao, itens, economia),
+        "venda": (session.get(Oportunidade, cotacao.oportunidade_id)
+                  if cotacao.oportunidade_id else None),
+        "editavel": (_valor_status(cotacao) not in wf.ESTADOS_IMUTAVEIS
+                     and _valor_status(cotacao) not in wf.ESTADOS_LEGADOS),
+        "revisoes": ws.revisoes_de(session, cotacao),
+        "economia": economia,
         "estados_difal": estados(session), "regra_icms_atual": regra_icms,
         "contexto_fiscal": contexto, "condicoes": cfg.condicoes_pagamento(session),
         "tipos_frete": [t.value for t in TipoFrete],
@@ -551,6 +592,25 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
     })
 
 
+@router.get("/cotacoes/{cotacao_id}/painel", response_class=HTMLResponse)
+def painel_situacao(request: Request, cotacao_id: int, session: Session = Depends(get_session)):
+    """O bloco de situação/ações, em HTML, para a tela trocar depois de uma negociação.
+
+    A prontidão é reavaliada aqui, no servidor — a tela nunca decide sozinha se pode
+    emitir ou se precisa de aprovação.
+    """
+    exigir_autenticado(request)
+    cotacao = session.get(Cotacao, cotacao_id)
+    if not cotacao:
+        raise HTTPException(status_code=404, detail="Cotação não encontrada.")
+    prontidao = ws.avaliar(session, cotacao, frete=ws.frete_para_avaliar(session, cotacao))
+    return templates.TemplateResponse(request, "_cotacao_situacao.html", {
+        "cotacao": cotacao, "prontidao": prontidao,
+        "acoes_workflow": acoes_do_workflow(cotacao, prontidao),
+        "economia": ve_economia(request),
+    })
+
+
 @router.post("/cotacoes/{cotacao_id}/atualizar")
 def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
                         estado_destino: str = Form(""), estado_origem: str = Form(""),
@@ -559,7 +619,8 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
                         freight_valor: str = Form(""), prazo_entrega: str = Form(""),
                         contato_nome: str = Form(""), departamento_contato: str = Form(""),
                         validade_dias: int = Form(0), vendedor: str = Form(""),
-                        observacoes: str = Form(""), termos_texto: str = Form(""),
+                        observacoes: str = Form(""), observacao_cliente: str = Form(""),
+                        termos_texto: str = Form(""), local_entrega: str = Form(""),
                         session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
     if cotacao is not None:
@@ -592,7 +653,10 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
     cotacao.contato_nome = contato_nome or None
     cotacao.departamento_contato = departamento_contato or None
     cotacao.vendedor = vendedor or None
-    cotacao.observacoes = observacoes or None
+    cotacao.observacoes = observacoes or None            # interna — nunca vai ao PDF
+    cotacao.observacao_cliente = observacao_cliente or None
+    if local_entrega:
+        cotacao.local_entrega = local_entrega
     cotacao.termos_texto = termos_texto or cotacao.termos_texto
     if validade_dias:
         cotacao.validade_dias = validade_dias
@@ -1247,12 +1311,20 @@ def gerar_pdf(request: Request, cotacao_id: int, session: Session = Depends(get_
     if not rascunho and not cotacao.emitida_em:
         cotacao.emitida_em = datetime.utcnow()
 
-    out_path = gerar_pdf_para_cotacao(cotacao, cliente, itens, rascunho=rascunho)
+    # Fase 3C: o final nasce do snapshot congelado na emissão; o rascunho, da cotação viva.
+    # A condição de pagamento vai por extenso ("30 dias"), nunca pelo código ("30").
+    condicao = cfg.condicao_pagamento(session, cotacao.condicao_pagamento)
+    out_path = gerar_pdf_para_cotacao(
+        cotacao, cliente, itens, rascunho=rascunho,
+        snapshot=None if rascunho else emissao,
+        condicao_label=getattr(condicao, "label", None) or cotacao.condicao_pagamento)
     cotacao.pdf_gerado_em = datetime.utcnow()
     session.add(cotacao)
     session.commit()
 
-    nome = f"Cotação Anara {cotacao.numero or cotacao.id} - {cliente.nome if cliente else 'Cliente'}.pdf"
+    nome = (f"Proposta Anara {cotacao.numero or cotacao.id}"
+            f"{' R' + str(cotacao.revisao) if (cotacao.revisao or 1) > 1 else ''}"
+            f"{' - RASCUNHO' if rascunho else ''} - {cliente.nome if cliente else 'Cliente'}.pdf")
     return FileResponse(out_path, media_type="application/pdf", filename=nome)
 
 

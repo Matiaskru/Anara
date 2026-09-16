@@ -35,6 +35,7 @@ from typing import List, Optional, Sequence
 from sqlmodel import Session, select
 
 from app import crm_service as crm
+from app import rotulos
 from app import workflow as wf
 from app import workflow_service as ws
 from app.dinheiro import D, D0, ZERO, dinheiro, divide, para_float, soma
@@ -91,8 +92,18 @@ def periodo_de(atalho: str = "", inicio: Optional[str] = None,
         return Periodo(hoje.replace(day=1), hoje, "Este mês")
     if atalho == "30d":
         return Periodo(hoje - timedelta(days=30), hoje, "Últimos 30 dias")
+    if atalho == "trimestre":
+        inicio_tri = hoje.replace(month=((hoje.month - 1) // 3) * 3 + 1, day=1)
+        return Periodo(inicio_tri, hoje, "Este trimestre")
     if atalho == "ano":
         return Periodo(hoje.replace(month=1, day=1), hoje, "Este ano")
+    if atalho == "12m":
+        # doze meses fechados + o corrente: do dia 1 de onze meses atrás até hoje
+        ano, mes = hoje.year, hoje.month - 11
+        while mes <= 0:
+            mes += 12
+            ano -= 1
+        return Periodo(date(ano, mes, 1), hoje, "Últimos 12 meses")
     return Periodo(rotulo="Todo o período")
 
 
@@ -779,3 +790,371 @@ CAMPOS_ECONOMICOS_DO_PAINEL = ("lucro_das_vendas", "margem_agregada", "comissao_
 def painel_vendas_comercial(session: Session, periodo: Periodo) -> dict:
     painel = painel_vendas(session, periodo)
     return {k: v for k, v in painel.items() if k not in CAMPOS_ECONOMICOS_DO_PAINEL}
+
+
+def clientes_resumo(session: Session) -> dict:
+    """`{cliente_id: resumo}` para a lista de Clientes (Fase 3C) — uma passada só.
+
+    Mesmas definições de `cliente_360`, agrupadas por cliente sem uma consulta por linha.
+    `status_financeiro` é derivado do pós-venda das vendas ganhas: "Atrasado" só quando a
+    alçada financeira marcou; "Em aberto" quando há valor vendido ainda não pago; "Em dia"
+    quando tudo o que foi vendido está pago; `None` sem venda.
+    """
+    from app import pos_venda_service as pv
+
+    grupos = {}
+    for o in session.exec(select(Oportunidade)).all():
+        grupos.setdefault(o.cliente_id, []).append(o)
+    saida = {}
+    for cliente_id, todas in grupos.items():
+        ganhas = [o for o in todas if o.status == GANHA]
+        total = soma(o.valor_fechado for o in ganhas if o.valor_fechado is not None)
+        em_aberto = [o for o in ganhas if o.status_pos_venda in pv.EM_ABERTO]
+        atrasadas = [o for o in ganhas if o.status_pos_venda == pv.ATRASADO]
+        if atrasadas:
+            status = "ATRASADO"
+        elif em_aberto:
+            status = "EM_ABERTO"
+        elif ganhas:
+            status = "EM_DIA"
+        else:
+            status = None
+        saida[cliente_id] = {
+            "total_comprado": para_float(total) if ganhas else None,
+            "quantidade_vendas": len(ganhas),
+            "ultima_compra": max((o.won_em for o in ganhas if o.won_em), default=None),
+            "valor_em_aberto": para_float(soma(o.valor_fechado for o in em_aberto)) if em_aberto else None,
+            "valor_atrasado": para_float(soma(o.valor_fechado for o in atrasadas)) if atrasadas else None,
+            "vendas_em_andamento": len([o for o in todas if o.status == ABERTA]),
+            "status_financeiro": status,
+        }
+    return saida
+
+
+# ---------------------------------------------------------------------------
+# Fase 3C — Dashboard OWNER/ADMIN: filtros, série mensal e análises secundárias
+# ---------------------------------------------------------------------------
+# Tudo aqui é DERIVADO das mesmas definições de `painel_vendas`: vendido = `valor_fechado`
+# das GANHAS por `won_em`; lucro/margem/desconto/comissão = itens da cotação vencedora;
+# revisões nunca somam; item sem dado econômico fica fora do agregado. Filtro de vendedora e
+# de cliente corta a VENDA; filtro de fornecedor e de família corta os ITENS da vencedora (e
+# a venda entra se algum item sobrar). Nada é inventado para preencher gráfico.
+@dataclass
+class FiltrosDashboard:
+    responsavel_id: Optional[int] = None
+    cliente_id: Optional[int] = None
+    fornecedor_id: Optional[int] = None
+    familia: Optional[str] = None
+
+    @property
+    def por_item(self) -> bool:
+        return self.fornecedor_id is not None or bool(self.familia)
+
+
+def _vendas_ganhas(session: Session, filtros: Optional[FiltrosDashboard] = None):
+    """`[(op, itens_da_vencedora_filtrados)]` para TODAS as ganhas — o período corta depois."""
+    filtros = filtros or FiltrosDashboard()
+    produtos = {p.id: p for p in session.exec(select(Produto)).all()}
+    saida = []
+    for o in session.exec(select(Oportunidade)).all():
+        if o.status != GANHA:
+            continue
+        if filtros.responsavel_id is not None and o.responsavel_id != filtros.responsavel_id:
+            continue
+        if filtros.cliente_id is not None and o.cliente_id != filtros.cliente_id:
+            continue
+        itens = _vencedora_itens(session, o)
+        if filtros.por_item:
+            itens = [it for it in itens
+                     if (filtros.fornecedor_id is None or it.fornecedor_id == filtros.fornecedor_id)
+                     and (not filtros.familia
+                          or (getattr(produtos.get(it.produto_id), "familia", None) or "—") == filtros.familia)]
+            if not itens:
+                continue
+        saida.append((o, itens))
+    return saida
+
+
+def _economia_dos_itens(itens: Sequence[CotacaoItem]) -> dict:
+    """Receita, lucro, comissão e desconto ponderado de um conjunto de itens (Decimal)."""
+    receita = lucro = comissao = rec = neg = ZERO
+    for it in itens:
+        if not (it.faturamento and it.custo_unitario):
+            continue
+        receita += D0(it.faturamento)
+        lucro += D0(it.lucro)
+        comissao += D0(it.comissao_valor)
+        if it.preco_recomendado:
+            rec += dinheiro(D0(it.preco_recomendado) * D0(it.quantidade))
+            neg += D0(it.faturamento)
+    return {"receita": receita, "lucro": lucro, "comissao": comissao, "rec": rec, "neg": neg}
+
+
+def _meses_ate(fim: date, quantidade: int) -> List[tuple]:
+    """`[(ano, mes)]` dos `quantidade` meses que terminam no mês de `fim`, em ordem."""
+    ano, mes = fim.year, fim.month
+    meses = []
+    for _ in range(quantidade):
+        meses.append((ano, mes))
+        mes -= 1
+        if mes == 0:
+            mes, ano = 12, ano - 1
+    return list(reversed(meses))
+
+
+ROTULO_MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+
+
+def serie_mensal(session: Session, *, meses: int = 12, fim: Optional[date] = None,
+                 filtros: Optional[FiltrosDashboard] = None) -> dict:
+    """Vendido, lucro, margem, nº de vendas, faturado e pago por mês — os últimos `meses`.
+
+    `ano_anterior` traz a mesma série deslocada 12 meses **só se houver dado**; sem venda
+    naquele período o campo fica `None` e a tela não desenha comparação nenhuma.
+    """
+    fim = fim or date.today()
+    janela = _meses_ate(fim, meses)
+    ganhas = _vendas_ganhas(session, filtros)
+    todas = {o.id: o for o, _ in ganhas}
+
+    def bucket(chave):
+        return {"vendido": ZERO, "lucro": ZERO, "receita": ZERO, "n": 0, "faturado": ZERO, "pago": ZERO}
+
+    por_mes = {m: bucket(m) for m in janela}
+    anterior = {(a - 1, m): bucket(m) for a, m in janela}
+    for o, itens in ganhas:
+        eco = _economia_dos_itens(itens)
+        valor = D0(o.valor_fechado) if not (filtros and filtros.por_item) else eco["receita"]
+        if o.won_em:
+            chave = (o.won_em.year, o.won_em.month)
+            for alvo in (por_mes, anterior):
+                if chave in alvo:
+                    b = alvo[chave]
+                    b["vendido"] += valor
+                    b["lucro"] += eco["lucro"]
+                    b["receita"] += eco["receita"]
+                    b["n"] += 1
+        if o.faturado_em and (o.faturado_em.year, o.faturado_em.month) in por_mes:
+            por_mes[(o.faturado_em.year, o.faturado_em.month)]["faturado"] += valor
+        if o.pago_em and (o.pago_em.year, o.pago_em.month) in por_mes:
+            por_mes[(o.pago_em.year, o.pago_em.month)]["pago"] += valor
+
+    def linha(chave, b):
+        return {
+            "ano": chave[0], "mes": chave[1],
+            "rotulo": f"{ROTULO_MES[chave[1] - 1]}/{str(chave[0])[2:]}",
+            "vendido": para_float(b["vendido"]) if b["n"] else None,
+            "lucro": para_float(b["lucro"]) if b["receita"] else None,
+            "margem": para_float(divide(b["lucro"], b["receita"])) if b["receita"] else None,
+            "vendas": b["n"],
+            "faturado": para_float(b["faturado"]) if b["faturado"] else None,
+            "pago": para_float(b["pago"]) if b["pago"] else None,
+        }
+
+    serie = [linha(m, por_mes[m]) for m in janela]
+    ant = [linha((a - 1, m), anterior[(a - 1, m)]) for a, m in janela]
+    tem_anterior = any(x["vendas"] for x in ant)
+    return {"meses": serie, "ano_anterior": ant if tem_anterior else None,
+            "total_vendido": para_float(soma(por_mes[m]["vendido"] for m in janela)),
+            "total_lucro": para_float(soma(por_mes[m]["lucro"] for m in janela))}
+
+
+def dashboard_admin(session: Session, periodo: Periodo,
+                    filtros: Optional[FiltrosDashboard] = None) -> dict:
+    """Tudo que o Dashboard OWNER/ADMIN mostra, num dicionário só, com as mesmas regras."""
+    filtros = filtros or FiltrosDashboard()
+    from app import pos_venda_service as pv
+
+    todas_ops = session.exec(select(Oportunidade)).all()
+    usuarios = {u.id: u.nome for u in session.exec(select(Usuario)).all()}
+    clientes = {c.id: c.nome for c in session.exec(select(Cliente)).all()}
+    produtos = {p.id: p for p in session.exec(select(Produto)).all()}
+
+    def passa_venda(o):
+        if filtros.responsavel_id is not None and o.responsavel_id != filtros.responsavel_id:
+            return False
+        if filtros.cliente_id is not None and o.cliente_id != filtros.cliente_id:
+            return False
+        return True
+
+    ganhas_periodo = [(o, its) for o, its in _vendas_ganhas(session, filtros)
+                      if periodo.contem(o.won_em)]
+    perdidas = [o for o in todas_ops if o.status == PERDIDA and passa_venda(o)
+                and periodo.contem(o.lost_em)]
+    abertas = [o for o in todas_ops if o.status == ABERTA and passa_venda(o)]
+    # ganhas de qualquer período (para o financeiro: faturado/pago no período e a receber)
+    ganhas_todas = _vendas_ganhas(session, filtros)
+
+    def valor_de(o, itens):
+        return D0(o.valor_fechado) if not filtros.por_item else _economia_dos_itens(itens)["receita"]
+
+    vendido = soma(valor_de(o, its) for o, its in ganhas_periodo)
+    eco = _economia_dos_itens([it for _o, its in ganhas_periodo for it in its])
+
+    faturado = soma(valor_de(o, its) for o, its in ganhas_todas
+                    if o.faturado_em and periodo.contem(datetime.combine(o.faturado_em, datetime.min.time())))
+    pago = soma(valor_de(o, its) for o, its in ganhas_todas if o.pago_em and periodo.contem(o.pago_em))
+    a_receber_lista = [(o, its) for o, its in ganhas_todas if o.status_pos_venda in pv.EM_ABERTO]
+    atrasadas = [(o, its) for o, its in ganhas_todas if o.status_pos_venda == pv.ATRASADO]
+    ag_entrega = [(o, its) for o, its in ganhas_todas if o.status_pos_venda == pv.AGUARDANDO_ENTREGA]
+    ag_pag = [(o, its) for o, its in ganhas_todas if o.status_pos_venda == pv.AGUARDANDO_PAGAMENTO]
+
+    pipeline = [(o, valor_de_pipeline(session, o)) for o in abertas]
+    pipeline_com_valor = [v for _o, v in pipeline if v is not None]
+
+    # --- por vendedora ---------------------------------------------------
+    por_vendedora = {}
+    for o, its in ganhas_periodo:
+        g = por_vendedora.setdefault(o.responsavel_id, {"vendas": 0, "vendido": ZERO, "itens": []})
+        g["vendas"] += 1
+        g["vendido"] += valor_de(o, its)
+        g["itens"].extend(its)
+    performance = []
+    for uid, g in por_vendedora.items():
+        e = _economia_dos_itens(g["itens"])
+        performance.append({
+            "responsavel_id": uid, "vendedora": usuarios.get(uid) or "Sem responsável",
+            "vendido": para_float(g["vendido"]), "vendas": g["vendas"],
+            "ticket": para_float(divide(g["vendido"], D(g["vendas"]))),
+            "margem": para_float(divide(e["lucro"], e["receita"])) if e["receita"] else None,
+            "desconto_medio": para_float(D("1") - divide(e["neg"], e["rec"])) if e["rec"] else None,
+            "comissao_estimada": para_float(e["comissao"]) if e["receita"] else None,
+        })
+    performance.sort(key=lambda x: -(x["vendido"] or 0))
+
+    # --- por cliente: top, concentração e rentabilidade --------------------
+    por_cliente = {}
+    for o, its in ganhas_periodo:
+        g = por_cliente.setdefault(o.cliente_id, {"vendas": 0, "vendido": ZERO, "itens": []})
+        g["vendas"] += 1
+        g["vendido"] += valor_de(o, its)
+        g["itens"].extend(its)
+    clientes_lista = []
+    for cid, g in por_cliente.items():
+        e = _economia_dos_itens(g["itens"])
+        clientes_lista.append({
+            "cliente_id": cid, "cliente": clientes.get(cid) or "—",
+            "vendido": para_float(g["vendido"]), "vendas": g["vendas"],
+            "lucro": para_float(e["lucro"]) if e["receita"] else None,
+            "margem": para_float(divide(e["lucro"], e["receita"])) if e["receita"] else None,
+            "participacao": para_float(divide(g["vendido"], vendido)) if vendido else None,
+        })
+    clientes_lista.sort(key=lambda x: -(x["vendido"] or 0))
+    top5 = clientes_lista[:5]
+    concentracao_top5 = (para_float(divide(soma(D0(c["vendido"]) for c in top5), vendido))
+                         if vendido else None)
+
+    # --- mix fornecedor / família (itens das vencedoras) -------------------
+    mix_forn, mix_fam = {}, {}
+    for _o, its in ganhas_periodo:
+        for it in its:
+            mix_forn[it.fornecedor_nome or "—"] = mix_forn.get(it.fornecedor_nome or "—", ZERO) + D0(it.faturamento)
+            fam = getattr(produtos.get(it.produto_id), "familia", None) or "—"
+            mix_fam[fam] = mix_fam.get(fam, ZERO) + D0(it.faturamento)
+    total_itens = soma(mix_forn.values())
+
+    def mix(d):
+        return sorted([{"nome": k, "valor": para_float(v),
+                        "participacao": para_float(divide(v, total_itens)) if total_itens else None}
+                       for k, v in d.items()], key=lambda x: -(x["valor"] or 0))
+
+    # --- impacto dos descontos: faixas de desconto × margem ---------------
+    faixas = [("Sem desconto", ZERO, ZERO), ("Até 5%", ZERO, D("0.05")),
+              ("5% a 10%", D("0.05"), D("0.10")), ("Acima de 10%", D("0.10"), None)]
+    impacto = {f[0]: {"vendas": 0, "vendido": ZERO, "itens": []} for f in faixas}
+    margem_x_desconto = []
+    for o, its in ganhas_periodo:
+        e = _economia_dos_itens(its)
+        desconto = (D("1") - divide(e["neg"], e["rec"])) if e["rec"] else None
+        margem = divide(e["lucro"], e["receita"]) if e["receita"] else None
+        if desconto is not None and desconto < ZERO:
+            desconto = ZERO
+        margem_x_desconto.append({
+            "venda_id": o.id, "titulo": o.titulo, "cliente": clientes.get(o.cliente_id) or "—",
+            "vendido": para_float(valor_de(o, its)),
+            "desconto": para_float(desconto), "margem": para_float(margem)})
+        if desconto is None:
+            continue
+        for nome, de, ate in faixas:
+            if (de == ZERO and ate == ZERO and desconto == ZERO) or \
+               (ate is not None and not (de == ZERO and ate == ZERO) and de < desconto <= ate) or \
+               (ate is None and desconto > de):
+                impacto[nome]["vendas"] += 1
+                impacto[nome]["vendido"] += valor_de(o, its)
+                impacto[nome]["itens"].extend(its)
+                break
+    impacto_lista = []
+    for nome, g in impacto.items():
+        e = _economia_dos_itens(g["itens"])
+        impacto_lista.append({"faixa": nome, "vendas": g["vendas"],
+                              "vendido": para_float(g["vendido"]) if g["vendas"] else None,
+                              "margem": para_float(divide(e["lucro"], e["receita"])) if e["receita"] else None})
+
+    # --- funil simples e aging das abertas ------------------------------
+    funil = []
+    for etapa in crm.ETAPAS:
+        grupo = [(o, v) for o, v in pipeline if o.etapa == etapa]
+        valores = [v for _o, v in grupo if v is not None]
+        funil.append({"etapa": etapa, "rotulo": rotulos.etapa_venda(etapa),
+                      "quantidade": len(grupo), "valor": para_float(soma(valores)) if valores else None})
+    agora = datetime.utcnow()
+    faixas_aging = [("Até 7 dias", 0, 7), ("8 a 30 dias", 8, 30), ("31 a 60 dias", 31, 60), ("Mais de 60 dias", 61, None)]
+    aging_lista = []
+    for nome, de, ate in faixas_aging:
+        grupo = []
+        for o, v in pipeline:
+            idade = aging(o, agora)
+            if idade is None:
+                continue
+            if idade >= de and (ate is None or idade <= ate):
+                grupo.append(v)
+        valores = [v for v in grupo if v is not None]
+        aging_lista.append({"faixa": nome, "quantidade": len(grupo),
+                            "valor": para_float(soma(valores)) if valores else None})
+
+    return {
+        "periodo": periodo.como_dict(),
+        "filtros": {"responsavel_id": filtros.responsavel_id, "cliente_id": filtros.cliente_id,
+                    "fornecedor_id": filtros.fornecedor_id, "familia": filtros.familia},
+        # principais
+        "valor_vendido": para_float(vendido) if ganhas_periodo else None,
+        "lucro": para_float(eco["lucro"]) if eco["receita"] else None,
+        "margem_agregada": para_float(divide(eco["lucro"], eco["receita"])) if eco["receita"] else None,
+        "vendas_fechadas": len(ganhas_periodo),
+        # secundários
+        "ticket_medio": para_float(divide(vendido, D(len(ganhas_periodo)))) if ganhas_periodo else None,
+        "conversao": taxa_de_conversao(len(ganhas_periodo), len(perdidas)),
+        "desconto_medio": para_float(D("1") - divide(eco["neg"], eco["rec"])) if eco["rec"] else None,
+        "pipeline_aberto": para_float(soma(pipeline_com_valor)) if pipeline_com_valor else None,
+        "vendas_abertas": len(abertas),
+        "perdidas": len(perdidas),
+        # financeiro — três fatos, três números
+        "valor_faturado": para_float(faturado) if faturado else None,
+        "valor_pago": para_float(pago) if pago else None,
+        "a_receber": para_float(soma(valor_de(o, its) for o, its in a_receber_lista)) if a_receber_lista else None,
+        "a_receber_quantidade": len(a_receber_lista),
+        "atrasado": para_float(soma(valor_de(o, its) for o, its in atrasadas)) if atrasadas else None,
+        "atrasado_quantidade": len(atrasadas),
+        # análises
+        "performance_vendedoras": performance,
+        "top_clientes": top5,
+        "concentracao_top5": concentracao_top5,
+        "rentabilidade_clientes": clientes_lista,
+        "mix_fornecedor": mix(mix_forn),
+        "mix_familia": mix(mix_fam),
+        "impacto_descontos": impacto_lista,
+        "margem_x_desconto": sorted(margem_x_desconto, key=lambda x: -(x["vendido"] or 0)),
+        "funil": funil,
+        "aging": aging_lista,
+        "motivos_perda": por_motivo_de_perda(perdidas),
+        "pos_venda": {
+            "aguardando_entrega": {"quantidade": len(ag_entrega),
+                                   "valor": para_float(soma(valor_de(o, its) for o, its in ag_entrega)) if ag_entrega else None},
+            "aguardando_pagamento": {"quantidade": len(ag_pag),
+                                     "valor": para_float(soma(valor_de(o, its) for o, its in ag_pag)) if ag_pag else None},
+            "atrasado": {"quantidade": len(atrasadas),
+                         "valor": para_float(soma(valor_de(o, its) for o, its in atrasadas)) if atrasadas else None},
+        },
+        "comissao_estimada": para_float(eco["comissao"]) if eco["receita"] else None,
+        "vazio": not todas_ops,
+    }

@@ -1,294 +1,280 @@
-// Tela de montagem de cotação: busca de produto (qualquer fornecedor), cálculo ao vivo,
-// adicionar/editar/remover item, recálculo de totais. Vanilla JS, sem framework.
+// Tela da cotação (Fase 3C): busca e inclusão de produto, negociação reativa e painel.
 //
-// O modo padrão é MARGEM: o vendedor diz "quero 18% líquidos" e recebe o preço. A margem já
-// vem preenchida com o padrão do produto (regra por fornecedor/família).
+// Regra da casa: NADA de economia calculada aqui. Preço de linha, total, desconto,
+// comissão e status de autonomia vêm do servidor — do preview canônico
+// (`POST /cotacoes/{id}/negociacao/preview`) enquanto se digita, e da gravação
+// (`POST /cotacoes/{id}/negociacao`, `PUT /cotacoes/{id}/itens/{item}`) ao confirmar.
+// O JavaScript só pinta o que recebe.
 
-let produtoSelecionado = null;
-let modoAtual = "margem";
-let debounceTimer = null;
+(function () {
+  const raiz = document.getElementById("cotacao");
+  if (!raiz) return;
+  const EDITAVEL = raiz.dataset.editavel === "1";
+  const ECONOMIA = raiz.dataset.economia === "1";
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 
-function brl(v) {
-  if (v === null || v === undefined) return "—";
-  return "R$ " + Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function pct(v) {
-  if (v === null || v === undefined) return "—";
-  return (Number(v) * 100).toFixed(1) + "%";
-}
-
-function setContribuinte(btn, valor) {
-  document.getElementById("contribuinte_icms_input").value = valor;
-  btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-}
-
-// ---------------------------------------------------------------------------
-// Busca de produto
-// ---------------------------------------------------------------------------
-const buscaInput = document.getElementById("busca-produto");
-const resultadosDiv = document.getElementById("resultados-busca");
-
-buscaInput.addEventListener("input", () => {
-  clearTimeout(debounceTimer);
-  const q = buscaInput.value.trim();
-  if (q.length < 2) { resultadosDiv.style.display = "none"; return; }
-  // busca por termos: "lencol 250 listrado" filtra pelos três ao mesmo tempo
-  debounceTimer = setTimeout(async () => {
-    const resp = await fetch(`/produtos/buscar?q=${encodeURIComponent(q)}`);
-    const produtos = await resp.json();
-    renderResultados(produtos);
-  }, 200);
-});
-
-document.addEventListener("click", (e) => {
-  if (!resultadosDiv.contains(e.target) && e.target !== buscaInput) {
-    resultadosDiv.style.display = "none";
+  // ------------------------------------------------------------------------
+  // Cabeçalho: alterações materiais ainda não aplicadas bloqueiam saída (PDF)
+  // ------------------------------------------------------------------------
+  const form = document.getElementById("form-cabecalho");
+  if (form && EDITAVEL) {
+    const aviso = document.getElementById("pendente");
+    const materiais = $$("[data-material]", form);
+    const inicial = new Map(materiais.map(c => [c, c.value]));
+    const conferir = () => {
+      const mudou = materiais.some(c => c.value !== inicial.get(c));
+      if (aviso) aviso.hidden = !mudou;
+      document.body.classList.toggle("cenario-pendente", mudou);
+      $$(".acao-de-saida").forEach(a => a.classList.toggle("hidden-soft", mudou));
+    };
+    materiais.forEach(c => { c.addEventListener("change", conferir); c.addEventListener("input", conferir); });
+    $$("[data-contribuinte]", form).forEach(b => b.addEventListener("click", () => setTimeout(conferir, 0)));
+    form.addEventListener("submit", () => document.body.classList.remove("cenario-pendente"));
   }
-});
+  window.setContribuinte = function (btn, valor) {
+    if (btn.disabled) return;
+    document.getElementById("contribuinte_icms_input").value = valor;
+    btn.parentElement.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+  };
 
-function renderResultados(produtos) {
-  if (!produtos.length) {
-    // não achar é o momento em que a calculadora serve: o cliente pediu uma medida que não
-    // está no catálogo
-    resultadosDiv.innerHTML = `
-      <div class="item" style="color:var(--gray);">
-        Nenhum produto encontrado.
-        <a href="/calculadora?cotacao_id=${COTACAO_ID}">Calcular um produto novo</a>
-        para lençol, capa duvet ou toalha.
-      </div>`;
+  // ------------------------------------------------------------------------
+  // Painel: pinta o payload do servidor
+  // ------------------------------------------------------------------------
+  function fretePorExtenso(f) {
+    if (!f) return "—";
+    if (f.tipo === "FOB") return "Por conta do cliente";
+    if (f.tipo === "A_COMBINAR") return "A combinar";
+    if (f.incluido_no_total && f.valor) return brl(f.valor);
+    if (f.tipo === "CIF") return "a definir";
+    return "—";
+  }
+  function pintar(p) {
+    if (!p) return;
+    const set = (sel, txt) => { const el = $(`[data-res="${sel}"]`); if (el) el.textContent = txt; };
+    set("subtotal_negociado", brl(p.subtotal_negociado));
+    set("frete", fretePorExtenso(p.frete));
+    set("total_proposta", brl(p.total_proposta));
+    set("desconto_pct", p.desconto_pct === null || p.desconto_pct === undefined ? "—" : pct(p.desconto_pct));
+    set("comissao_estimada_valor", p.comissao_estimada_valor === null ? "—" : brl(p.comissao_estimada_valor));
+    set("comissao_estimada_pct_efetiva", p.comissao_estimada_pct_efetiva === null || p.comissao_estimada_pct_efetiva === undefined
+        ? "Taxa efetiva —" : "Taxa efetiva " + pct(p.comissao_estimada_pct_efetiva, 2));
+    const temItens = (p.itens || []).length > 0;
+    $$("[data-autonomia]").forEach(el => el.hidden = true);
+    if (!temItens) $('[data-autonomia="vazio"]').hidden = false;
+    else if (p.requer_aprovacao) $('[data-autonomia="aprovacao"]').hidden = false;
+    else $('[data-autonomia="ok"]').hidden = false;
+    const topo = document.getElementById("topo-valor");
+    if (topo) topo.textContent = brl(p.total_proposta);
+
+    (p.itens || []).forEach(it => {
+      const tr = $(`tr[data-item-id="${it.item_id}"]`); if (!tr) return;
+      const total = $("[data-total]", tr); if (total) total.textContent = brl(it.total_linha);
+      const desc = $("[data-desconto]", tr);
+      if (desc) desc.textContent = (it.desconto_linha_pct === null || it.desconto_linha_pct === undefined) ? "—"
+                                 : (it.desconto_linha_pct > 0 ? pct(it.desconto_linha_pct) : "—");
+      const rec = $("[data-rec]", tr); if (rec) rec.textContent = it.preco_recomendado ? brl(it.preco_recomendado) : "—";
+      const fixo = $("[data-preco-fixo]", tr); if (fixo) fixo.textContent = brl(it.preco_negociado);
+    });
+    if (ECONOMIA && p.economia) pintarEconomia(p);
+  }
+
+  function pintarEconomia(p) {
+    const e = p.economia;
+    const set = (k, txt) => { $$(`[data-eco="${k}"]`).forEach(el => el.textContent = txt); };
+    set("custo_total", brl(e.custo_total)); set("receita", brl(p.subtotal_negociado));
+    set("lucro_total", brl(e.lucro_total)); set("margem_agregada_pct", pct(e.margem_agregada_pct, 2));
+    set("comissao_variavel_pct", e.comissao_variavel_pct === null ? "—" : pct(e.comissao_variavel_pct, 2));
+    set("limitada", e.limitada_pelo_piso ? "limitada pelo piso" + (e.limitada_por ? " (" + e.limitada_por + ")" : "")
+                    : (e.comissao_proporcional_pct !== null && e.comissao_proporcional_pct !== undefined ? "proporcional ao desconto" : ""));
+    set("comissao_travada_valor", brl(e.comissao_travada_valor));
+    set("absorvido_por_comissao", brl(e.absorvido_por_comissao));
+    set("absorvido_por_margem", brl(e.absorvido_por_margem));
+    set("absorvido_por_impostos_e_frete", brl(e.absorvido_por_impostos_e_frete));
+    const nomes = {}; (p.itens || []).forEach(i => nomes[i.item_id] = i.nome_produto);
+    const tbody = $("#eco-itens tbody");
+    if (tbody) tbody.innerHTML = (e.itens || []).map(i => {
+      const situacao = i.excecoes && i.excecoes.length
+        ? `<span class="tag tag-review">${esc((i.excecoes[0].motivo || "").replace(/_/g, " ").toLowerCase())}</span>`
+        : (i.preco_travado ? '<span class="tag tag-daune">preço fixo</span>' : (i.elegivel_variavel ? '<span class="tag tag-calc">ok</span>' : '<span class="tag">fora da negociação</span>'));
+      const abaixo = i.viola_piso;
+      return `<tr>
+        <td>${esc(nomes[i.item_id] || i.item_id)}</td>
+        <td class="num">${brl(i.custo_unitario)}</td>
+        <td class="num">${pct(i.margem_alvo_pct, 2)}</td>
+        <td class="num">${i.piso_margem_pct === null ? "—" : pct(i.piso_margem_pct, 2)}</td>
+        <td class="num ${abaixo ? "margem-abaixo" : "margem-ok"}">${i.margem_realizada_pct === null ? "—" : pct(i.margem_realizada_pct, 2)}</td>
+        <td class="num">${brl(i.lucro)}</td>
+        <td class="num">${i.comissao_aplicada_pct === null ? "—" : pct(i.comissao_aplicada_pct, 2)} · ${brl(i.comissao_valor)}</td>
+        <td>${situacao}</td></tr>`;
+    }).join("");
+    (e.itens || []).forEach(i => {
+      const tr = $(`tr[data-item-id="${i.item_id}"]`); if (!tr) return;
+      tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;
+      const m = $("[data-margem]", tr);
+      if (m) m.innerHTML = `<span class="${i.viola_piso ? "margem-abaixo" : "margem-ok"}">${i.margem_realizada_pct === null ? "—" : pct(i.margem_realizada_pct)}</span>`;
+    });
+  }
+
+  async function recarregarPainel() {
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao`);
+    if (r.ok) pintar(r.dados);
+    const s = await fetch(`/cotacoes/${COTACAO_ID}/painel`, {headers: {"Accept": "text/html"}});
+    if (s.ok) { const html = await s.text(); const alvo = document.getElementById("situacao"); if (alvo) alvo.innerHTML = html; }
+  }
+
+  pintar(NEGOCIACAO_INICIAL);
+
+  if (!EDITAVEL) return;
+
+  // ------------------------------------------------------------------------
+  // Negociação reativa: preço → preview enquanto digita; grava ao confirmar
+  // ------------------------------------------------------------------------
+  function precosAtuais() {
+    return $$("tr[data-item-id]").filter(tr => tr.dataset.travado !== "1").map(tr => {
+      const input = $("[data-preco-input]", tr);
+      const preco = input ? parseFloat(input.value) : parseFloat(tr.dataset.preco);
+      return {item_id: parseInt(tr.dataset.itemId, 10), preco_negociado: (preco > 0 ? preco : parseFloat(tr.dataset.preco)).toFixed(2)};
+    });
+  }
+  let seqPreview = 0;
+  const preview = debounce(async () => {
+    const meu = ++seqPreview;
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao/preview`, {method: "POST", json: {itens: precosAtuais()}});
+    if (meu !== seqPreview) return;               // chegou uma resposta antiga
+    if (!r.ok) { anaraToast(r.erro, "erro"); return; }
+    pintar(r.dados);
+  }, 300);
+
+  async function aplicarPrecos(input) {
+    const tr = input.closest("tr");
+    const anterior = tr.dataset.preco;
+    const valor = parseFloat(input.value);
+    if (!(valor > 0)) { input.value = anterior; input.classList.remove("dirty"); return; }
+    if (valor.toFixed(2) === parseFloat(anterior).toFixed(2)) { input.classList.remove("dirty"); return; }
+    input.classList.add("salvando");
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao`, {method: "POST", json: {itens: precosAtuais()}});
+    input.classList.remove("salvando");
+    if (!r.ok) {
+      // recusa do servidor (ex.: preço travado): a tela volta ao que está gravado
+      anaraToast(r.erro, "erro");
+      input.value = parseFloat(anterior).toFixed(2); input.classList.remove("dirty"); input.classList.add("erro");
+      setTimeout(() => input.classList.remove("erro"), 1500);
+      const atual = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao`); if (atual.ok) pintar(atual.dados);
+      return;
+    }
+    tr.dataset.preco = valor.toFixed(2); input.value = valor.toFixed(2); input.classList.remove("dirty");
+    pintar(r.dados);
+    anaraToast("Preço salvo.", "ok");
+    recarregarPainel();
+  }
+
+  async function aplicarQuantidade(input) {
+    const tr = input.closest("tr");
+    const anterior = tr.dataset.qtd;
+    const qtd = parseFloat(input.value);
+    if (!(qtd > 0)) { input.value = Math.trunc(parseFloat(anterior)); return; }
+    if (qtd === parseFloat(anterior)) return;
+    input.classList.add("salvando");
+    const body = new URLSearchParams({quantidade: qtd, modo: "preco", valor: tr.dataset.preco});
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/itens/${tr.dataset.itemId}`, {method: "PUT", body});
+    input.classList.remove("salvando");
+    if (!r.ok) { anaraToast(r.erro, "erro"); input.value = Math.trunc(parseFloat(anterior)); return; }
+    tr.dataset.qtd = qtd;
+    // a quantidade muda o rateio e a comissão de toda a cotação: o painel é relido do servidor
+    await recarregarPainel();
+    anaraToast("Quantidade salva.", "ok");
+  }
+
+  document.addEventListener("input", (e) => {
+    if (e.target.matches("[data-preco-input]")) { e.target.classList.add("dirty"); preview(); }
+  });
+  document.addEventListener("change", (e) => {
+    if (e.target.matches("[data-preco-input]")) aplicarPrecos(e.target);
+    if (e.target.matches("[data-qtd-input]")) aplicarQuantidade(e.target);
+  });
+  document.addEventListener("keydown", (e) => {
+    if ((e.key === "Enter" || e.key === "Return" || e.keyCode === 13)
+        && (e.target.matches("[data-preco-input]") || e.target.matches("[data-qtd-input]"))) { e.preventDefault(); e.target.blur(); }
+  });
+
+  window.removerItem = async function (itemId) {
+    if (!confirm("Remover este produto da proposta?")) return;
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/itens/${itemId}`, {method: "DELETE"});
+    if (!r.ok) { anaraToast(r.erro, "erro"); return; }
+    $(`tr[data-item-id="${itemId}"]`)?.remove();
+    await recarregarPainel();
+    anaraToast("Produto removido.", "ok");
+    if (!$$("tr[data-item-id]").length) location.reload();
+  };
+
+  // ------------------------------------------------------------------------
+  // Busca e inclusão de produto (sempre no preço recomendado; ajuste na linha)
+  // ------------------------------------------------------------------------
+  let produtoSelecionado = null;
+  const buscaInput = document.getElementById("busca-produto");
+  const resultadosDiv = document.getElementById("resultados-busca");
+  if (buscaInput) {
+    const buscar = debounce(async () => {
+      const q = buscaInput.value.trim();
+      if (q.length < 2) { resultadosDiv.style.display = "none"; return; }
+      const r = await anaraFetch(`/produtos/buscar?q=${encodeURIComponent(q)}`);
+      if (!r.ok) return;
+      renderResultados(r.dados || []);
+    }, 200);
+    buscaInput.addEventListener("input", buscar);
+    document.addEventListener("click", (e) => { if (!resultadosDiv.contains(e.target) && e.target !== buscaInput) resultadosDiv.style.display = "none"; });
+  }
+  function tagFornecedor(nome) {
+    if (!nome) return "";
+    const classe = nome.includes("Kazareen") || nome.includes("KTC") ? "tag-ktc" : (nome.includes("Daune") ? "tag-daune" : "tag-decor");
+    return `<span class="tag ${classe}">${esc(nome.split(" ")[0])}</span>`;
+  }
+  function renderResultados(produtos) {
+    if (!produtos.length) {
+      resultadosDiv.innerHTML = `<div class="item muted">Nenhum produto encontrado.${ECONOMIA ? ` <a class="link" href="/calculadora?cotacao_id=${COTACAO_ID}">Calcular um produto novo</a>` : ""}</div>`;
+      resultadosDiv.style.display = "block"; return;
+    }
+    resultadosDiv.innerHTML = produtos.map((p, i) => `
+      <div class="item" data-idx="${i}">
+        <div class="nome">${esc(p.nome)} ${tagFornecedor(p.fornecedor)}${p.preco_travado ? ' <span class="lock">🔒 preço fixo</span>' : ""}</div>
+        <div class="spec">${esc(p.especificacao || p.categoria || "")}${p.sem_custo ? ' · <span class="tag tag-review">sob consulta</span>' : ""}</div>
+      </div>`).join("");
     resultadosDiv.style.display = "block";
-    return;
+    $$(".item[data-idx]", resultadosDiv).forEach(el => el.addEventListener("click", () => selecionarProduto(produtos[parseInt(el.dataset.idx, 10)])));
   }
-  resultadosDiv.innerHTML = produtos.map(p => {
-    const preco = p.sem_custo
-      ? '<span class="tag tag-review">falta cotar</span>'
-      : `preço-base ${brl(p.preco_base)}`;
-    const margem = p.margem_padrao_pct ? ` · margem padrão ${pct(p.margem_padrao_pct)}` : "";
-    return `
-    <div class="item" onclick='selecionarProduto(${JSON.stringify(p)})'>
-      <div class="nome">${p.nome} ${tagFornecedor(p.fornecedor)}</div>
-      <div class="spec">${p.categoria || ""} · ${preco}${margem}</div>
-    </div>`;
-  }).join("");
-  resultadosDiv.style.display = "block";
-}
-
-function tagFornecedor(nome) {
-  if (!nome) return "";
-  const classe = nome.includes("Kazareen") ? "tag-ktc" : (nome.includes("Daune") ? "tag-daune" : "tag-decor");
-  return `<span class="tag ${classe}">${nome.split(" ")[0]}</span>`;
-}
-
-function selecionarProduto(p) {
-  produtoSelecionado = p;
-  resultadosDiv.style.display = "none";
-  buscaInput.value = "";
-  document.getElementById("form-add-item").style.display = "block";
-  document.getElementById("produto-selecionado-nome").innerHTML = `${p.nome} ${tagFornecedor(p.fornecedor)}`;
-
-  const meta = [];
-  if (p.especificacao) meta.push(p.especificacao);
-  if (p.familia) meta.push(p.familia);
-  if (p.margem_padrao_pct) meta.push(`margem padrão ${pct(p.margem_padrao_pct)}`);
-  let html = meta.join(" · ");
-  if (p.sem_custo) {
-    html += `<div class="aviso-inline">Este produto ainda não tem custo cadastrado. Dá para cotar
-             pelo preço, mas a margem só aparece quando o custo entrar.</div>`;
-  } else if (p.precisa_revisao && p.revisao_motivo) {
-    html += `<div class="aviso-inline">${p.revisao_motivo}</div>`;
+  function selecionarProduto(p) {
+    produtoSelecionado = p;
+    resultadosDiv.style.display = "none"; buscaInput.value = "";
+    const box = document.getElementById("form-add-item"); box.hidden = false;
+    document.getElementById("produto-selecionado-nome").innerHTML = `${esc(p.nome)} ${tagFornecedor(p.fornecedor)}`;
+    const meta = [p.especificacao, p.familia].filter(Boolean).map(esc);
+    if (p.sem_custo) meta.push('<span class="tag tag-review">sob consulta — sem preço automático</span>');
+    if (p.precisa_revisao && p.revisao_motivo) meta.push(esc(p.revisao_motivo));
+    document.getElementById("produto-selecionado-meta").innerHTML = meta.join(" · ");
+    document.getElementById("add-qtd").value = 1; document.getElementById("add-qtd").focus();
+    atualizarPreviewAdd();
   }
-  document.getElementById("produto-selecionado-meta").innerHTML = html;
-
-  setModo(p.sem_custo ? "preco" : "margem");
-  atualizarPreview();
-}
-
-function cancelarAdd() {
-  produtoSelecionado = null;
-  document.getElementById("form-add-item").style.display = "none";
-}
-
-function setModo(modo) {
-  modoAtual = modo;
-  ["preco", "margem", "markup"].forEach(m => {
-    const btn = document.getElementById(`modo-${m}-btn`);
-    if (btn) btn.classList.toggle("active", modo === m);
-  });
-  const label = document.getElementById("add-valor-label");
-  const valorInput = document.getElementById("add-valor");
-  if (modo === "preco") {
-    label.textContent = "Preço unitário (R$)";
-    valorInput.value = produtoSelecionado && produtoSelecionado.preco_base
-      ? Number(produtoSelecionado.preco_base).toFixed(2) : "";
-  } else if (modo === "markup") {
-    label.textContent = "Markup sobre o custo NET (%)";
-    valorInput.value = "45.0";
-  } else {
-    label.textContent = "Margem líquida desejada (%)";
-    const padrao = produtoSelecionado && produtoSelecionado.margem_padrao_pct;
-    valorInput.value = padrao ? (padrao * 100).toFixed(1) : "15.0";
-  }
-  atualizarPreview();
-}
-
-["add-qtd", "add-valor"].forEach(id => {
-  document.getElementById(id).addEventListener("input", () => {
-    clearTimeout(debounceTimer);
-    debounceTimer = setTimeout(atualizarPreview, 250);
-  });
-});
-
-async function atualizarPreview() {
-  if (!produtoSelecionado) return;
-  const qtd = parseFloat(document.getElementById("add-qtd").value) || 0;
-  let valor = parseFloat(document.getElementById("add-valor").value) || 0;
-  if (modoAtual === "margem" || modoAtual === "markup") valor = valor / 100;
-
-  const body = new URLSearchParams({
-    produto_id: produtoSelecionado.id, quantidade: qtd, modo: modoAtual, valor: valor,
-  });
-  const resp = await fetch(`/cotacoes/${COTACAO_ID}/calc`, { method: "POST", body });
-  const r = await resp.json();
-
-  const padrao = r.margem_padrao_pct;
-  const abaixo = padrao && r.margem_liquida < padrao - 0.0005;
-  const celula = (rotulo, valor, classe) =>
-    `<div><div class="label" style="font-size:10px; color:var(--gray);">${rotulo}</div>
-     <div class="${classe || ""}">${valor}</div></div>`;
-
-  document.getElementById("add-preview").innerHTML = `
-    <div class="grid-3" style="gap:8px;">
-      ${celula("PREÇO SUGERIDO", brl(r.preco_negociado))}
-      ${celula("FATURAMENTO", brl(r.faturamento))}
-      ${celula("LUCRO", r.sem_custo ? "—" : brl(r.lucro))}
-      ${celula("MARGEM PADRÃO", padrao ? pct(padrao) : "—")}
-      ${celula("MARGEM ATUAL", r.sem_custo ? "—" : pct(r.margem_liquida), abaixo ? "margem-abaixo" : "margem-ok")}
-      ${celula("CUSTO TOTAL", r.sem_custo ? "—" : brl(r.custo_total))}
-      ${celula("COMISSÃO", r.comissao_pct ? pct(r.comissao_pct) : "—")}
-      ${celula("MARKUP IMPLÍCITO", r.markup_implicito ? pct(r.markup_implicito) : "—")}
-      ${celula("DIF. VS PREÇO-BASE", r.diferenca_pct_vs_base !== null && r.diferenca_pct_vs_base !== undefined ? pct(r.diferenca_pct_vs_base) : "—")}
-    </div>
-    ${r.aviso ? `<div class="aviso-inline">${r.aviso}</div>` : ""}
-    ${abaixo ? `<div class="aviso-inline">Margem abaixo do padrão do produto (${pct(padrao)}). Dá para seguir — fica registrado como margem negociada.</div>` : ""}
-    ${r.margem_regra ? `<div style="font-size:10.5px; color:var(--gray); margin-top:6px;">Regra de margem: ${r.margem_regra}</div>` : ""}
-  `;
-}
-
-async function adicionarItem() {
-  if (!produtoSelecionado) return;
-  const qtd = parseFloat(document.getElementById("add-qtd").value) || 0;
-  let valor = parseFloat(document.getElementById("add-valor").value) || 0;
-  if (modoAtual === "margem" || modoAtual === "markup") valor = valor / 100;
-  if (qtd <= 0) { anaraToast("Informe uma quantidade válida."); return; }
-
-  const body = new URLSearchParams({
-    produto_id: produtoSelecionado.id, quantidade: qtd, modo: modoAtual, valor: valor,
-  });
-  const resp = await fetch(`/cotacoes/${COTACAO_ID}/itens`, { method: "POST", body });
-  const item = await resp.json();
-  if (!resp.ok) { anaraToast(item.detail || item.erro || "Não foi possível adicionar o item."); return; }
-  adicionarLinhaTabela(item);
-  cancelarAdd();
-  recalcularTotais();
-  anaraToast("Item adicionado.");
-}
-
-function adicionarLinhaTabela(it) {
-  const vazio = document.getElementById("itens-vazio");
-  if (vazio) vazio.remove();
-  const tbody = document.getElementById("corpo-itens");
-  const tr = document.createElement("tr");
-  tr.dataset.itemId = it.id;
-  tr.dataset.faturamento = it.faturamento;
-  tr.dataset.lucro = it.lucro;
-  tr.dataset.custo = it.custo_total;
-  tr.dataset.margemPadrao = it.margem_padrao_pct || 0;
-  const abaixo = it.margem_padrao_pct && it.margem_liquida < it.margem_padrao_pct - 0.0005;
-  tr.innerHTML = `
-    <td>${tbody.children.length + 1}</td>
-    <td><strong>${it.nome_produto}</strong><br><span style="color:var(--gray); font-size:11px;">${it.especificacao || ""}</span></td>
-    <td>${tagFornecedor(it.fornecedor_nome)}</td>
-    <td class="num"><input type="number" min="1" value="${Math.trunc(it.quantidade)}" style="width:66px;" onchange="editarItem(${it.id})" id="qtd-${it.id}"></td>
-    <td class="num">${brl(it.preco_base)}</td>
-    <td class="num"><input type="number" step="0.01" value="${it.preco_negociado.toFixed(2)}" style="width:96px;" onchange="editarItem(${it.id}, 'preco')" id="valor-${it.id}"></td>
-    <td class="num" id="diff-${it.id}">${it.diferenca_pct_vs_base !== null ? pct(it.diferenca_pct_vs_base) : "—"}</td>
-    <td class="num" id="fat-${it.id}">${brl(it.faturamento)}</td>
-    <td class="num" id="lucro-${it.id}">${brl(it.lucro)}</td>
-    <td class="num" style="color:var(--gray);">${it.margem_padrao_pct ? pct(it.margem_padrao_pct) : "—"}</td>
-    <td class="num"><input type="number" step="0.1" value="${(it.margem_liquida * 100).toFixed(2)}"
-        style="width:74px;" class="${abaixo ? "margem-abaixo" : "margem-ok"}"
-        onchange="editarItem(${it.id}, 'margem')" id="margem-input-${it.id}"
-        ${it.custo_unitario ? "" : "disabled title='Produto sem custo: margem não é calculável'"}></td>
-    <td style="white-space:nowrap;">
-      <button class="btn btn-ghost btn-sm" onclick="abrirMemoria(${it.id})">Memória</button>
-      <button class="btn btn-ghost btn-sm" onclick="removerItem(${it.id})">Remover</button>
-    </td>
-  `;
-  tbody.appendChild(tr);
-}
-
-async function editarItem(itemId, modoForcado) {
-  // O vendedor pode mexer no preço ou na margem da linha: cada um lê o seu campo e o outro é
-  // recalculado. Margem entra em % e vai para o servidor como fração.
-  const modo = modoForcado || "preco";
-  const qtd = parseFloat(document.getElementById(`qtd-${itemId}`).value) || 0;
-  let valor;
-  if (modo === "margem") {
-    valor = (parseFloat(document.getElementById(`margem-input-${itemId}`).value) || 0) / 100;
-  } else {
-    valor = parseFloat(document.getElementById(`valor-${itemId}`).value) || 0;
-  }
-  const body = new URLSearchParams({ quantidade: qtd, modo: modo, valor: valor });
-  const resp = await fetch(`/cotacoes/${COTACAO_ID}/itens/${itemId}`, { method: "PUT", body });
-  const it = await resp.json();
-  if (!resp.ok) {
-    // Recusa explícita do servidor (ex.: preço Daune travado): avisa e recarrega a linha
-    // como está gravada, em vez de deixar na tela um valor que não existe.
-    anaraToast(it.detail || it.erro || "Não foi possível atualizar o item.");
-    setTimeout(() => location.reload(), 900);
-    return;
-  }
-
-  const tr = document.querySelector(`tr[data-item-id="${itemId}"]`);
-  tr.dataset.faturamento = it.faturamento;
-  tr.dataset.lucro = it.lucro;
-  tr.dataset.custo = it.custo_total;
-  document.getElementById(`diff-${itemId}`).textContent = it.diferenca_pct_vs_base !== null ? pct(it.diferenca_pct_vs_base) : "—";
-  document.getElementById(`fat-${itemId}`).textContent = brl(it.faturamento);
-  document.getElementById(`lucro-${itemId}`).textContent = brl(it.lucro);
-  document.getElementById(`valor-${itemId}`).value = it.preco_negociado.toFixed(2);
-  const campoMargem = document.getElementById(`margem-input-${itemId}`);
-  campoMargem.value = (it.margem_liquida * 100).toFixed(2);
-  const padrao = parseFloat(tr.dataset.margemPadrao) || 0;
-  const abaixo = padrao > 0 && it.margem_liquida < padrao - 0.0005;
-  campoMargem.classList.toggle("margem-abaixo", abaixo);
-  campoMargem.classList.toggle("margem-ok", !abaixo);
-  recalcularTotais();
-  anaraToast("Item atualizado.");
-}
-
-async function removerItem(itemId) {
-  await fetch(`/cotacoes/${COTACAO_ID}/itens/${itemId}`, { method: "DELETE" });
-  document.querySelector(`tr[data-item-id="${itemId}"]`)?.remove();
-  recalcularTotais();
-  anaraToast("Item removido.");
-}
-
-function recalcularTotais() {
-  const linhas = document.querySelectorAll("#corpo-itens tr[data-item-id]");
-  let faturamento = 0, custo = 0, lucro = 0;
-  linhas.forEach(tr => {
-    faturamento += parseFloat(tr.dataset.faturamento) || 0;
-    custo += parseFloat(tr.dataset.custo) || 0;
-    lucro += parseFloat(tr.dataset.lucro) || 0;
-  });
-  document.getElementById("tot-faturamento").textContent = brl(faturamento);
-  document.getElementById("tot-custo").textContent = brl(custo);
-  document.getElementById("tot-lucro").textContent = brl(lucro);
-  document.getElementById("tot-margem").textContent = pct(faturamento ? lucro / faturamento : 0);
-  if (linhas.length === 0) {
-    document.getElementById("tabela-itens").insertAdjacentHTML("afterend",
-      '<div class="empty-state" id="itens-vazio"><h3>Nenhum item ainda</h3><p>Busque um produto acima pra começar.</p></div>');
-  }
-}
+  window.cancelarAdd = function () { produtoSelecionado = null; document.getElementById("form-add-item").hidden = true; };
+  const atualizarPreviewAdd = debounce(async () => {
+    if (!produtoSelecionado) return;
+    const qtd = parseFloat(document.getElementById("add-qtd").value) || 0;
+    const body = new URLSearchParams({produto_id: produtoSelecionado.id, quantidade: qtd, modo: "margem", valor: produtoSelecionado.margem_padrao_pct || 0});
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/calc`, {method: "POST", body});
+    const alvo = document.getElementById("add-preview");
+    if (!r.ok || !r.dados) { alvo.textContent = ""; return; }
+    alvo.innerHTML = r.dados.sem_custo ? `<span class="muted">sem preço automático</span>`
+      : `recomendado <strong>${brl(r.dados.preco_negociado)}</strong> · total <strong>${brl(r.dados.faturamento)}</strong>`;
+  }, 200);
+  document.getElementById("add-qtd")?.addEventListener("input", atualizarPreviewAdd);
+  window.adicionarItem = async function () {
+    if (!produtoSelecionado) return;
+    const qtd = parseFloat(document.getElementById("add-qtd").value) || 0;
+    if (qtd <= 0) { anaraToast("Informe uma quantidade válida.", "erro"); return; }
+    const body = new URLSearchParams({produto_id: produtoSelecionado.id, quantidade: qtd, modo: "margem"});
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/itens`, {method: "POST", body});
+    if (!r.ok) { anaraToast(r.erro, "erro"); return; }
+    location.reload();
+  };
+})();

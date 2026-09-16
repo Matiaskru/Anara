@@ -102,6 +102,8 @@ def _erro(mensagem: str, status: int = 400):
 #: quatro premissas, com rigor diferente — o mais fácil de achar era o menos auditado — e o
 #: menu lateral oferecia os dois lado a lado, sem dizer qual servia para quê.
 AREAS_ADMIN = [
+    ("Relatórios comerciais", "/relatorios",
+     "Pipeline, conversão, documentos, aprovações e o relatório econômico (Fase 3C: saiu do menu)."),
     ("Premissas e preços", "/admin/premissas",
      "Câmbio, frete internacional, despesas de importação e PIS/COFINS nominal."),
     ("Catálogo e custos", "/produtos",

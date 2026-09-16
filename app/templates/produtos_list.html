@@ -1,100 +1,85 @@
 {% extends "base.html" %}
-{% block title %}Produtos e preços — Anara Cotações{% endblock %}
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1>Produtos e preços</h1>
-    <div class="subtitle">
-      {{ produtos|length }} SKU(s) · catálogo único: KTC, Daune e Decor Tricot lado a lado
-      {% if ultima_importacao %} · última importação de planilha em {{ ultima_importacao.importado_em|data }}{% endif %}
-    </div>
-  </div>
-  {% if administra(request) %}
-  <a href="/relatorios/qualidade" class="btn btn-ghost">Qualidade da base</a>
-  {% endif %}
-</div>
+{% block title %}Produtos — Anara{% endblock %}
 
-<div class="card">
-  <form method="get" class="grid-4" style="margin-bottom:14px;">
-    <div class="field"><label>Buscar</label><input name="q" value="{{ q }}" placeholder="nome, família, categoria"></div>
-    <div class="field">
-      <label>Fornecedor</label>
-      <select name="fornecedor" onchange="this.form.submit()">
-        <option value="">Todos</option>
-        {% for f in fornecedores %}
-        <option value="{{ f.codigo }}" {{ 'selected' if f.codigo == fornecedor_filtro else '' }}>{{ f.nome }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    {% if ve_economia(request) %}
-    <div class="field">
-      <label>Método de custo</label>
-      <select name="metodo" onchange="this.form.submit()">
-        <option value="">Todos</option>
-        {% for m in metodos %}
-        <option value="{{ m }}" {{ 'selected' if m == metodo_filtro else '' }}>{{ m }}</option>
-        {% endfor %}
-      </select>
-    </div>
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Produtos</h1><span class="contexto">{{ produtos|length }} de {{ total_catalogo }} itens do catálogo</span></div>
+  <div class="acoes">
+    {% if administra(request) %}
+    <a href="/relatorios/qualidade" class="btn btn-ghost btn-sm">Qualidade da base</a>
+    <a href="/admin/premissas" class="btn btn-ghost btn-sm">Premissas e preços</a>
     {% endif %}
-    <div class="field">
-      <label>Situação</label>
-      <select name="revisao" onchange="this.form.submit()">
-        <option value="">Todas</option>
-        <option value="sim" {{ 'selected' if revisao_filtro == 'sim' else '' }}>Só as que precisam de revisão</option>
-        <option value="sem_custo" {{ 'selected' if revisao_filtro == 'sem_custo' else '' }}>Só as que faltam cotar (sem custo)</option>
-      </select>
-    </div>
-  </form>
-
-  <table class="compacta">
-    <thead>
-      <tr>
-        <th>Produto</th><th>Fornecedor</th>
-        {% if ve_economia(request) %}<th>Método</th><th class="num">Custo NET</th>{% endif %}
-        <th class="num">Preço-base</th>
-        {% if ve_economia(request) %}<th class="num">Margem padrão</th><th>Origem do custo</th>{% endif %}
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in produtos %}
-      {% set f = fornecedor_por_id.get(p.fornecedor_id) %}
-      <tr>
-        <td>
-          <strong>{{ p.nome }}</strong>
-          {% if p.precisa_revisao %}<span class="tag tag-review">revisar</span>{% endif %}
-          <br><span style="color:var(--gray); font-size:10.5px;">{{ p.especificacao or '' }}</span>
-        </td>
-        <td>
-          {% if f %}
-          <span class="tag {{ 'tag-ktc' if f.codigo == 'KTC' else ('tag-daune' if f.codigo == 'DAUNE' else 'tag-decor') }}">{{ f.nome.split(' ')[0] }}</span>
-          {% else %}—{% endif %}
-        </td>
-        {% if ve_economia(request) %}
-        <td><span class="tag {{ 'tag-calc' if p.cost_method == 'KTC_CALCULATED' else ('tag-legacy' if p.cost_method == 'LEGACY_EXCEL' else 'tag-quoted') }}">{{ p.cost_method or '—' }}</span></td>
-        <td class="num">{{ p.custo_unitario|brl if p.custo_unitario else '<span class="tag tag-review">a cotar</span>'|safe }}</td>
-        {% endif %}
-        <td class="num">{{ p.preco_base|brl if p.preco_base else '—' }}</td>
-        {% if ve_economia(request) %}<td class="num">{{ p.margem_padrao_pct|pct }}</td>{% endif %}
-        {% if ve_economia(request) %}
-        <td style="font-size:10.5px; color:var(--gray);">
-          {{ p.custo_ref_documento or '—' }}{% if p.custo_ref_data %}<br>{{ p.custo_ref_data|data }}{% endif %}
-          {% if p.custo_ref_cliente and p.custo_ref_cliente != 'ANARA' %}<br>cliente do documento: {{ p.custo_ref_cliente }}{% endif %}
-        </td>
-        {% endif %}
-        <td><button class="btn btn-ghost btn-sm" onclick="abrirMemoriaProduto({{ p.id }})">Memória</button></td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% if not produtos %}<div class="empty-state"><h3>Nenhum produto encontrado</h3></div>{% endif %}
-</div>
-
-<div class="drawer-fundo" id="drawer-fundo" onclick="fecharMemoria()"></div>
-<div class="drawer" id="drawer-memoria">
-  <button class="fechar" onclick="fecharMemoria()">×</button>
-  <div id="conteudo-memoria"></div>
+  </div>
 </div>
 {% endblock %}
-{% block extra_scripts %}<script src="/static/js/memoria.js"></script>{% endblock %}
+
+{% block content %}
+<form method="get" class="filters">
+  <input type="search" name="q" value="{{ q }}" placeholder="Buscar: lençol 250 listrado, travesseiro, bath towel…" aria-label="Buscar produto" style="min-width:300px;">
+  <select name="fornecedor" data-auto-submit aria-label="Fornecedor">
+    <option value="">Todos os fornecedores</option>
+    {% for f in fornecedores %}<option value="{{ f.codigo }}" {{ 'selected' if f.codigo == fornecedor_filtro else '' }}>{{ f.nome }}</option>{% endfor %}
+  </select>
+  <select name="familia" data-auto-submit aria-label="Família">
+    <option value="">Todas as famílias</option>
+    {% for f in familias %}<option value="{{ f }}" {{ 'selected' if f == familia_filtro else '' }}>{{ f }}</option>{% endfor %}
+  </select>
+  <select name="situacao" data-auto-submit aria-label="Situação">
+    <option value="">Qualquer situação</option>
+    {% for valor, rotulo in situacoes %}<option value="{{ valor }}" {{ 'selected' if valor == situacao_filtro else '' }}>{{ rotulo }}</option>{% endfor %}
+  </select>
+  {% if ve_economia(request) %}
+  <select name="metodo" data-auto-submit aria-label="Método de custo">
+    <option value="">Todos os métodos de custo</option>
+    {% for m in metodos %}<option value="{{ m }}" {{ 'selected' if m == metodo_filtro else '' }}>{{ m }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  {% if q or fornecedor_filtro or familia_filtro or situacao_filtro or metodo_filtro %}<a class="btn btn-ghost btn-sm" href="/produtos">Limpar</a>{% endif %}
+</form>
+
+<div class="card flush">
+  <div class="tw">
+  <table>
+    <thead><tr>
+      <th style="min-width:260px;">Produto</th><th>Fornecedor</th><th>Família</th>
+      {% if ve_economia(request) %}<th>Método</th><th class="num">Custo NET</th>{% endif %}
+      <th class="num">Preço de referência</th>
+      {% if ve_economia(request) %}<th class="num">Margem padrão</th><th>Origem do custo</th>{% endif %}
+      <th>Situação</th>
+      {% if ve_economia(request) %}<th></th>{% endif %}
+    </tr></thead>
+    <tbody>
+    {% for p in produtos %}
+      {% set f = fornecedor_por_id.get(p.fornecedor_id) %}
+      {% set sit = situacao_de(p) %}
+      <tr>
+        <td class="primaria">{{ p.nome }}<span class="sub">{{ p.especificacao or '' }}</span></td>
+        <td>{% if f %}<span class="tag {{ 'tag-ktc' if f.codigo == 'KTC' else ('tag-daune' if f.codigo == 'DAUNE' else 'tag-decor') }}">{{ f.nome.split(' ')[0] }}</span>{% else %}—{% endif %}</td>
+        <td class="muted">{{ p.familia or '—' }}</td>
+        {% if ve_economia(request) %}
+        <td><span class="tag {{ 'tag-calc' if p.cost_method == 'KTC_CALCULATED' else ('tag-legacy' if p.cost_method == 'LEGACY_EXCEL' else 'tag-quoted') }}">{{ p.cost_method or '—' }}</span></td>
+        <td class="num">{{ p.custo_unitario|brl if p.custo_unitario else '—' }}</td>
+        {% endif %}
+        <td class="num">{{ p.preco_base|brl if p.preco_base else '—' }}</td>
+        {% if ve_economia(request) %}
+        <td class="num">{{ p.margem_padrao_pct|pct }}</td>
+        <td class="muted small">{{ p.custo_ref_documento or '—' }}{% if p.custo_ref_data %}<span class="sub">{{ p.custo_ref_data|data }}</span>{% endif %}</td>
+        {% endif %}
+        <td><span class="pill sem-ponto {{ 'pill-ok' if sit == 'DISPONIVEL' else ('pill-neutro' if sit == 'SOB_CONSULTA' else 'pill-aguardando') }}">{{ rotulo_situacao[sit] }}</span></td>
+        {% if ve_economia(request) %}<td class="right"><button class="btn btn-ghost btn-xs" type="button" onclick="abrirMemoriaProduto({{ p.id }})">Memória</button></td>{% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="10" class="tbl-vazia">Nenhum produto encontrado.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+</div>
+<p class="nota">Preço de referência é o do catálogo, formado num cenário fiscal padrão. O preço recomendado de cada cotação é calculado para o destino, a condição de pagamento e o frete daquela proposta.{% if ultima_importacao %} Última importação de planilha em {{ ultima_importacao.importado_em|data }}.{% endif %}</p>
+
+{% if ve_economia(request) %}
+<div class="drawer-fundo" id="drawer-fundo" onclick="fecharMemoria()"></div>
+<div class="drawer" id="drawer-memoria"><button class="fechar" onclick="fecharMemoria()">×</button><div id="conteudo-memoria"></div></div>
+{% endif %}
+{% endblock %}
+{% block extra_scripts %}{% if ve_economia(request) %}<script src="/static/js/memoria.js"></script>{% endif %}{% endblock %}

@@ -61,10 +61,85 @@ def fmt_num(v):
     return s
 
 
+def fmt_datahora(v):
+    if not v:
+        return "—"
+    try:
+        return v.strftime("%d/%m/%Y %H:%M")
+    except AttributeError:
+        return str(v)
+
+
+def fmt_data_curta(v):
+    """`16/09` para listas densas; o ano só quando não é o corrente."""
+    if not v:
+        return "—"
+    try:
+        from datetime import date as _date
+        if v.year == _date.today().year:
+            return v.strftime("%d/%m")
+        return v.strftime("%d/%m/%y")
+    except AttributeError:
+        return str(v)
+
+
 templates.env.filters["brl"] = fmt_brl
 templates.env.filters["pct"] = fmt_pct
 templates.env.filters["data"] = fmt_data
+templates.env.filters["datahora"] = fmt_datahora
+templates.env.filters["data_curta"] = fmt_data_curta
 templates.env.filters["num"] = fmt_num
+
+
+# ---------------------------------------------------------------------------
+# Classes visuais dos status (Fase 3C) — a cor mora aqui, não em cada template
+# ---------------------------------------------------------------------------
+_PILL_VENDA = {"RASCUNHO": "pill-rascunho", "ENVIADO": "pill-enviado",
+               "NEGOCIACAO": "pill-negociacao"}
+_PILL_COTACAO = {"rascunho": "pill-rascunho", "aguardando_aprovacao": "pill-aguardando",
+                 "aprovada": "pill-aprovada", "emitida": "pill-emitida", "enviada": "pill-enviada",
+                 "cancelada": "pill-cancelada", "fechada": "pill-legado", "pedido": "pill-legado",
+                 "perdida": "pill-legado"}
+_PILL_FINANCEIRO = {"EM_DIA": "pill-pago", "EM_ABERTO": "pill-negociacao", "ATRASADO": "pill-atrasado"}
+_PILL_POS_VENDA = {"AGUARDANDO_ENTREGA": "pill-enviado", "AGUARDANDO_PAGAMENTO": "pill-negociacao",
+                   "PAGO": "pill-pago", "ATRASADO": "pill-atrasado"}
+
+
+def pill_venda(status, etapa=None) -> str:
+    if hasattr(status, "value"):
+        status = status.value
+    if status == "GANHA":
+        return "pill-vendido"
+    if status == "PERDIDA":
+        return "pill-perdido"
+    return _PILL_VENDA.get(etapa or "", "pill-neutro")
+
+
+def pill_cotacao(status) -> str:
+    if hasattr(status, "value"):
+        status = status.value
+    return _PILL_COTACAO.get(str(status or ""), "pill-neutro")
+
+
+def pill_pos_venda(status) -> str:
+    return _PILL_POS_VENDA.get(str(status or ""), "pill-neutro")
+
+
+templates.env.globals["pill_venda"] = pill_venda
+templates.env.globals["pill_cotacao"] = pill_cotacao
+def pill_financeiro(status) -> str:
+    return _PILL_FINANCEIRO.get(str(status or ""), "pill-neutro")
+
+
+def custo_pendente(status) -> bool:
+    """O custo do item impede a proposta (sob consulta / revisão)? Para a tela marcar a linha
+    sem escrever o código do status no template."""
+    return str(status or "").upper() in ("A_COTAR", "REVIEW_REQUIRED")
+
+
+templates.env.globals["custo_pendente"] = custo_pendente
+templates.env.globals["pill_pos_venda"] = pill_pos_venda
+templates.env.globals["pill_financeiro"] = pill_financeiro
 
 
 # ---------------------------------------------------------------------------
@@ -127,6 +202,8 @@ def _registrar_rotulos():
     templates.env.filters["rotulo_atividade"] = rotulos.atividade
     templates.env.filters["rotulo_papel"] = rotulos.papel
     templates.env.filters["explicacao_custo"] = rotulos.explicacao_custo
+    templates.env.globals["rotulo_evento"] = rotulos.evento_timeline
+    templates.env.filters["rotulo_financeiro"] = rotulos.status_financeiro
 
 
 _registrar_rotulos()

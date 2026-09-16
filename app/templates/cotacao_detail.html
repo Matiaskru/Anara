@@ -1,516 +1,273 @@
 {% extends "base.html" %}
-{% block title %}{{ cotacao.numero or ('Cotação #' ~ cotacao.id) }} — Anara Cotações{% endblock %}
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1>{{ cotacao.numero or ('Cotação #' ~ cotacao.id) }}</h1>
-    <div class="subtitle">
-      <a href="/clientes/{{ cliente.id }}">{{ cliente.nome if cliente else '—' }}</a>
-      {% if cotacao.contato_nome %} · {{ cotacao.contato_nome }}{% endif %}
-      · <span class="badge badge-{{ cotacao.status.value }}">{{ cotacao.status|rotulo_cotacao }}</span>
-      · <strong>{{ totais.faturamento|brl }}</strong>
-      <div style="font-size:11.5px;margin-top:3px;">
-        criada em {{ cotacao.criado_em|data }} · validade {{ cotacao.validade_em|data }}
-        {%- if cotacao.revisao and cotacao.revisao > 1 %} · revisão {{ cotacao.revisao }}{% endif %}
-      </div>
+{% block title %}{{ cotacao.numero or ('Cotação #' ~ cotacao.id) }} — Anara{% endblock %}
+{% set estado = cotacao.status.value if cotacao.status.value is defined else cotacao.status %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo">
+    <div>
+      <div class="crumbs"><a href="/clientes/{{ cliente.id }}">{{ cliente.nome if cliente else '—' }}</a>{% if venda %} · <a href="/vendas/{{ venda.id }}">{{ venda.titulo }}</a>{% else %} · <span title="Cotação anterior ao CRM">Legado — sem venda vinculada</span>{% endif %}</div>
+      <h1>Cotação {{ cotacao.numero or ('#' ~ cotacao.id) }}{% if (cotacao.revisao or 1) > 1 %} · R{{ cotacao.revisao }}{% endif %}</h1>
     </div>
-  </div>
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    <form method="post" action="/cotacoes/{{ cotacao.id }}/duplicar" style="display:inline;">
-      <button class="btn btn-ghost" type="submit">Duplicar</button>
-    </form>
-    <a href="/cotacoes/{{ cotacao.id }}/pdf" class="btn btn-copper" target="_blank">Gerar PDF</a>
-  </div>
-</div>
-
-{% if request.query_params.get('premissas') == 'atualizadas' %}
-<div class="card" style="background:#E7F0E9; margin-bottom:14px;">
-  Premissas atualizadas e preços recalculados.
-</div>
-{% elif request.query_params.get('cenario') == 'atualizado' %}
-<div class="card" style="background:#E7F0E9; margin-bottom:14px;">
-  Cenário atualizado e preços recalculados.
-</div>
-{% elif request.query_params.get('salvo') %}
-<div class="card" style="background:#E7F0E9; margin-bottom:14px;">
-  Dados salvos. Nada que mudasse o cálculo foi alterado, então os preços seguem os mesmos.
-</div>
-{% endif %}
-
-{#
-  Premissa mais recente que a desta cotação. Nada foi alterado — a escolha é de quem
-  negocia. Manter é decisão comercial e vira exceção na aprovação; atualizar recalcula.
-#}
-{% if premissas_novas and premissas_novas.desatualizado %}
-<div class="card aviso-premissas" style="margin-bottom:14px;">
-  <div style="font-weight:600; margin-bottom:8px;">
-    Existem premissas mais recentes disponíveis
-  </div>
-
-  {% for p in premissas_novas.premissas %}
-  <div style="font-size:13px; margin-bottom:4px;">
-    <strong>{{ p.rotulo }}</strong> — esta cotação usa <strong>{{ p.no_item }}</strong>,
-    e o valor atual é <strong>{{ p.vigente }}</strong>{% if p.vigente_desde %},
-    desde {{ p.vigente_desde }}{% endif %}.
-  </div>
-  {% endfor %}
-
-  {% if premissas_novas.itens and ve_economia(request) %}
-  <div style="font-size:13px; margin-top:6px;">
-    {{ premissas_novas.itens|length }} item(ns) usam custo anterior ao vigente.
-  </div>
-  {% endif %}
-
-  <div style="font-size:12px; color:var(--gray); margin:10px 0 12px; line-height:1.5;">
-    Nada mudou sozinho. Manter os valores desta cotação é uma decisão comercial e passa
-    pela aprovação; atualizar recalcula os preços com os valores de hoje.
-  </div>
-
-  <div style="display:flex; gap:8px; flex-wrap:wrap;">
-    <form method="post" action="/cotacoes/{{ cotacao.id }}/premissas/atualizar"
-          style="display:inline;">
-      <button class="btn btn-copper btn-sm" type="submit">Atualizar e recalcular</button>
-    </form>
-    <button class="btn btn-ghost btn-sm" type="button"
-            onclick="manterPremissas({{ cotacao.id }})">Manter premissas desta cotação</button>
-  </div>
-</div>
-{% endif %}
-
-{#
-  Ordem por hierarquia de uso, não pela ordem em que as telas foram construídas.
-  Quem abre uma cotação vem ver e mexer nos PRODUTOS; os dados da venda são
-  preenchidos uma vez e revisitados raramente. Antes, o formulário do cabeçalho
-  ocupava a primeira dobra inteira e os itens ficavam abaixo dele.
-#}
-{% if cotacao.arquivada_em %}
-<div class="card" style="background:#F3E7E4;">
-  <strong>Esta cotação está arquivada</strong> desde {{ cotacao.arquivada_em|data }}.
-  {{ cotacao.arquivada_motivo or '' }}
-  Ela não aparece na lista nem nos totais do dashboard.
-  <form method="post" action="/cotacoes/{{ cotacao.id }}/restaurar" style="display:inline;">
-    <button class="btn btn-ghost btn-sm" type="submit">Restaurar</button>
-  </form>
-  <form method="post" action="/cotacoes/{{ cotacao.id }}/apagar" style="display:inline;"
-        onsubmit="return confirm('Apagar {{ cotacao.numero }} de vez? O banco é copiado antes, mas ela some da plataforma.');">
-    <input type="hidden" name="confirmar" value="sim">
-    <button class="btn btn-ghost btn-sm" type="submit">Apagar de vez</button>
-  </form>
-  {% if avisos_exclusao %}
-  <div class="aviso-inline">Antes de apagar, vale saber: esta cotação {{ avisos_exclusao|join('; ') }}.</div>
-  {% endif %}
-</div>
-{% endif %}
-
-<div class="card">
-  <h3 style="margin-bottom:12px;">Adicionar produto</h3>
-  <div style="display:flex; gap:8px; align-items:flex-start;">
-    <div class="search-box" style="flex:1;">
-      <input type="text" id="busca-produto" placeholder="Buscar em português ou inglês: lencol 250 listrado, bath towel, chao 750...">
-      <div id="resultados-busca" class="search-results" style="display:none;"></div>
-    </div>
-    <a href="/calculadora?cotacao_id={{ cotacao.id }}" class="btn btn-ghost" style="white-space:nowrap;">
-      Calcular produto novo
-    </a>
-  </div>
-
-  <div id="form-add-item" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--row-alt);">
-    <p id="produto-selecionado-nome" style="font-weight:700; margin-bottom:4px;"></p>
-    <div id="produto-selecionado-meta" style="font-size:11.5px; color:var(--gray); margin-bottom:10px;"></div>
-    <div class="grid-3">
-      <div class="field"><label>Quantidade</label><input type="number" id="add-qtd" min="1" value="1"></div>
-      <div class="field">
-        <label>Modo</label>
-        <div class="mode-toggle">
-          {% if ve_economia(request) %}
-          <button type="button" id="modo-margem-btn" class="active" onclick="setModo('margem')">Margem-alvo</button>
-          <button type="button" id="modo-preco-btn" onclick="setModo('preco')">Preço</button>
-          <button type="button" id="modo-markup-btn" onclick="setModo('markup')">Markup</button>
-          {% else %}
-          <button type="button" id="modo-preco-btn" class="active" onclick="setModo('preco')">Preço</button>
-          {% endif %}
-        </div>
-      </div>
-      <div class="field">
-        {# O rótulo acompanha o modo inicial: quem não vê economia só tem o modo Preço. #}
-        <label id="add-valor-label">{% if ve_economia(request) %}Margem líquida desejada (%){% else %}Preço unitário (R$){% endif %}</label>
-        <input type="number" step="0.01" id="add-valor">
-      </div>
-    </div>
-    <div id="add-preview" class="card" style="background:var(--row-alt); box-shadow:none; margin-top:10px;"></div>
-    <button class="btn btn-copper" style="margin-top:10px;" onclick="adicionarItem()">Adicionar à cotação</button>
-    <button class="btn btn-ghost" style="margin-top:10px;" onclick="cancelarAdd()">Cancelar</button>
-  </div>
-</div>
-
-<div class="card">
-  <h3 style="margin-bottom:12px;">Produtos</h3>
-  <table id="tabela-itens">
-    <thead>
-      <tr>
-        <th>#</th><th>Produto</th><th>Fornecedor</th><th class="num">Qtd</th><th class="num">Preço-base</th>
-        <th class="num">Preço negociado</th><th class="num">Diferença</th>
-        <th class="num">Faturamento</th>
-        {% if ve_economia(request) %}
-        <th class="num">Lucro</th>
-        <th class="num">Margem padrão</th><th class="num">Margem negociada</th>
-        {% endif %}
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="corpo-itens">
-      {% for it in itens %}
-      <tr data-item-id="{{ it.id }}" data-faturamento="{{ it.faturamento }}"
-          {% if ve_economia(request) %}data-lucro="{{ it.lucro }}" data-custo="{{ it.custo_total }}" data-margem-padrao="{{ it.margem_padrao_pct or 0 }}"{% endif %}>
-        <td>{{ it.ordem + 1 }}</td>
-        <td><strong>{{ it.nome_produto }}</strong><br><span style="color:var(--gray); font-size:11px;">{{ it.especificacao or '' }}</span></td>
-        <td>
-          {% set forn = (it.fornecedor_nome or '') %}
-          <span class="tag {{ 'tag-ktc' if 'Kazareen' in forn else ('tag-daune' if 'Daune' in forn else 'tag-decor') }}">{{ forn.split(' ')[0] if forn else '—' }}</span>
-        </td>
-        <td class="num"><input type="number" min="1" value="{{ it.quantidade|int }}" style="width:66px;" onchange="editarItem({{ it.id }})" id="qtd-{{ it.id }}"></td>
-        <td class="num">{{ it.preco_base|brl }}</td>
-        <td class="num"><input type="number" step="0.01" value="{{ '%.2f'|format(it.preco_negociado) }}" style="width:96px;" onchange="editarItem({{ it.id }}, 'preco')" id="valor-{{ it.id }}"></td>
-        <td class="num" id="diff-{{ it.id }}">{{ it.diferenca_pct_vs_base|pct }}</td>
-        <td class="num" id="fat-{{ it.id }}">{{ it.faturamento|brl }}</td>
-        {% if ve_economia(request) %}
-        <td class="num" id="lucro-{{ it.id }}">{{ it.lucro|brl }}</td>
-        <td class="num" style="color:var(--gray);">{{ it.margem_padrao_pct|pct }}</td>
-        {% endif %}
-        {% if ve_economia(request) %}
-        <td class="num">
-          <input type="number" step="0.1" value="{{ '%.2f'|format(it.margem_liquida * 100) }}"
-                 style="width:74px;" id="margem-input-{{ it.id }}"
-                 class="{{ 'margem-abaixo' if it.margem_padrao_pct and it.margem_liquida < it.margem_padrao_pct - 0.0005 else 'margem-ok' }}"
-                 onchange="editarItem({{ it.id }}, 'margem')"
-                 {% if not it.custo_unitario %}disabled title="Produto sem custo: margem não é calculável"{% endif %}>
-        </td>
-        {% endif %}
-        <td style="white-space:nowrap;">
-          {% if ve_economia(request) %}
-          <button class="btn btn-ghost btn-sm" onclick="abrirMemoria({{ it.id }})">Memória</button>
-          {% endif %}
-          <button class="btn btn-ghost btn-sm" onclick="removerItem({{ it.id }})">Remover</button>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-  {% if not itens %}
-  <div class="empty-state" id="itens-vazio"><h3>Nenhum item ainda</h3><p>Busque um produto acima — KTC, Daune ou Decor Tricot, na mesma cotação.</p></div>
-  {% endif %}
-</div>
-
-<div class="card">
-  <h3 style="margin-bottom:12px;">Resumo comercial</h3>
-  <div class="kpi-grid" id="totais-resumo" style="grid-template-columns: repeat(4,1fr);">
-    <div class="kpi"><div class="label">Faturamento</div><div class="value" id="tot-faturamento">{{ totais.faturamento|brl }}</div></div>
-    {% if ve_economia(request) %}
-    <div class="kpi"><div class="label">Custo total</div><div class="value" id="tot-custo">{{ totais.custo_total|brl }}</div></div>
-    <div class="kpi"><div class="label">Lucro</div><div class="value copper" id="tot-lucro">{{ totais.lucro|brl }}</div></div>
-    <div class="kpi"><div class="label">Margem líquida</div><div class="value" id="tot-margem">{{ totais.margem_liquida|pct }}</div></div>
+    <span class="pill sem-ponto {{ pill_cotacao(estado) }}">{{ estado|rotulo_cotacao }}</span>
+    {% if revisoes|length > 1 %}
+    <select class="input-sm" style="width:auto;" onchange="if (this.value) window.location='/cotacoes/'+this.value" aria-label="Revisão">
+      {% for r in revisoes %}<option value="{{ r.id }}" {{ 'selected' if r.id == cotacao.id else '' }}>R{{ r.revisao }} — {{ r.status|rotulo_cotacao }}</option>{% endfor %}
+    </select>
     {% endif %}
   </div>
+  <div class="acoes">
+    <a href="/cotacoes/{{ cotacao.id }}/pdf" class="btn btn-ghost acao-de-saida" target="_blank">{{ 'PDF da proposta' if estado in ('emitida', 'enviada') else 'PDF (rascunho)' }}</a>
+    <button class="btn btn-ghost btn-icon" type="button" data-popover="popover-mais" aria-label="Mais ações">⋯</button>
+  </div>
 </div>
+<div class="popover" id="popover-mais" role="menu">
+  <form method="post" action="/cotacoes/{{ cotacao.id }}/duplicar"><button type="submit" role="menuitem">Duplicar cotação</button></form>
+  {% if not cotacao.arquivada_em %}
+  <form method="post" action="/cotacoes/{{ cotacao.id }}/arquivar" onsubmit="return confirm('Arquivar esta cotação? Ela sai da lista e dos totais; dá para restaurar.');"><button type="submit" role="menuitem">Arquivar</button></form>
+  {% else %}
+  <form method="post" action="/cotacoes/{{ cotacao.id }}/restaurar"><button type="submit" role="menuitem">Restaurar</button></form>
+  <form method="post" action="/cotacoes/{{ cotacao.id }}/apagar" onsubmit="return confirm('Apagar {{ cotacao.numero|e }} de vez? O banco é copiado antes, mas ela some da plataforma.');"><input type="hidden" name="confirmar" value="sim"><button type="submit" role="menuitem" style="color:var(--danger);">Apagar de vez</button></form>
+  {% endif %}
+</div>
+{% endblock %}
 
+{% block content %}
+{% if request.query_params.get('premissas') == 'atualizadas' %}
+<div class="banner banner-ok"><div>Premissas atualizadas e preços recalculados.</div></div>
+{% elif request.query_params.get('cenario') == 'atualizado' %}
+<div class="banner banner-ok"><div>Cenário atualizado e preços recalculados.</div></div>
+{% elif request.query_params.get('salvo') %}
+<div class="banner banner-ok"><div>Dados salvos. Nada que mudasse o cálculo foi alterado.</div></div>
+{% endif %}
 
-<h2 class="secao">Dados da venda</h2>
-<div class="grid-2">
-  <div class="card">
-    <h3 style="margin-bottom:12px;">Cenário comercial e fiscal</h3>
-    <form method="post" action="/cotacoes/{{ cotacao.id }}/atualizar" class="grid-2">
-      <div class="field">
-        <label>Condição de pagamento</label>
-        <select name="condicao_pagamento" data-material>
-          {% for c in condicoes %}
-          <option value="{{ c.codigo }}" {{ 'selected' if c.codigo == cotacao.condicao_pagamento else '' }}>
-            {{ c.label }}{% if c.encargo_pct is not none %} · {{ c.encargo_pct|pct }}{% else %} · a confirmar{% endif %}
-          </option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label>Destino da venda</label>
-        <select name="estado_destino" data-material>
-          <option value="">Definir depois</option>
-          {% for uf in estados_difal %}
-          <option value="{{ uf }}" {{ 'selected' if uf == cotacao.estado_destino else '' }}>{{ uf }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="field">
-        <label>Cliente é contribuinte de ICMS?</label>
-        <div class="mode-toggle">
-          <button type="button" class="{{ 'active' if cotacao.contribuinte_icms else '' }}" data-contribuinte="sim" onclick="setContribuinte(this,'sim')">SIM</button>
-          <button type="button" class="{{ '' if cotacao.contribuinte_icms else 'active' }}" data-contribuinte="nao" onclick="setContribuinte(this,'nao')">NÃO</button>
-        </div>
-        <input type="hidden" name="contribuinte_icms" id="contribuinte_icms_input" data-material value="{{ 'sim' if cotacao.contribuinte_icms else 'nao' }}">
-      </div>
-      <div class="field">
-        <label>Tipo de frete</label>
-        <select name="freight_type" data-material>
-          {% for t in tipos_frete %}<option value="{{ t }}" {{ 'selected' if t == cotacao.freight_type else '' }}>{{ t }}</option>{% endfor %}
-        </select>
-      </div>
+{% if cotacao.arquivada_em %}
+<div class="banner banner-warn"><div><strong>Cotação arquivada</strong> desde {{ cotacao.arquivada_em|data }}. {{ cotacao.arquivada_motivo or '' }} Não aparece na lista nem nos totais.
+  {% if avisos_exclusao %}<br><span class="small">Antes de apagar: esta cotação {{ avisos_exclusao|join('; ') }}.</span>{% endif %}</div></div>
+{% endif %}
 
-      <div style="grid-column: span 2; font-size:11px; color:var(--gray);">
-        Cenário fiscal aplicado agora: <strong>{{ regra_icms_atual }}</strong> —
-        ICMS {{ contexto_fiscal.icms_pct|pct }} ·
-        PIS/COFINS nominal {{ contexto_fiscal.pis_cofins_nominal_pct|pct(2) }}
-        {%- if contexto_fiscal.pis_cofins_pct %}, efetivo {{ contexto_fiscal.pis_cofins_pct|pct(3) }}
-        {%- else %} — o efetivo é por item ({{ contexto_fiscal.pis_cofins_nominal_pct|pct(2) }} menos o ICMS de cada linha){% endif %} ·
-        encargo {{ contexto_fiscal.encargo_pct|pct }} ({{ contexto_fiscal.encargo_label }})
-        {% if contexto_fiscal.encargo_aviso %}<div class="aviso-inline">{{ contexto_fiscal.encargo_aviso }}</div>{% endif %}
-      </div>
+{% if premissas_novas and premissas_novas.desatualizado and editavel %}
+<div class="banner banner-info aviso-premissas"><div>
+  <strong>Existem premissas mais recentes disponíveis</strong>
+  {% for p in premissas_novas.premissas %}<div class="small">{{ p.rotulo }}: esta cotação usa {{ p.no_item }}; o valor atual é {{ p.vigente }}{% if p.vigente_desde %} (desde {{ p.vigente_desde }}){% endif %}.</div>{% endfor %}
+  {% if premissas_novas.itens and economia %}<div class="small">{{ premissas_novas.itens|length }} item(ns) usam custo anterior ao vigente.</div>{% endif %}
+  <div class="flex mt-8">
+    <form method="post" action="/cotacoes/{{ cotacao.id }}/premissas/atualizar"><button class="btn btn-copper btn-sm" type="submit">Atualizar e recalcular</button></form>
+    <button class="btn btn-ghost btn-sm" type="button" onclick="manterPremissas({{ cotacao.id }})">Manter os valores desta cotação</button>
+  </div>
+</div></div>
+{% endif %}
 
-      {# Estado explícito do bloco 10: campo material mexido e ainda não aplicado. #}
-      <div id="pendente" class="pendente" style="grid-column: span 2;" hidden>
-        <strong>Há alterações ainda não aplicadas ao cálculo.</strong>
-        Os preços abaixo pertencem ao cenário anterior.
-      </div>
-
-      <div style="grid-column: span 2; display:flex; gap:8px; align-items:center;">
-        <button class="btn btn-copper btn-sm" type="submit" id="btn-salvar">Atualizar cenário e recalcular</button>
-        <span style="font-size:11px; color:var(--gray);">Salva os dados e reforma os preços.</span>
-      </div>
-
-      <details class="mais-detalhes" style="grid-column: span 2;">
-        <summary>Mais detalhes</summary>
-        <div class="grid-2" style="margin-top:12px;">
-          <div class="field"><label>Prazo de entrega</label><input name="prazo_entrega" value="{{ cotacao.prazo_entrega or '' }}" placeholder="ex.: 30 dias"></div>
-          <div class="field"><label>Validade (dias)</label><input type="number" name="validade_dias" min="1" value="{{ cotacao.validade_dias or 5 }}"></div>
-          <div class="field"><label>Responsável</label><input name="vendedor" value="{{ cotacao.vendedor or '' }}" placeholder="Não informado"></div>
-          <div class="field"><label>Contato</label><input name="contato_nome" value="{{ cotacao.contato_nome or '' }}" placeholder="Não informado"></div>
-          <div class="field"><label>Departamento</label><input name="departamento_contato" value="{{ cotacao.departamento_contato or '' }}" list="departamentos" placeholder="Não informado">
-            <datalist id="departamentos"><option>Compras</option><option>Governança</option><option>Operações</option><option>Financeiro</option><option>Diretoria</option></datalist>
+<div class="split" id="cotacao" data-cotacao="{{ cotacao.id }}" data-editavel="{{ '1' if editavel else '0' }}" data-economia="{{ '1' if economia else '0' }}">
+  {# ============================================================ principal #}
+  <div>
+    {# ---- dados comerciais compactos ---- #}
+    <form method="post" action="/cotacoes/{{ cotacao.id }}/atualizar" class="card" id="form-cabecalho" {% if not editavel %}data-somente-leitura{% endif %}>
+      <div class="grid-6" style="gap:10px;">
+        <div class="field"><label>Cliente</label><div style="font-weight:700;padding-top:4px;">{{ cliente.nome if cliente else '—' }}</div>
+          <small>{{ cotacao.contato_nome or (cliente.contato_nome if cliente else '') or '' }}</small></div>
+        <div class="field"><label for="c-destino">Destino</label>
+          <select id="c-destino" name="estado_destino" data-material {% if not editavel %}disabled{% endif %}>
+            <option value="">Definir depois</option>
+            {% for uf in estados_difal %}<option value="{{ uf }}" {{ 'selected' if uf == cotacao.estado_destino else '' }}>{{ uf }}</option>{% endfor %}
+          </select></div>
+        <div class="field"><label>Contribuinte de ICMS</label>
+          <div class="mode-toggle">
+            <button type="button" class="{{ 'active' if cotacao.contribuinte_icms else '' }}" data-contribuinte="sim" onclick="setContribuinte(this,'sim')" {% if not editavel %}disabled{% endif %}>Sim</button>
+            <button type="button" class="{{ '' if cotacao.contribuinte_icms else 'active' }}" data-contribuinte="nao" onclick="setContribuinte(this,'nao')" {% if not editavel %}disabled{% endif %}>Não</button>
           </div>
-          <div class="field"><label>Frete (texto na proposta)</label><input name="frete" value="{{ cotacao.frete or '' }}" placeholder="Incluso / A combinar"></div>
-
-          {#
-            Duas coisas diferentes, nomeadas por extenso. A origem fiscal decide o imposto;
-            a origem logística decide o frete. Uma não se infere da outra — Itajaí-SC ser o
-            ponto de entrada da mercadoria importada não prova a origem fiscal da venda.
-          #}
-          <div class="field" style="grid-column: span 2;">
-            <label>Origem fiscal da NF</label>
-            <div class="valor-derivado">
-              {% if origem_fiscal.uf %}<strong>{{ origem_fiscal.uf }}</strong>{% else %}<em>não definida</em>{% endif %}
-              <span style="color:var(--gray);"> — {{ origem_fiscal.fonte }}</span>
-            </div>
+          <input type="hidden" name="contribuinte_icms" id="contribuinte_icms_input" data-material value="{{ 'sim' if cotacao.contribuinte_icms else 'nao' }}"></div>
+        <div class="field"><label for="c-pagamento">Pagamento</label>
+          <select id="c-pagamento" name="condicao_pagamento" data-material {% if not editavel %}disabled{% endif %}>
+            {% for c in condicoes %}<option value="{{ c.codigo }}" {{ 'selected' if c.codigo == cotacao.condicao_pagamento else '' }}>{{ c.label }}</option>{% endfor %}
+          </select></div>
+        <div class="field"><label for="c-validade">Validade</label>
+          <div class="flex" style="gap:4px;"><input id="c-validade" type="number" name="validade_dias" min="1" value="{{ cotacao.validade_dias or 5 }}" style="width:64px;" {% if not editavel %}disabled{% endif %}><span class="muted small nowrap">dias · {{ cotacao.validade_em|data }}</span></div></div>
+        <div class="field"><label for="c-frete">Frete</label>
+          <select id="c-frete" name="freight_type" data-material {% if not editavel %}disabled{% endif %} onchange="document.getElementById('c-frete-valor-wrap').hidden = this.value !== 'CIF'">
+            <option value="CIF" {{ 'selected' if cotacao.freight_type == 'CIF' else '' }}>Anara entrega</option>
+            <option value="FOB" {{ 'selected' if cotacao.freight_type == 'FOB' else '' }}>Por conta do cliente</option>
+            <option value="A_COMBINAR" {{ 'selected' if cotacao.freight_type == 'A_COMBINAR' else '' }}>A combinar</option>
+          </select>
+          <div id="c-frete-valor-wrap" class="flex mt-8" style="gap:4px;" {% if cotacao.freight_type != 'CIF' %}hidden{% endif %}>
+            <input type="number" step="0.01" min="0" name="freight_valor" value="{{ cotacao.freight_valor if cotacao.freight_valor else '' }}" placeholder="valor R$" class="input-sm" {% if not editavel %}disabled{% endif %} aria-label="Valor do frete">
           </div>
-
-          <div class="field" style="grid-column: span 2;">
-            <label>Origem logística do embarque</label>
-            {% if origens_logisticas %}
-              {% for o in origens_logisticas %}
-              <div class="valor-derivado">
-                {% if o.conhecida %}<strong>{{ o.cidade }} — {{ o.uf }}</strong>
-                {% else %}<em>não cadastrada</em>{% endif %}
-                <span style="color:var(--gray);">
-                  · {{ o.fornecedor or 'sem fornecedor' }} · {{ o.itens }} item{{ '' if o.itens == 1 else 'ns' }}</span>
-              </div>
-              {% endfor %}
-              {% if origens_logisticas|length > 1 %}
-              <small style="color:var(--gray);">Embarques distintos: o frete de cada um é calculado à parte.</small>
-              {% endif %}
-            {% else %}
-              <div class="valor-derivado"><em>sem itens</em></div>
-            {% endif %}
+          <small>{% if cotacao.freight_type == 'CIF' and not cotacao.freight_valor %}Sem valor informado, o frete é calculado pela tabela da rota quando houver.{% endif %}</small></div>
+      </div>
+      <details class="mais" id="mais-opcoes" {% if cotacao.observacoes or cotacao.observacao_cliente %}open{% endif %}>
+        <summary>Mais opções</summary>
+        <div class="grid-4 mt-12">
+          <div class="field"><label for="c-prazo">Prazo de entrega</label><input id="c-prazo" name="prazo_entrega" value="{{ cotacao.prazo_entrega or '' }}" placeholder="ex.: 30 dias" {% if not editavel %}disabled{% endif %}></div>
+          <div class="field"><label for="c-local">Local de entrega</label><input id="c-local" name="local_entrega" value="{{ cotacao.local_entrega or '' }}" placeholder="ex.: unidade Campos do Jordão" {% if not editavel %}disabled{% endif %}></div>
+          <div class="field"><label for="c-contato">Contato</label><input id="c-contato" name="contato_nome" value="{{ cotacao.contato_nome or '' }}" {% if not editavel %}disabled{% endif %}></div>
+          <div class="field"><label for="c-depto">Departamento</label><input id="c-depto" name="departamento_contato" value="{{ cotacao.departamento_contato or '' }}" list="departamentos" {% if not editavel %}disabled{% endif %}>
+            <datalist id="departamentos"><option>Compras</option><option>Governança</option><option>Operações</option><option>Financeiro</option><option>Diretoria</option></datalist></div>
+          <div class="field"><label for="c-vendedor">Responsável</label><input id="c-vendedor" name="vendedor" value="{{ cotacao.vendedor or '' }}" {% if not editavel %}disabled{% endif %}></div>
+          <div class="field"><label for="c-frete-txt">Frete (texto na proposta)</label><input id="c-frete-txt" name="frete" value="{{ cotacao.frete or '' }}" placeholder="ex.: incluso até a portaria" {% if not editavel %}disabled{% endif %}></div>
+          <div class="field span-2"><label for="c-obs-cliente">Observação para o cliente <span class="muted" style="text-transform:none;letter-spacing:0;">(vai na proposta)</span></label>
+            <textarea id="c-obs-cliente" name="observacao_cliente" rows="2" {% if not editavel %}disabled{% endif %}>{{ cotacao.observacao_cliente or '' }}</textarea></div>
+          <div class="field span-2"><label for="c-obs">Observação interna <span class="muted" style="text-transform:none;letter-spacing:0;">(nunca vai ao cliente)</span></label>
+            <textarea id="c-obs" name="observacoes" rows="2" {% if not editavel %}disabled{% endif %}>{{ cotacao.observacoes or '' }}</textarea></div>
+          <div class="field span-2"><label for="c-termos">Termos e condições (vão na proposta)</label>
+            <textarea id="c-termos" name="termos_texto" rows="3" {% if not editavel %}disabled{% endif %}>{{ cotacao.termos_texto or '' }}</textarea></div>
+          {% if economia %}
+          <div class="field span-2"><label>Cenário fiscal aplicado</label>
+            <div class="small">{{ regra_icms_atual }} · ICMS {{ contexto_fiscal.icms_pct|pct }} · PIS/COFINS nominal {{ contexto_fiscal.pis_cofins_nominal_pct|pct(2) }} · encargo {{ contexto_fiscal.encargo_pct|pct }} ({{ contexto_fiscal.encargo_label }})
+              · origem fiscal {% if origem_fiscal.uf %}<strong>{{ origem_fiscal.uf }}</strong>{% else %}<em>não definida</em>{% endif %} <span class="muted">({{ origem_fiscal.fonte }})</span>
+              {% if contexto_fiscal.encargo_aviso %}<div class="aviso-inline">{{ contexto_fiscal.encargo_aviso }}</div>{% endif %}</div>
+            {% if origens_logisticas %}<div class="small muted mt-8">Embarque: {% for o in origens_logisticas %}{{ o.cidade ~ '/' ~ o.uf if o.conhecida else 'origem não cadastrada' }} · {{ o.fornecedor or 'sem fornecedor' }} ({{ o.itens }}){% if not loop.last %}; {% endif %}{% endfor %}</div>{% endif %}
           </div>
-
-          <div class="field" style="grid-column: span 2;"><label>Observações</label><textarea name="observacoes" rows="2">{{ cotacao.observacoes or '' }}</textarea></div>
-          <div class="field" style="grid-column: span 2;"><label>Termos e condições (vão para o PDF)</label><textarea name="termos_texto" rows="4">{{ cotacao.termos_texto or '' }}</textarea></div>
+          {% endif %}
         </div>
       </details>
-
-    </form>
-    {% if not cotacao.arquivada_em %}
-    <form method="post" action="/cotacoes/{{ cotacao.id }}/arquivar" class="zona-de-risco" style="display:flex; gap:8px; align-items:flex-end;">
-      <div class="field" style="flex:1; margin:0;">
-        <label style="font-size:10.5px;">Arquivar esta cotação (sai da lista e dos totais; dá para restaurar)</label>
-        <input name="motivo" placeholder="motivo — opcional, ex.: teste">
+      {% if editavel %}
+      <div class="flex mt-12" id="barra-salvar">
+        <button class="btn btn-copper btn-sm" type="submit" id="btn-salvar">Atualizar cenário e recalcular</button>
+        <span class="muted small" id="pendente" hidden>Há alterações ainda não aplicadas ao cálculo. Os preços na tela pertencem ao cenário anterior.</span>
       </div>
-      <button class="btn btn-ghost btn-sm" type="submit">Arquivar</button>
+      {% endif %}
     </form>
+
+    {# ---- produtos ---- #}
+    <div class="card" id="card-produtos">
+      <div class="card-title">
+        <h3>Produtos <span class="muted" style="font-weight:400;">({{ itens|length }})</span></h3>
+        {% if editavel %}
+        <div class="search-box" style="width:min(460px, 60%);">
+          <input type="search" id="busca-produto" placeholder="Adicionar produto: lençol 250 listrado, travesseiro, bath towel…" aria-label="Buscar produto">
+          <div id="resultados-busca" class="search-results" style="display:none;"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% if editavel %}
+      <div id="form-add-item" class="banner banner-info" hidden>
+        <div class="grow">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div><strong id="produto-selecionado-nome"></strong><div class="small" id="produto-selecionado-meta"></div></div>
+            <div class="flex">
+              <label for="add-qtd" style="margin:0;">Qtd.</label>
+              <input type="number" id="add-qtd" min="1" value="1" class="input-sm input-num" style="width:80px;">
+              <span class="small" id="add-preview"></span>
+              <button class="btn btn-copper btn-sm" type="button" onclick="adicionarItem()">Adicionar</button>
+              <button class="btn btn-ghost btn-sm" type="button" onclick="cancelarAdd()">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+      <div class="tw">
+      <table id="tabela-itens">
+        <thead><tr>
+          <th style="min-width:200px;">Produto</th><th class="num">Qtd.</th><th class="num">Recomendado</th>
+          <th class="num">Seu preço</th><th class="num oculta-mobile">Desconto</th><th class="num">Total</th>
+          {% if economia %}<th class="num">Margem</th>{% endif %}
+          <th></th>
+        </tr></thead>
+        <tbody id="corpo-itens">
+        {% for it in itens %}
+          {% set travado = it.preco_travado %}
+          <tr data-item-id="{{ it.id }}" data-travado="{{ '1' if travado else '0' }}" data-preco="{{ '%.2f'|format(it.preco_negociado or 0) }}" data-qtd="{{ it.quantidade }}"
+              {% if economia %}data-lucro="{{ it.lucro }}" data-custo="{{ it.custo_total }}"{% endif %}>
+            <td><div style="font-weight:700;">{{ it.nome_produto }}</div>
+              <div class="small muted">{{ it.especificacao or '' }}</div>
+              {% if custo_pendente(it.status_custo_item) %}<span class="tag tag-review">{{ it.status_custo_item|rotulo_custo }}</span>{% endif %}
+            </td>
+            <td class="num">{% if editavel %}<input type="number" min="1" step="1" class="input-cell input-num" style="width:64px;" value="{{ it.quantidade|int }}" data-qtd-input aria-label="Quantidade">{% else %}{{ it.quantidade|num }}{% endif %}</td>
+            <td class="num muted" data-rec>{{ it.preco_recomendado|brl if it.preco_recomendado else '—' }}</td>
+            <td class="num">
+              {% if editavel and not travado %}
+              <input type="number" min="0.01" step="0.01" class="input-cell input-num" style="width:96px;" value="{{ '%.2f'|format(it.preco_negociado or 0) }}" data-preco-input aria-label="Seu preço">
+              {% else %}
+              <span data-preco-fixo>{{ it.preco_negociado|brl }}</span>{% if travado %} <span class="lock" title="Preço fixo por política comercial">🔒 fixo</span>{% endif %}
+              {% endif %}
+            </td>
+            <td class="num muted oculta-mobile" data-desconto>—</td>
+            <td class="num" data-total style="font-weight:700;">{{ it.faturamento|brl }}</td>
+            {% if economia %}<td class="num" data-margem><span class="{{ 'margem-abaixo' if it.piso_margem_pct and it.margem_liquida < it.piso_margem_pct - 0.0005 else 'margem-ok' }}">{{ it.margem_liquida|pct }}</span></td>{% endif %}
+            <td class="right nowrap">
+              {% if economia %}<button class="btn btn-ghost btn-xs" type="button" onclick="abrirMemoria({{ it.id }})" title="Memória do preço" aria-label="Memória do preço">ⓘ</button>{% endif %}
+              {% if editavel %}<button class="btn btn-ghost btn-xs" type="button" onclick="removerItem({{ it.id }})" aria-label="Remover produto" title="Remover">×</button>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% if not itens %}<div class="empty-state" id="itens-vazio"><h3>Nenhum produto ainda</h3><p>Busque um produto acima — KTC, Daune ou Decor Tricot na mesma proposta.</p></div>{% endif %}
+    </div>
+
+    {# ---- economia (só OWNER/ADMIN), fechada por padrão ---- #}
+    {% if economia %}
+    <details class="card" id="economia-proposta">
+      <summary style="cursor:pointer;font-weight:700;">Economia da proposta <span class="muted" style="font-weight:400;">— interna, não vai ao cliente</span></summary>
+      <div class="kpi-row mt-12" id="eco-kpis">
+        <div class="kpi"><div class="label">Custo total</div><div class="value small" data-eco="custo_total">{{ totais.custo_total|brl }}</div></div>
+        <div class="kpi"><div class="label">Receita</div><div class="value small" data-eco="receita">{{ totais.faturamento|brl }}</div></div>
+        <div class="kpi"><div class="label">Lucro</div><div class="value small copper" data-eco="lucro_total">{{ totais.lucro|brl }}</div></div>
+        <div class="kpi"><div class="label">Margem agregada</div><div class="value small" data-eco="margem_agregada_pct">{{ totais.margem_liquida|pct }}</div></div>
+        <div class="kpi"><div class="label">Comissão variável</div><div class="value small" data-eco="comissao_variavel_pct">—</div><div class="nota" data-eco="limitada">—</div></div>
+        <div class="kpi"><div class="label">Comissão fixa (Daune)</div><div class="value small" data-eco="comissao_travada_valor">—</div></div>
+      </div>
+      <div class="tw">
+      <table class="compacta" id="eco-itens">
+        <thead><tr><th>Produto</th><th class="num">Custo un.</th><th class="num">Margem alvo</th><th class="num">Piso</th><th class="num">Margem realizada</th><th class="num">Lucro</th><th class="num">Comissão</th><th>Situação</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      </div>
+      <p class="nota">Desconto absorvido: <span data-eco="absorvido_por_comissao">—</span> pela comissão · <span data-eco="absorvido_por_margem">—</span> pela margem · <span data-eco="absorvido_por_impostos_e_frete">—</span> por impostos e frete.</p>
+    </details>
     {% endif %}
   </div>
 
-  <div>
-    <div class="card" style="margin-bottom:14px;">
-      <h3 style="margin-bottom:10px;">Situação</h3>
-      <div style="margin-bottom:14px;">
-        <span class="badge badge-{{ cotacao.status.value }}">{{ cotacao.status|rotulo_cotacao }}</span>
+  {# ============================================================ lateral #}
+  <div class="split-lateral">
+    <div class="panel" id="painel-resumo">
+      <div class="panel-sec">
+        <h4>Resumo da proposta</h4>
+        <div class="resumo-linha"><span class="r">Produtos</span><span class="v" data-res="subtotal_negociado">{{ totais.faturamento|brl }}</span></div>
+        <div class="resumo-linha"><span class="r">Frete</span><span class="v" data-res="frete">—</span></div>
+        <div class="resumo-linha total"><span class="r">Total</span><span class="v" data-res="total_proposta">{{ totais.faturamento|brl }}</span></div>
+        <div class="resumo-linha"><span class="r">Desconto sobre o recomendado</span><span class="v" data-res="desconto_pct">—</span></div>
       </div>
-      {# C-NEW-09/C-NEW-10: o estado deixou de ser um campo que se escolhe. Cada botão chama a
-         ação canônica, que confere o que precisa e deixa a trilha. E o que estiver impedindo
-         aparece aqui — o sistema sabia do item sem preço e não contava a ninguém. #}
-      {% if prontidao and prontidao.blockers %}
-      <div class="aviso-inline" style="margin-bottom:12px;">
-        <strong>Falta informação para emitir.</strong>
-        <div style="font-size:11px; margin-top:2px;">Aprovação não resolve isto — o número
-          não existe ainda.</div>
-        <ul style="margin:6px 0 0 16px; padding:0; font-size:11.5px;">
-          {% for b in prontidao.blockers %}
-          <li><strong>{{ b.escopo }}</strong> — {{ b.detalhe }}</li>
-          {% endfor %}
-        </ul>
+      <div class="panel-sec">
+        <h4>Sua comissão estimada</h4>
+        <div class="resumo-linha destaque"><span class="r"><span data-res="comissao_estimada_pct_efetiva">—</span></span><span class="v" data-res="comissao_estimada_valor">{{ totais.comissao_estimada_valor|brl if totais.comissao_estimada_valor else '—' }}</span></div>
+        <p class="nota">Estimativa comercial sobre esta proposta. Frete não entra.</p>
       </div>
-      {% endif %}
-
-      {% if prontidao and prontidao.excecoes and ve_economia(request) %}
-      <div class="aviso-inline" style="margin-bottom:12px;">
-        <strong>
-          {% if prontidao.aprovacao_valida %}Exceção aprovada para esta configuração.
-          {% else %}Exige aprovação de quem tem alçada.{% endif %}
-        </strong>
-        <ul style="margin:6px 0 0 16px; padding:0; font-size:11.5px;">
-          {% for e in prontidao.excecoes %}
-          <li><strong>{{ e.escopo }}</strong> — {{ e.detalhe }}</li>
-          {% endfor %}
-        </ul>
+      <div class="panel-sec" id="autonomia">
+        <div class="banner banner-ok" data-autonomia="ok" style="margin:0;" hidden><div>✓ Dentro da autonomia</div></div>
+        <div class="banner banner-warn" data-autonomia="aprovacao" style="margin:0;" hidden><div>⚠ Este preço precisa de aprovação</div></div>
+        <div class="muted small" data-autonomia="vazio">Adicione produtos para avaliar a proposta.</div>
       </div>
-      {% endif %}
-
-      {% if acoes_workflow %}
-      <div style="display:flex; gap:8px; flex-wrap:wrap;">
-        {% for a in acoes_workflow %}
-        <form method="post" action="{{ a.rota }}" title="{{ a.ajuda }}"
-              style="display:flex; gap:6px; align-items:center;">
-          {% if a.estado %}<input type="hidden" name="status" value="{{ a.estado }}">{% endif %}
-          {% if a.motivo %}<input name="motivo" placeholder="motivo — opcional" style="width:150px;">{% endif %}
-          {% if a.justificativa %}<input name="justificativa" required
-                 placeholder="por que a exceção?" style="width:190px;">{% endif %}
-          <button class="btn {{ a.estilo }} btn-sm" type="submit">{{ a.rotulo }}</button>
-        </form>
-        {% endfor %}
+      <div class="panel-sec" id="situacao">
+        {% include "_cotacao_situacao.html" %}
       </div>
-      {% elif cotacao.status.value in ('fechada', 'pedido', 'perdida') %}
-      <div style="font-size:12px; color:var(--gray); line-height:1.5;">
-        Esta cotação veio do sistema anterior e fica como está. Para propor de novo, duplique-a.
-      </div>
-      {% else %}
-      <div style="font-size:12px; color:var(--gray); line-height:1.5;">
-        Não há ação disponível para esta cotação agora.
-      </div>
-      {% endif %}
-    </div>
-
-    <div class="card">
-      <h3 style="margin-bottom:12px;">Aceite / pedido</h3>
-      <form method="post" action="/cotacoes/{{ cotacao.id }}/aceite" class="grid-2">
-        <div class="field"><label>Responsável pelo aceite</label><input name="aceite_responsavel" value="{{ cotacao.aceite_responsavel or '' }}"></div>
-        <div class="field"><label>Cargo</label><input name="aceite_cargo" value="{{ cotacao.aceite_cargo or '' }}"></div>
-        <div class="field"><label>Departamento</label><input name="aceite_departamento" value="{{ cotacao.aceite_departamento or '' }}"></div>
-        <div class="field"><label>Local de entrega</label><input name="local_entrega" value="{{ cotacao.local_entrega or '' }}"></div>
-        <div class="field" style="grid-column: span 2;"><label>Endereço de entrega</label><input name="endereco_entrega" value="{{ cotacao.endereco_entrega or '' }}"></div>
-        <div class="field" style="grid-column: span 2;"><label>Observações do pedido</label><textarea name="observacoes_pedido" rows="2">{{ cotacao.observacoes_pedido or '' }}</textarea></div>
-        <div style="grid-column: span 2; display:flex; gap:8px; align-items:center;">
-          <button class="btn btn-ghost btn-sm" type="submit">Salvar aceite</button>
-          {% if cotacao.aceite_em %}<span style="font-size:11px; color:var(--gray);">Aceite em {{ cotacao.aceite_em|data }}</span>{% endif %}
-        </div>
-      </form>
     </div>
   </div>
 </div>
 
 <div class="drawer-fundo" id="drawer-fundo" onclick="fecharMemoria()"></div>
-<div class="drawer" id="drawer-memoria">
-  <button class="fechar" onclick="fecharMemoria()">×</button>
-  <div id="conteudo-memoria"></div>
-</div>
+<div class="drawer" id="drawer-memoria"><button class="fechar" onclick="fecharMemoria()">×</button><div id="conteudo-memoria"></div></div>
 {% endblock %}
 
 <style>
-  .secao { font-size:15px; font-weight:600; margin:26px 0 12px;
-           padding-bottom:6px; border-bottom:1px solid var(--sand); }
-  .pendente { background:#F6E2D8; border-left:3px solid var(--danger); border-radius:0 7px 7px 0;
-              padding:11px 14px; font-size:13px; line-height:1.5; }
-  .mais-detalhes { border-top:1px solid var(--row-alt); padding-top:10px; }
-  .mais-detalhes > summary { cursor:pointer; font-size:12px; font-weight:600;
-                             color:var(--gray); list-style:none; }
-  .mais-detalhes > summary::-webkit-details-marker { display:none; }
-  .mais-detalhes > summary::before { content:"▸ "; }
-  .mais-detalhes[open] > summary::before { content:"▾ "; }
-  .valor-derivado { font-size:13px; padding:6px 0; }
-  /* Enquanto o cenário não foi aplicado, as ações de saída ficam inertes: emitir ou gerar
-     PDF agora usaria números do cenário anterior. */
-  body.cenario-pendente .btn-copper[href$="/pdf"],
-  body.cenario-pendente .acao-de-saida {
-    pointer-events:none; opacity:.4;
-  }
+  /* Enquanto o cenário não foi aplicado, as ações de saída ficam inertes: gerar PDF agora
+     usaria números do cenário anterior. */
+  body.cenario-pendente .acao-de-saida { pointer-events:none; opacity:.4; }
 </style>
 
 {% block extra_scripts %}
 <script>
 const COTACAO_ID = {{ cotacao.id }};
-
-/*
-  Manter as premissas desta cotação é uma decisão comercial registrada: o servidor grava a
-  escolha e ela vira exceção na hora de aprovar. Não é o mesmo que ignorar o aviso — por
-  isso passa por confirmação e some da tela depois.
-*/
-/*
-  Bloco 10 — alterações pendentes.
-
-  Mexer no destino, na condição de pagamento, no contribuinte ou no tipo de frete muda o
-  cenário econômico, mas os preços na tela continuam sendo os do cenário anterior até o
-  servidor recalcular. Sem sinal nenhum, os dois pareciam pertencer ao mesmo cálculo — foi
-  exatamente o que aconteceu no primeiro uso, com o destino trocado e o PDF saindo pelo
-  cenário velho.
-
-  Nada de autosave nem de recálculo a cada tecla: o aviso aparece, as ações de saída ficam
-  bloqueadas, e o recálculo continua sendo um clique explícito.
-
-  Isto é diferente do aviso de premissa global mais nova, logo acima na tela: aquele diz
-  "o mundo mudou", este diz "você mudou e ainda não aplicou".
-*/
-(function vigiarCenario() {
-  const form = document.querySelector('form[action$="/atualizar"]');
-  if (!form) return;
-  const aviso = document.getElementById('pendente');
-  const materiais = form.querySelectorAll('[data-material]');
-  const inicial = new Map();
-  materiais.forEach(c => inicial.set(c, c.value));
-
-  function conferir() {
-    const mudou = [...materiais].some(c => c.value !== inicial.get(c));
-    if (aviso) aviso.hidden = !mudou;
-    document.body.classList.toggle('cenario-pendente', mudou);
-  }
-
-  materiais.forEach(c => {
-    c.addEventListener('change', conferir);
-    c.addEventListener('input', conferir);
-  });
-  // O contribuinte é um input escondido trocado por botão: `change` não dispara sozinho.
-  form.querySelectorAll('[data-contribuinte]').forEach(
-    b => b.addEventListener('click', () => setTimeout(conferir, 0)));
-
-  // Sair da tela com alteração pendente perde o que foi mexido — melhor perguntar.
-  window.addEventListener('beforeunload', evento => {
-    if (document.body.classList.contains('cenario-pendente')) {
-      evento.preventDefault();
-      evento.returnValue = '';
-    }
-  });
-  form.addEventListener('submit', () => document.body.classList.remove('cenario-pendente'));
-})();
-
+const NEGOCIACAO_INICIAL = {{ negociacao|tojson if negociacao else 'null' }};
 async function manterPremissas(id) {
-  if (!confirm('Manter os valores desta cotação?\n\n'
-             + 'Os preços não mudam. A decisão fica registrada e entra na aprovação.')) {
-    return;
-  }
-  const r = await fetch(`/cotacoes/${id}/premissas/manter`, {method: 'POST'});
-  const j = await r.json();
-  if (j.erro) { alert(j.erro); return; }
+  if (!confirm('Manter os valores desta cotação?\n\nOs preços não mudam. A decisão fica registrada e entra na aprovação.')) return;
+  const r = await anaraFetch(`/cotacoes/${id}/premissas/manter`, {method: 'POST'});
+  if (!r.ok) { anaraToast(r.erro, 'erro'); return; }
   const aviso = document.querySelector('.aviso-premissas');
-  if (aviso) {
-    aviso.innerHTML = '<div style="font-size:13px;">Decisão registrada: esta cotação '
-                    + 'mantém as premissas atuais.</div>';
-  }
+  if (aviso) aviso.innerHTML = '<div>Decisão registrada: esta cotação mantém as premissas atuais.</div>';
 }
 </script>
 <script src="/static/js/cotacao.js"></script>
-<script src="/static/js/memoria.js"></script>
+{% if economia %}<script src="/static/js/memoria.js"></script>{% endif %}
 {% endblock %}

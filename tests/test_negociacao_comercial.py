@@ -548,9 +548,12 @@ def test_rotas_de_negociacao_para_a_vendedora(session, fornecedores, cliente, pa
     assert set(atual) == {"itens", "subtotal_recomendado", "subtotal_negociado", "desconto_pct",
                           "frete", "total_proposta", "comissao_estimada_pct_efetiva",
                           "comissao_estimada_valor", "autonomia_status", "requer_aprovacao"}
+    # Fase 3C acrescentou dois campos de tela, ambos comerciais: o desconto da linha em
+    # relação ao recomendado e se o preço é fixo (já na lista de permissão do item).
     assert set(atual["itens"][0]) == {"item_id", "produto_id", "nome_produto", "quantidade",
                                       "preco_recomendado", "preco_negociado", "total_linha",
-                                      "editavel", "motivo_nao_editavel"}
+                                      "editavel", "motivo_nao_editavel", "desconto_linha_pct",
+                                      "preco_travado"}
     assert not (_chaves(atual) & set(CONFIDENCIAIS_DA_VENDEDORA))
     assert encontrar_confidenciais(atual) == []
     assert atual["comissao_estimada_valor"] > 0 and atual["autonomia_status"] == pol.DENTRO_DA_AUTONOMIA

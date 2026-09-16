@@ -426,7 +426,7 @@ def test_15_cotacoes_legadas_continuam_acessiveis_sem_venda(session, owner):
     session.commit()
     r = chamar(listar, RequestFalsa(owner), session=session)
     html = bytes(r.body).decode()
-    assert legada.numero in html and "Sem venda vinculada (legado)" in html
+    assert legada.numero in html and "Legado — sem venda vinculada" in html   # rótulo da Fase 3C
     r = chamar(detalhe, RequestFalsa(owner), cotacao_id=legada.id, session=session)
     assert r.status_code == 200
     assert crm.cotacoes_com_venda(session).get(legada.id) is None

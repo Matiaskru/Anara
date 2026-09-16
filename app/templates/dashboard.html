@@ -1,82 +1,170 @@
 {% extends "base.html" %}
-{% block title %}Dashboard — Anara Cotações{% endblock %}
+{% block title %}Dashboard — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Dashboard</h1><span class="contexto">{{ periodo.rotulo }}{% if periodo.inicio %} · {{ periodo.inicio|data }} a {{ periodo.fim|data }}{% endif %}</span></div>
+  <form method="get" class="flex" id="filtros-dash">
+    <div class="seg" role="group" aria-label="Período">
+      {% for valor, rotulo in atalhos %}<a href="?periodo={{ valor }}{% for k, v in filtros.items() if v %}&{{ k }}={{ v }}{% endfor %}" class="{{ 'active' if atalho == valor else '' }}">{{ rotulo }}</a>{% endfor %}
+      <button type="button" class="{{ 'active' if personalizado else '' }}" onclick="document.getElementById('datas').hidden = !document.getElementById('datas').hidden">Personalizado</button>
+    </div>
+    <span id="datas" class="flex" {% if not personalizado %}hidden{% endif %}>
+      <input type="date" name="inicio" value="{{ inicio }}" class="input-sm" style="width:auto;" aria-label="De">
+      <input type="date" name="fim" value="{{ fim }}" class="input-sm" style="width:auto;" aria-label="Até">
+      <button class="btn btn-ghost btn-sm" type="submit">Aplicar</button>
+    </span>
+    {% if not personalizado %}<input type="hidden" name="periodo" value="{{ atalho }}">{% endif %}
+    <select name="vendedora" data-auto-submit class="input-sm" style="width:auto;" aria-label="Vendedora">
+      <option value="">Todas as vendedoras</option>
+      {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if filtros.vendedora == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
+    </select>
+    <select name="cliente_id" data-auto-submit class="input-sm" style="width:auto;" aria-label="Cliente">
+      <option value="">Todos os clientes</option>
+      {% for c in clientes %}<option value="{{ c.id }}" {{ 'selected' if filtros.cliente_id == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
+    </select>
+    <select name="fornecedor_id" data-auto-submit class="input-sm" style="width:auto;" aria-label="Fornecedor">
+      <option value="">Todos os fornecedores</option>
+      {% for f in fornecedores %}<option value="{{ f.id }}" {{ 'selected' if filtros.fornecedor_id == f.id|string else '' }}>{{ f.nome }}</option>{% endfor %}
+    </select>
+    <select name="familia" data-auto-submit class="input-sm" style="width:auto;" aria-label="Família">
+      <option value="">Todas as famílias</option>
+      {% for f in familias %}<option value="{{ f }}" {{ 'selected' if filtros.familia == f else '' }}>{{ f }}</option>{% endfor %}
+    </select>
+  </form>
+  <div class="acoes"><a class="btn btn-ghost btn-sm" href="/relatorios">Relatórios</a><a class="btn btn-ghost btn-sm" href="/aprovacoes">Aprovações</a></div>
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="page-header">
+{% if painel.vazio %}
+<div class="empty-state"><h3>Nenhuma venda registrada ainda</h3><p>O dashboard se preenche conforme as vendas forem fechadas. Nada aqui é inventado para a tela parecer cheia.</p>
+  <a class="btn btn-copper btn-sm" href="/vendas">Ir para Vendas</a></div>
+{% else %}
+
+<div class="kpi-row" style="grid-template-columns: repeat(4, 1fr);">
+  <div class="kpi destaque"><div class="label">Valor vendido</div><div class="value">{{ painel.valor_vendido|brl if painel.valor_vendido is not none else '—' }}</div><div class="nota">{{ painel.vendas_fechadas }} {{ 'venda fechada' if painel.vendas_fechadas == 1 else 'vendas fechadas' }}</div></div>
+  <div class="kpi destaque"><div class="label">Lucro</div><div class="value">{{ painel.lucro|brl if painel.lucro is not none else '—' }}</div><div class="nota">da cotação vencedora</div></div>
+  <div class="kpi destaque"><div class="label">Margem agregada</div><div class="value">{{ painel.margem_agregada|pct if painel.margem_agregada is not none else '—' }}</div><div class="nota">Σ lucro ÷ Σ receita</div></div>
+  <div class="kpi destaque"><div class="label">Vendas fechadas</div><div class="value">{{ painel.vendas_fechadas }}</div><div class="nota">{{ painel.perdidas }} perdidas no período</div></div>
+</div>
+<div class="kpi-row" style="grid-template-columns: repeat(8, 1fr);">
+  <div class="kpi"><div class="label">Ticket médio</div><div class="value small">{{ painel.ticket_medio|brl if painel.ticket_medio is not none else '—' }}</div></div>
+  <div class="kpi"><div class="label">Conversão</div><div class="value small">{{ painel.conversao|pct if painel.conversao is not none else '—' }}</div><div class="nota">ganhas ÷ encerradas</div></div>
+  <div class="kpi"><div class="label">Desconto médio</div><div class="value small">{{ painel.desconto_medio|pct if painel.desconto_medio is not none else '—' }}</div><div class="nota">ponderado por valor</div></div>
+  <div class="kpi"><div class="label">Pipeline aberto</div><div class="value small">{{ painel.pipeline_aberto|brl if painel.pipeline_aberto is not none else '—' }}</div><div class="nota">{{ painel.vendas_abertas }} vendas abertas</div></div>
+  <div class="kpi"><div class="label">Faturado</div><div class="value small">{{ painel.valor_faturado|brl if painel.valor_faturado is not none else '—' }}</div></div>
+  <div class="kpi"><div class="label">Pago</div><div class="value small">{{ painel.valor_pago|brl if painel.valor_pago is not none else '—' }}</div></div>
+  <div class="kpi"><div class="label">A receber</div><div class="value small">{{ painel.a_receber|brl if painel.a_receber is not none else '—' }}</div>{% if painel.a_receber_quantidade %}<div class="nota">{{ painel.a_receber_quantidade }} vendas</div>{% endif %}</div>
+  <div class="kpi"><div class="label">Atrasado</div><div class="value small {{ 'margem-abaixo' if painel.atrasado else '' }}">{{ painel.atrasado|brl if painel.atrasado is not none else '—' }}</div>{% if painel.atrasado_quantidade %}<div class="nota">{{ painel.atrasado_quantidade }} vendas</div>{% endif %}</div>
+</div>
+
+<div class="card">
+  <div class="card-title"><h3>Vendas e lucro por mês</h3>
+    <div class="legenda"><span><i style="background:var(--midnight);"></i>Vendido</span><span><i style="background:var(--copper);"></i>Lucro</span>{% if serie.ano_anterior %}<span><i style="background:var(--sand);"></i>Ano anterior</span>{% endif %}
+      <span class="muted">· 12 meses · {{ serie.total_vendido|brl }} vendidos</span></div></div>
+  <div class="chart-wrap"><div id="grafico-mensal"></div><div class="chart-tip" id="tip-mensal"></div></div>
+</div>
+
+<div class="split-2">
+  <div class="card">
+    <div class="card-title"><h3>Performance por vendedora</h3></div>
+    <div class="tw"><table class="compacta">
+      <thead><tr><th>Vendedora</th><th class="num">Vendido</th><th class="num">Vendas</th><th class="num">Ticket</th><th class="num">Margem</th><th class="num">Desconto médio</th><th class="num">Comissão est.</th></tr></thead>
+      <tbody>{% for r in painel.performance_vendedoras %}
+        <tr><td class="primaria">{{ r.vendedora }}</td><td class="num">{{ r.vendido|brl }}</td><td class="num">{{ r.vendas }}</td><td class="num">{{ r.ticket|brl }}</td>
+          <td class="num">{{ r.margem|pct if r.margem is not none else '—' }}</td><td class="num">{{ r.desconto_medio|pct if r.desconto_medio is not none else '—' }}</td><td class="num">{{ r.comissao_estimada|brl if r.comissao_estimada is not none else '—' }}</td></tr>
+      {% else %}<tr><td colspan="7" class="tbl-vazia">Nenhuma venda fechada no período.</td></tr>{% endfor %}</tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><h3>Top clientes</h3>{% if painel.concentracao_top5 is not none %}<span class="muted small">Top 5 = {{ painel.concentracao_top5|pct }} do vendido</span>{% endif %}</div>
+    <table class="compacta limpa">
+      <tbody>{% for c in painel.top_clientes %}
+        <tr><td style="width:40%;"><a class="link" href="/clientes/{{ c.cliente_id }}">{{ c.cliente }}</a><span class="sub">{{ c.vendas }} {{ 'venda' if c.vendas == 1 else 'vendas' }}{% if c.margem is not none %} · margem {{ c.margem|pct }}{% endif %}</span></td>
+          <td><div class="mini-bar-track"><div class="mini-bar" style="width:{{ ((c.participacao or 0) * 100)|round|int }}%;"></div></div></td>
+          <td class="num">{{ c.vendido|brl }}</td><td class="num muted">{{ c.participacao|pct if c.participacao is not none else '' }}</td></tr>
+      {% else %}<tr><td class="tbl-vazia">Nenhuma venda fechada no período.</td></tr>{% endfor %}</tbody>
+    </table>
+  </div>
+</div>
+
+<div class="split-2">
+  <div class="card">
+    <div class="card-title"><h3>Funil e aging das vendas abertas</h3></div>
+    <div class="split-2" style="gap:18px;">
+      <table class="compacta limpa"><tbody>
+        {% set maior = painel.funil|map(attribute='quantidade')|max %}
+        {% for f in painel.funil %}<tr><td style="width:34%;">{{ f.rotulo }}</td>
+          <td><div class="mini-bar-track"><div class="mini-bar midnight" style="width:{{ ((f.quantidade / maior * 100) if maior else 0)|round|int }}%;"></div></div></td>
+          <td class="num">{{ f.quantidade }}</td><td class="num muted">{{ f.valor|brl if f.valor is not none else '—' }}</td></tr>{% endfor %}
+      </tbody></table>
+      <table class="compacta limpa"><tbody>
+        {% for a in painel.aging %}<tr><td>{{ a.faixa }}</td><td class="num">{{ a.quantidade }}</td><td class="num muted">{{ a.valor|brl if a.valor is not none else '—' }}</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><h3>Mix por fornecedor e família</h3><span class="muted small">itens das vendas fechadas</span></div>
+    <div class="split-2" style="gap:18px;">
+      <table class="compacta limpa"><tbody>
+        {% for m in painel.mix_fornecedor %}<tr><td style="width:40%;">{{ m.nome }}</td><td><div class="mini-bar-track"><div class="mini-bar" style="width:{{ ((m.participacao or 0) * 100)|round|int }}%;"></div></div></td><td class="num muted">{{ m.participacao|pct if m.participacao is not none else '' }}</td></tr>
+        {% else %}<tr><td class="tbl-vazia">—</td></tr>{% endfor %}
+      </tbody></table>
+      <table class="compacta limpa"><tbody>
+        {% for m in painel.mix_familia[:8] %}<tr><td style="width:40%;">{{ m.nome }}</td><td><div class="mini-bar-track"><div class="mini-bar midnight" style="width:{{ ((m.participacao or 0) * 100)|round|int }}%;"></div></div></td><td class="num muted">{{ m.participacao|pct if m.participacao is not none else '' }}</td></tr>
+        {% else %}<tr><td class="tbl-vazia">—</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="split-2">
+  <div class="card">
+    <div class="card-title"><h3>Impacto dos descontos</h3><span class="muted small">margem × desconto por venda</span></div>
+    <table class="compacta">
+      <thead><tr><th>Faixa de desconto</th><th class="num">Vendas</th><th class="num">Vendido</th><th class="num">Margem</th></tr></thead>
+      <tbody>{% for f in painel.impacto_descontos %}<tr><td>{{ f.faixa }}</td><td class="num">{{ f.vendas }}</td><td class="num">{{ f.vendido|brl if f.vendido is not none else '—' }}</td><td class="num">{{ f.margem|pct if f.margem is not none else '—' }}</td></tr>{% endfor %}</tbody>
+    </table>
+    {% if painel.margem_x_desconto %}
+    <details class="mais"><summary>Por venda ({{ painel.margem_x_desconto|length }})</summary>
+      <div class="tw"><table class="compacta mt-8"><thead><tr><th>Venda</th><th class="num">Vendido</th><th class="num">Desconto</th><th class="num">Margem</th></tr></thead><tbody>
+        {% for v in painel.margem_x_desconto %}<tr class="clicavel" data-href="/vendas/{{ v.venda_id }}"><td>{{ v.cliente }} <span class="muted">· {{ v.titulo }}</span></td><td class="num">{{ v.vendido|brl }}</td><td class="num">{{ v.desconto|pct if v.desconto is not none else '—' }}</td><td class="num">{{ v.margem|pct if v.margem is not none else '—' }}</td></tr>{% endfor %}
+      </tbody></table></div></details>
+    {% endif %}
+  </div>
   <div>
-    <h1>Dashboard</h1>
-    <div class="subtitle">Visão geral das cotações</div>
-  </div>
-  <a href="/cotacoes/nova" class="btn btn-copper">+ Nova cotação</a>
-</div>
-
-<div class="kpi-grid">
-  <div class="kpi"><div class="label">Valor total cotado</div><div class="value">{{ valor_total|brl }}</div></div>
-  {% if ve_economia(request) %}
-  <div class="kpi"><div class="label">Lucro potencial</div><div class="value copper">{{ lucro_total|brl }}</div></div>
-  <div class="kpi"><div class="label">Margem líquida média ponderada</div><div class="value">{{ margem_media_ponderada|pct }}</div></div>
-  {% endif %}
-  <div class="kpi"><div class="label">Ticket médio</div><div class="value">{{ ticket_medio|brl }}</div></div>
-  <div class="kpi"><div class="label">Cotações</div><div class="value">{{ num_cotacoes }}</div></div>
-  <div class="kpi"><div class="label">Diferença média vs preço-base</div><div class="value">{{ diferenca_media|pct }}</div></div>
-</div>
-
-<div class="grid-2">
-  <div class="card">
-    <h3 style="margin-bottom:14px;">Cotações por status</h3>
-    {% if por_status %}
-      {% for status, qtd in por_status.items() %}
-      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
-        <span class="badge badge-{{ status }}">{{ status }}</span>
-        <span>{{ qtd }}</span>
+    <div class="card">
+      <div class="card-title"><h3>Pós-venda</h3><span class="muted small">todas as vendas fechadas</span></div>
+      <div class="kpi-row" style="grid-template-columns: repeat(3, 1fr); margin:0;">
+        <div class="kpi"><div class="label">Aguardando entrega</div><div class="value small">{{ painel.pos_venda.aguardando_entrega.quantidade }}</div><div class="nota">{{ painel.pos_venda.aguardando_entrega.valor|brl if painel.pos_venda.aguardando_entrega.valor is not none else '—' }}</div></div>
+        <div class="kpi"><div class="label">Aguardando pagamento</div><div class="value small">{{ painel.pos_venda.aguardando_pagamento.quantidade }}</div><div class="nota">{{ painel.pos_venda.aguardando_pagamento.valor|brl if painel.pos_venda.aguardando_pagamento.valor is not none else '—' }}</div></div>
+        <div class="kpi"><div class="label">Atrasado</div><div class="value small {{ 'margem-abaixo' if painel.pos_venda.atrasado.quantidade else '' }}">{{ painel.pos_venda.atrasado.quantidade }}</div><div class="nota">{{ painel.pos_venda.atrasado.valor|brl if painel.pos_venda.atrasado.valor is not none else '—' }}</div></div>
       </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state"><h3>Nada por aqui ainda</h3><p>Crie sua primeira cotação.</p></div>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h3 style="margin-bottom:14px;">Principais clientes</h3>
-    {% if principais_clientes %}
-      {% for nome, valor in principais_clientes %}
-      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
-        <span>{{ nome }}</span>
-        <span class="num">{{ valor|brl }}</span>
-      </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state"><h3>Sem dados ainda</h3></div>
-    {% endif %}
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Motivos de perda</h3><span class="muted small">{{ painel.perdidas }} no período</span></div>
+      <table class="compacta limpa"><tbody>
+        {% for m in painel.motivos_perda %}<tr><td>{{ m.motivo|rotulo_motivo }}</td><td><div class="mini-bar-track"><div class="mini-bar" style="width:{{ ((m.participacao or 0) * 100)|round|int }}%;"></div></div></td><td class="num">{{ m.quantidade }}</td></tr>
+        {% else %}<tr><td class="muted small">Nenhuma perda no período.</td></tr>{% endfor %}
+      </tbody></table>
+    </div>
   </div>
 </div>
 
-<div class="grid-2">
-  <div class="card">
-    <h3 style="margin-bottom:14px;">Produtos mais cotados</h3>
-    {% if produtos_mais_cotados %}
-      {% for nome, qtd in produtos_mais_cotados %}
-      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
-        <span>{{ nome }}</span>
-        <span class="num">{{ qtd|num }} un.</span>
-      </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state"><h3>Sem dados ainda</h3></div>
-    {% endif %}
-  </div>
-
-  <div class="card">
-    <h3 style="margin-bottom:14px;">Comparação mensal (valor cotado)</h3>
-    {% if comparacao_mensal %}
-      {% for mes, valor in comparacao_mensal %}
-      <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--row-alt);">
-        <span>{{ mes }}</span>
-        <span class="num">{{ valor|brl }}</span>
-      </div>
-      {% endfor %}
-    {% else %}
-      <div class="empty-state"><h3>Sem dados ainda</h3></div>
-    {% endif %}
-  </div>
+<div class="card">
+  <div class="card-title"><h3>Rentabilidade por cliente</h3><span class="muted small">vendas fechadas no período</span></div>
+  <div class="tw"><table class="compacta">
+    <thead><tr><th>Cliente</th><th class="num">Vendas</th><th class="num">Vendido</th><th class="num">Lucro</th><th class="num">Margem</th><th class="num">Participação</th></tr></thead>
+    <tbody>{% for c in painel.rentabilidade_clientes %}
+      <tr class="clicavel" data-href="/clientes/{{ c.cliente_id }}"><td class="primaria">{{ c.cliente }}</td><td class="num">{{ c.vendas }}</td><td class="num">{{ c.vendido|brl }}</td><td class="num">{{ c.lucro|brl if c.lucro is not none else '—' }}</td><td class="num">{{ c.margem|pct if c.margem is not none else '—' }}</td><td class="num">{{ c.participacao|pct if c.participacao is not none else '—' }}</td></tr>
+    {% else %}<tr><td colspan="6" class="tbl-vazia">Nenhuma venda fechada no período.</td></tr>{% endfor %}</tbody>
+  </table></div>
 </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>const SERIE_MENSAL = {{ serie|tojson }};</script>
+<script src="/static/js/dashboard.js"></script>
 {% endblock %}

@@ -1,23 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Histórico de cotações — Anara Cotações<script>
-function marcarTodas(origem) {
-  document.querySelectorAll(".check-cotacao").forEach(c => { c.checked = origem.checked; });
-}
-// "cara de teste" = rascunho, sem PDF e sem aceite. É sugestão: quem decide é você.
-function marcarTestes() {
-  document.querySelectorAll(".check-cotacao").forEach(c => {
-    c.checked = c.dataset.teste === "1";
-  });
-}
-</script>
-{% endblock %}
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1>Histórico de cotações</h1>
-    <div class="subtitle">{{ cotacoes|length }} cotação(ões)</div>
-  </div>
-  <div style="display:flex; gap:8px;">
+{% block title %}Cotações — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Cotações</h1><span class="contexto">{{ cotacoes|length }} {{ 'documento' if cotacoes|length == 1 else 'documentos' }}{% if mostrar_arquivadas %} · arquivadas{% endif %}</span></div>
+  <div class="acoes">
     {% if mostrar_arquivadas %}
     <a href="/cotacoes" class="btn btn-ghost">Ver ativas</a>
     {% else %}
@@ -26,106 +13,89 @@ function marcarTestes() {
     <a href="/cotacoes/nova" class="btn btn-copper">+ Nova cotação</a>
   </div>
 </div>
+{% endblock %}
 
-<div class="card">
-  <form method="get" class="grid-4" style="margin-bottom:14px;">
-    <div class="field">
-      <label>Status</label>
-      <select name="status" onchange="this.form.submit()">
-        <option value="">Todos</option>
-        {% for s in status_opcoes %}
-        <option value="{{ s }}" {{ 'selected' if s == status_filtro else '' }}>{{ s }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="field">
-      <label>Cliente</label>
-      <select name="cliente_id" onchange="this.form.submit()">
-        <option value="">Todos</option>
-        {% for c in todos_clientes %}
-        <option value="{{ c.id }}" {{ 'selected' if cliente_filtro == c.id|string else '' }}>{{ c.nome }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="field">
-      <label>Vendedor</label>
-      <select name="vendedor" onchange="this.form.submit()">
-        <option value="">Todos</option>
-        {% for v in vendedores %}
-        <option value="{{ v }}" {{ 'selected' if v == vendedor_filtro else '' }}>{{ v }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div class="field">
-      <label>Categoria de produto</label>
-      <select name="categoria" onchange="this.form.submit()">
-        <option value="">Todas</option>
-        {% for c in categorias %}
-        <option value="{{ c }}" {{ 'selected' if c == categoria_filtro else '' }}>{{ c }}</option>
-        {% endfor %}
-      </select>
-    </div>
-  </form>
-
-  {% if request.query_params.get('arquivadas_agora') %}
-  <div class="aviso-inline">{{ request.query_params.get('arquivadas_agora') }} cotação(ões) arquivada(s). Elas saíram da lista e dos totais, mas continuam no banco — dá para restaurar em "Arquivadas".</div>
+{% block content %}
+<form method="get" class="filters">
+  {% if mostrar_arquivadas %}<input type="hidden" name="arquivadas" value="sim">{% endif %}
+  <input type="search" name="busca" value="{{ busca }}" placeholder="Número ou cliente" aria-label="Buscar">
+  <select name="status" data-auto-submit aria-label="Status">
+    <option value="">Todos os status</option>
+    {% for valor, rotulo in status_opcoes %}<option value="{{ valor }}" {{ 'selected' if valor == status_filtro else '' }}>{{ rotulo }}</option>{% endfor %}
+  </select>
+  <select name="cliente_id" data-auto-submit aria-label="Cliente">
+    <option value="">Todos os clientes</option>
+    {% for c in todos_clientes %}<option value="{{ c.id }}" {{ 'selected' if cliente_filtro == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
+  </select>
+  <select name="vendedor" data-auto-submit aria-label="Responsável">
+    <option value="">Todos os responsáveis</option>
+    {% for v in vendedores %}<option value="{{ v }}" {{ 'selected' if v == vendedor_filtro else '' }}>{{ v }}</option>{% endfor %}
+  </select>
+  <select name="periodo" data-auto-submit aria-label="Período">
+    {% for valor, rotulo in periodos %}<option value="{{ valor }}" {{ 'selected' if periodo_filtro == valor else '' }}>{{ rotulo }}</option>{% endfor %}
+  </select>
+  {% if busca or status_filtro or cliente_filtro or vendedor_filtro or periodo_filtro %}
+  <a class="btn btn-ghost btn-sm" href="/cotacoes{{ '?arquivadas=sim' if mostrar_arquivadas else '' }}">Limpar</a>
   {% endif %}
-  {% if request.query_params.get('apagadas') %}
-  <div class="aviso-inline">{{ request.query_params.get('apagadas') }} cotação(ões) apagada(s) de vez. O banco foi copiado antes, em data/backups/.</div>
-  {% endif %}
+</form>
 
-  {% if cotacoes %}
-  <form method="post" action="/cotacoes/lote" id="form-lote">
-  <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
-    <label style="font-size:12px; display:flex; gap:5px; align-items:center;">
-      <input type="checkbox" onclick="marcarTodas(this)"> selecionar todas
-    </label>
-    {% if not mostrar_arquivadas %}
-    <button class="btn btn-ghost btn-sm" name="acao" value="arquivar" type="submit">Arquivar selecionadas</button>
-    {% if sugestoes_teste %}
-    <button class="btn btn-ghost btn-sm" type="button" onclick="marcarTestes()">Marcar as com cara de teste ({{ sugestoes_teste|length }})</button>
-    {% endif %}
-    {% else %}
-    <button class="btn btn-ghost btn-sm" name="acao" value="restaurar" type="submit">Restaurar selecionadas</button>
-    <button class="btn btn-ghost btn-sm" name="acao" value="apagar" type="submit"
-            onclick="return confirm('Apagar de vez as cotações selecionadas? O banco é copiado antes, mas depois disso elas somem da plataforma.');">
-      Apagar de vez
-    </button>
-    {% endif %}
-  </div>
+{% if request.query_params.get('arquivadas_agora') %}
+<div class="banner banner-info"><div>{{ request.query_params.get('arquivadas_agora') }} cotação(ões) arquivada(s). Saíram da lista e dos totais, mas continuam no banco — dá para restaurar em "Arquivadas".</div></div>
+{% endif %}
+{% if request.query_params.get('apagadas') %}
+<div class="banner banner-info"><div>{{ request.query_params.get('apagadas') }} cotação(ões) apagada(s) de vez. O banco foi copiado antes.</div></div>
+{% endif %}
+
+<form method="post" action="/cotacoes/lote" id="form-lote">
+<div class="card flush">
   <table>
-    <thead><tr><th></th><th>Número</th><th>Data</th><th>Cliente</th><th>Venda</th><th>Vendedor</th><th>Status</th><th>Condição</th><th class="num">Total</th>{% if ve_economia(request) %}<th class="num">Margem</th>{% endif %}<th></th></tr></thead>
+    <thead><tr>
+      <th style="width:28px;"><input type="checkbox" onclick="marcarTodas(this)" aria-label="Selecionar todas"></th>
+      <th>Número</th><th>Cliente</th><th>Venda</th><th>Rev.</th><th class="num">Valor</th>
+      {% if ve_economia(request) %}<th class="num">Margem</th>{% endif %}
+      <th>Status</th><th>Data</th><th class="oculta-mobile">Responsável</th>
+    </tr></thead>
     <tbody>
-      {% for c in cotacoes %}
-      <tr>
-        <td onclick="event.stopPropagation();"><input type="checkbox" name="ids" value="{{ c.id }}" class="check-cotacao" data-teste="{{ '1' if c.id in sugestoes_teste else '0' }}"></td>
-        <td>
-          <a href="/cotacoes/{{ c.id }}"><strong>{{ c.numero or ('#' ~ c.id) }}</strong>{% if (c.revisao or 1) > 1 %} <span class="tag">r{{ c.revisao }}</span>{% endif %}</a>
-          {% if c.id in sugestoes_teste and not mostrar_arquivadas %}<br><span class="tag tag-review">cara de teste</span>{% endif %}
-          {% if c.arquivada_em %}<br><span class="tag tag-legacy">arquivada</span>{% endif %}
-        </td>
-        <td>{{ c.criado_em|data }}</td>
+    {% for c in cotacoes %}
+      <tr class="clicavel" data-href="/cotacoes/{{ c.id }}">
+        <td><input type="checkbox" name="ids" value="{{ c.id }}" class="check-cotacao" data-teste="{{ '1' if c.id in sugestoes_teste else '0' }}" aria-label="Selecionar {{ c.numero or c.id }}"></td>
+        <td class="primaria">{{ c.numero or ('#' ~ c.id) }}
+          {% if c.arquivada_em %}<span class="sub">arquivada {{ c.arquivada_em|data_curta }}</span>{% endif %}</td>
         <td>{{ clientes.get(c.cliente_id).nome if clientes.get(c.cliente_id) else '—' }}</td>
-        <td style="font-size:11px;">
-          {% set venda = vendas.get(c.id) %}
-          {% if venda %}<a href="/vendas/{{ venda.id }}">{{ venda.titulo }}</a>
-          {% else %}<span style="color:var(--gray);">Sem venda vinculada (legado)</span>{% endif %}
-        </td>
-        <td>{{ c.vendedor or '—' }}</td>
-        <td><span class="badge badge-{{ c.status|rotulo_cotacao }}">{{ c.status|rotulo_cotacao }}</span></td>
-        <td>{{ c.condicao_pagamento }}</td>
+        <td>{% set venda = vendas.get(c.id) %}{% if venda %}<a class="link" href="/vendas/{{ venda.id }}">{{ venda.titulo }}</a>{% else %}<span class="muted">Legado — sem venda vinculada</span>{% endif %}</td>
+        <td>R{{ c.revisao or 1 }}</td>
         <td class="num">{{ totais.get(c.id, {}).get('faturamento')|brl }}</td>
-        {% if ve_economia(request) %}
-        <td class="num">{{ totais.get(c.id, {}).get('margem_liquida')|pct }}</td>
-        {% endif %}
-        <td><a href="/cotacoes/{{ c.id }}" class="btn btn-ghost btn-sm">Abrir</a></td>
+        {% if ve_economia(request) %}<td class="num">{{ totais.get(c.id, {}).get('margem_liquida')|pct }}</td>{% endif %}
+        <td><span class="pill sem-ponto {{ pill_cotacao(c.status) }}">{{ c.status|rotulo_cotacao }}</span></td>
+        <td class="muted nowrap">{{ c.criado_em|data }}</td>
+        <td class="oculta-mobile">{{ c.vendedor or '—' }}</td>
       </tr>
-      {% endfor %}
+    {% else %}
+      <tr><td colspan="10" class="tbl-vazia">Nenhuma cotação com esses filtros.</td></tr>
+    {% endfor %}
     </tbody>
   </table>
-  </form>
-  {% else %}
-  <div class="empty-state"><h3>Nenhuma cotação ainda</h3><p>Crie a primeira cotação pra começar.</p></div>
+  {% if cotacoes %}
+  <div class="tbl-foot">
+    <span>Com as selecionadas:</span>
+    {% if not mostrar_arquivadas %}
+    <button class="btn btn-ghost btn-xs" name="acao" value="arquivar" type="submit">Arquivar</button>
+    {% if sugestoes_teste %}<button class="btn btn-ghost btn-xs" type="button" onclick="marcarTestes()">Marcar as com cara de teste ({{ sugestoes_teste|length }})</button>{% endif %}
+    {% else %}
+    <button class="btn btn-ghost btn-xs" name="acao" value="restaurar" type="submit">Restaurar</button>
+    <button class="btn btn-danger-ghost btn-xs" name="acao" value="apagar" type="submit"
+            onclick="return confirm('Apagar de vez as cotações selecionadas? O banco é copiado antes, mas depois disso elas somem da plataforma.');">Apagar de vez</button>
+    {% endif %}
+  </div>
   {% endif %}
 </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function marcarTodas(origem) { document.querySelectorAll(".check-cotacao").forEach(c => { c.checked = origem.checked; }); }
+// "cara de teste" = rascunho, sem PDF e sem aceite. É sugestão: quem decide é você.
+function marcarTestes() { document.querySelectorAll(".check-cotacao").forEach(c => { c.checked = c.dataset.teste === "1"; }); }
+</script>
 {% endblock %}

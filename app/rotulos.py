@@ -136,6 +136,9 @@ ETAPA = {
 
 STATUS_OPORTUNIDADE = {"ABERTA": "Aberta", "GANHA": "Vendido", "PERDIDA": "Perdido"}
 
+#: Situação financeira derivada do cliente (Fase 3C) — nunca "inadimplente" sem marcação.
+STATUS_FINANCEIRO_CLIENTE = {"EM_DIA": "Em dia", "EM_ABERTO": "Em aberto", "ATRASADO": "Atrasado"}
+
 STATUS_POS_VENDA = {
     "AGUARDANDO_ENTREGA": "Aguardando entrega",
     "AGUARDANDO_PAGAMENTO": "Aguardando pagamento",
@@ -158,6 +161,13 @@ ORIGEM_OPORTUNIDADE = {
 TIPO_ATIVIDADE = {
     "LIGACAO": "Ligação", "EMAIL": "E-mail", "REUNIAO": "Reunião",
     "FOLLOW_UP": "Follow-up", "OUTRO": "Outro",
+}
+
+#: Tipos de evento da timeline da venda (Fase 3C) — rótulo curto para a tela.
+EVENTO_TIMELINE = {
+    "criacao": "Criação", "etapa": "Status", "reabertura": "Reaberta", "atualizacao": "Atualização",
+    "atividade": "Atividade", "cotacao": "Cotação", "aprovacao": "Aprovação", "ganho": "Vendido",
+    "perda": "Perdido", "entrega": "Entrega", "faturamento": "Faturamento", "pagamento": "Pagamento",
 }
 
 # ---------------------------------------------------------------------------
@@ -279,6 +289,14 @@ def atividade(codigo) -> str:
 
 def papel(codigo) -> str:
     return _traduz(PAPEL, codigo)
+
+
+def evento_timeline(codigo) -> str:
+    return _traduz(EVENTO_TIMELINE, codigo)
+
+
+def status_financeiro(codigo) -> str:
+    return _traduz(STATUS_FINANCEIRO_CLIENTE, codigo)
 
 
 def erro(excecao_ou_codigo) -> str:

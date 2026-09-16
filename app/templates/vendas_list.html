@@ -1,86 +1,211 @@
 {% extends "base.html" %}
 {% block title %}Vendas — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Vendas</h1><span class="contexto">{{ vendas|length }} {{ 'venda' if vendas|length == 1 else 'vendas' }}</span></div>
+  <div class="seg" role="tablist" aria-label="Modo de visualização">
+    <a href="/vendas?vista=lista{{ qs_filtros }}" class="{{ 'active' if vista == 'lista' else '' }}">Lista</a>
+    <a href="/vendas?vista=quadro{{ qs_filtros }}" class="{{ 'active' if vista == 'quadro' else '' }}">Quadro</a>
+  </div>
+  <div class="acoes">
+    <button class="btn btn-copper" type="button" data-modal="modal-nova-venda">+ Nova venda</button>
+  </div>
+</div>
+{% endblock %}
+
 {% block content %}
-<div class="page-head">
-  <div><h1>Vendas</h1><div class="sub">Um projeto por linha. Troque o status na própria linha — grava na hora.</div></div>
-  <button class="btn btn-copper" onclick="document.getElementById('nova-venda').style.display='block'">+ Nova venda</button>
-</div>
+<form method="get" class="filters" id="filtros-vendas">
+  <input type="hidden" name="vista" value="{{ vista }}">
+  <input type="search" name="busca" value="{{ filtros.busca }}" placeholder="Buscar cliente ou projeto" aria-label="Buscar">
+  <select name="status" data-auto-submit aria-label="Status">
+    {% for valor, rotulo in opcoes_status %}<option value="{{ valor }}" {{ 'selected' if filtros.status == valor else '' }}>{{ rotulo }}</option>{% endfor %}
+  </select>
+  <select name="cliente_id" data-auto-submit aria-label="Cliente">
+    <option value="">Todos os clientes</option>
+    {% for c in clientes %}<option value="{{ c.id }}" {{ 'selected' if filtros.cliente_id == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
+  </select>
+  <select name="responsavel" data-auto-submit aria-label="Responsável">
+    <option value="">Todos os responsáveis</option>
+    <option value="eu" {{ 'selected' if filtros.responsavel == 'eu' else '' }}>Minhas vendas</option>
+    {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if filtros.responsavel == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
+  </select>
+  <select name="periodo" data-auto-submit aria-label="Período">
+    {% for valor, rotulo in periodos %}<option value="{{ valor }}" {{ 'selected' if filtros.periodo == valor else '' }}>{{ rotulo }}</option>{% endfor %}
+  </select>
+  {% if filtros.busca or filtros.status or filtros.cliente_id or filtros.responsavel or filtros.periodo %}
+  <a class="btn btn-ghost btn-sm" href="/vendas?vista={{ vista }}">Limpar</a>
+  {% endif %}
+</form>
 
-<div class="card" id="nova-venda" style="display:none;">
-  <form method="post" action="/vendas" class="grid-4">
-    <div class="field"><label>Cliente</label>
-      <select name="cliente_id" required><option value="">Selecione…</option>
-        {% for c in clientes %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}</select></div>
-    <div class="field"><label>Projeto / venda</label><input name="titulo" required placeholder="ex.: Renovação enxoval 2026"></div>
-    <div class="field"><label>Responsável</label>
-      <select name="responsavel_id">{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if eu and eu.id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select></div>
-    <div class="field"><label>&nbsp;</label><button class="btn btn-copper" type="submit">Criar em rascunho</button></div>
-  </form>
-  <p style="font-size:11px;color:var(--gray);margin:6px 0 0;">Cliente novo? <a href="/clientes">Cadastre em Clientes</a> — só o nome é obrigatório.</p>
+{% if vista == 'quadro' %}
+{# ---------------------------------------------------------------- QUADRO #}
+<div class="kanban" id="kanban">
+  {% for col in colunas %}
+  <div class="kcol" data-etapa="{{ col.etapa }}">
+    <div class="kcol-head">
+      <span class="nome">{{ col.rotulo }}</span>
+      <span class="meta"><span data-conta>{{ col.quantidade }}</span> · <span data-total>{{ col.total|brl if col.total is not none else '—' }}</span></span>
+    </div>
+    {% for v in col.cartoes %}
+    <a class="kcard" href="/vendas/{{ v.id }}" draggable="true" data-id="{{ v.id }}" data-valor="{{ v.valor_atual if v.valor_atual is not none else '' }}">
+      <div class="cliente">{{ v.cliente }}</div>
+      <div class="projeto">{{ v.titulo }}</div>
+      <div class="valor">{{ v.valor_atual|brl if v.valor_atual is not none else '—' }}</div>
+      <div class="rodape">
+        <span>{% if v.proxima_atividade %}<span class="{{ 'atrasada' if v.proxima_atividade.atrasada else '' }}">{{ v.proxima_atividade.titulo }}{% if v.proxima_atividade.due_em %} · {{ v.proxima_atividade.due_em|data_curta }}{% endif %}</span>{% else %}atualizada {{ v.atualizado_em|data_curta }}{% endif %}</span>
+        <span>{{ (v.responsavel or '—').split(' ')[0] }}</span>
+      </div>
+    </a>
+    {% endfor %}
+    {% if not col.cartoes %}<div class="vazio" style="padding:18px 8px;font-size:12px;">Nenhuma venda</div>{% endif %}
+  </div>
+  {% endfor %}
 </div>
+<p class="nota">Arraste um card para mudar o status. Vendido e Perdido ficam fora do quadro e são marcados na própria venda.</p>
 
-<div class="card">
-  <form method="get" class="grid-4" style="margin-bottom:0;">
-    <div class="field"><label>Status</label>
-      <select name="status" onchange="this.form.submit()"><option value="">Todas</option>
-        {% for s in opcoes_status %}<option value="{{ s }}" {{ 'selected' if filtros.status == s else '' }}>{{ s|capitalize }}</option>{% endfor %}
-      </select></div>
-    <div class="field"><label>Responsável</label>
-      <select name="responsavel" onchange="this.form.submit()"><option value="">Todos</option>
-        <option value="eu" {{ 'selected' if filtros.responsavel == 'eu' else '' }}>Minhas vendas</option>
-        {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if filtros.responsavel == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
-      </select></div>
-    <div class="field"><label>Cliente</label>
-      <select name="cliente_id" onchange="this.form.submit()"><option value="">Todos</option>
-        {% for c in clientes %}<option value="{{ c.id }}" {{ 'selected' if filtros.cliente_id == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
-      </select></div>
-    <div class="field"><label>Busca</label><input type="text" name="busca" value="{{ filtros.busca }}" placeholder="cliente ou projeto"></div>
-  </form>
-</div>
-
-<div class="card">
-  <table class="compacta">
-    <thead><tr><th>Cliente</th><th>Projeto / venda</th><th class="num">Valor atual</th>
-      <th>Status</th><th>Responsável</th><th>Última atualização</th><th>Próxima atividade</th></tr></thead>
+{% else %}
+{# ---------------------------------------------------------------- LISTA #}
+<div class="card flush">
+  <table id="tabela-vendas">
+    <thead><tr>
+      <th>Cliente</th><th>Projeto</th><th class="num">Valor</th><th>Status</th>
+      <th>Cotação atual</th><th class="oculta-mobile">Última atualização</th><th class="oculta-mobile">Responsável</th>
+    </tr></thead>
     <tbody>
     {% for v in vendas %}
-      <tr style="cursor:pointer;" onclick="if (!event.target.closest('select')) window.location='/vendas/{{ v.id }}'">
-        <td>{{ v.cliente }}</td>
-        <td><a href="/vendas/{{ v.id }}">{{ v.titulo }}</a></td>
-        <td class="num">{{ v.valor_atual|brl }}</td>
+      <tr class="clicavel" data-href="/vendas/{{ v.id }}" data-venda="{{ v.id }}">
+        <td class="primaria">{{ v.cliente }}</td>
+        <td>{{ v.titulo }}
+          {% if v.proxima_atividade and v.proxima_atividade.atrasada %}<span class="sub" style="color:var(--danger);">atividade atrasada: {{ v.proxima_atividade.titulo }}</span>{% endif %}</td>
+        <td class="num">{{ v.valor_atual|brl if v.valor_atual is not none else '—' }}</td>
         <td>
           {% if v.status == 'ABERTA' %}
-          <select onchange="mudarStatus({{ v.id }}, this.value)" style="font-size:11px;">
-            {% for e in etapas %}<option value="{{ e }}" {{ 'selected' if v.etapa == e else '' }}>{{ e|rotulo_etapa }}</option>{% endfor %}
-          </select>
+          <button type="button" class="pill editavel {{ pill_venda(v.status, v.etapa) }}"
+                  data-status-venda="{{ v.id }}" data-etapa="{{ v.etapa }}"
+                  aria-label="Mudar status de {{ v.titulo }}">{{ v.status_comercial }}</button>
           {% else %}
-          <span class="tag {{ 'tag-calc' if v.status == 'GANHA' else 'tag-review' }}">{{ v.status_comercial }}</span>
-          {% if v.status_pos_venda %}<br><span style="font-size:10px;color:var(--gray);">{{ v.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}
+          <span class="pill {{ pill_venda(v.status, v.etapa) }}">{{ v.status_comercial }}</span>
+          {% if v.status_pos_venda %}<span class="pill sem-ponto {{ pill_pos_venda(v.status_pos_venda) }}" style="margin-left:4px;">{{ v.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}
           {% endif %}
         </td>
-        <td style="font-size:11px;">{{ v.responsavel or '—' }}</td>
-        <td style="font-size:11px;">{{ v.atualizado_em.strftime('%d/%m/%Y %H:%M') if v.atualizado_em else '—' }}</td>
-        <td style="font-size:11px;">
-          {% if v.proxima_atividade %}{{ v.proxima_atividade.titulo }}
-            {% if v.proxima_atividade.atrasada %}<span class="tag tag-review">atrasada</span>{% endif %}
-          {% else %}<span style="color:var(--gray);">—</span>{% endif %}</td>
+        <td>{% if v.cotacao %}<a href="/cotacoes/{{ v.cotacao.id }}">{{ v.cotacao.numero or ('#' ~ v.cotacao.id) }}{% if (v.cotacao.revisao or 1) > 1 %} · R{{ v.cotacao.revisao }}{% endif %}</a>
+              <span class="sub">{{ v.cotacao.status|rotulo_cotacao }}</span>{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="oculta-mobile muted nowrap">{{ v.atualizado_em|datahora }}</td>
+        <td class="oculta-mobile">{{ v.responsavel or '—' }}</td>
       </tr>
     {% else %}
-      <tr><td colspan="7" style="color:var(--gray);">Nenhuma venda com esses filtros.</td></tr>
+      <tr><td colspan="7" class="tbl-vazia">Nenhuma venda com esses filtros.
+        {% if not vendas and not (filtros.busca or filtros.status or filtros.cliente_id or filtros.responsavel or filtros.periodo) %}
+        <br><button class="btn btn-copper btn-sm mt-8" type="button" data-modal="modal-nova-venda">Criar a primeira venda</button>{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table>
+</div>
+{% endif %}
+
+{# Popover único de status — reposicionado para a linha clicada #}
+<div class="popover" id="popover-status" role="menu">
+  <div class="titulo">Status</div>
+  {% for e in etapas %}
+  <button type="button" role="menuitem" data-etapa-alvo="{{ e }}">
+    <span class="pill sem-ponto {{ pill_venda('ABERTA', e) }}" style="padding:1px 7px;">{{ e|rotulo_etapa }}</span></button>
+  {% endfor %}
+  <div class="sep"></div>
+  <a role="menuitem" href="#" data-abrir-venda>Marcar vendido ou perdido…</a>
+</div>
+
+{# Modal: nova venda #}
+<div class="modal-bg" id="modal-nova-venda" role="dialog" aria-modal="true" aria-labelledby="titulo-nova-venda">
+  <form class="modal" method="post" action="/vendas">
+    <div class="modal-head"><h2 id="titulo-nova-venda">Nova venda</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="field"><label for="nv-cliente">Cliente</label>
+      <select id="nv-cliente" name="cliente_id" required autofocus><option value="">Selecione…</option>
+        {% for c in clientes %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}</select>
+      <small>Cliente novo? <a class="link" href="/clientes">Cadastre em Clientes</a> — só o nome é obrigatório.</small></div>
+    <div class="field"><label for="nv-titulo">Projeto</label><input id="nv-titulo" name="titulo" required placeholder="ex.: Renovação do enxoval 2026"></div>
+    <div class="field"><label for="nv-resp">Responsável</label>
+      <select id="nv-resp" name="responsavel_id">{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if eu and eu.id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select></div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Criar venda</button></div>
+  </form>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-async function mudarStatus(id, etapa) {
-  const d = new FormData(); d.append('etapa', etapa);
-  const r = await fetch(`/vendas/${id}/status`, {method: 'POST', body: d});
-  const j = await r.json();
-  anaraToast(r.ok ? j.mensagem : (j.detail || j.erro || 'Não foi possível mudar o status.'));
-  if (!r.ok) setTimeout(() => location.reload(), 900);
-}
+(function () {
+  const ROTULOS = {{ etapas|map('rotulo_etapa')|list|tojson }};
+  const ETAPAS = {{ etapas|tojson }};
+  const CLASSES = {RASCUNHO: 'pill-rascunho', ENVIADO: 'pill-enviado', NEGOCIACAO: 'pill-negociacao'};
+  const pop = document.getElementById('popover-status');
+  let alvo = null;   // botão .pill da linha em edição
+
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-status-venda]');
+    if (!btn) return;
+    e.preventDefault(); e.stopPropagation();
+    alvo = btn;
+    pop.querySelectorAll('[data-etapa-alvo]').forEach(b => b.classList.toggle('atual', b.dataset.etapaAlvo === btn.dataset.etapa));
+    pop.querySelector('[data-abrir-venda]').href = '/vendas/' + btn.dataset.statusVenda;
+    abrirPopover(btn, 'popover-status');
+  });
+
+  pop.addEventListener('click', async (e) => {
+    const op = e.target.closest('[data-etapa-alvo]');
+    if (!op || !alvo) return;
+    e.preventDefault();
+    const etapa = op.dataset.etapaAlvo;
+    fecharPopovers();
+    if (etapa === alvo.dataset.etapa) return;
+    await mudarStatus(alvo, etapa);
+  });
+
+  async function mudarStatus(btn, etapa) {
+    const anterior = btn.dataset.etapa;
+    btn.classList.add('salvando');
+    const r = await anaraFetch(`/vendas/${btn.dataset.statusVenda}/status`, {method: 'POST', form: {etapa}});
+    btn.classList.remove('salvando');
+    if (!r.ok) { anaraToast(r.erro, 'erro'); return false; }
+    btn.dataset.etapa = r.dados.etapa;
+    btn.textContent = r.dados.status_comercial;
+    Object.values(CLASSES).forEach(c => btn.classList.remove(c));
+    btn.classList.add(CLASSES[r.dados.etapa] || 'pill-neutro');
+    anaraToast(r.dados.mensagem, 'ok');
+    return true;
+  }
+
+  // ---- Quadro: arrastar e soltar muda a etapa pelo backend ----
+  const kanban = document.getElementById('kanban');
+  if (!kanban) return;
+  let arrastando = null;
+  kanban.addEventListener('dragstart', (e) => {
+    const card = e.target.closest('.kcard'); if (!card) return;
+    arrastando = card; card.classList.add('arrastando');
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', card.dataset.id);
+  });
+  kanban.addEventListener('dragend', () => { if (arrastando) arrastando.classList.remove('arrastando'); arrastando = null;
+    kanban.querySelectorAll('.kcol').forEach(c => c.classList.remove('drop')); });
+  kanban.addEventListener('dragover', (e) => { const col = e.target.closest('.kcol'); if (!col) return; e.preventDefault(); col.classList.add('drop'); });
+  kanban.addEventListener('dragleave', (e) => { const col = e.target.closest('.kcol'); if (col && !col.contains(e.relatedTarget)) col.classList.remove('drop'); });
+  kanban.addEventListener('drop', async (e) => {
+    const col = e.target.closest('.kcol'); if (!col || !arrastando) return;
+    e.preventDefault(); col.classList.remove('drop');
+    const card = arrastando, origem = card.closest('.kcol'), etapa = col.dataset.etapa;
+    if (origem === col) return;
+    const r = await anaraFetch(`/vendas/${card.dataset.id}/status`, {method: 'POST', form: {etapa}});
+    if (!r.ok) { anaraToast(r.erro, 'erro'); return; }
+    col.insertBefore(card, col.querySelector('.kcard') || null);
+    col.querySelectorAll('.vazio').forEach(v => v.remove());
+    recontar(origem); recontar(col);
+    anaraToast(r.dados.mensagem, 'ok');
+  });
+  function recontar(col) {
+    const cards = col.querySelectorAll('.kcard');
+    let total = 0, algum = false;
+    cards.forEach(c => { if (c.dataset.valor !== '') { total += parseFloat(c.dataset.valor) || 0; algum = true; } });
+    col.querySelector('[data-conta]').textContent = cards.length;
+    col.querySelector('[data-total]').textContent = algum ? brl(total) : '—';
+  }
+})();
 </script>
 {% endblock %}

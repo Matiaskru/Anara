@@ -695,25 +695,36 @@ def timeline(session: Session, op: Oportunidade) -> List[dict]:
     versões da mesma história.
     """
     eventos = [{"quando": op.criado_em, "tipo": "criacao",
-                "texto": f"Oportunidade criada por {op.criado_por or '—'}"}]
+                "texto": f"Venda criada por {op.criado_por or '—'}"}]
     from app import rotulos
     for h in historico_de_etapas(session, op.id):
         if h.etapa_anterior:
             reabertura = (h.observacao or "").startswith("reabertura")
+            automatico = (h.ator_email or "").startswith("sistema (automático")
+            observacao = (h.observacao or "")
+            if automatico:
+                # "AUTOMÁTICO: cotação X r1 emitida" → "automático, ao emitir a cotação X"
+                observacao = observacao.replace("AUTOMÁTICO: ", "").strip()
+                ator = f"automático — {observacao}" if observacao else "automático"
+                observacao = ""
+            else:
+                ator = h.ator_email or "—"
             eventos.append({"quando": h.ocorrido_em,
                             "tipo": "reabertura" if reabertura else "etapa",
                             "texto": (f"{'Venda reaberta: ' if reabertura else ''}"
                                       f"{rotulos.etapa_venda(h.etapa_anterior)} → "
                                       f"{rotulos.etapa_venda(h.etapa_nova)} "
-                                      f"({h.ator_email or '—'})"
-                                      + (f" — {h.observacao}" if h.observacao and not reabertura
+                                      f"({ator})"
+                                      + (f" — {observacao}" if observacao and not reabertura
                                          else ""))})
     for n in atualizacoes_de(session, op.id):
         eventos.append({"quando": n.criado_em, "tipo": "atualizacao",
                         "texto": f"{n.texto} ({n.autor_email or '—'})"})
     for a in atividades_de(session, oportunidade_id=op.id):
+        # rótulo humano do tipo ("Follow-up", "Ligação"), nunca o código do enum
         eventos.append({"quando": a.criado_em, "tipo": "atividade",
-                        "texto": f"{a.tipo}: {a.titulo}"})
+                        "texto": f"{rotulos.atividade(a.tipo)}: {a.titulo}"
+                                 + (f" — para {a.due_em:%d/%m %H:%M}" if a.due_em else "")})
         if a.concluida_em:
             eventos.append({"quando": a.concluida_em, "tipo": "atividade",
                             "texto": f"Concluída: {a.titulo} ({a.concluida_por or '—'})"})
@@ -727,9 +738,10 @@ def timeline(session: Session, op: Oportunidade) -> List[dict]:
                               .where(AprovacaoCotacao.cotacao_id == c.id)).all():
             if a.decidido_em:
                 eventos.append({"quando": a.decidido_em, "tipo": "aprovacao",
-                                "texto": f"Exceção {a.status.lower()} na cotação "
-                                         f"{c.numero or c.id} r{c.revisao} "
-                                         f"({a.aprovador_email or '—'})"})
+                                "texto": (f"Exceção comercial "
+                                          f"{'aprovada' if a.status == 'APROVADA' else ('rejeitada' if a.status == 'REJEITADA' else a.status.lower())} "
+                                          f"na cotação {c.numero or c.id} r{c.revisao} "
+                                          f"({a.aprovador_email or '—'})")})
         if c.issued_em:
             eventos.append({"quando": c.issued_em, "tipo": "cotacao",
                             "texto": f"Cotação {c.numero or c.id} r{c.revisao} emitida"})
@@ -738,10 +750,10 @@ def timeline(session: Session, op: Oportunidade) -> List[dict]:
                             "texto": f"Cotação {c.numero or c.id} r{c.revisao} enviada"})
     if op.won_em:
         eventos.append({"quando": op.won_em, "tipo": "ganho",
-                        "texto": f"Negócio GANHO por {op.won_por or '—'}"})
+                        "texto": f"Venda fechada — marcada como vendida por {op.won_por or '—'}"})
     if op.lost_em:
         eventos.append({"quando": op.lost_em, "tipo": "perda",
-                        "texto": f"Venda PERDIDA ({rotulos.motivo_perda(op.motivo_perda)}) "
+                        "texto": f"Venda perdida ({rotulos.motivo_perda(op.motivo_perda)}) "
                                  f"por {op.lost_por or '—'}"})
     # pós-venda (Fase 3B): os fatos moram nas colunas; a timeline só os lê
     if op.entregue_em:

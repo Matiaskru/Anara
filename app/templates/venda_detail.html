@@ -1,195 +1,303 @@
 {% extends "base.html" %}
-{% block title %}{{ op.titulo }} — Vendas — Anara{% endblock %}
-{% block content %}
-<div class="page-head">
-  <div><h1>{{ op.titulo }}</h1>
-    <div class="sub"><a href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a>
-      · <span class="tag {{ 'tag-calc' if op.status == 'GANHA' else ('tag-review' if op.status == 'PERDIDA' else '') }}">{{ cartao.status_comercial }}</span>
-      · {{ responsavel.nome if responsavel else 'sem responsável' }}
-      {% if op.status_pos_venda %} · <span class="tag">{{ op.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}
-    </div></div>
-  <a href="/vendas" class="btn btn-ghost">Todas as vendas</a>
+{% block title %}{{ op.titulo }} — {{ cliente.nome }} — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo">
+    <div>
+      <div class="crumbs"><a href="/vendas">Vendas</a> · <a href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a></div>
+      <h1>{{ op.titulo }}</h1>
+    </div>
+  </div>
+  <div class="flex" style="gap:10px;">
+    <span class="muted small nowrap" id="topo-valor"><strong style="color:var(--ink);font-size:14px;">{{ cartao.valor_atual|brl if cartao.valor_atual is not none else '—' }}</strong></span>
+    {% if op.status == 'ABERTA' %}
+    <button type="button" class="pill editavel {{ pill_venda(op.status, op.etapa) }}" id="pill-status"
+            data-popover="popover-status" data-etapa="{{ op.etapa }}" aria-label="Mudar status">{{ cartao.status_comercial }}</button>
+    {% else %}
+    <span class="pill {{ pill_venda(op.status, op.etapa) }}">{{ cartao.status_comercial }}</span>
+    {% if op.status_pos_venda %}<span class="pill sem-ponto {{ pill_pos_venda(op.status_pos_venda) }}">{{ op.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}
+    {% endif %}
+    <span class="muted small nowrap oculta-mobile">{{ responsavel.nome if responsavel else 'sem responsável' }}</span>
+  </div>
+  <div class="acoes">
+    {% if op.status == 'ABERTA' %}
+    <button class="btn btn-ghost" type="button" data-modal="modal-atualizacao">+ Registrar atualização</button>
+    <form method="post" action="/vendas/{{ op.id }}/cotacao"><button class="btn btn-copper" type="submit">Nova cotação</button></form>
+    <button class="btn btn-ghost btn-icon" type="button" data-popover="popover-mais" aria-label="Mais ações">⋯</button>
+    {% elif op.status == 'PERDIDA' %}
+    <button class="btn btn-ghost" type="button" data-modal="modal-atualizacao">+ Registrar atualização</button>
+    <button class="btn btn-copper" type="button" onclick="reabrir()">Reabrir venda</button>
+    {% else %}
+    <button class="btn btn-ghost" type="button" data-modal="modal-atualizacao">+ Registrar atualização</button>
+    <form method="post" action="/vendas/{{ op.id }}/cotacao"><button class="btn btn-ghost" type="submit">Nova cotação</button></form>
+    {% endif %}
+  </div>
 </div>
 
-{% if faltando_fiscal %}
-<div class="card" style="border-left:4px solid var(--copper);">
-  <strong>Dados fiscais necessários para emitir cotação</strong>
-  <ul style="font-size:12px; margin:6px 0 0;">{% for f in faltando_fiscal %}<li>{{ f }}</li>{% endfor %}</ul>
+<div class="popover" id="popover-status" role="menu">
+  <div class="titulo">Status</div>
+  {% for e in etapas %}<button type="button" role="menuitem" data-etapa-alvo="{{ e }}" class="{{ 'atual' if op.etapa == e else '' }}"><span class="pill sem-ponto {{ pill_venda('ABERTA', e) }}" style="padding:1px 7px;">{{ e|rotulo_etapa }}</span></button>{% endfor %}
+  <div class="sep"></div>
+  <button type="button" role="menuitem" data-modal="modal-vendido">Marcar vendido…</button>
+  <button type="button" role="menuitem" data-modal="modal-perdido">Marcar perdido…</button>
 </div>
+<div class="popover" id="popover-mais" role="menu">
+  <button type="button" role="menuitem" data-modal="modal-vendido">Marcar vendido…</button>
+  <button type="button" role="menuitem" data-modal="modal-perdido">Marcar perdido…</button>
+  <div class="sep"></div>
+  <button type="button" role="menuitem" data-modal="modal-responsavel">Trocar responsável…</button>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if faltando_fiscal and op.status == 'ABERTA' %}
+<div class="banner banner-warn"><div><strong>Para emitir cotação, o cadastro do cliente ainda precisa de:</strong>
+  {{ faltando_fiscal|join('; ') }}. <a class="link" href="/clientes/{{ cliente.id }}#visao">Completar cadastro</a></div></div>
 {% endif %}
 
-<div class="kpis">
-  <div class="kpi"><div class="label">Valor atual</div><div class="value copper">{{ cartao.valor_atual|brl }}</div></div>
-  {% if op.valor_fechado %}<div class="kpi"><div class="label">Valor vendido</div><div class="value">{{ op.valor_fechado|brl }}</div></div>{% endif %}
-  <div class="kpi"><div class="label">Cotações</div><div class="value">{{ cotacoes|length }}</div></div>
+<div class="split">
+  {# ------------------------------------------------------------ principal #}
+  <div>
+    {% if op.status == 'GANHA' %}
+    <div class="card" id="pos-venda">
+      <div class="card-title"><h3>Pós-venda</h3>
+        <span class="pill sem-ponto {{ pill_pos_venda(op.status_pos_venda) }}" id="pv-status">{{ op.status_pos_venda|rotulo_pos_venda }}</span></div>
+      {% set pvs = op.status_pos_venda %}
+      <div class="stepper">
+        <div class="step feito">Venda fechada<span class="data">{{ op.won_em|data }}</span></div>
+        <div class="step {{ 'feito' if op.entregue_em else ('atual' if pvs == 'AGUARDANDO_ENTREGA' else '') }}">Entrega<span class="data">{{ op.entregue_em|data if op.entregue_em else ('prevista ' ~ op.entrega_prevista_em|data if op.entrega_prevista_em else '—') }}</span></div>
+        <div class="step {{ 'feito' if op.faturado_em else '' }}">Faturamento<span class="data">{{ op.faturado_em|data if op.faturado_em else '—' }}</span></div>
+        <div class="step {{ 'feito' if pvs == 'PAGO' else ('alerta' if pvs == 'ATRASADO' else ('atual' if pvs == 'AGUARDANDO_PAGAMENTO' else '')) }}">Pagamento<span class="data">{{ op.pago_em|data if op.pago_em else ('previsto ' ~ op.pagamento_previsto_em|data if op.pagamento_previsto_em else '—') }}{% if pvs == 'ATRASADO' %} · atrasado{% endif %}</span></div>
+      </div>
+      <div class="grid-3">
+        <div><div class="rotulo">Valor vendido</div><div class="numero" style="font-size:16px;">{{ pos_venda.valor_vendido|brl }}</div></div>
+        <div><div class="rotulo">Faturado</div><div class="numero" style="font-size:16px;">{{ pos_venda.valor_faturado|brl if pos_venda.valor_faturado else '—' }}</div>{% if op.numero_documento_fiscal %}<div class="nota">{{ op.numero_documento_fiscal }}</div>{% endif %}</div>
+        <div><div class="rotulo">Pago</div><div class="numero" style="font-size:16px;">{{ pos_venda.valor_pago|brl if pos_venda.valor_pago else '—' }}</div></div>
+      </div>
+      <details class="mais" {{ 'open' if not op.entregue_em or financeiro else '' }}>
+        <summary>Atualizar entrega{% if financeiro %} e financeiro{% endif %}</summary>
+        <div class="grid-4 mt-12">
+          <div class="field"><label for="pv-prevista">Entrega prevista</label>
+            <div class="flex"><input type="date" id="pv-prevista" value="{{ op.entrega_prevista_em or '' }}">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="pv('entrega-prevista', {prevista_em: v('pv-prevista')})">Salvar</button></div></div>
+          <div class="field"><label>Entrega</label>
+            <button class="btn btn-copper btn-sm" type="button" onclick="pv('entrega', {})" {% if op.entregue_em %}disabled{% endif %}>{{ 'Entregue em ' ~ op.entregue_em|data if op.entregue_em else 'Registrar entrega' }}</button></div>
+          <div class="field span-2"><label for="pv-obs">Observação de pós-venda</label>
+            <div class="flex"><input id="pv-obs" value="{{ op.observacao_pos_venda or '' }}" placeholder="ex.: entrega parcial combinada">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="pv('observacao', {texto: v('pv-obs')})">Salvar</button></div></div>
+        </div>
+        {% if financeiro %}
+        <div class="rotulo mt-8">Financeiro</div>
+        <div class="grid-4">
+          <div class="field"><label for="pv-fat">Faturado em</label><input type="date" id="pv-fat" value="{{ op.faturado_em or '' }}"></div>
+          <div class="field"><label for="pv-doc">Documento fiscal</label>
+            <div class="flex"><input id="pv-doc" placeholder="NF-e" value="{{ op.numero_documento_fiscal or '' }}">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="pv('faturamento', {faturado_em: v('pv-fat'), numero_documento_fiscal: v('pv-doc')})">Salvar</button></div></div>
+          <div class="field"><label for="pv-pgprev">Pagamento previsto</label>
+            <div class="flex"><input type="date" id="pv-pgprev" value="{{ op.pagamento_previsto_em or '' }}">
+              <button class="btn btn-ghost btn-sm" type="button" onclick="pv('pagamento-previsto', {previsto_em: v('pv-pgprev')})">Salvar</button></div></div>
+          <div class="field"><label>Pagamento</label>
+            <div class="flex">
+              <button class="btn btn-copper btn-sm" type="button" onclick="pv('pago', {})" {% if pvs == 'PAGO' %}disabled{% endif %}>Marcar pago</button>
+              <button class="btn btn-danger-ghost btn-sm" type="button" onclick="pv('atrasado', {observacao: v('pv-obs')})" {% if pvs in ('PAGO', 'ATRASADO') %}disabled{% endif %}>Marcar atrasado</button>
+            </div></div>
+        </div>
+        {% endif %}
+      </details>
+    </div>
+    {% endif %}
+
+    {% if op.status == 'PERDIDA' %}
+    <div class="banner banner-erro"><div><strong>Perdida em {{ op.lost_em|data }} · motivo: {{ op.motivo_perda|rotulo_motivo }}</strong>
+      {% if op.comentario_perda %}{{ op.comentario_perda }}{% endif %} <span class="muted">({{ op.lost_por or '—' }})</span></div></div>
+    {% endif %}
+
+    {# registro rápido #}
+    <div class="card">
+      <div class="quick">
+        <textarea id="at-rapido" rows="2" placeholder="Registrar atualização: o que aconteceu? (Enter para salvar, Shift+Enter para nova linha)"></textarea>
+        <button class="btn btn-copper" type="button" onclick="atualizarRapido()">Registrar</button>
+        <button class="btn btn-ghost" type="button" data-modal="modal-atualizacao" title="Com próxima ação">+ Ação</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><h3>Histórico</h3><span class="muted small">{{ timeline|length }} eventos</span></div>
+      <div class="timeline" id="timeline">
+        {% set ns = namespace(dia=None) %}
+        {% for e in timeline|reverse %}
+          {% set dia = e.quando.strftime('%d/%m/%Y') %}
+          {% if dia != ns.dia %}<div class="tl-dia">{{ dia }}</div>{% set ns.dia = dia %}{% endif %}
+          <div class="tl-item tl-{{ e.tipo }}">
+            <div class="quando">{{ e.quando.strftime('%H:%M') }} <span class="tipo">{{ rotulo_evento(e.tipo) }}</span></div>
+            <div class="texto">{{ e.texto }}</div>
+          </div>
+        {% else %}
+          <div class="vazio">Nada registrado ainda.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ------------------------------------------------------------ lateral #}
+  <div class="split-lateral">
+    <div class="panel">
+      <div class="panel-sec">
+        <h4>Resumo</h4>
+        <div class="resumo-linha"><span class="r">Cliente</span><span class="v"><a class="link" href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a></span></div>
+        <div class="resumo-linha"><span class="r">Responsável</span><span class="v">{{ responsavel.nome if responsavel else '—' }}</span></div>
+        <div class="resumo-linha"><span class="r">Criada em</span><span class="v">{{ op.criado_em|data }}</span></div>
+        <div class="resumo-linha"><span class="r">Última atualização</span><span class="v">{{ (op.atualizado_em or op.criado_em)|data }}</span></div>
+        {% if op.valor_fechado %}<div class="resumo-linha destaque"><span class="r">Valor vendido</span><span class="v">{{ op.valor_fechado|brl }}</span></div>
+        {% else %}<div class="resumo-linha destaque"><span class="r">Valor atual</span><span class="v">{{ cartao.valor_atual|brl if cartao.valor_atual is not none else '—' }}</span></div>{% endif %}
+      </div>
+      <div class="panel-sec">
+        <h4>Cotação atual</h4>
+        {% if cotacao_atual %}
+        <div class="resumo-linha"><span class="r"><a class="link" href="/cotacoes/{{ cotacao_atual.id }}">{{ cotacao_atual.numero or ('#' ~ cotacao_atual.id) }}</a>{% if (cotacao_atual.revisao or 1) > 1 %} · R{{ cotacao_atual.revisao }}{% endif %}</span>
+          <span class="v"><span class="pill sem-ponto {{ pill_cotacao(cotacao_atual.status) }}">{{ cotacao_atual.status|rotulo_cotacao }}</span></span></div>
+        <div class="resumo-linha"><span class="r">Valor</span><span class="v">{{ cartao.valor_cotado|brl if cartao.valor_cotado is not none else '—' }}</span></div>
+        {% if cotacoes|length > 1 %}
+        <details class="mais"><summary>Todas as cotações ({{ cotacoes|length }})</summary>
+          <table class="compacta limpa mt-8"><tbody>
+          {% for c in cotacoes %}<tr><td><a class="link" href="/cotacoes/{{ c.id }}">{{ c.numero or c.id }}</a>{% if (c.revisao or 1) > 1 %} · R{{ c.revisao }}{% endif %}</td>
+            <td><span class="pill sem-ponto {{ pill_cotacao(c.status) }}">{{ c.status|rotulo_cotacao }}</span>{% if op.cotacao_vencedora_id == c.id %} <span class="tag tag-calc">aceita</span>{% endif %}</td></tr>{% endfor %}
+          </tbody></table>
+          <p class="nota">Revisões (R1, R2…) são a mesma venda.</p></details>
+        {% endif %}
+        {% else %}
+        <p class="muted small">Nenhuma cotação ainda.</p>
+        {% if op.status == 'ABERTA' %}<form method="post" action="/vendas/{{ op.id }}/cotacao"><button class="btn btn-copper btn-sm" type="submit">Criar a primeira cotação</button></form>{% endif %}
+        {% endif %}
+      </div>
+      <div class="panel-sec">
+        <h4>Próxima atividade</h4>
+        {% if proxima %}
+        <div class="resumo-linha"><span class="r">{{ proxima.tipo|rotulo_atividade }}</span>
+          <span class="v {{ 'margem-abaixo' if atrasada(proxima) else '' }}">{{ proxima.due_em|datahora if proxima.due_em else 'sem data' }}{% if atrasada(proxima) %} · atrasada{% endif %}</span></div>
+        <div style="font-size:12.5px;margin:2px 0 8px;">{{ proxima.titulo }}</div>
+        <button class="btn btn-ghost btn-sm" type="button" onclick="concluir({{ proxima.id }})">Concluir</button>
+        {% else %}
+        <p class="muted small">Nenhuma ação combinada.</p>
+        <button class="btn btn-ghost btn-sm" type="button" data-modal="modal-atualizacao">Combinar próxima ação</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 
-<div class="card">
-  <h3 style="margin-top:0;">Status</h3>
-  {% if op.status == 'ABERTA' %}
-  <div class="grid-4">
-    <div class="field"><label>Status comercial</label>
-      <select id="op-etapa" onchange="mudarStatus(this.value)">
-        {% for e in etapas %}<option value="{{ e }}" {{ 'selected' if op.etapa == e else '' }}>{{ e|rotulo_etapa }}</option>{% endfor %}
-      </select></div>
-    <div class="field"><label>Responsável</label>
-      <select onchange="atribuir(this.value)"><option value="">Sem responsável</option>
-        {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if op.responsavel_id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}
-      </select></div>
-    <div class="field"><label>Marcar vendido — proposta aceita</label>
+{# ---------------------------------------------------------------- modais #}
+<div class="modal-bg" id="modal-atualizacao" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h2>Registrar atualização</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="field"><label for="at-texto">O que aconteceu</label><textarea id="at-texto" rows="3" placeholder="ex.: cliente pediu revisão para 300 toalhas" autofocus></textarea></div>
+    <div class="rotulo">Próxima ação (opcional)</div>
+    <div class="grid-3">
+      <div class="field span-3" style="grid-column: span 3;"><label for="at-titulo">Ação</label><input id="at-titulo" placeholder="ex.: ligar para o comprador"></div>
+      <div class="field"><label for="at-tipo">Tipo</label><select id="at-tipo">{% for t in tipos_atividade %}<option value="{{ t }}">{{ t|rotulo_atividade }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="at-data">Data</label><input id="at-data" type="date"></div>
+      <div class="field"><label for="at-hora">Hora</label><input id="at-hora" type="time"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="button" onclick="atualizar()">Salvar</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal-vendido" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h2>Marcar como vendido</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <p class="small muted">Escolha a proposta que o cliente aceitou. Só uma cotação emitida ou enviada pode ser a vencedora.</p>
+    <div class="field"><label for="op-vencedora">Proposta aceita</label>
       <select id="op-vencedora"><option value="">Selecione…</option>
         {% for c in cotacoes %}{% if c.status in ('emitida', 'enviada') %}
-        <option value="{{ c.id }}">{{ c.numero }} r{{ c.revisao }} — {{ c.status|rotulo_cotacao }}</option>{% endif %}{% endfor %}
+        <option value="{{ c.id }}">{{ c.numero }}{% if (c.revisao or 1) > 1 %} · R{{ c.revisao }}{% endif %} — {{ c.status|rotulo_cotacao }}</option>{% endif %}{% endfor %}
       </select>
-      <button class="btn btn-copper btn-sm" style="margin-top:6px;" onclick="vendido()">Marcar vendido</button></div>
-    <div class="field"><label>Marcar perdido — motivo</label>
-      <select id="op-motivo"><option value="">Motivo…</option>
-        {% for m in motivos_perda %}<option value="{{ m }}">{{ m|rotulo_motivo }}</option>{% endfor %}</select>
-      <input id="op-nota" type="text" placeholder="nota (opcional)" style="margin-top:4px;">
-      <button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="perdido()">Marcar perdido</button></div>
+      {% if not cotacoes|selectattr('status', 'in', ['emitida', 'enviada'])|list %}<small>Ainda não há proposta emitida nesta venda.</small>{% endif %}</div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="button" onclick="vendido()">Marcar vendido</button></div>
   </div>
-  <form method="post" action="/vendas/{{ op.id }}/cotacao" style="margin-top:10px;">
-    <button class="btn btn-copper" type="submit">Nova cotação nesta venda</button>
-  </form>
-  {% elif op.status == 'PERDIDA' %}
-  <p style="font-size:12px;">Perdida em {{ op.lost_em.strftime('%d/%m/%Y') if op.lost_em else '—' }} por {{ op.lost_por or '—' }}
-     · motivo <span class="tag tag-review">{{ op.motivo_perda|rotulo_motivo }}</span>
-     {% if op.comentario_perda %}<br><em>{{ op.comentario_perda }}</em>{% endif %}</p>
-  <button class="btn btn-ghost" onclick="reabrir()">Reabrir venda</button>
-  {% else %}
-  <p style="font-size:12px;">Vendida em {{ op.won_em.strftime('%d/%m/%Y') if op.won_em else '—' }} por {{ op.won_por or '—' }}
-     · proposta vencedora <a href="/cotacoes/{{ op.cotacao_vencedora_id }}">cotação #{{ op.cotacao_vencedora_id }}</a></p>
-  {% endif %}
-  <div id="op-resultado" style="margin-top:8px;"></div>
 </div>
 
-{% if op.status == 'GANHA' %}
-<div class="card">
-  <h3 style="margin-top:0;">Pós-venda — {{ op.status_pos_venda|rotulo_pos_venda }}</h3>
-  <table class="compacta"><tbody>
-    <tr><td>Valor vendido</td><td class="num">{{ pos_venda.valor_vendido|brl }}</td>
-        <td>Valor faturado</td><td class="num">{{ pos_venda.valor_faturado|brl if pos_venda.valor_faturado else '— (não faturado)' }}</td>
-        <td>Valor pago</td><td class="num">{{ pos_venda.valor_pago|brl if pos_venda.valor_pago else '— (não pago)' }}</td></tr>
-    <tr><td>Entrega prevista</td><td>{{ op.entrega_prevista_em|data if op.entrega_prevista_em else '—' }}</td>
-        <td>Entregue em</td><td>{{ op.entregue_em.strftime('%d/%m/%Y') if op.entregue_em else '—' }}</td>
-        <td>Faturado em</td><td>{{ op.faturado_em|data if op.faturado_em else '—' }}{% if op.numero_documento_fiscal %} · doc. {{ op.numero_documento_fiscal }}{% endif %}</td></tr>
-    <tr><td>Pagamento previsto</td><td>{{ op.pagamento_previsto_em|data if op.pagamento_previsto_em else '—' }}</td>
-        <td>Pago em</td><td>{{ op.pago_em.strftime('%d/%m/%Y') if op.pago_em else '—' }}</td>
-        <td>Observação</td><td>{{ op.observacao_pos_venda or '—' }}</td></tr>
-  </tbody></table>
-  <div class="grid-4" style="margin-top:10px;">
-    <div class="field"><label>Entrega prevista</label><input type="date" id="pv-prevista" value="{{ op.entrega_prevista_em or '' }}">
-      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('entrega-prevista', {prevista_em: v('pv-prevista')})">Salvar</button></div>
-    <div class="field"><label>Entrega</label>
-      <button class="btn btn-copper btn-sm" onclick="pv('entrega', {})" {% if op.entregue_em %}disabled{% endif %}>Registrar entrega</button></div>
-    <div class="field" style="grid-column: span 2;"><label>Observação de pós-venda</label><input id="pv-obs" value="{{ op.observacao_pos_venda or '' }}">
-      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('observacao', {texto: v('pv-obs')})">Salvar</button></div>
+<div class="modal-bg" id="modal-perdido" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h2>Marcar como perdido</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="field"><label for="op-motivo">Motivo</label>
+      <select id="op-motivo"><option value="">Selecione…</option>{% for m in motivos_perda %}<option value="{{ m }}">{{ m|rotulo_motivo }}</option>{% endfor %}</select></div>
+    <div class="field"><label for="op-nota">Comentário (opcional)</label><input id="op-nota" placeholder="ex.: fechou com fornecedor local"></div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-danger" type="button" onclick="perdido()">Marcar perdido</button></div>
   </div>
-  {% if financeiro %}
-  <h4 style="margin:14px 0 6px;">Financeiro (dono/administrador)</h4>
-  <div class="grid-4">
-    <div class="field"><label>Faturado em</label><input type="date" id="pv-fat" value="{{ op.faturado_em or '' }}">
-      <input id="pv-doc" placeholder="documento fiscal" value="{{ op.numero_documento_fiscal or '' }}" style="margin-top:4px;">
-      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('faturamento', {faturado_em: v('pv-fat'), numero_documento_fiscal: v('pv-doc')})">Registrar faturamento</button></div>
-    <div class="field"><label>Pagamento previsto</label><input type="date" id="pv-pgprev" value="{{ op.pagamento_previsto_em or '' }}">
-      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('pagamento-previsto', {previsto_em: v('pv-pgprev')})">Salvar</button></div>
-    <div class="field"><label>Pagamento</label>
-      <button class="btn btn-copper btn-sm" onclick="pv('pago', {})" {% if op.status_pos_venda == 'PAGO' %}disabled{% endif %}>Marcar pago</button></div>
-    <div class="field"><label>Atraso</label>
-      <button class="btn btn-ghost btn-sm" onclick="pv('atrasado', {observacao: v('pv-obs')})" {% if op.status_pos_venda in ('PAGO', 'ATRASADO') %}disabled{% endif %}>Marcar atrasado</button></div>
-  </div>
-  {% endif %}
-</div>
-{% endif %}
-
-<div class="card">
-  <h3 style="margin-top:0;">Registrar atualização</h3>
-  <div class="grid-4">
-    <div class="field" style="grid-column: span 2;"><label>O que aconteceu</label><input id="at-texto" placeholder="ex.: cliente pediu revisão para 300 toalhas"></div>
-    <div class="field"><label>Próxima atividade (opcional)</label><input id="at-titulo" placeholder="ex.: follow-up"></div>
-    <div class="field"><label>Quando</label><input id="at-due" type="datetime-local">
-      <select id="at-tipo" style="margin-top:4px;">{% for t in tipos_atividade %}<option value="{{ t }}">{{ t|rotulo_atividade }}</option>{% endfor %}</select></div>
-  </div>
-  <button class="btn btn-copper btn-sm" onclick="atualizar()">Registrar</button>
-  {% if proxima %}<p style="font-size:12px;margin-top:8px;">Próxima: <strong>{{ proxima.titulo }}</strong>
-    · {{ proxima.due_em.strftime('%d/%m/%Y %H:%M') if proxima.due_em else 'sem data' }}
-    {% if atrasada(proxima) %}<span class="tag tag-review">atrasada</span>{% endif %}
-    <button class="btn btn-ghost btn-sm" onclick="concluir({{ proxima.id }})">Concluir</button></p>{% endif %}
-  {% if atualizacoes %}
-  <table class="compacta" style="margin-top:10px;"><tbody>
-    {% for n in atualizacoes %}
-    <tr><td style="font-size:11px;white-space:nowrap;">{{ n.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
-        <td style="font-size:12px;">{{ n.texto }}</td><td style="font-size:11px;color:var(--gray);">{{ n.autor_email or '—' }}</td></tr>
-    {% endfor %}
-  </tbody></table>
-  {% endif %}
 </div>
 
-<div class="card">
-  <h3 style="margin-top:0;">Cotações desta venda</h3>
-  <p style="color:var(--gray);font-size:12px;">Revisões (R1, R2…) são a mesma venda — não contam como vendas separadas.</p>
-  <table class="compacta">
-    <thead><tr><th>Número</th><th class="num">Revisão</th><th>Status</th><th></th></tr></thead>
-    <tbody>
-    {% for c in cotacoes %}
-      <tr {% if cotacao_atual and c.id == cotacao_atual.id %}style="background:var(--row-alt);font-weight:600;"{% endif %}>
-        <td><code>{{ c.numero or c.id }}</code></td><td class="num">{{ c.revisao }}</td>
-        <td><span class="tag">{{ c.status|rotulo_cotacao }}</span>{% if op.cotacao_vencedora_id == c.id %} <span class="tag tag-calc">vencedora</span>{% endif %}</td>
-        <td><a class="btn btn-ghost btn-sm" href="/cotacoes/{{ c.id }}">Abrir</a></td></tr>
-    {% else %}
-      <tr><td colspan="4" style="color:var(--gray);">Nenhuma cotação ainda.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-</div>
-
-<div class="card">
-  <h3 style="margin-top:0;">Histórico</h3>
-  <table class="compacta"><tbody>
-    {% for e in timeline %}
-      <tr><td style="font-size:11px;white-space:nowrap;">{{ e.quando.strftime('%d/%m/%Y %H:%M') }}</td>
-        <td><span class="tag">{{ e.tipo }}</span></td><td style="font-size:12px;">{{ e.texto }}</td></tr>
-    {% endfor %}
-  </tbody></table>
+<div class="modal-bg" id="modal-responsavel" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-head"><h2>Responsável pela venda</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="field"><label for="op-resp">Responsável</label>
+      <select id="op-resp"><option value="">Sem responsável</option>{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if op.responsavel_id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select></div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="button" onclick="atribuir()">Salvar</button></div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 const OP = {{ op.id }};
-const v = id => document.getElementById(id).value;
-function mostrar(j, ok) {
-  document.getElementById('op-resultado').innerHTML =
-    ok ? '<div class="aviso">' + j.mensagem + '</div>' : '<div class="erro">' + (j.detail || j.erro || 'erro') + '</div>';
+const v = id => (document.getElementById(id) || {}).value || '';
+const CLASSES = {RASCUNHO: 'pill-rascunho', ENVIADO: 'pill-enviado', NEGOCIACAO: 'pill-negociacao'};
+
+async function postar(url, dados, recarregar) {
+  const r = await anaraFetch(url, {method: 'POST', form: dados});
+  if (!r.ok) { anaraToast(r.erro, 'erro'); return null; }
+  anaraToast(r.dados.mensagem || 'Salvo.', 'ok');
+  if (recarregar !== false) setTimeout(() => location.reload(), 500);
+  return r.dados;
 }
-async function postar(url, dados) {
-  const d = new FormData(); Object.entries(dados).forEach(([k, val]) => d.append(k, val));
-  const r = await fetch(url, {method: 'POST', body: d});
-  const j = await r.json();
-  mostrar(j, r.ok);
-  if (r.ok) setTimeout(() => location.reload(), 700);
-  return r.ok;
-}
-const mudarStatus = e => postar(`/vendas/${OP}/status`, {etapa: e});
-const atribuir = r => postar(`/vendas/${OP}/responsavel`, {responsavel_id: r});
+
+// status inline — sem recarregar
+document.getElementById('popover-status')?.addEventListener('click', async (e) => {
+  const op = e.target.closest('[data-etapa-alvo]'); if (!op) return;
+  fecharPopovers();
+  const pill = document.getElementById('pill-status');
+  if (op.dataset.etapaAlvo === pill.dataset.etapa) return;
+  pill.classList.add('salvando');
+  const r = await anaraFetch(`/vendas/${OP}/status`, {method: 'POST', form: {etapa: op.dataset.etapaAlvo}});
+  pill.classList.remove('salvando');
+  if (!r.ok) { anaraToast(r.erro, 'erro'); return; }
+  pill.dataset.etapa = r.dados.etapa; pill.textContent = r.dados.status_comercial;
+  Object.values(CLASSES).forEach(c => pill.classList.remove(c)); pill.classList.add(CLASSES[r.dados.etapa] || 'pill-neutro');
+  document.querySelectorAll('#popover-status [data-etapa-alvo]').forEach(b => b.classList.toggle('atual', b.dataset.etapaAlvo === r.dados.etapa));
+  anaraToast(r.dados.mensagem, 'ok');
+  // a mudança entra no histórico: recarrega só a timeline, sem perder o resto
+  setTimeout(() => location.reload(), 900);
+});
+
 function vendido() {
   const c = v('op-vencedora');
-  if (!c) { mostrar({detail: 'Escolha a proposta que o cliente aceitou.'}, false); return; }
+  if (!c) { anaraToast('Escolha a proposta que o cliente aceitou.', 'erro'); return; }
   postar(`/vendas/${OP}/vendido`, {cotacao_id: c});
 }
 function perdido() {
   const m = v('op-motivo');
-  if (!m) { mostrar({detail: 'Informe o motivo.'}, false); return; }
+  if (!m) { anaraToast('Informe o motivo.', 'erro'); return; }
   postar(`/vendas/${OP}/perdido`, {motivo: m, nota: v('op-nota')});
 }
 const reabrir = () => postar(`/vendas/${OP}/reabrir`, {motivo: 'reaberta pelo comercial'});
-function atualizar() {
-  const t = v('at-texto');
-  if (!t) { mostrar({detail: 'Escreva o que aconteceu.'}, false); return; }
-  postar(`/vendas/${OP}/atualizacoes`, {texto: t, atividade_titulo: v('at-titulo'),
-                                        atividade_tipo: v('at-tipo'), atividade_due_em: v('at-due')});
-}
+const atribuir = () => postar(`/vendas/${OP}/responsavel`, {responsavel_id: v('op-resp')});
 const concluir = id => postar(`/atividades/${id}/concluir`, {});
 const pv = (acao, dados) => postar(`/vendas/${OP}/pos-venda/${acao}`, dados);
+
+function atualizar() {
+  const t = v('at-texto').trim();
+  if (!t) { anaraToast('Escreva o que aconteceu.', 'erro'); return; }
+  const data = v('at-data'), hora = v('at-hora');
+  const due = data ? (data + 'T' + (hora || '09:00')) : '';
+  postar(`/vendas/${OP}/atualizacoes`, {texto: t, atividade_titulo: v('at-titulo'), atividade_tipo: v('at-tipo'), atividade_due_em: due});
+}
+function atualizarRapido() {
+  const t = v('at-rapido').trim();
+  if (!t) { anaraToast('Escreva o que aconteceu.', 'erro'); return; }
+  postar(`/vendas/${OP}/atualizacoes`, {texto: t});
+}
+document.getElementById('at-rapido').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); atualizarRapido(); }
+});
 </script>
 {% endblock %}

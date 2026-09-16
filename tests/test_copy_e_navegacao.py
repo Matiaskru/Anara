@@ -24,7 +24,7 @@ TEMPLATES = os.path.join(RAIZ, "app", "templates")
 TELAS_COMERCIAIS = [
     "dashboard.html", "crm_home.html", "crm_pipeline.html", "crm_lista.html",
     "crm_oportunidade.html", "vendas_list.html", "venda_detail.html", "clientes_list.html", "cliente_detail.html",
-    "cotacoes_list.html", "cotacao_nova.html", "cotacao_detail.html",
+    "cotacoes_list.html", "cotacao_nova.html", "cotacao_detail.html", "_cotacao_situacao.html",
     "produtos_list.html", "relatorios.html", "relatorio_cotacoes.html",
     "relatorio_aprovacoes.html", "login.html", "primeiro_acesso.html",
     "erro_acao.html", "base.html",
@@ -112,9 +112,11 @@ def test_menu_e_por_tarefa_e_curto():
     nav = html.split("<nav>")[1].split("</nav>")[0]
     destinos = re.findall(r'href="(/[^"]*)"', nav)
 
-    # Fase 3B: a operação é Vendas → Clientes → Cotações → Produtos; "Meu dia" e o quadro
-    # continuam alcançáveis (/comercial, /pipeline) sem linha própria.
-    assert destinos[:5] == ["/vendas", "/clientes", "/cotacoes", "/produtos", "/relatorios"]
+    # Fase 3C: Dashboard (só OWNER/ADMIN) → Vendas → Clientes → Cotações → Produtos, e depois
+    # as portas por permissão (Aprovações, Admin). Relatórios saiu do menu principal: mora
+    # dentro do Admin e do Dashboard. "Meu dia" e o quadro antigo continuam alcançáveis.
+    assert destinos[:5] == ["/", "/vendas", "/clientes", "/cotacoes", "/produtos"]
+    assert "/relatorios" not in destinos, "Relatórios voltou ao menu principal"
     assert len(destinos) <= 7, f"o menu voltou a crescer: {destinos}"
 
 

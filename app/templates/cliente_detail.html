@@ -1,148 +1,209 @@
 {% extends "base.html" %}
 {% block title %}{{ cliente.nome }} — Anara{% endblock %}
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1>{{ cliente.nome }}</h1>
-    <div class="subtitle">{{ cliente.cidade_uf or '' }}{% if cliente.cnpj_cpf %} · {{ cliente.cnpj_cpf }}{% endif %}</div>
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo">
+    <div>
+      <div class="crumbs"><a href="/clientes">Clientes</a></div>
+      <h1>{{ cliente.nome }}</h1>
+    </div>
+    <span class="contexto oculta-mobile">{% if cliente.cnpj_cpf %}{{ cliente.cnpj_cpf }} · {% endif %}{{ cliente.cidade_uf or 'cidade/UF não informada' }}</span>
   </div>
-  <div style="display:flex;gap:8px;">
-    <form method="post" action="/vendas" style="display:flex;gap:6px;margin:0;">
-      <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
-      <input name="titulo" required placeholder="Nova venda: nome do projeto" style="width:220px;">
-      <button class="btn btn-ghost" type="submit">+ Venda</button>
-    </form>
+  <div class="acoes">
+    <button class="btn btn-ghost btn-sm" type="button" data-modal="modal-editar">Editar cadastro</button>
+    <button class="btn btn-ghost btn-sm" type="button" data-modal="modal-contato">Adicionar contato</button>
+    <button class="btn btn-ghost" type="button" data-modal="modal-nova-venda">+ Nova venda</button>
     <a href="/cotacoes/nova?cliente_id={{ cliente.id }}" class="btn btn-copper">+ Nova cotação</a>
   </div>
 </div>
+{% endblock %}
 
-{# VISÃO GERAL — cadastro à esquerda, números comerciais DERIVADOS à direita #}
-<div class="grid-2">
-  <div class="card">
-    <h3 style="margin-bottom:10px;">Cadastro</h3>
-    <p style="margin:4px 0;"><strong>CNPJ/CPF:</strong> {{ cliente.cnpj_cpf or '—' }}</p>
-    <p style="margin:4px 0;"><strong>Cidade/UF:</strong> {{ cliente.cidade_uf or '—' }}</p>
-    <p style="margin:4px 0;"><strong>Finalidade fiscal:</strong> {{ cliente.finalidade or '—' }}</p>
-    <p style="margin:4px 0;"><strong>Telefone:</strong> {{ cliente.telefone or '—' }}</p>
-    <p style="margin:4px 0;"><strong>E-mail:</strong> {{ cliente.email or '—' }}</p>
-    <p style="margin:4px 0;"><strong>Cliente desde:</strong> {{ cliente.criado_em|data }}</p>
-    {% if cliente.observacoes_comerciais %}<p style="margin:4px 0;font-size:12px;"><strong>Observações:</strong> {{ cliente.observacoes_comerciais }}</p>{% endif %}
-    {% if faltando_fiscal %}
-    <div style="border-left:3px solid var(--copper);padding-left:8px;margin-top:8px;font-size:12px;">
-      <strong>Para emitir cotação falta:</strong> {{ faltando_fiscal|join('; ') }}.
-      <span style="color:var(--gray);">O cadastro comercial pode seguir assim.</span></div>
-    {% endif %}
-  </div>
-  <div class="card">
-    <h3 style="margin-bottom:10px;">Comercial</h3>
-    <div class="kpis" style="margin:0;">
-      <div class="kpi"><div class="label">Total comprado</div><div class="value copper">{{ comercial.total_comprado|brl if comercial.total_comprado is not none else '—' }}</div></div>
-      <div class="kpi"><div class="label">Vendas ganhas</div><div class="value">{{ comercial.quantidade_vendas }}</div></div>
-      <div class="kpi"><div class="label">Ticket médio</div><div class="value">{{ comercial.ticket_medio|brl if comercial.ticket_medio is not none else '—' }}</div></div>
-      <div class="kpi"><div class="label">Última compra</div><div class="value">{{ comercial.ultima_compra.strftime('%d/%m/%Y') if comercial.ultima_compra else '—' }}</div></div>
-      <div class="kpi"><div class="label">Em andamento</div><div class="value">{{ comercial.vendas_em_andamento }}{% if comercial.valor_em_andamento %} · {{ comercial.valor_em_andamento|brl }}{% endif %}</div></div>
-      <div class="kpi"><div class="label">Em aberto (a receber)</div><div class="value">{{ comercial.valor_em_aberto|brl if comercial.valor_em_aberto is not none else '—' }}</div></div>
-      <div class="kpi"><div class="label">Atrasado</div><div class="value {{ 'copper' if comercial.valor_atrasado else '' }}">{{ comercial.valor_atrasado|brl if comercial.valor_atrasado is not none else '—' }}</div></div>
-      <div class="kpi"><div class="label">Pago</div><div class="value">{{ comercial.valor_pago|brl if comercial.valor_pago is not none else '—' }}</div></div>
+{% block content %}
+{% if faltando_fiscal %}
+<div class="banner banner-warn"><div><strong>Para emitir cotação ainda falta:</strong> {{ faltando_fiscal|join('; ') }}.
+  <button class="btn-link" type="button" data-modal="modal-editar">Completar cadastro</button></div></div>
+{% endif %}
+
+<div class="kpi-row">
+  <div class="kpi"><div class="label">Total comprado</div><div class="value copper">{{ comercial.total_comprado|brl if comercial.total_comprado is not none else '—' }}</div></div>
+  <div class="kpi"><div class="label">Nº vendas</div><div class="value">{{ comercial.quantidade_vendas }}</div>{% if comercial.vendas_em_andamento %}<div class="nota">{{ comercial.vendas_em_andamento }} em andamento{% if comercial.valor_em_andamento %} · {{ comercial.valor_em_andamento|brl }}{% endif %}</div>{% endif %}</div>
+  <div class="kpi"><div class="label">Ticket médio</div><div class="value">{{ comercial.ticket_medio|brl if comercial.ticket_medio is not none else '—' }}</div></div>
+  <div class="kpi"><div class="label">Última compra</div><div class="value">{{ comercial.ultima_compra|data if comercial.ultima_compra else '—' }}</div></div>
+  <div class="kpi"><div class="label">Em aberto</div><div class="value">{{ comercial.valor_em_aberto|brl if comercial.valor_em_aberto is not none else '—' }}</div>{% if comercial.quantidade_em_aberto %}<div class="nota">{{ comercial.quantidade_em_aberto }} {{ 'venda' if comercial.quantidade_em_aberto == 1 else 'vendas' }} a receber</div>{% endif %}</div>
+  <div class="kpi"><div class="label">Atrasado</div><div class="value {{ 'margem-abaixo' if comercial.valor_atrasado else '' }}">{{ comercial.valor_atrasado|brl if comercial.valor_atrasado is not none else '—' }}</div></div>
+</div>
+
+<div class="tabs" data-tab-group="cliente" role="tablist">
+  <button type="button" role="tab" data-tab="visao" class="ativa">Visão geral</button>
+  <button type="button" role="tab" data-tab="vendas">Vendas <span class="conta">{{ abertas|length + vendidas|length + perdidas|length }}</span></button>
+  <button type="button" role="tab" data-tab="cotacoes">Cotações <span class="conta">{{ cotacoes|length }}</span></button>
+  <button type="button" role="tab" data-tab="contatos">Contatos <span class="conta">{{ contatos|selectattr('ativo')|list|length }}</span></button>
+</div>
+
+{# ------------------------------------------------------------- Visão geral #}
+<div class="tab-panel ativa" data-group="cliente" data-panel="visao">
+  <div class="split-2">
+    <div class="card">
+      <div class="card-title"><h3>Cadastro</h3><button class="btn-link small" type="button" data-modal="modal-editar">Editar</button></div>
+      <table class="limpa compacta"><tbody>
+        <tr><td class="muted" style="width:38%;">CNPJ/CPF</td><td>{{ cliente.cnpj_cpf or '—' }}</td></tr>
+        <tr><td class="muted">Cidade/UF</td><td>{{ cliente.cidade_uf or '—' }}</td></tr>
+        <tr><td class="muted">Finalidade fiscal</td><td>{{ cliente.finalidade or '—' }}</td></tr>
+        <tr><td class="muted">Telefone</td><td>{{ cliente.telefone or '—' }}</td></tr>
+        <tr><td class="muted">E-mail</td><td>{{ cliente.email or '—' }}</td></tr>
+        <tr><td class="muted">Contato principal</td><td>{% set principal = contatos|selectattr('principal')|selectattr('ativo')|first %}{{ principal.nome if principal else (cliente.contato_nome or '—') }}{% if principal and principal.cargo %} · {{ principal.cargo }}{% endif %}</td></tr>
+        <tr><td class="muted">Cliente desde</td><td>{{ cliente.criado_em|data }}</td></tr>
+      </tbody></table>
     </div>
-    <p style="font-size:11px;color:var(--gray);margin:8px 0 0;">Total comprado = vendas marcadas como vendidas (valor fechado). Cotação enviada não é compra; revisões não somam.</p>
+    <div>
+      <div class="card">
+        <div class="card-title"><h3>Vendas em andamento</h3><span class="muted small">{{ abertas|length }}</span></div>
+        {% if abertas %}
+        <table class="compacta"><tbody>
+          {% for o in abertas %}
+          <tr class="clicavel" data-href="/vendas/{{ o.id }}">
+            <td class="primaria">{{ o.titulo }}</td>
+            <td><span class="pill sem-ponto {{ pill_venda(o.status, o.etapa) }}">{{ o.status_comercial }}</span></td>
+            <td class="num">{{ o.valor_atual|brl if o.valor_atual is not none else '—' }}</td>
+            <td class="muted nowrap">{{ o.atualizado_em|data_curta }}</td></tr>
+          {% endfor %}
+        </tbody></table>
+        {% else %}<p class="muted small">Nenhuma venda aberta. <button class="btn-link" type="button" data-modal="modal-nova-venda">Criar venda</button></p>{% endif %}
+      </div>
+      {% if ultimos_precos %}
+      <div class="card">
+        <div class="card-title"><h3>Últimos preços propostos</h3></div>
+        <table class="compacta limpa"><tbody>
+          {% for nome, info in ultimos_precos[:8] %}
+          <tr><td>{{ nome }}</td><td class="muted nowrap">{{ info.data|data_curta }}</td><td class="num">{{ info.preco|brl }}</td></tr>
+          {% endfor %}
+        </tbody></table>
+      </div>
+      {% endif %}
+    </div>
   </div>
-</div>
-
-{# VENDAS #}
-<div class="card">
-  <h3 style="margin-top:0;">Vendas</h3>
-  {% for titulo, lista in [('Abertas', abertas), ('Vendidas', vendidas), ('Perdidas', perdidas)] %}
-  <h4 style="margin:10px 0 4px;font-size:12px;color:var(--gray);text-transform:uppercase;">{{ titulo }} ({{ lista|length }})</h4>
-  <table class="compacta"><tbody>
-    {% for o in lista %}
-      <tr onclick="window.location='/vendas/{{ o.id }}'" style="cursor:pointer;">
-        <td><a href="/vendas/{{ o.id }}">{{ o.titulo }}</a></td>
-        <td><span class="tag {{ 'tag-calc' if o.status == 'GANHA' else ('tag-review' if o.status == 'PERDIDA' else '') }}">{{ o.status_comercial }}</span>
-            {% if o.status_pos_venda %}<span class="tag">{{ o.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}</td>
-        <td style="font-size:11px;">{{ o.responsavel or '—' }}</td>
-        <td class="num">{{ o.valor_atual|brl }}</td>
-        <td style="font-size:11px;">{{ o.atualizado_em.strftime('%d/%m/%Y') if o.atualizado_em else '—' }}</td></tr>
-    {% else %}
-      <tr><td colspan="5" style="color:var(--gray);font-size:12px;">Nenhuma.</td></tr>
-    {% endfor %}
-  </tbody></table>
-  {% endfor %}
-</div>
-
-{# COTAÇÕES — todas, inclusive revisões, canceladas e legado #}
-<div class="card">
-  <h3 style="margin-bottom:14px;">Cotações ({{ cotacoes|length }})</h3>
-  {% if cotacoes %}
-  <table>
-    <thead><tr><th>Número</th><th>Data</th><th>Venda</th><th>Status</th><th>Condição</th><th class="num">Total</th><th></th></tr></thead>
-    <tbody>
-      {% for c in cotacoes %}
-      <tr onclick="window.location='/cotacoes/{{ c.id }}'" style="cursor:pointer;">
-        <td>{{ c.numero or ('#' ~ c.id) }}{% if (c.revisao or 1) > 1 %} <span class="tag">r{{ c.revisao }}</span>{% endif %}</td>
-        <td>{{ c.criado_em|data }}</td>
-        <td style="font-size:11px;">{% set venda = vendas_por_id.get(c.oportunidade_id) %}{% if venda %}{{ venda.titulo }}{% else %}<span style="color:var(--gray);">Sem venda vinculada (legado)</span>{% endif %}</td>
-        <td><span class="badge badge-{{ c.status|rotulo_cotacao }}">{{ c.status|rotulo_cotacao }}</span></td>
-        <td>{{ c.condicao_pagamento }}</td>
-        <td class="num">{{ totais.get(c.id)|brl }}</td>
-        <td><a href="/cotacoes/{{ c.id }}" class="btn btn-ghost btn-sm">Abrir</a></td>
-      </tr>
+  {% if atividades %}
+  <div class="card">
+    <div class="card-title"><h3>Atividades recentes</h3></div>
+    <table class="compacta"><tbody>
+      {% for a in atividades %}
+      <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
+        <td class="muted nowrap">{{ a.due_em|datahora if a.due_em else '—' }}</td>
+        <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td>
+        <td>{{ a.titulo }}</td>
+        <td class="muted">{{ 'concluída' if a.concluida_em else 'pendente' }}</td></tr>
       {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-  <div class="empty-state"><h3>Nenhuma cotação ainda</h3></div>
+    </tbody></table>
+  </div>
   {% endif %}
 </div>
 
-{# CONTATOS #}
-<div class="card">
-  <h3 style="margin-top:0;">Contatos</h3>
-  <table class="compacta"><tbody>
-    {% for c in contatos %}
-      <tr {% if not c.ativo %}style="opacity:.5;"{% endif %}>
-        <td>{{ c.nome }}{% if c.principal %} <span class="tag tag-calc">principal</span>{% endif %}</td>
-        <td style="font-size:11px;">{{ c.cargo or '—' }}</td>
-        <td style="font-size:11px;">{{ c.email or '—' }}</td>
-        <td style="font-size:11px;">{{ c.telefone or '—' }}</td></tr>
-    {% else %}
-      <tr><td colspan="4" style="color:var(--gray);">Nenhum contato cadastrado.</td></tr>
-    {% endfor %}
-  </tbody></table>
-  <form method="post" action="/clientes/{{ cliente.id }}/contatos" class="grid-4" style="margin-top:10px;">
-    <div class="field"><label>Nome</label><input name="nome" required></div>
-    <div class="field"><label>Cargo</label><input name="cargo"></div>
-    <div class="field"><label>E-mail</label><input name="email" type="email"></div>
-    <div class="field"><label>Telefone</label><input name="telefone"></div>
-    <div class="field"><label>Principal</label>
-      <select name="principal"><option value="">não</option><option value="sim">sim</option></select></div>
-    <div class="field"><label>&nbsp;</label><button class="btn btn-ghost" type="submit">Adicionar contato</button></div>
+{# ------------------------------------------------------------- Vendas #}
+<div class="tab-panel" data-group="cliente" data-panel="vendas">
+  <div class="card flush">
+    <table>
+      <thead><tr><th>Projeto</th><th>Status</th><th class="num">Valor</th><th>Responsável</th><th>Última atualização</th></tr></thead>
+      <tbody>
+      {% for o in abertas + vendidas + perdidas %}
+        <tr class="clicavel" data-href="/vendas/{{ o.id }}">
+          <td class="primaria">{{ o.titulo }}</td>
+          <td><span class="pill {{ pill_venda(o.status, o.etapa) }}">{{ o.status_comercial }}</span>
+            {% if o.status_pos_venda %} <span class="pill sem-ponto {{ pill_pos_venda(o.status_pos_venda) }}">{{ o.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}</td>
+          <td class="num">{{ o.valor_atual|brl if o.valor_atual is not none else '—' }}</td>
+          <td>{{ o.responsavel or '—' }}</td>
+          <td class="muted nowrap">{{ o.atualizado_em|datahora }}</td></tr>
+      {% else %}
+        <tr><td colspan="5" class="tbl-vazia">Nenhuma venda com este cliente.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">Revisões de cotação (R1, R2…) pertencem à mesma venda e não contam como compras separadas.</p>
+</div>
+
+{# ------------------------------------------------------------- Cotações #}
+<div class="tab-panel" data-group="cliente" data-panel="cotacoes">
+  <div class="card flush">
+    <table>
+      <thead><tr><th>Número</th><th>Venda</th><th>Revisão</th><th class="num">Valor</th><th>Status</th><th>Data</th><th>Responsável</th></tr></thead>
+      <tbody>
+      {% for c in cotacoes %}
+        <tr class="clicavel" data-href="/cotacoes/{{ c.id }}">
+          <td class="primaria">{{ c.numero or ('#' ~ c.id) }}{% if c.arquivada_em %} <span class="tag tag-legacy">arquivada</span>{% endif %}</td>
+          <td>{% set venda = vendas_por_id.get(c.oportunidade_id) %}{% if venda %}<a class="link" href="/vendas/{{ venda.id }}">{{ venda.titulo }}</a>{% else %}<span class="muted">Legado — sem venda vinculada</span>{% endif %}</td>
+          <td>R{{ c.revisao or 1 }}</td>
+          <td class="num">{{ totais.get(c.id)|brl }}</td>
+          <td><span class="pill sem-ponto {{ pill_cotacao(c.status) }}">{{ c.status|rotulo_cotacao }}</span></td>
+          <td class="muted nowrap">{{ c.criado_em|data }}</td>
+          <td>{{ c.vendedor or '—' }}</td></tr>
+      {% else %}
+        <tr><td colspan="7" class="tbl-vazia">Nenhuma cotação ainda.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ------------------------------------------------------------- Contatos #}
+<div class="tab-panel" data-group="cliente" data-panel="contatos">
+  <div class="card flush">
+    <table>
+      <thead><tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th></th></tr></thead>
+      <tbody>
+      {% for c in contatos %}
+        <tr {% if not c.ativo %}style="opacity:.5;"{% endif %}>
+          <td class="primaria">{{ c.nome }}{% if c.principal %} <span class="tag tag-calc">principal</span>{% endif %}</td>
+          <td>{{ c.cargo or '—' }}</td><td>{{ c.email or '—' }}</td><td>{{ c.telefone or '—' }}</td>
+          <td class="muted small">{{ c.observacao or '' }}</td></tr>
+      {% else %}
+        <tr><td colspan="5" class="tbl-vazia">Nenhum contato cadastrado. <button class="btn-link" type="button" data-modal="modal-contato">Adicionar contato</button></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# ------------------------------------------------------------- modais #}
+<div class="modal-bg" id="modal-nova-venda" role="dialog" aria-modal="true">
+  <form class="modal" method="post" action="/vendas">
+    <div class="modal-head"><h2>Nova venda — {{ cliente.nome }}</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+    <div class="field"><label for="nv-titulo">Projeto</label><input id="nv-titulo" name="titulo" required placeholder="ex.: Renovação do enxoval 2026" autofocus></div>
+    <div class="field"><label for="nv-resp">Responsável</label>
+      <select id="nv-resp" name="responsavel_id">{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if eu and eu.id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select></div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Criar venda</button></div>
   </form>
 </div>
 
-{% if ultimos_precos %}
-<div class="card">
-  <h3 style="margin-bottom:10px;">Último preço oferecido</h3>
-  {% for nome, info in ultimos_precos[:8] %}
-  <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--row-alt); font-size:12px;">
-    <span>{{ nome }}</span><span class="num">{{ info.preco|brl }}</span>
-  </div>
-  {% endfor %}
+<div class="modal-bg" id="modal-contato" role="dialog" aria-modal="true">
+  <form class="modal" method="post" action="/clientes/{{ cliente.id }}/contatos">
+    <div class="modal-head"><h2>Novo contato</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="grid-2">
+      <div class="field"><label for="ct-nome">Nome</label><input id="ct-nome" name="nome" required autofocus></div>
+      <div class="field"><label for="ct-cargo">Cargo</label><input id="ct-cargo" name="cargo"></div>
+      <div class="field"><label for="ct-email">E-mail</label><input id="ct-email" name="email" type="email"></div>
+      <div class="field"><label for="ct-tel">Telefone</label><input id="ct-tel" name="telefone"></div>
+      <div class="field span-2 inline"><input type="checkbox" id="ct-principal" name="principal" value="sim"><label for="ct-principal">Contato principal</label></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Adicionar</button></div>
+  </form>
 </div>
-{% endif %}
 
-{% if atividades %}
-<div class="card">
-  <h3 style="margin-top:0;">Atividades recentes</h3>
-  <table class="compacta"><tbody>
-    {% for a in atividades %}
-      <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
-        <td style="font-size:11px;">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
-        <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td>
-        <td>{{ a.titulo }}</td>
-        <td style="font-size:11px;">{{ 'concluída' if a.concluida_em else 'pendente' }}</td></tr>
-    {% endfor %}
-  </tbody></table>
+<div class="modal-bg" id="modal-editar" role="dialog" aria-modal="true">
+  <form class="modal" method="post" action="/clientes/{{ cliente.id }}/editar">
+    <div class="modal-head"><h2>Editar cadastro</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="grid-2">
+      <div class="field span-2"><label for="ed-nome">Nome</label><input id="ed-nome" name="nome" value="{{ cliente.nome }}" required></div>
+      <div class="field"><label for="ed-cnpj">CNPJ/CPF</label><input id="ed-cnpj" name="cnpj_cpf" value="{{ cliente.cnpj_cpf or '' }}"></div>
+      <div class="field"><label for="ed-cidade">Cidade/UF</label><input id="ed-cidade" name="cidade_uf" value="{{ cliente.cidade_uf or '' }}" placeholder="ex.: São Paulo"><small>Define o destino fiscal das cotações.</small></div>
+      <div class="field"><label for="ed-fin">Finalidade fiscal</label>
+        <select id="ed-fin" name="finalidade"><option value="">—</option>{% for f in finalidades %}<option value="{{ f }}" {{ 'selected' if cliente.finalidade == f else '' }}>{{ f|replace('_', ' ')|capitalize }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="ed-tel">Telefone</label><input id="ed-tel" name="telefone" value="{{ cliente.telefone or '' }}"></div>
+      <div class="field"><label for="ed-email">E-mail</label><input id="ed-email" name="email" type="email" value="{{ cliente.email or '' }}"></div>
+      <div class="field"><label for="ed-contato">Contato (no documento)</label><input id="ed-contato" name="contato_nome" value="{{ cliente.contato_nome or '' }}"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Salvar</button></div>
+  </form>
 </div>
-{% endif %}
 {% endblock %}

@@ -933,3 +933,37 @@ históricas (ALTA/MEDIA/BAIXA) e a decisão é humana.
 - **PDF cliente** e **frete nacional**: fora desta fase (PDF agendado para a 3C; frete
   continua pausado — C-NEW-01/02/03/05/06/07/08 abertos).
 - **Offline V2** continua STALE, intocado.
+
+
+## 9. Fase 3C — redesign comercial, Dashboard OWNER/ADMIN e PDF cliente (16/09/2026)
+
+**Escopo cumprido:** shell/login/menus por papel; UX completa da vendedora (Vendas lista +
+quadro, status inline, venda individual com timeline e registro rápido, Cliente 360,
+cotações e negociação reativa sobre os endpoints canônicos, painel sticky, pós-venda
+visual); Dashboard exclusivo OWNER/ADMIN; Produtos como catálogo comercial; PDF cliente
+redesenhado e blindado; responsividade; testes funcionais (`tests/test_fase3c_ux_pdf.py`) e
+inspeção visual Playwright (`scripts/visual_3c.py`). Migration aditiva `0020`
+(`cotacao.observacao_cliente`), com backup antes.
+
+**Nada reaberto:** pricing, fiscal, CNET, PIS/COFINS, workflow, SnapshotEmissao,
+approval/fingerprint, gates, política comercial 3A, CRM/pós-venda 3B. O frontend não
+duplica fórmula: chama `negociacao/preview`, `negociacao`, `itens`, `painel` e exibe.
+
+**Confidencialidade verificada:** HTML da vendedora (vendas, venda, clientes, cliente 360,
+cotações, cotação, produtos) sem custo/CNET/EXW/lucro/piso/markup/margem/memória; payload
+JSON da negociação sem confidenciais; PDF com allowlist explícita, varredura de códigos e
+teste que extrai o texto e falha se aparecer economia, fornecedor, código operacional,
+recomendado/desconto ou observação interna. PDF final prova o snapshot: alteração posterior
+do item não muda o documento emitido.
+
+**Testes de interface ajustados (não econômicos):** ordem do menu (3C), rótulo "Legado —
+sem venda vinculada", dois campos comerciais novos no item da negociação
+(`desconto_linha_pct`, `preco_travado`).
+
+**Continuam abertos, fora da fase:** C-NEW-01/02/03/05/06/07/08 (frete), C-NEW-11/12,
+OQ-01, cadastro fiscal pendente, offline V3 (STALE), produção/deploy.
+
+**Limitações declaradas da 3C:** o quadro e o status inline recarregam a página depois de
+gravar para trazer a timeline (a gravação em si é sem reload); a cotação no celular rola a
+tabela de produtos horizontalmente; comparação com o ano anterior no gráfico só aparece com
+dado real (hoje não há); o gerador legado `gerar_cotacao.py` fica no repositório sem uso.

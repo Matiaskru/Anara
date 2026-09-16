@@ -1,0 +1,41 @@
+{# Situação e ações válidas AGORA — derivadas da prontidão, no servidor. Reaproveitado pela
+   rota /cotacoes/{id}/painel para a tela atualizar depois de uma negociação. #}
+{% set estado = cotacao.status.value if cotacao.status.value is defined else cotacao.status %}
+{% if prontidao and prontidao.blockers %}
+<div class="banner banner-warn" style="margin-bottom:10px;">
+  <div><strong>Falta informação para emitir</strong>
+    <ul>{% for b in prontidao.blockers %}<li><strong>{{ b.escopo }}</strong> — {{ b.detalhe or b.codigo|rotulo_blocker }}</li>{% endfor %}</ul>
+    <span class="muted small">Aprovação não resolve isto: o número ainda não existe.</span></div>
+</div>
+{% endif %}
+
+{% if prontidao and prontidao.excecoes %}
+  {% if prontidao.aprovacao_valida %}
+  <div class="banner banner-ok" style="margin-bottom:10px;"><div><strong>Exceção aprovada para esta configuração.</strong>
+    Qualquer alteração de preço ou quantidade exige nova aprovação.</div></div>
+  {% elif estado == 'aguardando_aprovacao' %}
+  <div class="banner banner-warn" style="margin-bottom:10px;"><div><strong>Aguardando aprovação.</strong>
+    Este preço precisa de aprovação antes da emissão. O pedido já foi registrado.</div></div>
+  {% else %}
+  <div class="banner banner-warn" style="margin-bottom:10px;"><div><strong>Este preço precisa de aprovação antes da emissão.</strong>
+    {% if economia %}<ul>{% for e in prontidao.excecoes %}<li><strong>{{ e.escopo }}</strong> — {{ e.detalhe }}</li>{% endfor %}</ul>
+    {% else %}<span class="muted small">Peça aprovação para seguir com esta proposta, ou ajuste os preços.</span>{% endif %}</div></div>
+  {% endif %}
+{% endif %}
+
+{% if acoes_workflow %}
+<div class="flex flex-wrap" id="acoes-workflow">
+  {% for a in acoes_workflow %}
+  <form method="post" action="{{ a.rota }}" title="{{ a.ajuda }}" class="flex" style="gap:6px;">
+    {% if a.estado %}<input type="hidden" name="status" value="{{ a.estado }}">{% endif %}
+    {% if a.motivo %}<input name="motivo" placeholder="motivo (opcional)" class="input-sm" style="width:150px;">{% endif %}
+    {% if a.justificativa %}<input name="justificativa" required placeholder="por que a exceção?" class="input-sm" style="width:190px;">{% endif %}
+    <button class="btn btn-sm {{ 'btn-copper' if a.estilo == 'btn-primary' else ('btn-danger-ghost' if a.estilo == 'btn-danger' else 'btn-ghost') }}" type="submit">{{ a.rotulo }}</button>
+  </form>
+  {% endfor %}
+</div>
+{% elif estado in ('fechada', 'pedido', 'perdida') %}
+<p class="muted small">Cotação do sistema anterior — fica como está. Para propor de novo, duplique-a.</p>
+{% elif estado == 'cancelada' %}
+<p class="muted small">Cotação cancelada{% if cotacao.cancelamento_motivo %}: {{ cotacao.cancelamento_motivo }}{% endif %}.</p>
+{% endif %}

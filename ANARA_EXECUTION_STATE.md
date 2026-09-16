@@ -2,7 +2,45 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **16/09/2026 — fim da Fase 3B (CRM comercial simples e pós-venda)**
+Última atualização: **16/09/2026 — fim da Fase 3C (redesign comercial, Dashboard Admin e PDF cliente)**
+
+---
+
+# Fase 3C — Redesign da plataforma · Dashboard OWNER/ADMIN · UX seller · PDF cliente (16/09/2026) — EXECUTADA
+
+Alembic **`0020`** (`0020_observacao_cliente`, aditiva: `cotacao.observacao_cliente`).
+Backups antes da migration: `data/backups/anara.db.antes-fase3c-migration-0020-*` e
+`~/Anara-Cotacao-Backups/anara_fase3c_pre_20260916-171044.db`. Nenhuma regra econômica,
+fiscal, de workflow ou de política comercial foi reaberta: o frontend chama os endpoints
+canônicos e mostra a resposta.
+
+| O quê | Onde |
+|---|---|
+| Design system único (sidebar compacta, topbar baixa, tabelas densas, pills, modais, popovers, timeline, stepper, kanban, painel sticky, gráficos SVG sem CDN, responsivo) | `app/static/css/anara.css`, `app/static/js/ui.js`, `base.html`, `login.html` |
+| Menu por papel: vendedora Vendas · Clientes · Cotações · Produtos; OWNER/ADMIN + Dashboard, Aprovações, Admin. Relatórios saiu do menu (fica no Admin e no Dashboard). Sem saudação | `base.html`, `app/routers/admin.py` (`AREAS_ADMIN`) |
+| **Vendas**: lista em toda a largura com status inline (popover → `POST /vendas/{id}/status`), filtros (busca, status, cliente, responsável, período), `+ Nova venda` em modal, **Quadro** (Rascunho/Enviado/Negociação com contagem/total e drag-and-drop pelo backend) | `app/routers/vendas.py` (`quadro`, `PERIODOS_LISTA`), `vendas_list.html` |
+| **Venda individual** 70/30: registro rápido (Enter salva), modal com próxima ação (tipo/data/hora), timeline única em português (sem enum/código), resumo, cotação atual, próxima atividade, pós-venda com stepper (Venda fechada → Entrega → Faturamento → Pagamento); vendedora edita só o que o backend permite; financeiro só OWNER/ADMIN | `venda_detail.html`, `app/crm_service.py` (`timeline` humanizada), `app/rotulos.py` (`EVENTO_TIMELINE`) |
+| **Clientes**: lista com total comprado, nº vendas, última compra, em aberto, status financeiro derivado (`metrics_service.clientes_resumo`); **Cliente 360** com KPIs (total, nº, ticket, última compra, em aberto, atrasado), abas (Visão geral/Vendas/Cotações/Contatos), modais de nova venda, contato e edição de cadastro (`POST /clientes/{id}/editar`, CNPJ duplicado 409, finalidade do enum) | `app/routers/clientes.py`, `clientes_list.html`, `cliente_detail.html`, `app/metrics_service.py` |
+| **Cotações**: lista (Número, Cliente, Venda, Rev., Valor, Status, Data, Responsável), filtros com rótulos humanos, período, busca; legado = "Legado — sem venda vinculada"; arquivar/restaurar/apagar no rodapé da tabela | `app/routers/cotacoes.py` (`listar`), `cotacoes_list.html` |
+| **Cotação** redesenhada: breadcrumb Cliente/Venda, status, revisões, dados comerciais em grid (Destino, Contribuinte, Pagamento, Validade, Frete Anara/cliente/a combinar + valor) e "Mais opções" (prazo, local, contato, departamento, responsável, texto do frete, **observação para o cliente** × **observação interna**, termos); tabela Produto/Qtd./Recomendado/Seu preço/Desconto/Total; Daune = "🔒 fixo"; busca e inclusão de produto no recomendado | `cotacao_detail.html`, `app/static/js/cotacao.js` |
+| **Negociação reativa**: preço → `POST /cotacoes/{id}/negociacao/preview` (debounce 300 ms) e grava ao confirmar (`POST /cotacoes/{id}/negociacao`); quantidade → `PUT /cotacoes/{id}/itens/{item}` + releitura; painel sticky (Produtos, Frete, Total, Desconto, Sua comissão estimada, ✓ Dentro da autonomia / ⚠ precisa de aprovação); bloco de situação/ações recarregado por `GET /cotacoes/{id}/painel` (partial `_cotacao_situacao.html`); recusa do servidor → mensagem humana + rollback visual. `desconto_linha_pct` e `preco_travado` entraram no payload da vendedora (comerciais) | `app/routers/cotacoes.py` (`_negociacao_inicial`, `painel_situacao`), `app/comercial_service.py` |
+| **Economia da proposta** (OWNER/ADMIN, fechada por padrão): custo, receita, lucro, margem agregada, comissão variável/fixa, limitação pelo piso, absorções, diagnóstico por item — tudo do `payload_admin` | `cotacao_detail.html`, `cotacao.js` |
+| **Dashboard OWNER/ADMIN** (`/`): filtros Período (Mês/Trimestre/Ano/12 meses/Personalizado), Vendedora, Cliente, Fornecedor, Família; KPIs principais (vendido, lucro, margem agregada, vendas fechadas), secundários (ticket, conversão, desconto médio, pipeline aberto), financeiros (faturado, pago, a receber, atrasado — três fatos separados); gráfico **Vendas e lucro por mês** (12 meses, barras + linha, tooltip, ano anterior só com dado real); performance por vendedora, top clientes + concentração Top 5, funil e aging, mix fornecedor/família, impacto dos descontos (faixas × margem, por venda), pós-venda, motivos de perda, rentabilidade por cliente | `app/routers/dashboard.py`, `dashboard.html`, `app/static/js/dashboard.js`, `metrics_service.dashboard_admin` / `serie_mensal` / `FiltrosDashboard` / `periodo_de` (+ `trimestre`, `12m`) |
+| **Produtos**: catálogo comercial (busca, fornecedor, família, situação Disponível/Sob consulta/Revisar); economia e Memória só para quem vê economia | `app/routers/produtos.py` (`situacao_comercial`), `produtos_list.html` |
+| **PDF cliente** — PROPOSTA COMERCIAL ANARA (ReportLab, fontes já licenciadas): cabeçalho com nº/revisão/data/validade, cliente/contato/local, tabela Produto-Especificação/Qtd./Valor unitário/Total com cabeçalho repetido e fechamento (subtotal, frete, TOTAL) nas últimas linhas da tabela, condições comerciais, observação cliente, termos, contato comercial, aceite, "Página X de Y"; rascunho com faixa e marca d'água (imagem) RASCUNHO — NÃO ENVIAR AO CLIENTE; **final nasce do `SnapshotEmissao`**; allowlist `CAMPOS_HEADER/ITEM/TOTAIS` + varredura de códigos (`PdfInseguro`); frete por extenso (nunca `A_COTAR`); sem desconto/recomendado/tabela | `app/pdf_proposta.py`, `app/pdf_bridge.py`, `app/routers/cotacoes.py` (`gerar_pdf`) |
+| Ambiente de demonstração numa CÓPIA do banco + inspeção visual Playwright (desktop, celular, sem economia para a vendedora, sem erro de console) | `scripts/demo_3c.py`, `scripts/visual_3c.py` |
+| 22 regressões da fase (UX seller, Dashboard, PDF: rascunho/final, 1/10/34 itens, paginação, soma ao centavo, confidencialidade, snapshot, frete) | `tests/test_fase3c_ux_pdf.py` |
+
+Ajustes em testes anteriores, todos de interface (nenhum econômico): menu da 3C
+(`test_copy_e_navegacao`), rótulo "Legado — sem venda vinculada" (`test_fase3b`), dois campos
+comerciais novos no item da negociação (`test_negociacao_comercial`).
+
+**Banco real:** só o esquema mudou (0020). Nenhum backfill; as 21 cotações históricas
+continuam com `oportunidade_id` NULO. `gerar_cotacao.py` (gerador legado do Excel) ficou
+intocado e deixou de ser usado pela plataforma.
+
+**Fora desta fase, de propósito:** frete nacional definitivo (C-NEW-01/02/03/05/06/07/08),
+cadastro fiscal pendente, offline V3, produção/deploy. OQ-01 continua aberta.
 
 ---
 

@@ -9,6 +9,7 @@ O que continua sendo verdade da Sessão 7: `responsavel` organiza, não esconde;
 Quem decide o que a vendedora vê é `crm.cartao` e `pos_venda.resumo`, nunca o template.
 """
 from datetime import date, datetime
+from types import SimpleNamespace
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -80,31 +81,76 @@ def _contexto(session: Session, request: Request) -> dict:
 # ---------------------------------------------------------------------------
 # Lista
 # ---------------------------------------------------------------------------
+#: Rótulos dos filtros de status da lista — a tela nunca mostra o enum.
+ROTULO_FILTRO_STATUS = {
+    "": "Todas", "abertas": "Abertas", "rascunho": "Rascunho", "enviado": "Enviado",
+    "negociacao": "Negociação", "vendido": "Vendido", "perdido": "Perdido",
+}
+
+#: Atalhos de período da lista (Fase 3C). Filtram pela última atualização da venda.
+PERIODOS_LISTA = [("", "Qualquer data"), ("mes", "Este mês"), ("trimestre", "Este trimestre"),
+                  ("ano", "Este ano"), ("12m", "Últimos 12 meses")]
+
+
 def listar_vendas(session: Session, *, status: str = "", responsavel_id: Optional[int] = None,
-                  cliente_id: Optional[int] = None, busca: str = "") -> list:
+                  cliente_id: Optional[int] = None, busca: str = "", periodo: str = "") -> list:
     st, etapa = FILTRO_STATUS.get(status, (None, None))
     linhas = crm.listar_oportunidades(session, status=st, etapa=etapa,
                                       responsavel_id=responsavel_id, cliente_id=cliente_id,
                                       busca=busca or None, limite=500)
+    if periodo:
+        from app import metrics_service as mx
+        janela = mx.periodo_de(periodo)
+        linhas = [o for o in linhas if janela.contem(o.atualizado_em or o.criado_em)]
     cartoes = [crm.cartao(session, o) for o in linhas]
     # a mais recentemente tocada primeiro — é assim que se opera uma lista de trabalho
     return sorted(cartoes, key=lambda c: c["atualizado_em"] or datetime.min, reverse=True)
 
 
+def quadro(vendas: list) -> list:
+    """As três colunas do pipeline ativo — só vendas abertas, com contagem e total.
+
+    Vendido e Perdido ficam fora: o quadro é do que ainda está em jogo.
+    """
+    from app.dinheiro import D0, ZERO, para_float
+    colunas = []
+    for etapa in crm.ETAPAS:
+        cartoes = [v for v in vendas if v["status"] == StatusOportunidade.aberta.value
+                   and v["etapa"] == etapa]
+        com_valor = [c["valor_atual"] for c in cartoes if c["valor_atual"] is not None]
+        colunas.append({
+            "etapa": etapa, "rotulo": crm.status_comercial(SimpleNamespace(
+                status=StatusOportunidade.aberta.value, etapa=etapa)),
+            "quantidade": len(cartoes),
+            "total": para_float(sum((D0(v) for v in com_valor), ZERO)) if com_valor else None,
+            "cartoes": cartoes,
+        })
+    return colunas
+
+
 @router.get("/vendas", response_class=HTMLResponse)
 def lista(request: Request, status: str = "", responsavel: str = "", cliente_id: str = "",
-          busca: str = "", session: Session = Depends(get_session)):
+          busca: str = "", periodo: str = "", vista: str = "lista",
+          session: Session = Depends(get_session)):
     eu = exigir_autenticado(request)
     responsavel_id = eu.id if responsavel == "eu" else (
         int(responsavel) if responsavel.isdigit() else None)
     vendas = listar_vendas(session, status=status, responsavel_id=responsavel_id,
                            cliente_id=int(cliente_id) if cliente_id.isdigit() else None,
-                           busca=busca)
+                           busca=busca, periodo=periodo)
+    vista = "quadro" if vista == "quadro" else "lista"
+    from urllib.parse import urlencode
+    filtros_ativos = {k: v for k, v in (("status", status), ("responsavel", responsavel),
+                                        ("cliente_id", cliente_id), ("busca", busca),
+                                        ("periodo", periodo)) if v}
     return templates.TemplateResponse(request, "vendas_list.html", {
-        "active": "vendas", "vendas": vendas,
+        "active": "vendas", "vendas": vendas, "vista": vista,
+        "qs_filtros": ("&" + urlencode(filtros_ativos)) if filtros_ativos else "",
+        "colunas": quadro(vendas) if vista == "quadro" else [],
         "filtros": {"status": status, "responsavel": responsavel, "cliente_id": cliente_id,
-                    "busca": busca},
-        "opcoes_status": list(FILTRO_STATUS),
+                    "busca": busca, "periodo": periodo},
+        "opcoes_status": [(k, ROTULO_FILTRO_STATUS.get(k, k)) for k in ("",) + tuple(FILTRO_STATUS)],
+        "periodos": PERIODOS_LISTA,
         "clientes": session.exec(select(Cliente).where(Cliente.ativo == True)  # noqa: E712
                                  .order_by(Cliente.nome)).all(),
         **_contexto(session, request),

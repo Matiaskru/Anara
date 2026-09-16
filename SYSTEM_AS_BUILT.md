@@ -4,10 +4,10 @@
 
 | | |
 |---|---|
-| HEAD | commit da Fase 3B (16/09/2026) — CRM comercial simples e pós-venda |
-| Alembic | `0019` — pós-venda em `oportunidade` + `atualizacaocomercial` (aditiva) |
-| Suíte | **1176 passando**, 0 falhas (`python3 -m pytest -q`, ~85 s) |
-| Código | ~11.500 linhas em `app/`, 40 módulos, 15 routers, 33 templates |
+| HEAD | commit da Fase 3C (16/09/2026) — redesign comercial e proposta cliente |
+| Alembic | `0020` — `cotacao.observacao_cliente` (aditiva) |
+| Suíte | **1200 passando**, 0 falhas (`python3 -m pytest -q`) |
+| Código | ~13.000 linhas em `app/`, 41 módulos, 15 routers, 34 templates |
 | Banco | SQLite em `data/anara.db`, 33 tabelas |
 | Atualizado em | 09/09/2026, ao fim do Product Cleanup |
 
@@ -32,7 +32,7 @@ afirmação não pôde ser comprovada lendo o código, está escrito **NÃO CONF
 | ORM | SQLModel sobre SQLAlchemy | `app/models.py` |
 | Banco | SQLite | `data/anara.db` |
 | Migrations | Alembic | `alembic/versions/`, atual `0017` |
-| PDF | ReportLab, via gerador legado | `app/pdf_bridge.py` → `gerar_cotacao.py` |
+| PDF | ReportLab — proposta comercial da Fase 3C | `app/pdf_bridge.py` (allowlist) → `app/pdf_proposta.py` |
 | Planilha | openpyxl | `app/excel_import.py` |
 | Autenticação | argon2-cffi + itsdangerous | `app/auth.py` |
 | Testes | pytest | `tests/`, `pytest.ini` |
@@ -1833,6 +1833,89 @@ Seção explícita, para não confundir especificação com implementação.
 - **Não há relatório de comissão por vendedor**
 
 ---
+
+# 24. Fase 3C — redesign comercial, Dashboard OWNER/ADMIN e PDF cliente (16/09/2026)
+
+## 24.1 Camada visual
+
+Um design system só (`app/static/css/anara.css`): sidebar compacta, topbar baixa com título,
+filtros e ação principal, conteúdo em toda a largura, tabelas densas, pills de status,
+modais/popovers (`app/static/js/ui.js`), timeline, stepper de pós-venda, quadro kanban,
+painel sticky e gráficos em SVG puro (`app/static/js/dashboard.js`) — **sem CDN**. Templates
+redesenhados: `login`, `base`, `vendas_list`, `venda_detail`, `clientes_list`,
+`cliente_detail`, `cotacoes_list`, `cotacao_detail` (+ partial `_cotacao_situacao`),
+`dashboard`, `produtos_list`. As telas administrativas anteriores herdam a régua nova sem
+redesenho.
+
+Menu por papel (decidido no template a partir de `permissoes`, autorizado no backend):
+vendedora Vendas · Clientes · Cotações · Produtos; OWNER/ADMIN + Dashboard (`/`), Aprovações
+(alçada), Admin. Relatórios mora dentro do Admin. Sem saudação.
+
+## 24.2 Vendas, Venda, Clientes
+
+- `/vendas`: lista (Cliente, Projeto, Valor, Status inline, Cotação atual, Última atualização,
+  Responsável), filtros busca/status/cliente/responsável/período (`atualizado_em`), `+ Nova
+  venda` em modal; `?vista=quadro` mostra só Rascunho/Enviado/Negociação com contagem/total e
+  drag-and-drop → `POST /vendas/{id}/status`. Vendido/Perdido continuam ações explícitas.
+- `/vendas/{id}`: 70/30 — registro rápido e modal de atualização (+ próxima ação), timeline
+  única e humanizada (`crm.timeline`: tipos traduzidos por `rotulos.EVENTO_TIMELINE`, avanço
+  automático sem prefixo de código), resumo, cotação atual e revisões, próxima atividade,
+  pós-venda com stepper; financeiro só para quem vê economia (403 no backend, como antes).
+- `/clientes`: `metrics_service.clientes_resumo` (uma passada) → total comprado, nº vendas,
+  última compra, em aberto e **status financeiro derivado** (Atrasado só quando a alçada
+  marcou; Em aberto; Em dia). `/clientes/{id}`: KPIs de `cliente_360`, abas, modais;
+  `POST /clientes/{id}/editar` (CNPJ de outro cliente ativo → 409; finalidade só do enum;
+  AuditLog `UPDATE_CLIENT`).
+
+## 24.3 Cotações e negociação reativa
+
+`/cotacoes/{id}` monta o painel já com `comercial_service.payload_vendedora` /
+`payload_admin` (`_negociacao_inicial`). O JavaScript (`app/static/js/cotacao.js`) **não
+calcula economia**: preço digitado → `POST /negociacao/preview` (debounce) → pinta linha,
+subtotal, frete, total, desconto, comissão estimada e status de autonomia; confirmar →
+`POST /negociacao` (grava, invalida aprovação) e relê `GET /cotacoes/{id}/painel`
+(HTML das ações válidas, derivadas de `ws.avaliar`). Quantidade → `PUT /itens/{item}` e
+releitura. Recusa do servidor (Daune travado, 409) → toast humano e rollback do campo.
+`_item_vendedora` ganhou `desconto_linha_pct` (exibição) e `preco_travado` (já na lista
+de permissão). OWNER/ADMIN têm "Economia da proposta" fechada por padrão, com
+`payload_admin.economia`.
+
+Cabeçalho: `observacao_cliente` (vai à proposta) × `observacoes` (interna, nunca vai) —
+migration 0020. Frete na tela: Anara entrega (CIF, com valor opcional; sem valor usa a
+tabela da rota quando houver), Por conta do cliente (FOB), A combinar. Motor de frete
+nacional definitivo **não** foi implementado (C-NEW de frete continuam abertos).
+
+## 24.4 Dashboard OWNER/ADMIN
+
+`metrics_service.dashboard_admin(session, periodo, FiltrosDashboard)` e `serie_mensal`
+(12 meses; `ano_anterior` só com dado real). Filtro de vendedora/cliente corta a venda;
+fornecedor/família cortam os itens da vencedora (a venda entra se sobrar item). Vendido =
+`valor_fechado` por `won_em`; lucro/margem/desconto/comissão = itens da vencedora; faturado
+por `faturado_em`; pago por `pago_em`; a receber = pós-venda em aberto. `periodo_de` ganhou
+`trimestre` e `12m`. Análises: performance por vendedora, top clientes e concentração Top 5,
+funil (abertas por etapa) e aging, mix fornecedor/família, impacto dos descontos (faixas ×
+margem e por venda), pós-venda, motivos de perda, rentabilidade por cliente. Nada é inventado:
+sem dado, `None` e "—".
+
+## 24.5 PDF — PROPOSTA COMERCIAL ANARA
+
+`app/pdf_bridge.montar_documento` produz `header/items/totals` por **lista de permissão**
+(`CAMPOS_HEADER`, `CAMPOS_ITEM`, `CAMPOS_TOTAIS`), varre códigos operacionais e recusa com
+`PdfInseguro`; `app/pdf_proposta.build_pdf` só desenha. Final usa `SnapshotEmissao`
+(itens, cliente, frete, número, revisão, data de emissão); rascunho usa a cotação viva com
+faixa e marca d'água (imagem, não texto) "RASCUNHO — NÃO ENVIAR AO CLIENTE" em toda
+página. Fechamento (subtotal, frete, TOTAL DA PROPOSTA) são as últimas linhas da tabela de
+itens, que repete o cabeçalho a cada página; rodapé "Página X de Y". Frete por extenso
+(`Frete nacional: R$ X` / `Por conta do cliente` / `A combinar` / `a definir` só em
+rascunho). Sem preço recomendado, tabela, desconto, fornecedor, custo, margem, comissão.
+`gerar_cotacao.py` (gerador do Excel) permanece no repositório, sem uso pela plataforma.
+
+## 24.6 Demonstração e inspeção visual
+
+`scripts/demo_3c.py --db <cópia> [--serve porta]` copia o banco, migra a cópia, semeia dois
+usuários de demonstração e um cenário comercial pequeno, e sobe o servidor; nunca toca em
+`data/anara.db`. `scripts/visual_3c.py` fotografa as telas (desktop e celular) com
+Playwright e acusa economia no texto da vendedora, HTTP ≥ 400 e erro de console.
 
 # 23. Check final
 

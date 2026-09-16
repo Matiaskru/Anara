@@ -917,7 +917,11 @@ class Cotacao(SQLModel, table=True):
     finalidade: Optional[str] = None            # override da finalidade do cliente
     contribuinte_icms: bool = Field(default=True)
     frete: Optional[str] = None
+    # `observacoes` é INTERNA (nunca vai ao PDF). O que o cliente lê é `observacao_cliente`
+    # (Fase 3C) — separação formal, para que uma anotação da equipe nunca vire texto da
+    # proposta por descuido.
     observacoes: Optional[str] = None
+    observacao_cliente: Optional[str] = None
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     validade_em: Optional[datetime] = None
     base_importacao_id: Optional[int] = Field(default=None, foreign_key="baseimportacao.id")

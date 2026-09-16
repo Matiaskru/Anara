@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Anara Cotações{% endblock %}</title>
+  <title>{% block title %}Anara{% endblock %}</title>
   <link rel="stylesheet" href="/static/css/anara.css">
   <link rel="icon" href="/static/img/anara_mark_copper.png">
   {% block extra_head %}{% endblock %}
@@ -11,50 +11,64 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <div class="brand">
-        <img src="/static/img/anara_mark_copper.png" alt="Anara">
+      <a class="brand" href="/">
+        <img src="/static/img/anara_mark_copper.png" alt="">
         <span class="word">ANARA</span>
-      </div>
+      </a>
       {#
-        Navegação por tarefa, não por módulo. Eram quinze linhas — com "Premissas e versões"
-        e "Configurações" lado a lado, sem dizer qual servia para quê, e com ferramentas
-        técnicas misturadas ao trabalho do dia. Tudo continua alcançável: o que mudou é que
-        a administração tem uma porta só, e "Nova cotação" virou ação onde se cota, não
-        linha de menu permanente.
+        Menu por tarefa, e por papel. A vendedora vê o que opera: Vendas, Clientes,
+        Cotações, Produtos. OWNER/ADMIN ganham o Dashboard e as portas de decisão
+        (Aprovações) e de administração. O que decide quem vê o quê é o backend —
+        aqui só se deixa de anunciar uma tela que a pessoa não pode operar.
       #}
       <nav>
-        {# Fase 3B: a operação é Vendas → Clientes → Cotações → Produtos. "Meu dia" e o
-           quadro por etapa continuam existindo (/comercial, /pipeline), sem linha própria. #}
-        <a href="/vendas" class="{{ 'active' if active in ('vendas', 'pipeline', 'oportunidades', 'comercial') else '' }}">Vendas</a>
-        <a href="/clientes" class="{{ 'active' if active == 'clientes' else '' }}">Clientes</a>
-        <a href="/cotacoes" class="{{ 'active' if active in ('cotacoes', 'nova_cotacao') else '' }}">Cotações</a>
-        <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">Produtos</a>
-        <a href="/relatorios" class="{{ 'active' if active in ('relatorios', 'relatorios_eco') else '' }}">Relatórios</a>
-        {# A fila é o painel de quem DECIDE. Alçada é `can_approve_quotes`, não acesso
-           econômico: quem versiona o câmbio não herda o direito de aprovar desconto. #}
+        {% if ve_economia(request) %}
+        <a href="/" class="{{ 'active' if active == 'dashboard' else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="9" width="3" height="5" rx=".5"/><rect x="6.5" y="5" width="3" height="9" rx=".5"/><rect x="11" y="2" width="3" height="12" rx=".5"/></svg>
+          Dashboard</a>
+        {% endif %}
+        <a href="/vendas" class="{{ 'active' if active in ('vendas', 'pipeline', 'oportunidades', 'comercial') else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/><path d="M11 5h3v3"/></svg>
+          Vendas</a>
+        <a href="/clientes" class="{{ 'active' if active == 'clientes' else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 14V4a1 1 0 011-1h5v11M8 6h5a1 1 0 011 1v7M4.5 6h1M4.5 9h1M10.5 9h1M10.5 11.5h1"/></svg>
+          Clientes</a>
+        <a href="/cotacoes" class="{{ 'active' if active in ('cotacoes', 'nova_cotacao') else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 2h5l3 3v9H4z"/><path d="M9 2v3h3M6 8h4M6 11h4"/></svg>
+          Cotações</a>
+        <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l5.5 3v6L8 14l-5.5-3V5z"/><path d="M8 8l5.5-3M8 8L2.5 5M8 8v6"/></svg>
+          Produtos</a>
         {% if aprova_cotacoes(request) %}
-        <a href="/aprovacoes" class="{{ 'active' if active == 'aprovacoes' else '' }}">Aprovações</a>
+        <a href="/aprovacoes" class="{{ 'active' if active == 'aprovacoes' else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M5.5 8l2 2 3.5-4"/></svg>
+          Aprovações</a>
         {% endif %}
         {% if administra(request) %}
-        <a href="/admin" class="{{ 'active' if active in ('admin', 'configuracoes', 'saude') else '' }}">Admin</a>
+        <a href="/admin" class="{{ 'active' if active in ('admin', 'configuracoes', 'saude', 'relatorios', 'relatorios_eco') else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/></svg>
+          Admin</a>
         {% endif %}
       </nav>
       {% set eu = usuario_atual(request) %}
       {% if eu %}
-      <div class="usuario-atual" style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);
-                                        font-size:12px;line-height:1.5;">
-        <div style="font-weight:600;">{{ eu.nome }}</div>
-        <div style="opacity:.6;">{{ eu.papel.replace('_', ' ')|title }}</div>
+      <div class="usuario-atual">
+        <div class="nome" title="{{ eu.email }}">{{ eu.nome }}</div>
+        <div class="papel">{{ eu.papel|rotulo_papel }}</div>
       </div>
       {% endif %}
       <a href="/logout" class="logout">Sair</a>
     </aside>
     <main class="main">
-      {% block content %}{% endblock %}
+      {% block topbar %}{% endblock %}
+      <div class="content {% block content_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+      </div>
     </main>
   </div>
-  <div id="toast" class="toast"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="/static/js/toast.js"></script>
+  <script src="/static/js/ui.js"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

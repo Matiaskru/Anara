@@ -373,7 +373,13 @@ def _item_vendedora(a: ItemAvaliado) -> dict:
         if l.preco_recomendado is not None else None,
         "preco_negociado": para_float(l.preco_negociado),
         "total_linha": para_float(l.faturamento),
+        # desconto da linha em relação ao recomendado — só para a tela mostrar; acima do
+        # recomendado não é desconto (fica 0)
+        "desconto_linha_pct": (para_float(max(ZERO, D("1") - divide(l.preco_negociado,
+                                                                        l.preco_recomendado)))
+                               if l.preco_recomendado else None),
         "editavel": l.editavel, "motivo_nao_editavel": l.motivo_nao_editavel,
+        "preco_travado": l.preco_travado,
     }
 
 
