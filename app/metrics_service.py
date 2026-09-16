@@ -624,3 +624,158 @@ PENDENCIAS_CONHECIDAS = [
     {"id": "B-22", "assunto": "Sistema", "titulo": "Backup sem poda",
      "situacao": "`scripts/backup_banco.py` não aplica o limite. Não bloqueia nada."},
 ]
+
+
+# ---------------------------------------------------------------------------
+# Fase 3B — Cliente 360 e painel de vendas (para o Dashboard Admin da Fase 3C)
+# ---------------------------------------------------------------------------
+def _vencedora_itens(session: Session, op: Oportunidade) -> List[CotacaoItem]:
+    """Os itens da proposta vencedora — a única cotação que representa uma venda GANHA.
+
+    R1 e R2 nunca são somadas: só a `cotacao_vencedora_id` conta.
+    """
+    if not op.cotacao_vencedora_id:
+        return []
+    return ws.itens_de(session, op.cotacao_vencedora_id)
+
+
+def cliente_360(session: Session, cliente_id: int) -> dict:
+    """Os números comerciais DERIVADOS da ficha do cliente. Nada aqui é gravado.
+
+        TOTAL COMPRADO   Σ valor_fechado das vendas GANHAS      (cotação enviada NÃO é compra)
+        QTD DE VENDAS    número de vendas GANHAS
+        TICKET MÉDIO     total comprado ÷ quantidade de vendas ganhas
+        ÚLTIMA COMPRA    maior won_em entre as ganhas
+        EM ANDAMENTO     vendas ABERTAS (quantidade e valor de pipeline)
+        EM ABERTO        Σ valor_fechado das ganhas ainda não pagas
+        ATRASADO         Σ valor_fechado das ganhas marcadas ATRASADO
+        PAGO             Σ valor_fechado das ganhas PAGO
+    """
+    from app import pos_venda_service as pv
+
+    todas = session.exec(select(Oportunidade)
+                         .where(Oportunidade.cliente_id == cliente_id)).all()
+    ganhas = [o for o in todas if o.status == GANHA]
+    abertas = [o for o in todas if o.status == ABERTA]
+    total = soma(o.valor_fechado for o in ganhas if o.valor_fechado is not None)
+    pipeline = [v for v in (valor_de_pipeline(session, o) for o in abertas) if v is not None]
+    em_aberto = [o for o in ganhas if o.status_pos_venda in pv.EM_ABERTO]
+    atrasadas = [o for o in ganhas if o.status_pos_venda == pv.ATRASADO]
+    pagas = [o for o in ganhas if o.status_pos_venda == pv.PAGO]
+    faturadas = [o for o in ganhas if o.faturado_em]
+    ultima = max((o.won_em for o in ganhas if o.won_em), default=None)
+    return {
+        "total_comprado": para_float(total) if ganhas else None,
+        "quantidade_vendas": len(ganhas),
+        "ticket_medio": para_float(divide(total, D(len(ganhas)))) if ganhas else None,
+        "ultima_compra": ultima,
+        "vendas_em_andamento": len(abertas),
+        "valor_em_andamento": para_float(soma(pipeline)) if pipeline else None,
+        "valor_em_aberto": para_float(soma(o.valor_fechado for o in em_aberto)) if em_aberto else None,
+        "quantidade_em_aberto": len(em_aberto),
+        "valor_atrasado": para_float(soma(o.valor_fechado for o in atrasadas)) if atrasadas else None,
+        "quantidade_atrasada": len(atrasadas),
+        "valor_faturado": para_float(soma(o.valor_fechado for o in faturadas)) if faturadas else None,
+        "valor_pago": para_float(soma(o.valor_fechado for o in pagas)) if pagas else None,
+        "perdidas": len([o for o in todas if o.status == PERDIDA]),
+    }
+
+
+def _agrupar(linhas, chave):
+    grupos = {}
+    for rotulo, valor in linhas:
+        grupos.setdefault(rotulo, ZERO)
+        grupos[rotulo] += D0(valor)
+    return sorted([{chave: k, "valor": para_float(v)} for k, v in grupos.items()],
+                  key=lambda x: -(x["valor"] or 0))
+
+
+def painel_vendas(session: Session, periodo: Periodo) -> dict:
+    """As métricas que o Dashboard Admin (Fase 3C) vai mostrar — definições canônicas.
+
+    * **vendido / faturado / pago são três coisas**: `valor_fechado` das GANHAS no período
+      (por `won_em`), das que têm `faturado_em` no período, das PAGAS por `pago_em`;
+    * **lucro e margem** vêm dos itens da **cotação vencedora** de cada venda ganha —
+      margem agregada = Σ lucro ÷ Σ receita, nunca média de percentuais;
+    * **desconto médio** é ponderado por valor: 1 − Σ negociado ÷ Σ recomendado, sobre os
+      itens da vencedora que têm recomendado;
+    * **comissão estimada** = Σ `comissao_valor` da vencedora (estimativa de pricing);
+    * revisões de cotação **não** contam como vendas; itens sem dado econômico ficam fora
+      do agregado.
+
+    Lucro, margem, comissão e desconto são **economia**: quem consome decide se mostra.
+    """
+    todas = session.exec(select(Oportunidade)).all()
+    ganhas = [o for o in todas if o.status == GANHA and periodo.contem(o.won_em)]
+    perdidas = [o for o in todas if o.status == PERDIDA and periodo.contem(o.lost_em)]
+    abertas = [o for o in todas if o.status == ABERTA]
+    faturadas = [o for o in todas if o.status == GANHA and o.faturado_em
+                 and periodo.contem(datetime.combine(o.faturado_em, datetime.min.time()))]
+    pagas = [o for o in todas if o.status == GANHA and o.pago_em and periodo.contem(o.pago_em)]
+    from app import pos_venda_service as pv
+    aguardando_entrega = [o for o in todas if o.status_pos_venda == pv.AGUARDANDO_ENTREGA]
+    aguardando_pagamento = [o for o in todas if o.status_pos_venda == pv.AGUARDANDO_PAGAMENTO]
+    atrasadas = [o for o in todas if o.status_pos_venda == pv.ATRASADO]
+
+    vendido = soma(o.valor_fechado for o in ganhas if o.valor_fechado is not None)
+    receita = lucro = comissao = rec = neg = ZERO
+    por_vendedor, por_cliente, por_fornecedor, por_familia = [], [], [], []
+    usuarios = {u.id: u.nome for u in session.exec(select(Usuario)).all()}
+    clientes = {c.id: c.nome for c in session.exec(select(Cliente)).all()}
+    produtos = {p.id: p for p in session.exec(select(Produto)).all()}
+    for o in ganhas:
+        por_vendedor.append((usuarios.get(o.responsavel_id) or "Sem responsável", o.valor_fechado))
+        por_cliente.append((clientes.get(o.cliente_id) or "—", o.valor_fechado))
+        for it in _vencedora_itens(session, o):
+            if not (it.faturamento and it.custo_unitario):
+                continue
+            receita += D0(it.faturamento)
+            lucro += D0(it.lucro)
+            comissao += D0(it.comissao_valor)
+            if it.preco_recomendado:
+                rec += dinheiro(D0(it.preco_recomendado) * D0(it.quantidade))
+                neg += D0(it.faturamento)
+            por_fornecedor.append((it.fornecedor_nome or "—", it.faturamento))
+            familia = getattr(produtos.get(it.produto_id), "familia", None) or "—"
+            por_familia.append((familia, it.faturamento))
+
+    tempos = [t for t in (tempo_ate_fechamento(o) for o in ganhas) if t is not None]
+    idades = [a for a in (aging(o) for o in abertas) if a is not None]
+    em_negociacao = [v for v in (valor_de_pipeline(session, o) for o in abertas
+                                 if o.etapa == crm.NEGOCIACAO) if v is not None]
+    return {
+        "periodo": periodo.como_dict(),
+        "valor_vendido": para_float(vendido) if ganhas else None,
+        "valor_faturado": para_float(soma(o.valor_fechado for o in faturadas)) if faturadas else None,
+        "valor_pago": para_float(soma(o.valor_fechado for o in pagas)) if pagas else None,
+        "lucro_das_vendas": para_float(lucro) if receita else None,
+        "margem_agregada": para_float(divide(lucro, receita)) if receita else None,
+        "numero_vendas": len(ganhas),
+        "ticket_medio": para_float(divide(vendido, D(len(ganhas)))) if ganhas else None,
+        "taxa_conversao": taxa_de_conversao(len(ganhas), len(perdidas)),
+        "desconto_medio_ponderado": para_float(D("1") - divide(neg, rec)) if rec else None,
+        "comissao_estimada": para_float(comissao) if receita else None,
+        "vendas_abertas": len(abertas),
+        "valor_em_negociacao": para_float(soma(em_negociacao)) if em_negociacao else None,
+        "por_vendedor": _agrupar(por_vendedor, "vendedor"),
+        "por_cliente": _agrupar(por_cliente, "cliente"),
+        "por_fornecedor": _agrupar(por_fornecedor, "fornecedor"),
+        "por_familia": _agrupar(por_familia, "familia"),
+        "tempo_medio_ate_fechamento_dias": (round(sum(tempos) / len(tempos), 1) if tempos else None),
+        "aging_medio_abertas_dias": (round(sum(idades) / len(idades), 1) if idades else None),
+        "aguardando_entrega": len(aguardando_entrega),
+        "valor_aguardando_pagamento": (para_float(soma(o.valor_fechado for o in aguardando_pagamento))
+                                       if aguardando_pagamento else None),
+        "valor_atrasado": para_float(soma(o.valor_fechado for o in atrasadas)) if atrasadas else None,
+        "quantidade_atrasada": len(atrasadas),
+    }
+
+
+#: O que do painel de vendas é economia interna — a rota corta para quem não vê.
+CAMPOS_ECONOMICOS_DO_PAINEL = ("lucro_das_vendas", "margem_agregada", "comissao_estimada",
+                               "desconto_medio_ponderado")
+
+
+def painel_vendas_comercial(session: Session, periodo: Periodo) -> dict:
+    painel = painel_vendas(session, periodo)
+    return {k: v for k, v in painel.items() if k not in CAMPOS_ECONOMICOS_DO_PAINEL}

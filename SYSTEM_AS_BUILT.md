@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| HEAD | commit da Fase 3A (16/09/2026) — política comercial canônica |
-| Alembic | `0018` — política comercial (colunas aditivas em `margemregra` e `cotacaoitem`) |
-| Suíte | **1142 passando**, 0 falhas (`python3 -m pytest -q`, ~90 s) |
+| HEAD | commit da Fase 3B (16/09/2026) — CRM comercial simples e pós-venda |
+| Alembic | `0019` — pós-venda em `oportunidade` + `atualizacaocomercial` (aditiva) |
+| Suíte | **1176 passando**, 0 falhas (`python3 -m pytest -q`, ~85 s) |
 | Código | ~11.500 linhas em `app/`, 40 módulos, 15 routers, 33 templates |
 | Banco | SQLite em `data/anara.db`, 33 tabelas |
 | Atualizado em | 09/09/2026, ao fim do Product Cleanup |
@@ -111,15 +111,18 @@ Rota sem sessão → `303` para `/login?next=<path>`.
 
 ### Navegação
 
-O menu lateral tem **8 itens**, organizados por tarefa:
+O menu lateral tem **7 itens**, organizados por tarefa (Fase 3B):
 
 ```
-Meu dia · Pipeline · Clientes · Cotações · Produtos · Relatórios
+Vendas · Clientes · Cotações · Produtos · Relatórios
 + Aprovações   (quem tem alçada — `aprova_cotacoes`, não `ve_economia`)
 + Admin        (papel administrativo)
 ```
 
-Oportunidades é alcançada pelo Pipeline. Nova cotação é ação, não linha de menu. Calculadora,
+**Vendas** é o nome de interface da Oportunidade. "Meu dia" (`/comercial`) e o quadro por
+etapa (`/pipeline`) continuam existindo sem linha de menu; `/oportunidades` redireciona para
+`/vendas`. Vendedora entra e cai em **Vendas**; `/` (dashboard) a redireciona para lá.
+Nova cotação é ação, não linha de menu. Calculadora,
 importação, configurações, auditoria, qualidade da base e saúde moram **dentro do Admin** —
 `/admin` é um hub com 13 áreas, e `/configuracoes` deixou de ser um segundo endereço a
 memorizar.
@@ -159,22 +162,41 @@ memorizar.
 
 ### `/` — Dashboard
 - **Arquivo:** `app/routers/dashboard.py:15` · template `dashboard.html`
-- **Acesso:** autenticado
+- **Acesso:** OWNER/ADMIN. Vendedora → `303 /vendas` (Fase 3B); o dashboard novo é da 3C
+
+### `/vendas` — Vendas (Fase 3B)
+- **Arquivo:** `app/routers/vendas.py` · template `vendas_list.html`
+- **Exibe:** cliente, projeto, valor atual, **status comercial único** (Rascunho / Enviado /
+  Negociação / Vendido / Perdido), responsável, última atualização, próxima atividade.
+  Status trocado inline (`POST /vendas/{id}/status`, grava na hora, histórico append-only)
+- **Ações:** POST `/vendas` (cliente + projeto → RASCUNHO, responsável = quem criou)
+
+### `/vendas/{id}` — Venda
+- **Template** `venda_detail.html`. Status, responsável, marcar **vendido** (proposta aceita
+  → `crm.marcar_ganha` → `validar_compromisso_firme`; pós-venda nasce AGUARDANDO_ENTREGA),
+  **perdido** (motivo obrigatório), reabrir (volta à última etapa aberta; legado → Rascunho),
+  nova cotação nesta venda, **registrar atualização** (+ próxima atividade opcional),
+  cotações/revisões, timeline consolidada, bloco de **pós-venda**
+- **Pós-venda:** `POST /vendas/{id}/pos-venda/{entrega-prevista|entrega|observacao}`
+  (vendedora) · `/{faturamento|pagamento-previsto|pago|atrasado|corrigir}` (OWNER/ADMIN,
+  403 para vendedor, `AuditLog`)
+- **Automação:** cotação emitida/enviada → venda em RASCUNHO vai a ENVIADO
+  (`crm.avancar_por_envio`, ator "sistema (automático)"); em NEGOCIAÇÃO nada muda; VENDIDO,
+  PERDIDO e NEGOCIAÇÃO nunca são marcados sozinhos
+- `/clientes/{id}/vendas.json` alimenta o formulário de nova cotação
 
 ### `/comercial` — O dia
 - **Arquivo:** `app/routers/crm.py:74` · template `crm_home.html`
 - **Acesso:** autenticado
 - **Exibe:** atividades atrasadas, do dia, oportunidades sem próxima atividade
 
-### `/pipeline` — Funil por etapa
+### `/pipeline` — Quadro por etapa (mantido, fora do menu)
 - **Arquivo:** `app/routers/crm.py:102` · template `crm_pipeline.html`
-- **Exibe:** colunas por `EtapaOportunidade`, cards de `crm_service.cartao()`
+- **Exibe:** três colunas (`RASCUNHO`, `ENVIADO`, `NEGOCIACAO`), cards de `crm_service.cartao()`
 - **Confidencialidade:** preço e total comerciais podem aparecer; custo, margem, lucro e
   markup, não
 
-### `/oportunidades` — Lista
-- **Arquivo:** `app/routers/crm.py:118` · template `crm_lista.html`
-- **Filtros:** etapa, status, responsável
+### `/oportunidades` — redireciona para `/vendas` (Fase 3B)
 
 ### `/oportunidades/{id}` — Oportunidade 360
 - **Arquivo:** `app/routers/crm.py:150` · template `crm_oportunidade.html`
@@ -186,17 +208,29 @@ memorizar.
 - **Arquivo:** `app/routers/clientes.py:13` · template `clientes_list.html`
 - **Ações:** POST `/clientes` (criar), `/clientes/{id}/arquivar`, `/restaurar`
 
-### `/clientes/{id}` — Cliente 360
-- **Arquivo:** `app/routers/clientes.py:61` · template `cliente_detail.html`
-- **Exibe:** dados, contatos, oportunidades, cotações
-- **Ação:** POST `/clientes/{id}/contatos`
+### `/clientes/{id}` — Cliente 360 (Fase 3B)
+- **Arquivo:** `app/routers/clientes.py` · template `cliente_detail.html`
+- **Visão geral:** cadastro (razão social, CNPJ, cidade/UF, fiscal, contatos) + números
+  **derivados** (`metrics_service.cliente_360`): total comprado = Σ `valor_fechado` das
+  vendas GANHAS (cotação enviada não é compra; R1/R2 não somam), quantidade, ticket médio,
+  última compra (maior `won_em`), em andamento, em aberto, atrasado, faturado, pago
+- **Vendas:** abertas / vendidas / perdidas · **Cotações:** todas do cliente, com revisão e
+  venda vinculada ("Sem venda vinculada (legado)") · **Contatos**
+- **Ações:** POST `/vendas` (nova venda do cliente), `/clientes/{id}/contatos`;
+  `POST /clientes` cria com nome só e recusa CNPJ repetido (409, `crm.criar_cliente`)
 - **Bloqueio informativo:** `crm_service.dados_fiscais_faltando()` lista o que falta para
   emitir
 
 ## 2.3 Cotação
 
-### `/cotacoes` — Lista
-- **Arquivo:** `app/routers/cotacoes.py:139` · template `cotacoes_list.html`
+### `/cotacoes` — Lista (módulo próprio — não fica escondido em Vendas)
+- **Arquivo:** `app/routers/cotacoes.py` · template `cotacoes_list.html`
+- **Fase 3B:** coluna **Venda** (link) ou "Sem venda vinculada (legado)"; revisão marcada;
+  filtros por status incluem os estados legados e arquivadas. Status técnico da cotação
+  **não** vira status comercial da venda
+- **Nova cotação exige venda** (`exigir_venda`): venda aberta do cliente ou nome de projeto
+  para criar uma (`nova_venda`); sem vínculo → 400; venda de outro cliente → 409.
+  `Cotacao.oportunidade_id` continua NULO nas 21 históricas (não é NOT NULL no banco)
 
 ### `/cotacoes/nova` — Criar
 - **Arquivo:** `app/routers/cotacoes.py:180` · template `cotacao_nova.html`
@@ -485,13 +519,25 @@ Organização **e** prospect — não existe entidade separada de lead.
 ### `Contato` (`models.py:1223`)
 `cliente_id`, `nome`, `cargo`, `email`, `telefone`, `principal`, `ativo`
 
-### `Oportunidade` (`models.py:1247`)
-- `cliente_id`, `titulo`, `etapa`, `status`, `responsavel_id`, `origem`
+### `Oportunidade` = **Venda** na interface (`models.py`)
+- `cliente_id`, `titulo`, `etapa` (**RASCUNHO / ENVIADO / NEGOCIACAO** — Fase 3B; os
+  valores do funil anterior são `ETAPAS_LEGADAS`, só leitura), `status` (ABERTA / GANHA =
+  Vendido / PERDIDA = Perdido), `responsavel_id`, `origem`
 - `valor_estimado` — **palpite manual**, persistido
-- `valor_fechado` — snapshot do ganho, persistido
+- `valor_fechado` — snapshot do ganho (**valor vendido**), persistido
 - `cotacao_vencedora_id` — preenchido em GANHA
-- `data_prevista_fechamento`, `motivo_perda`, `criado_em`, `fechado_em`
-- **Derivado, sem coluna:** valor cotado, aging, tempo em etapa, tempo até fechamento
+- `data_prevista_fechamento`, `motivo_perda` (+ `PRODUTO_ESPECIFICACAO`), `criado_em`
+- **Pós-venda (0019):** `status_pos_venda` (AGUARDANDO_ENTREGA → AGUARDANDO_PAGAMENTO →
+  PAGO; ATRASADO marcado pelo financeiro; nulo em aberta/perdida), `entrega_prevista_em`,
+  `entregue_em`, `faturado_em` + `numero_documento_fiscal` (**valor faturado**),
+  `pagamento_previsto_em`, `pago_em` (**valor pago**), `observacao_pos_venda`. V1 sem
+  pagamento parcial
+- **Derivado, sem coluna:** valor cotado, aging, tempo em etapa, tempo até fechamento,
+  status comercial (`rotulos.venda`)
+
+### `AtualizacaoComercial` (`models.py`, Fase 3B)
+Append-only: `oportunidade_id`, `autor_id`, `autor_email`, `texto`, `criado_em`. Não se
+edita nem apaga — correção é outra atualização. Pode criar uma `AtividadeComercial` junto.
 
 ### `OportunidadeEtapaHistorico` (`models.py:1288`)
 Append-only. `oportunidade_id`, `de`, `para`, `ator_id`, `em`, `nota`

@@ -33,12 +33,19 @@ from app import admin_service as adm
 from app import workflow_service as ws
 from app.dinheiro import D, para_float
 from app.models import (
-    AtividadeComercial, Cliente, Contato, Cotacao, EtapaOportunidade, MotivoPerda,
-    Oportunidade, OportunidadeEtapaHistorico, StatusCotacao, StatusOportunidade, Usuario,
+    ETAPAS_LEGADAS, AtividadeComercial, AtualizacaoComercial, Cliente, Contato, Cotacao,
+    EtapaOportunidade, MotivoPerda, Oportunidade, OportunidadeEtapaHistorico, StatusCotacao,
+    StatusOportunidade, StatusPosVenda, Usuario,
 )
 
+#: As três etapas de uma VENDA aberta (Fase 3B). Vendido/Perdido são `status`.
 ETAPAS = [e.value for e in EtapaOportunidade]
 STATUS = [s.value for s in StatusOportunidade]
+RASCUNHO = EtapaOportunidade.rascunho.value
+ENVIADO = EtapaOportunidade.enviado.value
+NEGOCIACAO = EtapaOportunidade.negociacao.value
+#: Motivos de perda oferecidos na tela (o enum ainda lê o legado `FORA_DE_ESCOPO`).
+MOTIVOS_PERDA = [m.value for m in MotivoPerda if m != MotivoPerda.fora_de_escopo]
 
 #: Estados da cotação que valem como proposta apresentada ao cliente.
 COTACAO_APRESENTAVEL = (StatusCotacao.emitida.value, StatusCotacao.enviada.value)
@@ -168,7 +175,7 @@ def contato_principal(session: Session, cliente_id: int) -> Optional[Contato]:
 # ---------------------------------------------------------------------------
 def criar_oportunidade(session: Session, *, ator: Usuario, cliente_id: int, titulo: str,
                        responsavel_id: Optional[int] = None,
-                       etapa: str = EtapaOportunidade.prospeccao.value,
+                       etapa: str = EtapaOportunidade.rascunho.value,
                        origem: Optional[str] = None, origem_detalhe: Optional[str] = None,
                        valor_estimado=None, data_prevista_fechamento: Optional[date] = None,
                        descricao: Optional[str] = None) -> Oportunidade:
@@ -178,7 +185,9 @@ def criar_oportunidade(session: Session, *, ator: Usuario, cliente_id: int, titu
     if not (titulo or "").strip():
         raise DadoInvalido("A oportunidade precisa de um título.")
     if etapa not in ETAPAS:
-        raise DadoInvalido(f"Etapa '{etapa}' não existe. Válidas: {', '.join(ETAPAS)}.")
+        raise DadoInvalido(f"Etapa '{etapa}' não existe. Válidas: {', '.join(ETAPAS)}."
+                           + (" Etapa do funil anterior não é aceita em venda nova."
+                              if etapa in ETAPAS_LEGADAS else ""))
     responsavel = _validar_responsavel(session, responsavel_id)
 
     op = Oportunidade(
@@ -222,7 +231,9 @@ def mudar_etapa(session: Session, op: Oportunidade, nova: str, *, ator: Usuario,
     inventaria uma sequência comercial que não corresponde a como se vende.
     """
     if nova not in ETAPAS:
-        raise DadoInvalido(f"Etapa '{nova}' não existe. Válidas: {', '.join(ETAPAS)}.")
+        raise DadoInvalido(f"Etapa '{nova}' não existe. Válidas: {', '.join(ETAPAS)}."
+                           + (" Etapa do funil anterior não é aceita." if nova in ETAPAS_LEGADAS
+                              else ""))
     if op.status != StatusOportunidade.aberta.value:
         raise DadoInvalido(
             f"A oportunidade está {op.status} — reabra antes de mover no funil.", status=409)
@@ -367,6 +378,8 @@ def marcar_ganha(session: Session, op: Oportunidade, cotacao_id: int, *,
     # Snapshot: se a tabela de preços mudar amanhã, o valor fechado não muda.
     op.valor_fechado = total
     op.atualizado_em = op.won_em
+    # Pós-venda (Fase 3B): vendido → aguardando entrega. Só existe a partir daqui.
+    op.status_pos_venda = StatusPosVenda.aguardando_entrega.value
     session.add(op)
     adm.registrar(session, ator=ator, acao="MARK_WON", entidade="Oportunidade",
                   entidade_id=op.id, escopo=op.titulo,
@@ -416,9 +429,12 @@ def reabrir(session: Session, op: Oportunidade, *, ator: Usuario, etapa: Optiona
         raise DadoInvalido(
             "Oportunidade ganha não se reabre por aqui. Corrigir um fechamento é ação "
             "administrativa própria — e ainda não existe.", status=409)
-    destino = etapa or op.etapa
+    # Sem etapa pedida, volta para a **última etapa aberta antes da perda** — `op.etapa` não
+    # é apagada na perda, então é determinística. Etapa do funil anterior não é reoferecida:
+    # cai em RASCUNHO, e o histórico diz que caiu.
+    destino = etapa or (op.etapa if op.etapa in ETAPAS else RASCUNHO)
     if destino not in ETAPAS:
-        raise DadoInvalido(f"Etapa '{destino}' não existe.")
+        raise DadoInvalido(f"Etapa '{destino}' não existe. Válidas: {', '.join(ETAPAS)}.")
 
     op.status = StatusOportunidade.aberta.value
     op.atualizado_em = datetime.utcnow()
@@ -435,6 +451,87 @@ def reabrir(session: Session, op: Oportunidade, *, ator: Usuario, etapa: Optiona
                   entidade_id=op.id, escopo=op.titulo, antes="PERDIDA", depois="ABERTA",
                   motivo=motivo, origem="crm")
     return op
+
+
+# ---------------------------------------------------------------------------
+# Atualização comercial (Fase 3B) — append-only
+# ---------------------------------------------------------------------------
+def registrar_atualizacao(session: Session, op: Oportunidade, *, ator: Usuario, texto: str,
+                          proxima_atividade: Optional[dict] = None) -> AtualizacaoComercial:
+    """"Registrar atualização": o que aconteceu, dito por quem viu. Nunca editada.
+
+    `proxima_atividade`, opcional, cria a atividade junto (`{"titulo", "tipo", "due_em"}`)
+    — a mesma `AtividadeComercial` de sempre, não uma tabela nova.
+    """
+    if not (texto or "").strip():
+        raise DadoInvalido("A atualização precisa de texto.")
+    nota = AtualizacaoComercial(oportunidade_id=op.id, autor_id=ator.id, autor_email=ator.email,
+                                texto=texto.strip())
+    session.add(nota)
+    op.atualizado_em = datetime.utcnow()
+    session.add(op)
+    session.flush()
+    adm.registrar(session, ator=ator, acao="COMMERCIAL_UPDATE", entidade="Oportunidade",
+                  entidade_id=op.id, escopo=op.titulo, depois=texto.strip()[:200], origem="crm",
+                  detalhe={"atualizacao_id": nota.id})
+    if proxima_atividade and (proxima_atividade.get("titulo") or "").strip():
+        criar_atividade(session, ator=ator, titulo=proxima_atividade["titulo"],
+                        oportunidade_id=op.id, cliente_id=op.cliente_id,
+                        tipo=proxima_atividade.get("tipo") or "FOLLOW_UP",
+                        due_em=proxima_atividade.get("due_em"))
+    return nota
+
+
+def atualizacoes_de(session: Session, oportunidade_id: int) -> List[AtualizacaoComercial]:
+    return session.exec(select(AtualizacaoComercial)
+                        .where(AtualizacaoComercial.oportunidade_id == oportunidade_id)
+                        .order_by(AtualizacaoComercial.criado_em.desc(),
+                                  AtualizacaoComercial.id.desc())).all()
+
+
+# ---------------------------------------------------------------------------
+# Avanço automático — só o óbvio (Fase 3B, §7)
+# ---------------------------------------------------------------------------
+def avancar_por_envio(session: Session, cotacao: Cotacao, *, ator: Optional[Usuario],
+                      evento: str) -> Optional[Oportunidade]:
+    """Cotação emitida/enviada: venda em RASCUNHO vai para ENVIADO. Só isso.
+
+    Venda já em NEGOCIACAO **não volta** para ENVIADO por causa de uma revisão nova;
+    NEGOCIACAO, VENDIDO e PERDIDO nunca são marcados sozinhos. O avanço fica no histórico
+    com o ator identificado como automático.
+    """
+    if not cotacao.oportunidade_id:
+        return None
+    op = session.get(Oportunidade, cotacao.oportunidade_id)
+    if op is None or op.status != StatusOportunidade.aberta.value or op.etapa != RASCUNHO:
+        return op
+    anterior = op.etapa
+    op.etapa = ENVIADO
+    op.atualizado_em = datetime.utcnow()
+    session.add(op)
+    session.add(OportunidadeEtapaHistorico(
+        oportunidade_id=op.id, etapa_anterior=anterior, etapa_nova=ENVIADO,
+        ator_id=getattr(ator, "id", None),
+        ator_email=f"sistema (automático · {getattr(ator, 'email', None) or '—'})",
+        observacao=f"AUTOMÁTICO: cotação {cotacao.numero or cotacao.id} r{cotacao.revisao} "
+                   f"{evento}"))
+    adm.registrar(session, ator=ator, acao="CHANGE_STAGE", entidade="Oportunidade",
+                  entidade_id=op.id, escopo=op.titulo, antes=anterior, depois=ENVIADO,
+                  motivo=f"automático: cotação {evento}", origem="crm:automatico")
+    return op
+
+
+def cotacoes_com_venda(session: Session) -> dict:
+    """`{cotacao_id: Oportunidade}` para a lista de cotações mostrar a venda vinculada."""
+    ops = {o.id: o for o in session.exec(select(Oportunidade)).all()}
+    return {c.id: ops.get(c.oportunidade_id)
+            for c in session.exec(select(Cotacao)).all() if c.oportunidade_id}
+
+
+def status_comercial(op: Oportunidade) -> str:
+    """O rótulo único da tela de Vendas — ver `rotulos.venda`."""
+    from app import rotulos
+    return rotulos.venda(op.status, op.etapa)
 
 
 # ---------------------------------------------------------------------------
@@ -571,6 +668,12 @@ def cartao(session: Session, op: Oportunidade) -> dict:
         "cotacao": ({"id": cot.id, "numero": cot.numero, "revisao": cot.revisao,
                      "status": cot.status} if cot else None),
         "origem": op.origem,
+        # Fase 3B — a lista de Vendas
+        "status_comercial": status_comercial(op),
+        "atualizado_em": op.atualizado_em or op.criado_em,
+        "status_pos_venda": op.status_pos_venda,
+        "valor_atual": (op.valor_fechado if op.status == StatusOportunidade.ganha.value
+                        else (valor_cotado(session, op.id) or op.valor_estimado)),
     }
 
 
@@ -593,20 +696,40 @@ def timeline(session: Session, op: Oportunidade) -> List[dict]:
     """
     eventos = [{"quando": op.criado_em, "tipo": "criacao",
                 "texto": f"Oportunidade criada por {op.criado_por or '—'}"}]
+    from app import rotulos
     for h in historico_de_etapas(session, op.id):
         if h.etapa_anterior:
-            eventos.append({"quando": h.ocorrido_em, "tipo": "etapa",
-                            "texto": f"{h.etapa_anterior} → {h.etapa_nova}"
-                                     f" ({h.ator_email or '—'})"})
+            reabertura = (h.observacao or "").startswith("reabertura")
+            eventos.append({"quando": h.ocorrido_em,
+                            "tipo": "reabertura" if reabertura else "etapa",
+                            "texto": (f"{'Venda reaberta: ' if reabertura else ''}"
+                                      f"{rotulos.etapa_venda(h.etapa_anterior)} → "
+                                      f"{rotulos.etapa_venda(h.etapa_nova)} "
+                                      f"({h.ator_email or '—'})"
+                                      + (f" — {h.observacao}" if h.observacao and not reabertura
+                                         else ""))})
+    for n in atualizacoes_de(session, op.id):
+        eventos.append({"quando": n.criado_em, "tipo": "atualizacao",
+                        "texto": f"{n.texto} ({n.autor_email or '—'})"})
     for a in atividades_de(session, oportunidade_id=op.id):
         eventos.append({"quando": a.criado_em, "tipo": "atividade",
                         "texto": f"{a.tipo}: {a.titulo}"})
         if a.concluida_em:
             eventos.append({"quando": a.concluida_em, "tipo": "atividade",
                             "texto": f"Concluída: {a.titulo} ({a.concluida_por or '—'})"})
+    from app.models import AprovacaoCotacao
     for c in cotacoes_de(session, op.id):
         eventos.append({"quando": c.criado_em, "tipo": "cotacao",
-                        "texto": f"Cotação {c.numero or c.id} r{c.revisao} criada"})
+                        "texto": (f"Revisão {c.revisao} da cotação {c.numero or c.id} criada"
+                                  if (c.revisao or 1) > 1
+                                  else f"Cotação {c.numero or c.id} criada")})
+        for a in session.exec(select(AprovacaoCotacao)
+                              .where(AprovacaoCotacao.cotacao_id == c.id)).all():
+            if a.decidido_em:
+                eventos.append({"quando": a.decidido_em, "tipo": "aprovacao",
+                                "texto": f"Exceção {a.status.lower()} na cotação "
+                                         f"{c.numero or c.id} r{c.revisao} "
+                                         f"({a.aprovador_email or '—'})"})
         if c.issued_em:
             eventos.append({"quando": c.issued_em, "tipo": "cotacao",
                             "texto": f"Cotação {c.numero or c.id} r{c.revisao} emitida"})
@@ -618,6 +741,17 @@ def timeline(session: Session, op: Oportunidade) -> List[dict]:
                         "texto": f"Negócio GANHO por {op.won_por or '—'}"})
     if op.lost_em:
         eventos.append({"quando": op.lost_em, "tipo": "perda",
-                        "texto": f"Negócio PERDIDO ({op.motivo_perda}) "
+                        "texto": f"Venda PERDIDA ({rotulos.motivo_perda(op.motivo_perda)}) "
                                  f"por {op.lost_por or '—'}"})
+    # pós-venda (Fase 3B): os fatos moram nas colunas; a timeline só os lê
+    if op.entregue_em:
+        eventos.append({"quando": op.entregue_em, "tipo": "entrega", "texto": "Entrega registrada"})
+    if op.faturado_em:
+        eventos.append({"quando": datetime.combine(op.faturado_em, datetime.min.time()),
+                        "tipo": "faturamento",
+                        "texto": f"Faturamento registrado"
+                                 + (f" — documento {op.numero_documento_fiscal}"
+                                    if op.numero_documento_fiscal else "")})
+    if op.pago_em:
+        eventos.append({"quando": op.pago_em, "tipo": "pagamento", "texto": "Pagamento registrado"})
     return sorted([e for e in eventos if e["quando"]], key=lambda e: e["quando"])

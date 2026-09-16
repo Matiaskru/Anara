@@ -2,7 +2,40 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **16/09/2026 — fim da Fase 3A (política comercial canônica)**
+Última atualização: **16/09/2026 — fim da Fase 3B (CRM comercial simples e pós-venda)**
+
+---
+
+# Fase 3B — CRM comercial simples · Cliente 360 · cotações · pós-venda (16/09/2026) — EXECUTADA
+
+Alembic **`0019`** (`0019_crm_pos_venda`, aditiva). **1176 testes** passando. Servidor
+religado em 127.0.0.1:8420. Nenhuma alteração econômica (a Fase 3A não foi reaberta).
+
+| O quê | Onde |
+|---|---|
+| **C-NEW-14 resolvido**: `/configuracoes/margem` versiona pelo `admin_service` (fonte, trilha, herança da política, faixa de fios) | `app/routers/configuracoes.py`, `app/admin_service.py` |
+| "Venda" = Oportunidade; 3 etapas (RASCUNHO/ENVIADO/NEGOCIACAO); Vendido/Perdido = status; legado só leitura | `app/models.py`, `app/crm_service.py`, `app/rotulos.py` |
+| Tela **Vendas** (lista com status inline + detalhe), rotas de status/vendido/perdido/reabrir/atualização/pós-venda | `app/routers/vendas.py`, `vendas_list.html`, `venda_detail.html` |
+| Avanço automático só Rascunho → Enviado ao emitir/enviar cotação | `app/workflow_service.py` → `crm.avancar_por_envio` |
+| Cotação nova exige venda (existente ou criada pelo nome); cross-client 409; lista mostra a venda ou "Sem venda vinculada (legado)" | `app/routers/cotacoes.py`, `cotacao_nova.html`, `cotacoes_list.html` |
+| Cliente 360 (visão geral com métricas derivadas, vendas, cotações, contatos); criação recusa CNPJ repetido | `app/routers/clientes.py`, `cliente_detail.html`, `metrics_service.cliente_360` |
+| `AtualizacaoComercial` append-only (+ próxima atividade); timeline consolidada | `app/models.py`, `app/crm_service.py` |
+| Pós-venda V1 (`pos_venda_service`): entrega → aguardando pagamento → pago / atrasado; permissões vendedora × financeiro; AuditLog | `app/pos_venda_service.py` |
+| Métricas para a 3C: `painel_vendas` (vendido/faturado/pago, lucro, margem, ticket, conversão, desconto ponderado, comissão, por vendedor/cliente/fornecedor/família, aging, pós-venda) | `app/metrics_service.py` |
+| Vendedora entra em `/vendas`; `/` redireciona; menu Vendas · Clientes · Cotações · Produtos | `app/routers/login.py`, `app/routers/dashboard.py`, `base.html` |
+| Relatório READ-ONLY de backfill das 21 cotações (não aplicado) | `scripts/relatorio_backfill_cotacoes.py` → `relatorios/fase3b_proposta_backfill_cotacoes.md` |
+| 35 regressões da fase | `tests/test_fase3b_comercial.py` |
+
+**Banco real:** cotações, itens, produtos, custos, snapshots e aprovações idênticos; 0
+oportunidades criadas; só esquema novo (0019). **Backfill das 21 cotações: NÃO aplicado** —
+decisão humana pendente sobre o relatório.
+
+**Agendado para a Fase 3C:** Dashboard Admin + redesign completo da UX + **PDF cliente
+final** (proposta profissional com identidade ANARA, allowlist de campos, sem código/status
+interno, preço negociado, frete separado, rascunho marcado, snapshot como fonte, paginação
+1/10/30+ itens, soma ao centavo). **Frete nacional continua pausado** (política já decidida:
+rota exata → automático; sem tabela → manual; sem aproximação; fora de comissão/desconto);
+C-NEW-01/02/03/05/06/07/08 seguem abertos. Offline V2 STALE, intocado.
 
 ---
 

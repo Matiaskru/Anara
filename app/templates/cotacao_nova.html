@@ -22,16 +22,32 @@
       tela seguinte, onde tem contexto.
     #}
     <form method="post" action="/cotacoes">
-      {% if oportunidade %}<input type="hidden" name="oportunidade_id" value="{{ oportunidade.id }}">{% endif %}
-
       <div class="field">
         <label>Cliente</label>
-        <select name="cliente_id" id="campo-cliente" required onchange="carregarContatos()">
+        <select name="cliente_id" id="campo-cliente" required onchange="carregarContatos(); carregarVendas();">
           <option value="">Selecione...</option>
           {% for c in clientes %}
           <option value="{{ c.id }}" {{ 'selected' if cliente_selecionado and cliente_selecionado.id == c.id else '' }}>{{ c.nome }}</option>
           {% endfor %}
         </select>
+      </div>
+
+      {# Fase 3B: toda cotação nova pertence a uma VENDA — existente ou criada aqui. #}
+      <div class="grid-2">
+        <div class="field">
+          <label>Venda</label>
+          <select name="oportunidade_id" id="campo-venda" onchange="document.getElementById('campo-nova-venda').disabled = !!this.value;">
+            <option value="">Criar nova venda…</option>
+            {% for v in vendas_abertas or [] %}
+            <option value="{{ v.id }}" {{ 'selected' if oportunidade and oportunidade.id == v.id else '' }}>{{ v.titulo }} — {{ v.status_comercial }}</option>
+            {% endfor %}
+          </select>
+          <small style="color:var(--gray);font-size:11px;">Escolha uma venda aberta do cliente, ou crie uma.</small>
+        </div>
+        <div class="field">
+          <label>Nome da nova venda / projeto</label>
+          <input name="nova_venda" id="campo-nova-venda" placeholder="ex.: Renovação enxoval 2026" {% if oportunidade %}disabled{% endif %}>
+        </div>
       </div>
 
       <div class="field">
@@ -122,6 +138,21 @@ function setContribuinte(btn, valor) {
   btn.classList.add('active');
 }
 
+// Trocar de cliente troca a lista de vendas abertas — a venda é do cliente.
+async function carregarVendas() {
+  const cliente = document.getElementById('campo-cliente').value;
+  const alvo = document.getElementById('campo-venda');
+  alvo.innerHTML = '<option value="">Criar nova venda…</option>';
+  document.getElementById('campo-nova-venda').disabled = false;
+  if (!cliente) return;
+  const r = await fetch(`/clientes/${cliente}/vendas.json`);
+  if (!r.ok) return;
+  for (const v of await r.json()) {
+    const o = document.createElement('option');
+    o.value = v.id; o.textContent = `${v.titulo} — ${v.status_comercial}`;
+    alvo.appendChild(o);
+  }
+}
 // Trocar de cliente troca a lista de contatos. Sem isso, o campo ofereceria o contato de
 // outro cliente — que o servidor recusa, mas só depois de o usuário ter escolhido.
 async function carregarContatos() {

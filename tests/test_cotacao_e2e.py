@@ -115,10 +115,12 @@ def corpo(resposta):
 
 def criar_cotacao(s, **extra):
     from app.routers.cotacoes import criar
+    # Fase 3B: toda cotação nova pertence a uma venda — aqui, criada junto pelo nome.
     dados = dict(cliente_id=1, condicao_pagamento="30", estado_origem="São Paulo",
-                 estado_destino="São Paulo", contribuinte_icms="sim", vendedor="Matias")
+                 estado_destino="São Paulo", contribuinte_icms="sim", vendedor="Matias",
+                 nova_venda="Venda e2e")
     dados.update(extra)
-    resposta = chamar(criar, request=None, session=s, **dados)
+    resposta = chamar(criar, session=s, **dados)
     return int(resposta.headers["location"].rsplit("/", 1)[1])
 
 

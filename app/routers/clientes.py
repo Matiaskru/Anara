@@ -48,9 +48,13 @@ def criar(request: Request, nome: str = Form(...), cnpj_cpf: str = Form(""),
           cidade_uf: str = Form(""), telefone: str = Form(""), email: str = Form(""),
           voltar_para: str = Form("/clientes"),
           session: Session = Depends(get_session)):
-    cliente = Cliente(nome=nome.strip(), cnpj_cpf=cnpj_cpf or None, cidade_uf=cidade_uf or None,
-                       telefone=telefone or None, email=email or None)
-    session.add(cliente)
+    """Cadastro mínimo: nome. CNPJ repetido de cliente ativo é recusado (409)."""
+    from app import crm_service as crm
+    from app.permissoes import usuario_da_request
+
+    cliente = crm.criar_cliente(session, ator=usuario_da_request(request), nome=nome,
+                                cnpj_cpf=cnpj_cpf or None, cidade_uf=cidade_uf or None,
+                                telefone=telefone or None, email=email or None)
     session.commit()
     session.refresh(cliente)
     if voltar_para == "nova_cotacao":
@@ -79,21 +83,22 @@ def detalhe(request: Request, cliente_id: int, session: Session = Depends(get_se
                 ultimos_precos[it.nome_produto] = {"preco": it.preco_negociado, "data": c.criado_em,
                                                     "especificacao": it.especificacao}
 
-    # --- CRM (Sessão 7): a ficha vira 360 sem virar dashboard ---
+    # --- CRM (Sessão 7 → Fase 3B): a ficha é o Cliente 360 ---
     from app import crm_service as crm
+    from app import metrics_service as mx
 
-    oportunidades = crm.listar_oportunidades(session, cliente_id=cliente_id)
+    oportunidades = crm.listar_oportunidades(session, cliente_id=cliente_id, limite=1000)
+    vendas = {o.id: o for o in oportunidades}
     return templates.TemplateResponse(request, "cliente_detail.html", {
         "active": "clientes", "cliente": cliente, "cotacoes": cotacoes,
-        "totais": totais,
+        "totais": totais, "vendas_por_id": vendas,
         "ultimos_precos": sorted(ultimos_precos.items(), key=lambda x: x[1]["data"], reverse=True),
         "contatos": crm.contatos_de(session, cliente_id),
-        "abertas": [crm.cartao(session, o) for o in oportunidades
-                    if o.status == "ABERTA"],
-        "fechadas": [crm.cartao(session, o) for o in oportunidades
-                     if o.status != "ABERTA"],
+        "abertas": [crm.cartao(session, o) for o in oportunidades if o.status == "ABERTA"],
+        "vendidas": [crm.cartao(session, o) for o in oportunidades if o.status == "GANHA"],
+        "perdidas": [crm.cartao(session, o) for o in oportunidades if o.status == "PERDIDA"],
         "atividades": crm.atividades_de(session, cliente_id=cliente_id, limite=20),
         "faltando_fiscal": crm.dados_fiscais_faltando(cliente),
+        "comercial": mx.cliente_360(session, cliente_id),
         "etapas": crm.ETAPAS,
-        "origens": [o.value for o in __import__("app.models", fromlist=["x"]).OrigemOportunidade],
     })

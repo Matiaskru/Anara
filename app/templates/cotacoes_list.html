@@ -94,20 +94,23 @@ function marcarTestes() {
     {% endif %}
   </div>
   <table>
-{% if ve_economia(request) %}
-    <thead><tr><th></th><th>Número</th><th>Data</th><th>Cliente</th><th>Vendedor</th><th>Status</th><th>Condição</th><th class="num">Total</th><th class="num">Margem</th><th></th></tr></thead>
-{% endif %}
+    <thead><tr><th></th><th>Número</th><th>Data</th><th>Cliente</th><th>Venda</th><th>Vendedor</th><th>Status</th><th>Condição</th><th class="num">Total</th>{% if ve_economia(request) %}<th class="num">Margem</th>{% endif %}<th></th></tr></thead>
     <tbody>
       {% for c in cotacoes %}
       <tr>
         <td onclick="event.stopPropagation();"><input type="checkbox" name="ids" value="{{ c.id }}" class="check-cotacao" data-teste="{{ '1' if c.id in sugestoes_teste else '0' }}"></td>
         <td>
-          <a href="/cotacoes/{{ c.id }}"><strong>{{ c.numero or ('#' ~ c.id) }}</strong></a>
+          <a href="/cotacoes/{{ c.id }}"><strong>{{ c.numero or ('#' ~ c.id) }}</strong>{% if (c.revisao or 1) > 1 %} <span class="tag">r{{ c.revisao }}</span>{% endif %}</a>
           {% if c.id in sugestoes_teste and not mostrar_arquivadas %}<br><span class="tag tag-review">cara de teste</span>{% endif %}
           {% if c.arquivada_em %}<br><span class="tag tag-legacy">arquivada</span>{% endif %}
         </td>
         <td>{{ c.criado_em|data }}</td>
         <td>{{ clientes.get(c.cliente_id).nome if clientes.get(c.cliente_id) else '—' }}</td>
+        <td style="font-size:11px;">
+          {% set venda = vendas.get(c.id) %}
+          {% if venda %}<a href="/vendas/{{ venda.id }}">{{ venda.titulo }}</a>
+          {% else %}<span style="color:var(--gray);">Sem venda vinculada (legado)</span>{% endif %}
+        </td>
         <td>{{ c.vendedor or '—' }}</td>
         <td><span class="badge badge-{{ c.status|rotulo_cotacao }}">{{ c.status|rotulo_cotacao }}</span></td>
         <td>{{ c.condicao_pagamento }}</td>

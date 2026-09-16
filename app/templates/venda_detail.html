@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% block title %}{{ op.titulo }} — Vendas — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>{{ op.titulo }}</h1>
+    <div class="sub"><a href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a>
+      · <span class="tag {{ 'tag-calc' if op.status == 'GANHA' else ('tag-review' if op.status == 'PERDIDA' else '') }}">{{ cartao.status_comercial }}</span>
+      · {{ responsavel.nome if responsavel else 'sem responsável' }}
+      {% if op.status_pos_venda %} · <span class="tag">{{ op.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}
+    </div></div>
+  <a href="/vendas" class="btn btn-ghost">Todas as vendas</a>
+</div>
+
+{% if faltando_fiscal %}
+<div class="card" style="border-left:4px solid var(--copper);">
+  <strong>Dados fiscais necessários para emitir cotação</strong>
+  <ul style="font-size:12px; margin:6px 0 0;">{% for f in faltando_fiscal %}<li>{{ f }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+
+<div class="kpis">
+  <div class="kpi"><div class="label">Valor atual</div><div class="value copper">{{ cartao.valor_atual|brl }}</div></div>
+  {% if op.valor_fechado %}<div class="kpi"><div class="label">Valor vendido</div><div class="value">{{ op.valor_fechado|brl }}</div></div>{% endif %}
+  <div class="kpi"><div class="label">Cotações</div><div class="value">{{ cotacoes|length }}</div></div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Status</h3>
+  {% if op.status == 'ABERTA' %}
+  <div class="grid-4">
+    <div class="field"><label>Status comercial</label>
+      <select id="op-etapa" onchange="mudarStatus(this.value)">
+        {% for e in etapas %}<option value="{{ e }}" {{ 'selected' if op.etapa == e else '' }}>{{ e|rotulo_etapa }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Responsável</label>
+      <select onchange="atribuir(this.value)"><option value="">Sem responsável</option>
+        {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if op.responsavel_id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Marcar vendido — proposta aceita</label>
+      <select id="op-vencedora"><option value="">Selecione…</option>
+        {% for c in cotacoes %}{% if c.status in ('emitida', 'enviada') %}
+        <option value="{{ c.id }}">{{ c.numero }} r{{ c.revisao }} — {{ c.status|rotulo_cotacao }}</option>{% endif %}{% endfor %}
+      </select>
+      <button class="btn btn-copper btn-sm" style="margin-top:6px;" onclick="vendido()">Marcar vendido</button></div>
+    <div class="field"><label>Marcar perdido — motivo</label>
+      <select id="op-motivo"><option value="">Motivo…</option>
+        {% for m in motivos_perda %}<option value="{{ m }}">{{ m|rotulo_motivo }}</option>{% endfor %}</select>
+      <input id="op-nota" type="text" placeholder="nota (opcional)" style="margin-top:4px;">
+      <button class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="perdido()">Marcar perdido</button></div>
+  </div>
+  <form method="post" action="/vendas/{{ op.id }}/cotacao" style="margin-top:10px;">
+    <button class="btn btn-copper" type="submit">Nova cotação nesta venda</button>
+  </form>
+  {% elif op.status == 'PERDIDA' %}
+  <p style="font-size:12px;">Perdida em {{ op.lost_em.strftime('%d/%m/%Y') if op.lost_em else '—' }} por {{ op.lost_por or '—' }}
+     · motivo <span class="tag tag-review">{{ op.motivo_perda|rotulo_motivo }}</span>
+     {% if op.comentario_perda %}<br><em>{{ op.comentario_perda }}</em>{% endif %}</p>
+  <button class="btn btn-ghost" onclick="reabrir()">Reabrir venda</button>
+  {% else %}
+  <p style="font-size:12px;">Vendida em {{ op.won_em.strftime('%d/%m/%Y') if op.won_em else '—' }} por {{ op.won_por or '—' }}
+     · proposta vencedora <a href="/cotacoes/{{ op.cotacao_vencedora_id }}">cotação #{{ op.cotacao_vencedora_id }}</a></p>
+  {% endif %}
+  <div id="op-resultado" style="margin-top:8px;"></div>
+</div>
+
+{% if op.status == 'GANHA' %}
+<div class="card">
+  <h3 style="margin-top:0;">Pós-venda — {{ op.status_pos_venda|rotulo_pos_venda }}</h3>
+  <table class="compacta"><tbody>
+    <tr><td>Valor vendido</td><td class="num">{{ pos_venda.valor_vendido|brl }}</td>
+        <td>Valor faturado</td><td class="num">{{ pos_venda.valor_faturado|brl if pos_venda.valor_faturado else '— (não faturado)' }}</td>
+        <td>Valor pago</td><td class="num">{{ pos_venda.valor_pago|brl if pos_venda.valor_pago else '— (não pago)' }}</td></tr>
+    <tr><td>Entrega prevista</td><td>{{ op.entrega_prevista_em|data if op.entrega_prevista_em else '—' }}</td>
+        <td>Entregue em</td><td>{{ op.entregue_em.strftime('%d/%m/%Y') if op.entregue_em else '—' }}</td>
+        <td>Faturado em</td><td>{{ op.faturado_em|data if op.faturado_em else '—' }}{% if op.numero_documento_fiscal %} · doc. {{ op.numero_documento_fiscal }}{% endif %}</td></tr>
+    <tr><td>Pagamento previsto</td><td>{{ op.pagamento_previsto_em|data if op.pagamento_previsto_em else '—' }}</td>
+        <td>Pago em</td><td>{{ op.pago_em.strftime('%d/%m/%Y') if op.pago_em else '—' }}</td>
+        <td>Observação</td><td>{{ op.observacao_pos_venda or '—' }}</td></tr>
+  </tbody></table>
+  <div class="grid-4" style="margin-top:10px;">
+    <div class="field"><label>Entrega prevista</label><input type="date" id="pv-prevista" value="{{ op.entrega_prevista_em or '' }}">
+      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('entrega-prevista', {prevista_em: v('pv-prevista')})">Salvar</button></div>
+    <div class="field"><label>Entrega</label>
+      <button class="btn btn-copper btn-sm" onclick="pv('entrega', {})" {% if op.entregue_em %}disabled{% endif %}>Registrar entrega</button></div>
+    <div class="field" style="grid-column: span 2;"><label>Observação de pós-venda</label><input id="pv-obs" value="{{ op.observacao_pos_venda or '' }}">
+      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('observacao', {texto: v('pv-obs')})">Salvar</button></div>
+  </div>
+  {% if financeiro %}
+  <h4 style="margin:14px 0 6px;">Financeiro (dono/administrador)</h4>
+  <div class="grid-4">
+    <div class="field"><label>Faturado em</label><input type="date" id="pv-fat" value="{{ op.faturado_em or '' }}">
+      <input id="pv-doc" placeholder="documento fiscal" value="{{ op.numero_documento_fiscal or '' }}" style="margin-top:4px;">
+      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('faturamento', {faturado_em: v('pv-fat'), numero_documento_fiscal: v('pv-doc')})">Registrar faturamento</button></div>
+    <div class="field"><label>Pagamento previsto</label><input type="date" id="pv-pgprev" value="{{ op.pagamento_previsto_em or '' }}">
+      <button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="pv('pagamento-previsto', {previsto_em: v('pv-pgprev')})">Salvar</button></div>
+    <div class="field"><label>Pagamento</label>
+      <button class="btn btn-copper btn-sm" onclick="pv('pago', {})" {% if op.status_pos_venda == 'PAGO' %}disabled{% endif %}>Marcar pago</button></div>
+    <div class="field"><label>Atraso</label>
+      <button class="btn btn-ghost btn-sm" onclick="pv('atrasado', {observacao: v('pv-obs')})" {% if op.status_pos_venda in ('PAGO', 'ATRASADO') %}disabled{% endif %}>Marcar atrasado</button></div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="card">
+  <h3 style="margin-top:0;">Registrar atualização</h3>
+  <div class="grid-4">
+    <div class="field" style="grid-column: span 2;"><label>O que aconteceu</label><input id="at-texto" placeholder="ex.: cliente pediu revisão para 300 toalhas"></div>
+    <div class="field"><label>Próxima atividade (opcional)</label><input id="at-titulo" placeholder="ex.: follow-up"></div>
+    <div class="field"><label>Quando</label><input id="at-due" type="datetime-local">
+      <select id="at-tipo" style="margin-top:4px;">{% for t in tipos_atividade %}<option value="{{ t }}">{{ t|rotulo_atividade }}</option>{% endfor %}</select></div>
+  </div>
+  <button class="btn btn-copper btn-sm" onclick="atualizar()">Registrar</button>
+  {% if proxima %}<p style="font-size:12px;margin-top:8px;">Próxima: <strong>{{ proxima.titulo }}</strong>
+    · {{ proxima.due_em.strftime('%d/%m/%Y %H:%M') if proxima.due_em else 'sem data' }}
+    {% if atrasada(proxima) %}<span class="tag tag-review">atrasada</span>{% endif %}
+    <button class="btn btn-ghost btn-sm" onclick="concluir({{ proxima.id }})">Concluir</button></p>{% endif %}
+  {% if atualizacoes %}
+  <table class="compacta" style="margin-top:10px;"><tbody>
+    {% for n in atualizacoes %}
+    <tr><td style="font-size:11px;white-space:nowrap;">{{ n.criado_em.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td style="font-size:12px;">{{ n.texto }}</td><td style="font-size:11px;color:var(--gray);">{{ n.autor_email or '—' }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Cotações desta venda</h3>
+  <p style="color:var(--gray);font-size:12px;">Revisões (R1, R2…) são a mesma venda — não contam como vendas separadas.</p>
+  <table class="compacta">
+    <thead><tr><th>Número</th><th class="num">Revisão</th><th>Status</th><th></th></tr></thead>
+    <tbody>
+    {% for c in cotacoes %}
+      <tr {% if cotacao_atual and c.id == cotacao_atual.id %}style="background:var(--row-alt);font-weight:600;"{% endif %}>
+        <td><code>{{ c.numero or c.id }}</code></td><td class="num">{{ c.revisao }}</td>
+        <td><span class="tag">{{ c.status|rotulo_cotacao }}</span>{% if op.cotacao_vencedora_id == c.id %} <span class="tag tag-calc">vencedora</span>{% endif %}</td>
+        <td><a class="btn btn-ghost btn-sm" href="/cotacoes/{{ c.id }}">Abrir</a></td></tr>
+    {% else %}
+      <tr><td colspan="4" style="color:var(--gray);">Nenhuma cotação ainda.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Histórico</h3>
+  <table class="compacta"><tbody>
+    {% for e in timeline %}
+      <tr><td style="font-size:11px;white-space:nowrap;">{{ e.quando.strftime('%d/%m/%Y %H:%M') }}</td>
+        <td><span class="tag">{{ e.tipo }}</span></td><td style="font-size:12px;">{{ e.texto }}</td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+const OP = {{ op.id }};
+const v = id => document.getElementById(id).value;
+function mostrar(j, ok) {
+  document.getElementById('op-resultado').innerHTML =
+    ok ? '<div class="aviso">' + j.mensagem + '</div>' : '<div class="erro">' + (j.detail || j.erro || 'erro') + '</div>';
+}
+async function postar(url, dados) {
+  const d = new FormData(); Object.entries(dados).forEach(([k, val]) => d.append(k, val));
+  const r = await fetch(url, {method: 'POST', body: d});
+  const j = await r.json();
+  mostrar(j, r.ok);
+  if (r.ok) setTimeout(() => location.reload(), 700);
+  return r.ok;
+}
+const mudarStatus = e => postar(`/vendas/${OP}/status`, {etapa: e});
+const atribuir = r => postar(`/vendas/${OP}/responsavel`, {responsavel_id: r});
+function vendido() {
+  const c = v('op-vencedora');
+  if (!c) { mostrar({detail: 'Escolha a proposta que o cliente aceitou.'}, false); return; }
+  postar(`/vendas/${OP}/vendido`, {cotacao_id: c});
+}
+function perdido() {
+  const m = v('op-motivo');
+  if (!m) { mostrar({detail: 'Informe o motivo.'}, false); return; }
+  postar(`/vendas/${OP}/perdido`, {motivo: m, nota: v('op-nota')});
+}
+const reabrir = () => postar(`/vendas/${OP}/reabrir`, {motivo: 'reaberta pelo comercial'});
+function atualizar() {
+  const t = v('at-texto');
+  if (!t) { mostrar({detail: 'Escreva o que aconteceu.'}, false); return; }
+  postar(`/vendas/${OP}/atualizacoes`, {texto: t, atividade_titulo: v('at-titulo'),
+                                        atividade_tipo: v('at-tipo'), atividade_due_em: v('at-due')});
+}
+const concluir = id => postar(`/atividades/${id}/concluir`, {});
+const pv = (acao, dados) => postar(`/vendas/${OP}/pos-venda/${acao}`, dados);
+</script>
+{% endblock %}

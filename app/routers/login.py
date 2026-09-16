@@ -75,8 +75,21 @@ def login_submit(request: Request, email: str = Form(""), senha: str = Form(""),
     session.commit()
     session.refresh(usuario)
 
-    resp = RedirectResponse(url=destino, status_code=303)
+    resp = RedirectResponse(url=landing(usuario, destino), status_code=303)
     return aplicar_cookie(resp, usuario.id, usuario.sessao_versao)
+
+
+def landing(usuario, destino: str = "/") -> str:
+    """Onde a pessoa cai depois de entrar (Fase 3B).
+
+    Vendedora → **Vendas**, a superfície do trabalho dela. OWNER/ADMIN → o dashboard atual
+    (o novo é da Fase 3C). Um `next` explícito para outra tela continua valendo; só a raiz
+    é trocada — e, para a vendedora, a raiz também redireciona (`/` → `/vendas`).
+    """
+    from app.models import PAPEIS_ECONOMICOS
+    if destino in ("", "/") and usuario.papel not in PAPEIS_ECONOMICOS:
+        return "/vendas"
+    return destino
 
 
 @router.get("/logout")

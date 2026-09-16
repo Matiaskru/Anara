@@ -256,23 +256,22 @@ def test_cotacao_ja_de_outra_oportunidade_nao_e_roubada(session, owner):
 def test_p0_historico_de_etapas_append_only(session, owner):
     """Pipeline não é máquina de estados: avança, pula e volta — e tudo fica registrado."""
     cliente = novo_cliente(session, owner)
-    op = nova_op(session, owner, cliente, etapa="PROSPECCAO")
+    op = nova_op(session, owner, cliente, etapa="RASCUNHO")
 
-    for etapa in ("QUALIFICACAO", "COTACAO", "NEGOCIACAO"):
+    for etapa in ("ENVIADO", "NEGOCIACAO"):
         crm.mudar_etapa(session, op, etapa, ator=owner)
     session.commit()
     assert op.etapa == "NEGOCIACAO"
 
     # voltar é legítimo
-    crm.mudar_etapa(session, op, "QUALIFICACAO", ator=owner, observacao="cliente esfriou")
+    crm.mudar_etapa(session, op, "ENVIADO", ator=owner, observacao="cliente esfriou")
     session.commit()
-    assert op.etapa == "QUALIFICACAO"
+    assert op.etapa == "ENVIADO"
 
     historico = crm.historico_de_etapas(session, op.id)
     caminho = [(h.etapa_anterior, h.etapa_nova) for h in historico]
-    assert caminho == [(None, "PROSPECCAO"), ("PROSPECCAO", "QUALIFICACAO"),
-                       ("QUALIFICACAO", "COTACAO"), ("COTACAO", "NEGOCIACAO"),
-                       ("NEGOCIACAO", "QUALIFICACAO")]
+    assert caminho == [(None, "RASCUNHO"), ("RASCUNHO", "ENVIADO"),
+                       ("ENVIADO", "NEGOCIACAO"), ("NEGOCIACAO", "ENVIADO")]
     assert all(h.ocorrido_em and h.ator_email == owner.email for h in historico)
     assert historico[-1].observacao == "cliente esfriou"
 
@@ -287,7 +286,7 @@ def test_etapa_invalida_e_recusada(session, owner):
 def test_pular_etapa_e_permitido(session, owner):
     """Qualificação → negociação acontece no mesmo telefonema. Não travar isso."""
     cliente = novo_cliente(session, owner)
-    op = nova_op(session, owner, cliente, etapa="QUALIFICACAO")
+    op = nova_op(session, owner, cliente, etapa="RASCUNHO")
     crm.mudar_etapa(session, op, "NEGOCIACAO", ator=owner)
     session.commit()
     assert op.etapa == "NEGOCIACAO"
@@ -444,11 +443,11 @@ def test_p0_reabertura_preserva_o_evento_de_perda(session, owner):
     session.commit()
     perda = (op.lost_em, op.lost_por, op.motivo_perda)
 
-    crm.reabrir(session, op, ator=owner, etapa="CONTATO", motivo="cliente voltou")
+    crm.reabrir(session, op, ator=owner, etapa="ENVIADO", motivo="cliente voltou")
     session.commit()
 
     assert op.status == StatusOportunidade.aberta.value
-    assert op.etapa == "CONTATO"
+    assert op.etapa == "ENVIADO"
     assert (op.lost_em, op.lost_por, op.motivo_perda) == perda   # a perda não é apagada
     historico = crm.historico_de_etapas(session, op.id)
     assert "reabertura" in (historico[-1].observacao or "")
@@ -712,7 +711,7 @@ def test_payload_das_rotas_novas_nao_leva_economia(session, owner, daune):
     session.commit()
     vendedor = _novo_usuario("VENDEDOR_INTERNO")
     dados = corpo(chamar(rc.mover, RequestFalsa(vendedor), oportunidade_id=op.id,
-                         etapa="QUALIFICACAO", observacao="", session=session))
+                         etapa="ENVIADO", observacao="", session=session))
     assert encontrar_confidenciais(dados) == []
 
 

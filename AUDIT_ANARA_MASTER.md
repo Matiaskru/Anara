@@ -864,7 +864,16 @@ funciona" para `resolver_margem`; era verdade para a função e falso para o ser
 para inspeção sem data. Empate de prioridade e especificidade desempata pela vigência mais
 recente. Regressão: `tests/test_margens.py::test_margem_padrao_do_servico_resolve_por_hoje`.
 
-### C-NEW-14 — `POST /configuracoes/margem` edita a regra de margem NO LUGAR (P1, MÉDIO) — **ABERTO**
+### C-NEW-14 — `POST /configuracoes/margem` edita a regra de margem NO LUGAR (P1, MÉDIO) — **RESOLVIDO em 16/09/2026 (Fase 3B)**
+
+**Resolução:** a rota passou a chamar `admin_service.preview_margem → aplicar_margem` — o
+mesmo caminho versionado do fluxo administrativo: encerra a regra vigente (`valid_to`),
+cria a sucessora com o **mesmo escopo, prioridade e faixa de fios**, herda piso/comissão de
+formação/travamento, exige **fonte**, grava `AuditLog`, exige alçada econômica
+(`exigir_economia_gerenciavel`). Regra já encerrada não é reeditável. De quebra,
+`_mesmo_escopo` passou a considerar `min/max_thread_count`: versionar "Flat Sheet < 300TC"
+não encerra mais a regra "≥ 300TC". Regressões:
+`tests/test_fase3b_comercial.py::test_01_*`. Registro original abaixo, preservado.
 
 `app/routers/configuracoes.py::salvar_margem` faz `regra.margem_pct = ...; session.commit()`
 — reescreve a linha em vez de versionar, sem `AuditLog`, sem fonte, sem vigência. É o
@@ -903,3 +912,24 @@ Decisão pendente: diretoria + financeiro.
 - Os **17 rascunhos reais** passam a ser apontados por `premissas_desatualizadas` como
   formados com a política anterior: continuam com seus números; reprecificar é o botão
   "atualizar premissas" — ou emitir com premissa antiga, que exige alçada (`PREMISSA_VELHA`).
+
+
+---
+
+## 8. Fase 3B — CRM comercial simples, Cliente 360 e pós-venda (16/09/2026)
+
+Sem alteração econômica: pricing, fiscal, CNET, PIS/COFINS, política 3A, fingerprint,
+snapshot e workflow técnico da cotação intocados (provado por `test_31_…_35`). Migration
+**0019** aditiva. Banco real: 0 oportunidades na entrada; **nenhum backfill** — o relatório
+read-only `relatorios/fase3b_proposta_backfill_cotacoes.md` classifica as 21 cotações
+históricas (ALTA/MEDIA/BAIXA) e a decisão é humana.
+
+- **"Venda" = rótulo de interface de `Oportunidade`**; três etapas abertas
+  (RASCUNHO/ENVIADO/NEGOCIACAO); Vendido/Perdido = `status`. Etapas do funil anterior
+  ficam `ETAPAS_LEGADAS`, só leitura.
+- **Cotação nova exige venda** (service `exigir_venda`); `oportunidade_id` continua NULO nas
+  21 históricas — acessíveis em Cotações com "Sem venda vinculada (legado)".
+- **Pós-venda V1** sem pagamento parcial; ATRASADO é marcado por alçada financeira.
+- **PDF cliente** e **frete nacional**: fora desta fase (PDF agendado para a 3C; frete
+  continua pausado — C-NEW-01/02/03/05/06/07/08 abertos).
+- **Offline V2** continua STALE, intocado.

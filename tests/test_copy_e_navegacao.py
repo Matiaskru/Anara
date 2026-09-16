@@ -23,7 +23,7 @@ TEMPLATES = os.path.join(RAIZ, "app", "templates")
 #: Telas que uma vendedora abre no dia a dia. Aqui não entra código interno.
 TELAS_COMERCIAIS = [
     "dashboard.html", "crm_home.html", "crm_pipeline.html", "crm_lista.html",
-    "crm_oportunidade.html", "clientes_list.html", "cliente_detail.html",
+    "crm_oportunidade.html", "vendas_list.html", "venda_detail.html", "clientes_list.html", "cliente_detail.html",
     "cotacoes_list.html", "cotacao_nova.html", "cotacao_detail.html",
     "produtos_list.html", "relatorios.html", "relatorio_cotacoes.html",
     "relatorio_aprovacoes.html", "login.html", "primeiro_acesso.html",
@@ -112,9 +112,10 @@ def test_menu_e_por_tarefa_e_curto():
     nav = html.split("<nav>")[1].split("</nav>")[0]
     destinos = re.findall(r'href="(/[^"]*)"', nav)
 
-    assert destinos[:6] == ["/comercial", "/pipeline", "/clientes", "/cotacoes",
-                            "/produtos", "/relatorios"]
-    assert len(destinos) <= 8, f"o menu voltou a crescer: {destinos}"
+    # Fase 3B: a operação é Vendas → Clientes → Cotações → Produtos; "Meu dia" e o quadro
+    # continuam alcançáveis (/comercial, /pipeline) sem linha própria.
+    assert destinos[:5] == ["/vendas", "/clientes", "/cotacoes", "/produtos", "/relatorios"]
+    assert len(destinos) <= 7, f"o menu voltou a crescer: {destinos}"
 
 
 def test_menu_nao_tem_ferramenta_tecnica_solta():

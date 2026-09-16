@@ -110,6 +110,7 @@ def _cotacao_com_item(session, mundo, cliente, preco=None, oportunidade=None):
     resposta = chamar(criar, request=req, cliente_id=cliente.id,
                       condicao_pagamento="30", estado_destino="São Paulo",
                       oportunidade_id=str(oportunidade.id) if oportunidade else "",
+                      nova_venda="" if oportunidade else "Venda lote C",
                       session=session)
     cot_id = int(resposta.headers["location"].rsplit("/", 1)[1])
     adicionar_item(req, cot_id, produto_id=mundo["produto"].id, quantidade=10,

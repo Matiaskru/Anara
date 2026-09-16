@@ -93,14 +93,39 @@ def salvar_premissa(request: Request, chave: str = Form(...), valor: str = Form(
 
 @router.post("/configuracoes/margem")
 def salvar_margem(request: Request, regra_id: int = Form(...), margem_pct: float = Form(...),
+                  fonte: str = Form(""), motivo: str = Form(""),
                   session: Session = Depends(get_session)):
-    """Muda a margem padrão. Preço-base e cotações novas passam a usar; emitidas não mudam."""
-    exigir_admin(request)
+    """Versiona a margem de um escopo — pelo MESMO caminho do fluxo administrativo.
+
+    **C-NEW-14.** Esta rota fazia `regra.margem_pct = novo; commit()`: reescrevia a linha
+    vigente no lugar, sem fonte, sem vigência, sem trilha — e, desde a Fase 3A, deixaria
+    piso e comissão de formação incoerentes com a margem. Agora ela chama
+    `admin_service.preview_margem → aplicar_margem`: a regra anterior é **encerrada**
+    (`valid_to = hoje`), nasce uma sucessora com o mesmo escopo, prioridade e faixa de fios,
+    herdando piso/comissão/travamento, com fonte e `AuditLog`. Exige alçada econômica.
+    """
+    from app import admin_service as adm
+    from app.permissoes import exigir_economia_gerenciavel
+
+    ator = exigir_economia_gerenciavel(request)
     regra = session.get(MargemRegra, regra_id)
-    if regra:
-        regra.margem_pct = margem_pct / 100 if margem_pct > 1 else margem_pct
-        session.add(regra)
+    if regra is None:
+        return RedirectResponse(url="/configuracoes?aba=margens&erro=regra", status_code=303)
+    if regra.valid_to is not None or not regra.ativo:
+        return RedirectResponse(url="/configuracoes?aba=margens&erro=encerrada", status_code=303)
+    nova = margem_pct / 100 if margem_pct > 1 else margem_pct
+    escopo = dict(fornecedor_id=regra.fornecedor_id, familia=regra.familia,
+                  sku_key=regra.sku_key, min_thread_count=regra.min_thread_count,
+                  max_thread_count=regra.max_thread_count, prioridade=regra.prioridade)
+    try:
+        prop = adm.preview_margem(session, margem_pct=nova, nome=regra.nome, fonte=fonte,
+                                  motivo=motivo or None, **escopo)
+        adm.aplicar_margem(session, prop, ator=ator, margem_pct=nova, nome=regra.nome,
+                           fonte=fonte, motivo=motivo or None, origem="configuracoes-ui",
+                           **escopo)
         session.commit()
+    except adm.DadoInvalido:
+        return RedirectResponse(url="/configuracoes?aba=margens&erro=fonte", status_code=303)
     return RedirectResponse(url="/configuracoes?aba=margens&ok=1", status_code=303)
 
 

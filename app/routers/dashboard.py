@@ -14,6 +14,13 @@ router = APIRouter()
 
 @router.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, session: Session = Depends(get_session)):
+    # Fase 3B: o dashboard é administrativo/econômico. A vendedora cai em Vendas — a raiz
+    # redireciona em vez de negar, porque `/` é o que se digita para "abrir o sistema".
+    from fastapi.responses import RedirectResponse
+    from app.permissoes import exigir_autenticado, ve_economia
+    exigir_autenticado(request)
+    if not ve_economia(request):
+        return RedirectResponse(url="/vendas", status_code=303)
     # cotação arquivada não conta em nada: é teste ou lixo que o Matias tirou da vista
     cotacoes = [c for c in session.exec(select(Cotacao)).all() if not c.arquivada_em]
     itens = session.exec(select(CotacaoItem)).all()

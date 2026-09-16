@@ -377,10 +377,10 @@ def test_item_sem_dado_economico_fica_fora_do_agregado(session, owner, cliente):
 def test_p0_tempo_em_etapa_soma_visitas_e_preserva_historico(session, owner, cliente):
     from app.models import OportunidadeEtapaHistorico
 
-    op = nova_op(session, owner, cliente, etapa="PROSPECCAO")
-    crm.mudar_etapa(session, op, "QUALIFICACAO", ator=owner)
+    op = nova_op(session, owner, cliente, etapa="RASCUNHO")
+    crm.mudar_etapa(session, op, "ENVIADO", ator=owner)
     crm.mudar_etapa(session, op, "NEGOCIACAO", ator=owner)
-    crm.mudar_etapa(session, op, "QUALIFICACAO", ator=owner)     # voltou
+    crm.mudar_etapa(session, op, "ENVIADO", ator=owner)     # voltou
     session.commit()
 
     # datas controladas para o cálculo ser verificável
@@ -392,9 +392,9 @@ def test_p0_tempo_em_etapa_soma_visitas_e_preserva_historico(session, owner, cli
     session.commit()
 
     tempos = mx.tempo_em_etapas(session, op.id)
-    assert tempos["atual"] == "QUALIFICACAO"
-    # QUALIFICACAO foi visitada duas vezes e os períodos são somados
-    assert tempos["por_etapa"]["QUALIFICACAO"] > tempos["por_etapa"]["PROSPECCAO"]
+    assert tempos["atual"] == "ENVIADO"
+    # ENVIADO foi visitada duas vezes e os períodos são somados
+    assert tempos["por_etapa"]["ENVIADO"] > tempos["por_etapa"]["RASCUNHO"]
     assert tempos["aging_etapa_dias"] is not None
     # voltar não destruiu o histórico
     assert len(crm.historico_de_etapas(session, op.id)) == 4

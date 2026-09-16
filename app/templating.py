@@ -120,6 +120,8 @@ def _registrar_rotulos():
     templates.env.filters["rotulo_excecao"] = rotulos.excecao
     templates.env.filters["rotulo_etapa"] = rotulos.etapa
     templates.env.filters["rotulo_oportunidade"] = rotulos.oportunidade
+    templates.env.filters["rotulo_pos_venda"] = rotulos.pos_venda
+    templates.env.globals["rotulo_venda"] = rotulos.venda
     templates.env.filters["rotulo_motivo"] = rotulos.motivo_perda
     templates.env.filters["rotulo_origem"] = rotulos.origem
     templates.env.filters["rotulo_atividade"] = rotulos.atividade

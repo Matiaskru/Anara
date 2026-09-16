@@ -378,6 +378,9 @@ def emitir(session: Session, cotacao: Cotacao, *, ator: Usuario,
     cotacao.emitida_em = cotacao.emitida_em or cotacao.issued_em
     session.add(cotacao)
     session.flush()
+    # Fase 3B: proposta emitida → venda em RASCUNHO passa a ENVIADO (só isso, só nesse caso).
+    from app import crm_service as crm
+    crm.avancar_por_envio(session, cotacao, ator=ator, evento="emitida")
 
     adm.registrar(session, ator=ator, acao="ISSUE", entidade="Cotacao",
                   entidade_id=cotacao.id,
@@ -398,6 +401,8 @@ def marcar_enviada(session: Session, cotacao: Cotacao, *, ator: Usuario) -> Cota
     cotacao.sent_em = datetime.utcnow()
     cotacao.sent_por = ator.email
     session.add(cotacao)
+    from app import crm_service as crm
+    crm.avancar_por_envio(session, cotacao, ator=ator, evento="enviada ao cliente")
     adm.registrar(session, ator=ator, acao="MARK_SENT", entidade="Cotacao",
                   entidade_id=cotacao.id,
                   escopo=f"cotação {cotacao.numero or cotacao.id} r{cotacao.revisao}",

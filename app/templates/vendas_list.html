@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Vendas — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Vendas</h1><div class="sub">Um projeto por linha. Troque o status na própria linha — grava na hora.</div></div>
+  <button class="btn btn-copper" onclick="document.getElementById('nova-venda').style.display='block'">+ Nova venda</button>
+</div>
+
+<div class="card" id="nova-venda" style="display:none;">
+  <form method="post" action="/vendas" class="grid-4">
+    <div class="field"><label>Cliente</label>
+      <select name="cliente_id" required><option value="">Selecione…</option>
+        {% for c in clientes %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}</select></div>
+    <div class="field"><label>Projeto / venda</label><input name="titulo" required placeholder="ex.: Renovação enxoval 2026"></div>
+    <div class="field"><label>Responsável</label>
+      <select name="responsavel_id">{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if eu and eu.id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select></div>
+    <div class="field"><label>&nbsp;</label><button class="btn btn-copper" type="submit">Criar em rascunho</button></div>
+  </form>
+  <p style="font-size:11px;color:var(--gray);margin:6px 0 0;">Cliente novo? <a href="/clientes">Cadastre em Clientes</a> — só o nome é obrigatório.</p>
+</div>
+
+<div class="card">
+  <form method="get" class="grid-4" style="margin-bottom:0;">
+    <div class="field"><label>Status</label>
+      <select name="status" onchange="this.form.submit()"><option value="">Todas</option>
+        {% for s in opcoes_status %}<option value="{{ s }}" {{ 'selected' if filtros.status == s else '' }}>{{ s|capitalize }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Responsável</label>
+      <select name="responsavel" onchange="this.form.submit()"><option value="">Todos</option>
+        <option value="eu" {{ 'selected' if filtros.responsavel == 'eu' else '' }}>Minhas vendas</option>
+        {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if filtros.responsavel == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Cliente</label>
+      <select name="cliente_id" onchange="this.form.submit()"><option value="">Todos</option>
+        {% for c in clientes %}<option value="{{ c.id }}" {{ 'selected' if filtros.cliente_id == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label>Busca</label><input type="text" name="busca" value="{{ filtros.busca }}" placeholder="cliente ou projeto"></div>
+  </form>
+</div>
+
+<div class="card">
+  <table class="compacta">
+    <thead><tr><th>Cliente</th><th>Projeto / venda</th><th class="num">Valor atual</th>
+      <th>Status</th><th>Responsável</th><th>Última atualização</th><th>Próxima atividade</th></tr></thead>
+    <tbody>
+    {% for v in vendas %}
+      <tr style="cursor:pointer;" onclick="if (!event.target.closest('select')) window.location='/vendas/{{ v.id }}'">
+        <td>{{ v.cliente }}</td>
+        <td><a href="/vendas/{{ v.id }}">{{ v.titulo }}</a></td>
+        <td class="num">{{ v.valor_atual|brl }}</td>
+        <td>
+          {% if v.status == 'ABERTA' %}
+          <select onchange="mudarStatus({{ v.id }}, this.value)" style="font-size:11px;">
+            {% for e in etapas %}<option value="{{ e }}" {{ 'selected' if v.etapa == e else '' }}>{{ e|rotulo_etapa }}</option>{% endfor %}
+          </select>
+          {% else %}
+          <span class="tag {{ 'tag-calc' if v.status == 'GANHA' else 'tag-review' }}">{{ v.status_comercial }}</span>
+          {% if v.status_pos_venda %}<br><span style="font-size:10px;color:var(--gray);">{{ v.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}
+          {% endif %}
+        </td>
+        <td style="font-size:11px;">{{ v.responsavel or '—' }}</td>
+        <td style="font-size:11px;">{{ v.atualizado_em.strftime('%d/%m/%Y %H:%M') if v.atualizado_em else '—' }}</td>
+        <td style="font-size:11px;">
+          {% if v.proxima_atividade %}{{ v.proxima_atividade.titulo }}
+            {% if v.proxima_atividade.atrasada %}<span class="tag tag-review">atrasada</span>{% endif %}
+          {% else %}<span style="color:var(--gray);">—</span>{% endif %}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" style="color:var(--gray);">Nenhuma venda com esses filtros.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function mudarStatus(id, etapa) {
+  const d = new FormData(); d.append('etapa', etapa);
+  const r = await fetch(`/vendas/${id}/status`, {method: 'POST', body: d});
+  const j = await r.json();
+  anaraToast(r.ok ? j.mensagem : (j.detail || j.erro || 'Não foi possível mudar o status.'));
+  if (!r.ok) setTimeout(() => location.reload(), 900);
+}
+</script>
+{% endblock %}

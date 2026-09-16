@@ -164,29 +164,47 @@ class TipoComponenteFrete(str, enum.Enum):
 
 
 class EtapaOportunidade(str, enum.Enum):
-    """Onde o negócio está no funil.
+    """Onde a VENDA aberta está — três etapas, desde 16/09/2026 (Fase 3B).
 
-    **Não é máquina de estados rígida** — diferente do workflow da cotação. Um negócio
-    comercial pula etapa, volta, e às vezes uma qualificação vira negociação no mesmo
-    telefonema. Travar isso criaria burocracia que não corresponde a como se vende; o que
-    importa é **registrar** toda mudança, e isso `OportunidadeEtapaHistorico` faz.
+    Na interface a oportunidade chama-se **Venda**, e uma venda aberta está em
+    `RASCUNHO`, `ENVIADO` ou `NEGOCIACAO`. Vendido e Perdido não são etapas: são o `status`
+    (`GANHA`/`PERDIDA`), eixo separado.
 
-    As etapas da COTAÇÃO (aguardando aprovação, emitida, enviada) **não** entram aqui: são
-    estados do documento, não do negócio.
+    **Não é máquina de estados rígida** — diferente do workflow da cotação. A vendedora move
+    a venda entre as três etapas nos dois sentidos; o que é obrigatório é **registrar**
+    toda mudança em `OportunidadeEtapaHistorico`. As etapas da COTAÇÃO (aguardando
+    aprovação, emitida, enviada) não entram aqui: são estados do documento, não do negócio.
+
+    Os valores do funil anterior (`PROSPECCAO`, `CONTATO`, `QUALIFICACAO`, `COTACAO`,
+    `DECISAO`) continuam aceitos **só para leitura** de registros antigos
+    (`ETAPAS_LEGADAS`); nenhum registro novo nasce com eles.
     """
-    prospeccao = "PROSPECCAO"
-    contato = "CONTATO"
-    qualificacao = "QUALIFICACAO"
-    cotacao = "COTACAO"
+    rascunho = "RASCUNHO"
+    enviado = "ENVIADO"
     negociacao = "NEGOCIACAO"
-    decisao = "DECISAO"
+
+
+#: Etapas do funil anterior à Fase 3B. Não são oferecidas nem aceitas em registro novo.
+ETAPAS_LEGADAS = frozenset({"PROSPECCAO", "CONTATO", "QUALIFICACAO", "COTACAO", "DECISAO"})
 
 
 class StatusOportunidade(str, enum.Enum):
-    """Resultado do negócio — eixo separado da etapa."""
+    """Resultado do negócio — eixo separado da etapa. Na UI: Vendido / Perdido."""
     aberta = "ABERTA"
     ganha = "GANHA"
     perdida = "PERDIDA"
+
+
+class StatusPosVenda(str, enum.Enum):
+    """Acompanhamento depois de VENDIDO, até o pagamento. V1: sem pagamento parcial.
+
+    `ATRASADO` é um status marcado por quem tem alçada financeira — o sistema não chama um
+    cliente de inadimplente por conta própria. Nulo em venda aberta ou perdida.
+    """
+    aguardando_entrega = "AGUARDANDO_ENTREGA"
+    aguardando_pagamento = "AGUARDANDO_PAGAMENTO"
+    pago = "PAGO"
+    atrasado = "ATRASADO"
 
 
 class OrigemOportunidade(str, enum.Enum):
@@ -205,7 +223,8 @@ class MotivoPerda(str, enum.Enum):
     concorrente = "CONCORRENTE"
     sem_retorno = "SEM_RETORNO"
     projeto_cancelado = "PROJETO_CANCELADO"
-    fora_de_escopo = "FORA_DE_ESCOPO"
+    produto_especificacao = "PRODUTO_ESPECIFICACAO"    # Fase 3B
+    fora_de_escopo = "FORA_DE_ESCOPO"                  # anterior à Fase 3B; só leitura
     outro = "OUTRO"
 
 
@@ -1285,7 +1304,7 @@ class Oportunidade(SQLModel, table=True):
     titulo: str
     descricao: Optional[str] = None
     responsavel_id: Optional[int] = Field(default=None, foreign_key="usuario.id", index=True)
-    etapa: str = Field(default=EtapaOportunidade.prospeccao.value, index=True)
+    etapa: str = Field(default=EtapaOportunidade.rascunho.value, index=True)
     status: str = Field(default=StatusOportunidade.aberta.value, index=True)
     origem: Optional[str] = None
     origem_detalhe: Optional[str] = None
@@ -1304,6 +1323,31 @@ class Oportunidade(SQLModel, table=True):
     lost_por: Optional[str] = None
     motivo_perda: Optional[str] = None
     comentario_perda: Optional[str] = None
+    # --- pós-venda (Fase 3B) — só existe depois de GANHA; nulo em aberta/perdida ---
+    # VENDIDO (`valor_fechado`), FATURADO (`faturado_em` + documento) e PAGO (`pago_em`) são
+    # três fatos diferentes e ficam em três lugares. V1 sem pagamento parcial.
+    status_pos_venda: Optional[str] = Field(default=None, index=True)
+    entrega_prevista_em: Optional[date] = None
+    entregue_em: Optional[datetime] = None
+    faturado_em: Optional[date] = None
+    numero_documento_fiscal: Optional[str] = None
+    pagamento_previsto_em: Optional[date] = None
+    pago_em: Optional[datetime] = None
+    observacao_pos_venda: Optional[str] = None
+
+
+class AtualizacaoComercial(SQLModel, table=True):
+    """"Registrar atualização": uma nota comercial da venda, **append-only** (Fase 3B).
+
+    Não é atividade (que tem data e conclusão) nem edição de campo: é o que aconteceu, dito
+    por quem viu. Não se edita nem se apaga — correção é outra atualização.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    oportunidade_id: int = Field(foreign_key="oportunidade.id", index=True)
+    autor_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    autor_email: Optional[str] = None
+    texto: str
+    criado_em: datetime = Field(default_factory=datetime.utcnow, index=True)
 
 
 class OportunidadeEtapaHistorico(SQLModel, table=True):

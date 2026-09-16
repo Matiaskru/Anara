@@ -122,20 +122,32 @@ EXCECAO = {
 # CRM
 # ---------------------------------------------------------------------------
 ETAPA = {
-    "PROSPECCAO": "Prospecção",
-    "CONTATO": "Contato",
-    "QUALIFICACAO": "Qualificação",
-    "COTACAO": "Cotação",
+    # Fase 3B — as três etapas de uma venda aberta
+    "RASCUNHO": "Rascunho",
+    "ENVIADO": "Enviado",
     "NEGOCIACAO": "Negociação",
-    "DECISAO": "Decisão",
+    # funil anterior — só em registro antigo
+    "PROSPECCAO": "Prospecção (antigo)",
+    "CONTATO": "Contato (antigo)",
+    "QUALIFICACAO": "Qualificação (antigo)",
+    "COTACAO": "Cotação (antigo)",
+    "DECISAO": "Decisão (antigo)",
 }
 
-STATUS_OPORTUNIDADE = {"ABERTA": "Aberta", "GANHA": "Ganha", "PERDIDA": "Perdida"}
+STATUS_OPORTUNIDADE = {"ABERTA": "Aberta", "GANHA": "Vendido", "PERDIDA": "Perdido"}
+
+STATUS_POS_VENDA = {
+    "AGUARDANDO_ENTREGA": "Aguardando entrega",
+    "AGUARDANDO_PAGAMENTO": "Aguardando pagamento",
+    "PAGO": "Pago",
+    "ATRASADO": "Atrasado",
+}
 
 MOTIVO_PERDA = {
     "PRECO": "Preço", "PRAZO": "Prazo", "CONCORRENTE": "Concorrente",
     "SEM_RETORNO": "Sem retorno", "PROJETO_CANCELADO": "Projeto cancelado",
-    "FORA_DE_ESCOPO": "Fora de escopo", "OUTRO": "Outro",
+    "PRODUTO_ESPECIFICACAO": "Produto / especificação",
+    "FORA_DE_ESCOPO": "Fora de escopo (antigo)", "OUTRO": "Outro",
 }
 
 ORIGEM_OPORTUNIDADE = {
@@ -230,6 +242,27 @@ def etapa(codigo) -> str:
 
 def oportunidade(codigo) -> str:
     return _traduz(STATUS_OPORTUNIDADE, codigo)
+
+
+def venda(status, etapa=None) -> str:
+    """O status comercial ÚNICO que a tela de Vendas mostra (Fase 3B).
+
+        ABERTA + RASCUNHO → Rascunho · ABERTA + ENVIADO → Enviado ·
+        ABERTA + NEGOCIACAO → Negociação · GANHA → Vendido · PERDIDA → Perdido
+    """
+    if hasattr(status, "value"):
+        status = status.value
+    if status == "ABERTA":
+        return etapa_venda(etapa)
+    return _traduz(STATUS_OPORTUNIDADE, status)
+
+
+def etapa_venda(codigo) -> str:
+    return _traduz(ETAPA, codigo)
+
+
+def pos_venda(codigo) -> str:
+    return _traduz(STATUS_POS_VENDA, codigo)
 
 
 def motivo_perda(codigo) -> str:

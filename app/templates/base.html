@@ -23,8 +23,9 @@
         linha de menu permanente.
       #}
       <nav>
-        <a href="/comercial" class="{{ 'active' if active == 'comercial' else '' }}">Meu dia</a>
-        <a href="/pipeline" class="{{ 'active' if active in ('pipeline', 'oportunidades') else '' }}">Pipeline</a>
+        {# Fase 3B: a operação é Vendas → Clientes → Cotações → Produtos. "Meu dia" e o
+           quadro por etapa continuam existindo (/comercial, /pipeline), sem linha própria. #}
+        <a href="/vendas" class="{{ 'active' if active in ('vendas', 'pipeline', 'oportunidades', 'comercial') else '' }}">Vendas</a>
         <a href="/clientes" class="{{ 'active' if active == 'clientes' else '' }}">Clientes</a>
         <a href="/cotacoes" class="{{ 'active' if active in ('cotacoes', 'nova_cotacao') else '' }}">Cotações</a>
         <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">Produtos</a>

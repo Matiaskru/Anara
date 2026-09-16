@@ -1,45 +1,87 @@
 {% extends "base.html" %}
-{% block title %}{{ cliente.nome }} — Anara Cotações{% endblock %}
+{% block title %}{{ cliente.nome }} — Anara{% endblock %}
 {% block content %}
 <div class="page-header">
   <div>
     <h1>{{ cliente.nome }}</h1>
     <div class="subtitle">{{ cliente.cidade_uf or '' }}{% if cliente.cnpj_cpf %} · {{ cliente.cnpj_cpf }}{% endif %}</div>
   </div>
-  <a href="/cotacoes/nova?cliente_id={{ cliente.id }}" class="btn btn-copper">+ Nova cotação pra este cliente</a>
+  <div style="display:flex;gap:8px;">
+    <form method="post" action="/vendas" style="display:flex;gap:6px;margin:0;">
+      <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
+      <input name="titulo" required placeholder="Nova venda: nome do projeto" style="width:220px;">
+      <button class="btn btn-ghost" type="submit">+ Venda</button>
+    </form>
+    <a href="/cotacoes/nova?cliente_id={{ cliente.id }}" class="btn btn-copper">+ Nova cotação</a>
+  </div>
 </div>
 
+{# VISÃO GERAL — cadastro à esquerda, números comerciais DERIVADOS à direita #}
 <div class="grid-2">
   <div class="card">
-    <h3 style="margin-bottom:10px;">Dados de contato</h3>
+    <h3 style="margin-bottom:10px;">Cadastro</h3>
+    <p style="margin:4px 0;"><strong>CNPJ/CPF:</strong> {{ cliente.cnpj_cpf or '—' }}</p>
+    <p style="margin:4px 0;"><strong>Cidade/UF:</strong> {{ cliente.cidade_uf or '—' }}</p>
+    <p style="margin:4px 0;"><strong>Finalidade fiscal:</strong> {{ cliente.finalidade or '—' }}</p>
     <p style="margin:4px 0;"><strong>Telefone:</strong> {{ cliente.telefone or '—' }}</p>
     <p style="margin:4px 0;"><strong>E-mail:</strong> {{ cliente.email or '—' }}</p>
     <p style="margin:4px 0;"><strong>Cliente desde:</strong> {{ cliente.criado_em|data }}</p>
+    {% if cliente.observacoes_comerciais %}<p style="margin:4px 0;font-size:12px;"><strong>Observações:</strong> {{ cliente.observacoes_comerciais }}</p>{% endif %}
+    {% if faltando_fiscal %}
+    <div style="border-left:3px solid var(--copper);padding-left:8px;margin-top:8px;font-size:12px;">
+      <strong>Para emitir cotação falta:</strong> {{ faltando_fiscal|join('; ') }}.
+      <span style="color:var(--gray);">O cadastro comercial pode seguir assim.</span></div>
+    {% endif %}
   </div>
   <div class="card">
-    <h3 style="margin-bottom:10px;">Último preço oferecido</h3>
-    {% if ultimos_precos %}
-      {% for nome, info in ultimos_precos[:8] %}
-      <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--row-alt); font-size:12px;">
-        <span>{{ nome }}</span>
-        <span class="num">{{ info.preco|brl }}</span>
-      </div>
-      {% endfor %}
-    {% else %}
-      <p style="color:var(--gray); font-size:13px;">Nenhuma cotação ainda.</p>
-    {% endif %}
+    <h3 style="margin-bottom:10px;">Comercial</h3>
+    <div class="kpis" style="margin:0;">
+      <div class="kpi"><div class="label">Total comprado</div><div class="value copper">{{ comercial.total_comprado|brl if comercial.total_comprado is not none else '—' }}</div></div>
+      <div class="kpi"><div class="label">Vendas ganhas</div><div class="value">{{ comercial.quantidade_vendas }}</div></div>
+      <div class="kpi"><div class="label">Ticket médio</div><div class="value">{{ comercial.ticket_medio|brl if comercial.ticket_medio is not none else '—' }}</div></div>
+      <div class="kpi"><div class="label">Última compra</div><div class="value">{{ comercial.ultima_compra.strftime('%d/%m/%Y') if comercial.ultima_compra else '—' }}</div></div>
+      <div class="kpi"><div class="label">Em andamento</div><div class="value">{{ comercial.vendas_em_andamento }}{% if comercial.valor_em_andamento %} · {{ comercial.valor_em_andamento|brl }}{% endif %}</div></div>
+      <div class="kpi"><div class="label">Em aberto (a receber)</div><div class="value">{{ comercial.valor_em_aberto|brl if comercial.valor_em_aberto is not none else '—' }}</div></div>
+      <div class="kpi"><div class="label">Atrasado</div><div class="value {{ 'copper' if comercial.valor_atrasado else '' }}">{{ comercial.valor_atrasado|brl if comercial.valor_atrasado is not none else '—' }}</div></div>
+      <div class="kpi"><div class="label">Pago</div><div class="value">{{ comercial.valor_pago|brl if comercial.valor_pago is not none else '—' }}</div></div>
+    </div>
+    <p style="font-size:11px;color:var(--gray);margin:8px 0 0;">Total comprado = vendas marcadas como vendidas (valor fechado). Cotação enviada não é compra; revisões não somam.</p>
   </div>
 </div>
 
+{# VENDAS #}
 <div class="card">
-  <h3 style="margin-bottom:14px;">Histórico de cotações</h3>
+  <h3 style="margin-top:0;">Vendas</h3>
+  {% for titulo, lista in [('Abertas', abertas), ('Vendidas', vendidas), ('Perdidas', perdidas)] %}
+  <h4 style="margin:10px 0 4px;font-size:12px;color:var(--gray);text-transform:uppercase;">{{ titulo }} ({{ lista|length }})</h4>
+  <table class="compacta"><tbody>
+    {% for o in lista %}
+      <tr onclick="window.location='/vendas/{{ o.id }}'" style="cursor:pointer;">
+        <td><a href="/vendas/{{ o.id }}">{{ o.titulo }}</a></td>
+        <td><span class="tag {{ 'tag-calc' if o.status == 'GANHA' else ('tag-review' if o.status == 'PERDIDA' else '') }}">{{ o.status_comercial }}</span>
+            {% if o.status_pos_venda %}<span class="tag">{{ o.status_pos_venda|rotulo_pos_venda }}</span>{% endif %}</td>
+        <td style="font-size:11px;">{{ o.responsavel or '—' }}</td>
+        <td class="num">{{ o.valor_atual|brl }}</td>
+        <td style="font-size:11px;">{{ o.atualizado_em.strftime('%d/%m/%Y') if o.atualizado_em else '—' }}</td></tr>
+    {% else %}
+      <tr><td colspan="5" style="color:var(--gray);font-size:12px;">Nenhuma.</td></tr>
+    {% endfor %}
+  </tbody></table>
+  {% endfor %}
+</div>
+
+{# COTAÇÕES — todas, inclusive revisões, canceladas e legado #}
+<div class="card">
+  <h3 style="margin-bottom:14px;">Cotações ({{ cotacoes|length }})</h3>
   {% if cotacoes %}
   <table>
-    <thead><tr><th>Data</th><th>Status</th><th>Condição</th><th class="num">Total</th><th></th></tr></thead>
+    <thead><tr><th>Número</th><th>Data</th><th>Venda</th><th>Status</th><th>Condição</th><th class="num">Total</th><th></th></tr></thead>
     <tbody>
       {% for c in cotacoes %}
       <tr onclick="window.location='/cotacoes/{{ c.id }}'" style="cursor:pointer;">
+        <td>{{ c.numero or ('#' ~ c.id) }}{% if (c.revisao or 1) > 1 %} <span class="tag">r{{ c.revisao }}</span>{% endif %}</td>
         <td>{{ c.criado_em|data }}</td>
+        <td style="font-size:11px;">{% set venda = vendas_por_id.get(c.oportunidade_id) %}{% if venda %}{{ venda.titulo }}{% else %}<span style="color:var(--gray);">Sem venda vinculada (legado)</span>{% endif %}</td>
         <td><span class="badge badge-{{ c.status|rotulo_cotacao }}">{{ c.status|rotulo_cotacao }}</span></td>
         <td>{{ c.condicao_pagamento }}</td>
         <td class="num">{{ totais.get(c.id)|brl }}</td>
@@ -53,19 +95,10 @@
   {% endif %}
 </div>
 
-{% if faltando_fiscal %}
-<div class="card" style="border-left:4px solid var(--copper);">
-  <strong>Dados fiscais necessários para emitir cotação</strong>
-  <ul style="font-size:12px;margin:6px 0 0;">{% for f in faltando_fiscal %}<li>{{ f }}</li>{% endfor %}</ul>
-  <p style="font-size:12px;color:var(--gray);margin:6px 0 0;">
-    O cadastro comercial pode seguir assim. O que precisa desses dados é a proposta.</p>
-</div>
-{% endif %}
-
+{# CONTATOS #}
 <div class="card">
   <h3 style="margin-top:0;">Contatos</h3>
-  <table class="compacta">
-    <tbody>
+  <table class="compacta"><tbody>
     {% for c in contatos %}
       <tr {% if not c.ativo %}style="opacity:.5;"{% endif %}>
         <td>{{ c.nome }}{% if c.principal %} <span class="tag tag-calc">principal</span>{% endif %}</td>
@@ -75,8 +108,7 @@
     {% else %}
       <tr><td colspan="4" style="color:var(--gray);">Nenhum contato cadastrado.</td></tr>
     {% endfor %}
-    </tbody>
-  </table>
+  </tbody></table>
   <form method="post" action="/clientes/{{ cliente.id }}/contatos" class="grid-4" style="margin-top:10px;">
     <div class="field"><label>Nome</label><input name="nome" required></div>
     <div class="field"><label>Cargo</label><input name="cargo"></div>
@@ -88,53 +120,21 @@
   </form>
 </div>
 
+{% if ultimos_precos %}
 <div class="card">
-  <h3 style="margin-top:0;">Oportunidades abertas</h3>
-  <table class="compacta">
-    <tbody>
-    {% for o in abertas %}
-      <tr><td><a href="/oportunidades/{{ o.id }}">{{ o.titulo }}</a></td>
-        <td><span class="tag">{{ o.etapa|rotulo_etapa }}</span></td>
-        <td style="font-size:11px;">{{ o.responsavel or '—' }}</td>
-        <td class="num">{{ (o.valor_cotado or o.valor_estimado)|brl }}</td>
-        <td style="font-size:11px;">{% if o.proxima_atividade %}{{ o.proxima_atividade.titulo }}
-          {% else %}<span style="color:var(--gray);">Sem próxima atividade</span>{% endif %}</td></tr>
-    {% else %}
-      <tr><td colspan="5" style="color:var(--gray);">Nenhuma oportunidade aberta.</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
-  <form method="post" action="/oportunidades" class="grid-4" style="margin-top:10px;">
-    <input type="hidden" name="cliente_id" value="{{ cliente.id }}">
-    <div class="field"><label>Nova oportunidade</label><input name="titulo" required placeholder="ex.: enxoval 120 UHs"></div>
-    <div class="field"><label>Etapa</label>
-      <select name="etapa">{% for e in etapas %}<option value="{{ e }}">{{ e }}</option>{% endfor %}</select></div>
-    <div class="field"><label>Origem</label>
-      <select name="origem"><option value="">—</option>{% for o in origens %}<option value="{{ o }}">{{ o }}</option>{% endfor %}</select></div>
-    <div class="field"><label>&nbsp;</label><button class="btn btn-copper" type="submit">Criar</button></div>
-  </form>
-</div>
-
-{% if fechadas %}
-<div class="card">
-  <h3 style="margin-top:0;">Oportunidades encerradas</h3>
-  <table class="compacta">
-    <tbody>
-    {% for o in fechadas %}
-      <tr><td><a href="/oportunidades/{{ o.id }}">{{ o.titulo }}</a></td>
-        <td><span class="tag {{ 'tag-calc' if o.status == 'GANHA' else 'tag-review' }}">{{ o.status|rotulo_oportunidade }}</span></td>
-        <td class="num">{{ (o.valor_fechado or o.valor_cotado)|brl }}</td></tr>
-    {% endfor %}
-    </tbody>
-  </table>
+  <h3 style="margin-bottom:10px;">Último preço oferecido</h3>
+  {% for nome, info in ultimos_precos[:8] %}
+  <div style="display:flex; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--row-alt); font-size:12px;">
+    <span>{{ nome }}</span><span class="num">{{ info.preco|brl }}</span>
+  </div>
+  {% endfor %}
 </div>
 {% endif %}
 
 {% if atividades %}
 <div class="card">
   <h3 style="margin-top:0;">Atividades recentes</h3>
-  <table class="compacta">
-    <tbody>
+  <table class="compacta"><tbody>
     {% for a in atividades %}
       <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
         <td style="font-size:11px;">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
@@ -142,9 +142,7 @@
         <td>{{ a.titulo }}</td>
         <td style="font-size:11px;">{{ 'concluída' if a.concluida_em else 'pendente' }}</td></tr>
     {% endfor %}
-    </tbody>
-  </table>
+  </tbody></table>
 </div>
 {% endif %}
-
 {% endblock %}

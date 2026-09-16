@@ -199,17 +199,53 @@ do workflow — dar sentido a eles é da Sessão 7.
   (`can_manage_economics`) não autoriza desconto. OWNER sempre pode
 - **PDF de rascunho sai marcado.** Preview e final são a mesma folha para quem recebe
 
-## CRM comercial (Sessão 7)
+## CRM comercial (Sessão 7 → Fase 3B, 16/09/2026)
 
 **Cliente** é a organização — e também o prospect. Não existe `Lead → Prospect → Conta`: o
 que muda entre eles é *quanto se sabe*, não *o que são*. O CRM aceita empresa com nome e
 telefone; **emitir cotação continua exigindo os dados fiscais**, e essa validação não foi
-afrouxada.
+afrouxada. CNPJ repetido de cliente ativo é recusado; nome parecido, não.
 
-**Oportunidade ≠ Cotação.** A oportunidade é o negócio; a cotação é a proposta econômica com
-o workflow da Sessão 6. Uma oportunidade tem zero, uma ou várias cotações, e as **revisões de
-uma proposta continuam sendo o mesmo negócio** — contar cada revisão faria o pipeline medir
-papel em vez de negócio.
+**"Venda" é o nome de interface da Oportunidade** — não há tabela nova. Uma venda é um
+projeto/negociação com um cliente (`Clara Resorts — Renovação enxoval 2026`), com várias
+revisões de cotação dentro. **Oportunidade ≠ Cotação**: a cotação tem o workflow técnico da
+Sessão 6; a venda tem **um status comercial só**, e são coisas diferentes:
+
+    ABERTA + RASCUNHO → Rascunho · ABERTA + ENVIADO → Enviado · ABERTA + NEGOCIACAO → Negociação
+    GANHA → Vendido · PERDIDA → Perdido
+
+- Três etapas abertas, nos dois sentidos, trocadas inline (`POST /vendas/{id}/status`) com
+  histórico append-only. `PROSPECCAO/CONTATO/QUALIFICACAO/COTACAO/DECISAO` são
+  `ETAPAS_LEGADAS`: legíveis, nunca criadas
+- **Automação só do óbvio:** venda nova = Rascunho; cotação emitida/enviada move Rascunho →
+  Enviado (ator "sistema (automático)"); venda em Negociação não volta; Negociação, Vendido e
+  Perdido nunca são marcados sozinhos
+- **Vendido** = `marcar_ganha` → `validar_compromisso_firme` (blocker duro impede), grava
+  `cotacao_vencedora_id`, `valor_fechado`, `won_em` e abre o pós-venda em AGUARDANDO_ENTREGA.
+  **Perdido** exige motivo estruturado; reabrir preserva o evento e volta à última etapa aberta
+- **Toda cotação nova pertence a uma venda** (`exigir_venda`): existente do mesmo cliente ou
+  criada pelo nome do projeto. Cross-client é 409. As 21 cotações históricas ficam com
+  `oportunidade_id` NULO e visíveis em Cotações como "Sem venda vinculada (legado)" —
+  **backfill não aplicado**: `relatorios/fase3b_proposta_backfill_cotacoes.md` é read-only
+- **Registrar atualização** (`AtualizacaoComercial`, append-only) ≠ atividade; pode criar a
+  próxima atividade junto. Timeline (`crm.timeline`) compõe as tabelas canônicas — nunca
+  economia para a vendedora
+- **Cliente 360** (`metrics_service.cliente_360`): total comprado = Σ `valor_fechado` das
+  GANHAS (cotação enviada não é compra; R1/R2 nunca somam), ticket médio, última compra
+  (`won_em`), em andamento, em aberto, atrasado, pago
+- **Pós-venda V1:** AGUARDANDO_ENTREGA → (entrega) → AGUARDANDO_PAGAMENTO → PAGO, com
+  ATRASADO marcado por alçada financeira e corrigível para PAGO. Vendedora edita entrega
+  prevista, entrega e observação; OWNER/ADMIN registram faturamento/documento, pagamento
+  previsto, PAGO e ATRASADO (`AuditLog`). **Vendido ≠ faturado ≠ pago** — três fatos, três
+  colunas. Sem pagamento parcial
+- **Vendedora entra em `/vendas`**; `/` redireciona para lá. Menu: Vendas · Clientes ·
+  Cotações · Produtos (+ Relatórios; Aprovações e Admin por permissão). Continua sem custo,
+  CNET, margem, lucro, piso, economia, premissas e Admin
+- Métricas para o Dashboard Admin (Fase 3C) já em `metrics_service.painel_vendas`:
+  vendido/faturado/pago, lucro e margem agregada da vencedora, ticket, conversão, desconto
+  ponderado, comissão estimada, por vendedor/cliente/fornecedor/família, aging, pós-venda
+- **Fora desta fase, de propósito:** redesign visual, Dashboard novo, **PDF cliente** (Fase
+  3C), frete nacional (pausado), cotador offline (STALE)
 
 - **`responsavel_id` não é ACL.** Quem vê o quê segue a Sessão 4; o filtro "minhas
   oportunidades" organiza o dia, não esconde negócio de colega
@@ -345,8 +381,11 @@ Alembic em `0013` (`auditlog`, vigência da condição de pagamento, `can_manage
 
 **Sessão 8 — relatórios, saúde e prontidão para o piloto: EXECUTADA.** Sem migration nova — relatórios são derivados. O sistema sobe, autentica e responde: `scripts/smoke_test.py`.
 
-**Fase 3A — política comercial canônica (16/09/2026): EXECUTADA.** Alembic em `0018`. 1142
-testes. Backend pronto para a UX reativa; a UX em si é a próxima fase, ainda não autorizada.
+**Fase 3A — política comercial canônica (16/09/2026): EXECUTADA.** Alembic em `0018`.
+
+**Fase 3B — CRM comercial simples, Cliente 360 e pós-venda (16/09/2026): EXECUTADA.**
+Alembic em `0019`. 1176 testes. Próxima: **Fase 3C** (Dashboard Admin + redesign completo da
+UX + PDF cliente final) — não iniciada, não autorizada.
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

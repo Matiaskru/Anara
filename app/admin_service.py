@@ -565,18 +565,28 @@ def escopo_da_margem(session: Session, *, fornecedor_id=None, familia=None, sku_
             "familias": sorted({p.familia for p in alvo if p.familia})}
 
 
-def _mesmo_escopo(r, *, sku_key, fornecedor_id, familia) -> bool:
+def _mesmo_escopo(r, *, sku_key, fornecedor_id, familia, min_thread_count=None,
+                  max_thread_count=None) -> bool:
+    """Mesmo escopo = mesmo SKU, fornecedor, família **e faixa de fios**.
+
+    Sem a faixa, versionar "KTC — Flat Sheet < 300TC" encerraria também a regra "≥ 300TC"
+    da mesma família — C-NEW-14 tornou isso visível ao levar a tela de configurações para
+    este caminho.
+    """
     return (r.ativo and (r.valid_to is None)
             and (r.sku_key or None) == (sku_key or None)
             and (r.fornecedor_id or None) == (fornecedor_id or None)
-            and ((r.familia or "").lower() or None) == ((familia or "").lower() or None))
+            and ((r.familia or "").lower() or None) == ((familia or "").lower() or None)
+            and (r.min_thread_count or None) == (min_thread_count or None)
+            and (r.max_thread_count or None) == (max_thread_count or None))
 
 
 def preview_margem(session: Session, *, margem_pct, nome: str, fornecedor_id=None,
                    familia=None, sku_key=None, prioridade: int = 50,
                    fonte: str = "", vigente_a_partir_de: Optional[date] = None,
                    motivo: Optional[str] = None, piso_pct=None, comissao_formacao_pct=None,
-                   preco_travado: Optional[bool] = None) -> Proposta:
+                   preco_travado: Optional[bool] = None, min_thread_count=None,
+                   max_thread_count=None) -> Proposta:
     fonte = valida_fonte(fonte)
     nova = valida_percentual(margem_pct, "margem")
     inicio = vigente_a_partir_de or date.today()
@@ -636,8 +646,8 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
                    fonte: str = "", vigente_a_partir_de: Optional[date] = None,
                    motivo: Optional[str] = None, origem: str = "admin-ui",
                    correlacao: Optional[str] = None, piso_pct=None,
-                   comissao_formacao_pct=None, preco_travado: Optional[bool] = None
-                   ) -> Optional[MargemRegra]:
+                   comissao_formacao_pct=None, preco_travado: Optional[bool] = None,
+                   min_thread_count=None, max_thread_count=None) -> Optional[MargemRegra]:
     """Versiona a margem de um escopo. **A política do escopo é herdada**, não perdida.
 
     Desde 16/09/2026 a regra carrega piso, comissão de formação e preço travado. Uma regra
@@ -665,7 +675,8 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
     # Regra anterior EXATAMENTE do mesmo escopo tem a vigência encerrada — não é apagada.
     encerrada = None
     for r in regras:
-        if _mesmo_escopo(r, sku_key=sku_key, fornecedor_id=fornecedor_id, familia=familia):
+        if _mesmo_escopo(r, sku_key=sku_key, fornecedor_id=fornecedor_id, familia=familia,
+                         min_thread_count=min_thread_count, max_thread_count=max_thread_count):
             r.valid_to = inicio
             session.add(r)
             # a herança vem da regra mais recente do escopo — a que estava formando preço
@@ -679,6 +690,7 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
 
     nova = MargemRegra(nome=nome, fornecedor_id=fornecedor_id, familia=familia,
                        sku_key=sku_key, margem_pct=para_float(D(margem_pct)),
+                       min_thread_count=min_thread_count, max_thread_count=max_thread_count,
                        prioridade=prioridade, valid_from=inicio, ativo=True,
                        notas=f"{fonte}{' · ' + motivo if motivo else ''}",
                        piso_pct=para_float(D(piso)) if piso is not None else None,

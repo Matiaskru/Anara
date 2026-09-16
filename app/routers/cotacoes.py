@@ -233,6 +233,9 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
     clientes = {c.id: c for c in session.exec(select(Cliente)).all()}
     economia = ve_economia(request)
     totais = {c.id: _totais(itens_por_cotacao.get(c.id, []), economia) for c in cotacoes}
+    # Fase 3B: a venda de cada cotação. Cotação sem venda é legado — e a tela diz isso.
+    from app import crm_service as crm
+    vendas = crm.cotacoes_com_venda(session)
     categorias = sorted({i.categoria for i in session.exec(select(CotacaoItem)).all() if i.categoria})
     vendedores = sorted({c.vendedor for c in session.exec(select(Cotacao)).all() if c.vendedor})
 
@@ -244,6 +247,7 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
         "itens_por_cotacao": {k: len(v) for k, v in itens_por_cotacao.items()},
         "sugestoes_teste": {s["id"] for s in arquivamento.candidatas_a_teste(session)},
         "todos_clientes": sorted(clientes.values(), key=lambda c: c.nome),
+        "vendas": vendas,
         # Aqui é FILTRO, e por isso a lista é completa: os estados herdados precisam ser
         # filtráveis para que as cotações antigas continuem encontráveis. Na tela de
         # detalhe, onde `status_opcoes` vira botão de ação, a lista é outra.
@@ -256,18 +260,23 @@ def nova_form(request: Request, cliente_id: int = 0, oportunidade_id: int = 0,
               session: Session = Depends(get_session)):
     """Formulário mínimo. Quando vem de uma oportunidade, já chega com o cliente dela."""
     from app import crm_service as crm
-    from app.models import Oportunidade
+    from app.models import Oportunidade, StatusOportunidade
 
     oportunidade = session.get(Oportunidade, oportunidade_id) if oportunidade_id else None
     if oportunidade is not None and not cliente_id:
         cliente_id = oportunidade.cliente_id
 
     clientes = session.exec(select(Cliente).order_by(Cliente.nome)).all()
+    vendas_abertas = (crm.listar_oportunidades(session, cliente_id=cliente_id,
+                                               status=StatusOportunidade.aberta.value)
+                      if cliente_id else [])
     return templates.TemplateResponse(request, "cotacao_nova.html", {
         "active": "nova_cotacao", "clientes": clientes,
         "cliente_selecionado": session.get(Cliente, cliente_id) if cliente_id else None,
         "contatos": crm.contatos_de(session, cliente_id, apenas_ativos=True) if cliente_id else [],
         "oportunidade": oportunidade,
+        "vendas_abertas": [{"id": o.id, "titulo": o.titulo,
+                            "status_comercial": crm.status_comercial(o)} for o in vendas_abertas],
         "estados_difal": estados(session),
         "condicoes": cfg.condicoes_pagamento(session),
         "tipos_frete": [t.value for t in TipoFrete],
@@ -325,13 +334,83 @@ def _herdar_da_operacao(session: Session, request: Request, cliente_id: int,
     return herdado
 
 
+class CotacaoSemVenda(HTTPException):
+    """Fase 3B: nenhuma cotação comercial nova nasce solta."""
+
+    def __init__(self):
+        super().__init__(status_code=400, detail=(
+            "Toda cotação nova pertence a uma venda. Escolha uma venda aberta do cliente ou "
+            "informe o nome do projeto para criar uma."))
+
+
+def exigir_venda(session: Session, *, ator, cliente_id: int, oportunidade_id=None,
+                 nova_venda: str = ""):
+    """A venda a que a cotação nova pertence — existente ou criada agora com o mínimo.
+
+    `nova_venda` é o nome do projeto ("Renovação enxoval 2026"). Venda existente de outro
+    cliente é recusada: cotação do Hotel A não entra no negócio do Hotel B.
+    """
+    from app import crm_service as crm
+    from app.models import Oportunidade
+
+    if oportunidade_id:
+        op = session.get(Oportunidade, int(oportunidade_id))
+        if op is None:
+            raise HTTPException(status_code=404, detail="Venda não encontrada.")
+        if op.cliente_id != cliente_id:
+            raise HTTPException(status_code=409, detail=(
+                "Esta venda é de outro cliente. Cotação do cliente A não entra na venda do "
+                "cliente B."))
+        return op
+    if (nova_venda or "").strip():
+        if ator is None:
+            raise HTTPException(status_code=401, detail="Autenticação necessária.")
+        from app.models import Usuario
+        # responsável = quem está criando, quando é usuário do banco (teste com ator falso, não)
+        responsavel = getattr(ator, "id", None)
+        if responsavel is not None and session.get(Usuario, responsavel) is None:
+            responsavel = None
+        return crm.criar_oportunidade(session, ator=ator, cliente_id=cliente_id,
+                                      titulo=nova_venda.strip(), responsavel_id=responsavel)
+    raise CotacaoSemVenda()
+
+
+def criar_cotacao_da_venda(session: Session, request: Request, op, *, ator, **campos) -> Cotacao:
+    """O caminho canônico de criação: cliente e vínculo vêm da venda; o resto é herdado."""
+    from app.models import Oportunidade  # noqa: F401
+    cliente = session.get(Cliente, op.cliente_id)
+    dias = int(cfg.num(session, "validade_dias", 5))
+    agora = datetime.utcnow()
+    herdado = _herdar_da_operacao(session, request, op.cliente_id, oportunidade_id=op.id,
+                                  contato_id=campos.get("contato_id"))
+    cotacao = Cotacao(
+        criado_em=agora, numero=proximo_numero(session), cliente_id=op.cliente_id,
+        vendedor=herdado["vendedor"], oportunidade_id=op.id,
+        condicao_pagamento=campos.get("condicao_pagamento") or "30",
+        estado_destino=campos.get("estado_destino") or getattr(cliente, "cidade_uf", None),
+        contribuinte_icms=campos.get("contribuinte_icms", True),
+        finalidade=getattr(cliente, "finalidade", None),
+        freight_type=campos.get("freight_type") or TipoFrete.cif.value,
+        contato_nome=herdado["contato_nome"],
+        departamento_contato=herdado["departamento_contato"],
+        validade_dias=dias, validade_em=agora + timedelta(days=dias),
+        termos_texto=cfg.txt(session, "termos_padrao"))
+    _gravar_snapshot_fiscal(session, cotacao)
+    session.add(cotacao)
+    session.flush()
+    op.atualizado_em = agora
+    session.add(op)
+    return cotacao
+
+
 @router.post("/cotacoes")
 def criar(request: Request, cliente_id: int = Form(...), condicao_pagamento: str = Form("30"),
           estado_destino: str = Form(""), contribuinte_icms: str = Form("sim"),
           freight_type: str = Form(TipoFrete.cif.value),
           contato_id: str = Form(""), oportunidade_id: str = Form(""),
+          nova_venda: str = Form(""),
           session: Session = Depends(get_session)):
-    """Cria a cotação com o **mínimo** e deriva o resto.
+    """Cria a cotação com o **mínimo** e deriva o resto — **dentro de uma venda** (Fase 3B).
 
     O formulário pedia dezoito campos, entre eles vendedor, contato, departamento, prazo de
     entrega, validade, texto do frete e observações — todos preenchíveis depois, e vários já
@@ -343,30 +422,15 @@ def criar(request: Request, cliente_id: int = Form(...), condicao_pagamento: str
     nunca usou esse campo — ele resolve por `uf_origem_fiscal`, que agora é editável no
     lugar certo, com o nome certo.
     """
-    dias = int(cfg.num(session, "validade_dias", 5))
-    agora = datetime.utcnow()
-    herdado = _herdar_da_operacao(
-        session, request, cliente_id,
-        oportunidade_id=int(oportunidade_id) if oportunidade_id.isdigit() else None,
-        contato_id=int(contato_id) if contato_id.isdigit() else None)
-
-    cotacao = Cotacao(
-        criado_em=agora,
-        numero=proximo_numero(session), cliente_id=cliente_id,
-        vendedor=herdado["vendedor"],
-        oportunidade_id=int(oportunidade_id) if oportunidade_id.isdigit() else None,
-        condicao_pagamento=condicao_pagamento or "30",
-        estado_destino=estado_destino or None,
-        contribuinte_icms=(contribuinte_icms == "sim"),
-        freight_type=freight_type or TipoFrete.cif.value,
-        contato_nome=herdado["contato_nome"],
-        departamento_contato=herdado["departamento_contato"],
-        validade_dias=dias,
-        validade_em=agora + timedelta(days=dias),
-        termos_texto=cfg.txt(session, "termos_padrao"),
-    )
-    _gravar_snapshot_fiscal(session, cotacao)
-    session.add(cotacao)
+    ator = usuario_da_request(request)
+    op = exigir_venda(session, ator=ator, cliente_id=cliente_id,
+                      oportunidade_id=int(oportunidade_id) if oportunidade_id.isdigit() else None,
+                      nova_venda=nova_venda)
+    cotacao = criar_cotacao_da_venda(
+        session, request, op, ator=ator,
+        contato_id=int(contato_id) if contato_id.isdigit() else None,
+        condicao_pagamento=condicao_pagamento, estado_destino=estado_destino or None,
+        contribuinte_icms=(contribuinte_icms == "sim"), freight_type=freight_type)
     session.commit()
     session.refresh(cotacao)
     return RedirectResponse(url=f"/cotacoes/{cotacao.id}", status_code=303)
