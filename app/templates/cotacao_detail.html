@@ -133,9 +133,12 @@
       <div class="card-title">
         <h3>Produtos <span class="muted" style="font-weight:400;">({{ itens|length }})</span></h3>
         {% if editavel %}
-        <div class="search-box" style="width:min(460px, 60%);">
-          <input type="search" id="busca-produto" placeholder="Adicionar produto: lençol 250 listrado, travesseiro, bath towel…" aria-label="Buscar produto">
-          <div id="resultados-busca" class="search-results" style="display:none;"></div>
+        <div class="flex" style="width:min(560px, 70%);">
+          <div class="search-box grow">
+            <input type="search" id="busca-produto" placeholder="Adicionar produto: lençol 250 listrado, travesseiro, bath towel…" aria-label="Buscar produto">
+            <div id="resultados-busca" class="search-results" style="display:none;"></div>
+          </div>
+          {% if economia %}<a href="/calculadora?cotacao_id={{ cotacao.id }}" class="btn btn-ghost btn-sm nowrap">Calcular produto novo</a>{% endif %}
         </div>
         {% endif %}
       </div>
