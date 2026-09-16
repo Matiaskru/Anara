@@ -138,3 +138,55 @@ def test_opcoes_so_oferecem_tecido_que_a_ktc_cotou(s):
     assert len(o["materiais"]) == 12
     assert all(m["price_usd_m2"] > 0 for m in o["materiais"])
     assert any(m["plain_or_stripe"] == "stripe" for m in o["materiais"])
+
+
+def test_produto_personalizado_entra_na_cotacao_com_preco_formado(s):
+    """Fase 3C: o item da calculadora entra pelo caminho canônico de "adicionar item".
+
+    Antes, a rota de salvar montava o item por conta própria e resolvia o cenário fiscal
+    sem o produto — para KTC isso não resolve — e o item entrava com preço R$ 0,00, sem
+    recomendado e sem a comissão da cotação reaplicada.
+    """
+    import asyncio
+    import json
+    from types import SimpleNamespace
+
+    from app.models import Cliente, Cotacao, CotacaoItem, Usuario
+    from app.routers.calculadora import salvar
+
+    cliente = s.exec(select(Cliente)).first()
+    if cliente is None:
+        cliente = Cliente(nome="Hotel calculadora", cidade_uf="São Paulo", finalidade="REVENDA")
+        s.add(cliente)
+        s.commit()
+        s.refresh(cliente)
+    cot = Cotacao(cliente_id=cliente.id, uf_origem_fiscal="SP", estado_destino="São Paulo",
+                  contribuinte_icms=True, finalidade="REVENDA", condicao_pagamento="30",
+                  freight_type="FOB", numero="CALC-3C-0001")
+    s.add(cot)
+    s.commit()
+    s.refresh(cot)
+    m = material(s, "300TC Sateen 100% Cotton")
+    dona = Usuario(id=1, email="calc@anara.test", nome="Dona", senha_hash="h", papel="OWNER")
+
+    class Req:
+        def __init__(self, form):
+            self.state = SimpleNamespace(usuario=dona)
+            self._form = form
+            self.url = SimpleNamespace(path="/")
+            self.headers = {"accept": "application/json"}
+            self.cookies = {}
+
+        async def form(self):
+            return self._form
+
+    form = {"familia": "Flat Sheet", "largura_cm": "200", "comprimento_cm": "400",
+            "material_id": str(m.id), "plain_or_stripe": "stripe", "quantidade": "3",
+            "cotacao_id": str(cot.id), "calculavel": "sim"}
+    resposta = json.loads(bytes(asyncio.run(salvar(Req(form), s)).body))
+    item = s.get(CotacaoItem, resposta["item_id"])
+    assert item.custo_unitario > 0
+    assert item.preco_recomendado and item.preco_recomendado > item.custo_unitario
+    assert item.preco_negociado == item.preco_recomendado
+    assert item.faturamento == aprox(item.preco_negociado * 3)
+    assert item.politica_comercial and item.icms_pct is not None

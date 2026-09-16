@@ -81,35 +81,25 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
                              "sem_custo": not bool(produto.custo_unitario)})
 
     cotacao = session.get(Cotacao, int(cotacao_id))
-    regras, _regra, _ctx = montar_regras(cotacao, session)
-    margem = ps.margem_padrao(session, produto)
+    if cotacao is None:
+        return JSONResponse({"erro": "Cotação não encontrada."}, status_code=404)
+    # O item entra pelo MESMO caminho de "adicionar produto" na cotação: cenário fiscal
+    # resolvido com o produto (KTC depende dele), preço recomendado, política congelada,
+    # comissão da cotação reaplicada e aprovação anterior invalidada. Montar o item aqui
+    # à parte deixava o produto calculado entrar com preço zero e sem recomendado.
+    from app.routers.cotacoes import adicionar_item
     quantidade = dados["quantidade"] or 1
-    # Item novo: custo resolvido pelas premissas vigentes, igual ao caminho da cotação.
-    custo, memoria_custo = ps.custo_para_precificar(session, produto)
-    custo = custo or 0.0
-
-    if custo > 0:
-        modo, valor = "margem", (dados["margem_override"] or margem.margem_pct)
-        resultado = _calcular(modo, custo, quantidade, valor, regras, produto.preco_base)
+    if produto.custo_unitario:
+        modo, valor = "margem", dados["margem_override"]     # None = margem da regra
     else:
         modo, valor = "preco", (produto.preco_base or 0.0)
-        resultado = _calcular(modo, 0.0, quantidade, valor, regras, produto.preco_base)
-
-    ordem = session.exec(select(CotacaoItem)
-                         .where(CotacaoItem.cotacao_id == cotacao.id)).all()
-    item = CotacaoItem(
-        cotacao_id=cotacao.id, produto_id=produto.id, ordem=len(ordem),
-        nome_produto=produto.nome, especificacao=produto.especificacao,
-        categoria=produto.categoria, quantidade=quantidade, custo_unitario=custo,
-        preco_base=produto.preco_base or 0.0, modo_edicao=modo, valor_editado=valor)
-    _preencher_item(session, item, produto, margem, memoria_custo)
-    _aplicar_resultado(item, resultado, regras)
-    item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
-        session, produto, cotacao, preco_negociado=resultado.preco_negociado,
-        quantidade=quantidade))
-    session.add(item)
-    session.commit()
-    session.refresh(item)
+    resposta = adicionar_item(request, cotacao.id, produto_id=produto.id, quantidade=quantidade,
+                              modo=modo, valor=valor, session=session)
+    if getattr(resposta, "status_code", 200) >= 400:
+        return resposta
+    item = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao.id)
+                        .where(CotacaoItem.produto_id == produto.id)
+                        .order_by(CotacaoItem.id.desc())).first()
     return JSONResponse({"produto_id": produto.id, "nome": produto.nome, "item_id": item.id,
                          "cotacao_id": cotacao.id,
                          "sem_custo": not bool(produto.custo_unitario)})
