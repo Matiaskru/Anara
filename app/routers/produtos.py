@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from sqlmodel import Session, select
 
 from app import pricing_service as ps
+from app import rotulos
 from app.busca import buscar as buscar_produtos
 from app.confidencial import produto_comercial
 from app.permissoes import exigir_economia, ve_economia
@@ -78,8 +79,45 @@ def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = ""
     })
 
 
+def tamanho_de(p: Produto):
+    """`180x280` a partir das medidas cadastradas; `None` sem medida."""
+    if p.largura_cm and p.comprimento_cm:
+        return f"{int(p.largura_cm)}x{int(p.comprimento_cm)}"
+    return None
+
+
+@router.get("/produtos/facetas")
+def facetas(request: Request, session: Session = Depends(get_session)):
+    """As opções dos filtros da busca (Fase 3C): família, fornecedor, tamanho, fios, gramatura.
+
+    Derivadas do catálogo ativo — nada cadastrado à mão. É informação comercial: a
+    vendedora usa os mesmos filtros que o cotador offline tinha.
+    """
+    from app import rotulos
+    produtos = session.exec(select(Produto).where(Produto.ativo == True)).all()  # noqa: E712
+    fornecedores = {f.id: f for f in session.exec(select(Fornecedor)).all()}
+    familias = {}
+    for p in produtos:
+        if p.familia:
+            familias[p.familia] = familias.get(p.familia, 0) + 1
+    tamanhos = sorted({t for t in (tamanho_de(p) for p in produtos) if t},
+                      key=lambda t: (int(t.split("x")[0]), int(t.split("x")[1])))
+    return JSONResponse({
+        "familias": [{"valor": f, "rotulo": rotulos.familia(f), "n": n}
+                     for f, n in sorted(familias.items(), key=lambda x: rotulos.familia(x[0]))],
+        "fornecedores": [{"codigo": f.codigo, "nome": f.nome}
+                         for f in sorted(fornecedores.values(), key=lambda f: f.nome)
+                         if any(p.fornecedor_id == f.id for p in produtos)],
+        "tamanhos": tamanhos,
+        "fios": sorted({int(p.thread_count) for p in produtos if p.thread_count}),
+        "gramaturas": sorted({int(p.gsm) for p in produtos if p.gsm}),
+        "total": len(produtos),
+    })
+
+
 @router.get("/produtos/buscar")
-def buscar(request: Request, q: str = "", fornecedor: str = "",
+def buscar(request: Request, q: str = "", fornecedor: str = "", familia: str = "",
+           tamanho: str = "", fios: str = "", gramatura: str = "",
            session: Session = Depends(get_session)):
     """Busca da tela de cotação: entende português e inglês, vários termos e acentos.
 
@@ -93,8 +131,18 @@ def buscar(request: Request, q: str = "", fornecedor: str = "",
     if fornecedor:
         produtos = [p for p in produtos if fornecedores.get(p.fornecedor_id)
                     and fornecedores[p.fornecedor_id].codigo == fornecedor]
+    # Filtros da Fase 3C — os mesmos do cotador offline. Com filtro e sem texto, a busca
+    # devolve o catálogo filtrado em ordem alfabética.
+    if familia:
+        produtos = [p for p in produtos if (p.familia or "") == familia]
+    if tamanho:
+        produtos = [p for p in produtos if tamanho_de(p) == tamanho]
+    if fios.isdigit():
+        produtos = [p for p in produtos if p.thread_count and int(p.thread_count) == int(fios)]
+    if gramatura.isdigit():
+        produtos = [p for p in produtos if p.gsm and int(p.gsm) == int(gramatura)]
     produtos = buscar_produtos(produtos, q, {i: f.nome for i, f in fornecedores.items()},
-                               limite=40)
+                               limite=60)
     # A margem que a tela oferece como default é a da regra VIGENTE, resolvida agora — não a
     # coluna-cache `Produto.margem_padrao_pct`, que envelhece quando a política muda (a de
     # 16/09/2026 mudou todas). `preco_travado` é operacional, como `sem_custo`: diz que a
@@ -114,6 +162,8 @@ def buscar(request: Request, q: str = "", fornecedor: str = "",
         "precisa_revisao": p.precisa_revisao, "revisao_motivo": p.revisao_motivo,
         "sem_custo": not bool(p.custo_unitario),
         "thread_count": p.thread_count, "gsm": p.gsm,
+        "familia_rotulo": rotulos.familia(p.familia) if p.familia else None,
+        "tamanho": tamanho_de(p),
     } for p in produtos]
     if ve_economia(request):
         return JSONResponse(completo)

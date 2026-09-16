@@ -638,3 +638,14 @@ details.card > summary { list-style: none; }
 details.card > summary::-webkit-details-marker { display: none; }
 details.card > summary::before { content: "▸ "; color: var(--gray); }
 details.card[open] > summary::before { content: "▾ "; }
+
+/* Lista de resultados da busca de produto na cotação (Fase 3C) */
+.lista-busca { max-height: 420px; overflow-y: auto; }
+.lista-busca .item { display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 8px 14px; border-top: 1px solid var(--line); cursor: pointer; }
+.lista-busca .item:hover, .lista-busca .item.ativo { background: var(--row-hover); }
+.lista-busca .item .nome { font-weight: 700; font-size: 12.5px; }
+.lista-busca .item .spec { font-size: 11px; color: var(--gray); }
+.lista-busca .item .meta { font-size: 10.5px; color: var(--gray-2); }
+.lista-busca .item .lado { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.lista-busca .vazio { padding: 16px; }

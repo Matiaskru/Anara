@@ -69,8 +69,9 @@ CAMPOS_ITEM_COMERCIAL = (
 
 #: Campos que um produto pode mostrar num resultado de busca comercial.
 CAMPOS_PRODUTO_COMERCIAL = (
-    "id", "nome", "especificacao", "categoria", "familia", "preco_base",
-    "fornecedor", "sem_custo", "thread_count", "gsm", "precisa_revisao", "preco_travado",
+    "id", "nome", "especificacao", "categoria", "familia", "familia_rotulo", "tamanho",
+    "preco_base", "fornecedor", "sem_custo", "thread_count", "gsm", "precisa_revisao",
+    "preco_travado",
 )
 
 #: Totais de cotação que um vendedor pode ver: o que ele vai cobrar, e nada sobre o que custa.

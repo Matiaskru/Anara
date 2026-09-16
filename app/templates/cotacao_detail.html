@@ -133,29 +133,43 @@
       <div class="card-title">
         <h3>Produtos <span class="muted" style="font-weight:400;">({{ itens|length }})</span></h3>
         {% if editavel %}
-        <div class="flex" style="width:min(560px, 70%);">
-          <div class="search-box grow">
-            <input type="search" id="busca-produto" placeholder="Adicionar produto: lençol 250 listrado, travesseiro, bath towel…" aria-label="Buscar produto">
-            <div id="resultados-busca" class="search-results" style="display:none;"></div>
-          </div>
-          {% if economia %}<a href="/calculadora?cotacao_id={{ cotacao.id }}" class="btn btn-ghost btn-sm nowrap">Calcular produto novo</a>{% endif %}
+        <div class="flex">
+          {% if economia %}<a href="/calculadora?cotacao_id={{ cotacao.id }}" class="btn btn-ghost btn-sm nowrap">Produto personalizado</a>{% endif %}
+          <button class="btn btn-copper btn-sm" type="button" id="btn-abrir-busca" aria-expanded="false" aria-controls="painel-busca">+ Adicionar produto</button>
         </div>
         {% endif %}
       </div>
       {% if editavel %}
-      <div id="form-add-item" class="banner banner-info" hidden>
-        <div class="grow">
-          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
-            <div><strong id="produto-selecionado-nome"></strong><div class="small" id="produto-selecionado-meta"></div></div>
-            <div class="flex">
-              <label for="add-qtd" style="margin:0;">Qtd.</label>
-              <input type="number" id="add-qtd" min="1" value="1" class="input-sm input-num" style="width:80px;">
-              <span class="small" id="add-preview"></span>
-              <button class="btn btn-copper btn-sm" type="button" onclick="adicionarItem()">Adicionar</button>
-              <button class="btn btn-ghost btn-sm" type="button" onclick="cancelarAdd()">Cancelar</button>
+      {# Painel de busca com os filtros do cotador offline: família, fornecedor, tamanho, fios, gramatura #}
+      <div id="painel-busca" class="panel mb-12" hidden>
+        <div class="panel-sec">
+          <input type="search" id="busca-produto" placeholder="Buscar em português: lençol 250 listrado, toalha de banho 550, edredom Daune…" aria-label="Buscar produto" autocomplete="off">
+          <div class="filters mt-8" style="margin-bottom:0;">
+            <select id="f-familia" data-filtro aria-label="Família"><option value="">Família: todas</option></select>
+            <select id="f-fornecedor" data-filtro aria-label="Fornecedor"><option value="">Fornecedor: todos</option></select>
+            <select id="f-tamanho" data-filtro aria-label="Tamanho"><option value="">Tamanho: todos</option></select>
+            <select id="f-fios" data-filtro aria-label="Fios"><option value="">Fios: todos</option></select>
+            <select id="f-gramatura" data-filtro aria-label="Gramatura"><option value="">Gramatura: todas</option></select>
+            <button class="btn btn-ghost btn-sm" type="button" id="btn-limpar-busca">Limpar</button>
+            <span class="spacer"></span>
+            <span class="muted small" id="busca-nota">Digite parte do nome ou use os filtros.</span>
+          </div>
+        </div>
+        <div id="form-add-item" class="banner banner-info" hidden style="margin:10px 14px 0;">
+          <div class="grow">
+            <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+              <div><strong id="produto-selecionado-nome"></strong><div class="small" id="produto-selecionado-meta"></div></div>
+              <div class="flex">
+                <label for="add-qtd" style="margin:0;">Qtd.</label>
+                <input type="number" id="add-qtd" min="1" value="1" class="input-sm input-num" style="width:80px;">
+                <span class="small" id="add-preview"></span>
+                <button class="btn btn-copper btn-sm" type="button" onclick="adicionarItem()">Adicionar</button>
+                <button class="btn btn-ghost btn-sm" type="button" onclick="cancelarAdd()">Cancelar</button>
+              </div>
             </div>
           </div>
         </div>
+        <div id="resultados-busca" class="lista-busca"></div>
       </div>
       {% endif %}
       <div class="tw">

@@ -163,6 +163,17 @@ TIPO_ATIVIDADE = {
     "FOLLOW_UP": "Follow-up", "OUTRO": "Outro",
 }
 
+#: Famílias do catálogo em português — a vendedora filtra por "Lençol plano", não "Flat Sheet".
+FAMILIA = {
+    "Flat Sheet": "Lençol plano", "Fitted Sheet": "Lençol com elástico", "Top Sheet": "Lençol de cima",
+    "Duvet Cover": "Capa de edredom", "Duvet Insert": "Edredom", "Pillow Case": "Fronha",
+    "Pillow": "Travesseiro", "Pillow Protector": "Protetor de travesseiro",
+    "Mattress Protector": "Protetor de colchão", "Mattress Topper": "Pillow top / topper",
+    "Bath Towel": "Toalha de banho", "Hand Towel": "Toalha de rosto", "Wash Cloth": "Toalha de lavabo",
+    "Bath Mat": "Toalha de piso", "Pool Towel": "Toalha de piscina", "Bathrobe": "Roupão",
+    "Bed Runner": "Peseira", "Slipper": "Chinelo", "Cushion Cover": "Capa de almofada",
+}
+
 #: Tipos de evento da timeline da venda (Fase 3C) — rótulo curto para a tela.
 EVENTO_TIMELINE = {
     "criacao": "Criação", "etapa": "Status", "reabertura": "Reaberta", "atualizacao": "Atualização",
@@ -293,6 +304,10 @@ def papel(codigo) -> str:
 
 def evento_timeline(codigo) -> str:
     return _traduz(EVENTO_TIMELINE, codigo)
+
+
+def familia(codigo) -> str:
+    return _traduz(FAMILIA, codigo)
 
 
 def status_financeiro(codigo) -> str:

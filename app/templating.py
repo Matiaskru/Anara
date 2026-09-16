@@ -139,7 +139,7 @@ def custo_pendente(status) -> bool:
 
 #: Versão dos arquivos estáticos. Entra como `?v=` nas URLs de CSS/JS para o navegador não
 #: reaproveitar um cache da fase anterior (o JavaScript antigo quebrava a tela nova).
-VERSAO_ESTATICA = "3c1"
+VERSAO_ESTATICA = "3c2"
 templates.env.globals["versao_estatica"] = VERSAO_ESTATICA
 templates.env.globals["custo_pendente"] = custo_pendente
 templates.env.globals["pill_pos_venda"] = pill_pos_venda
@@ -208,6 +208,7 @@ def _registrar_rotulos():
     templates.env.filters["explicacao_custo"] = rotulos.explicacao_custo
     templates.env.globals["rotulo_evento"] = rotulos.evento_timeline
     templates.env.filters["rotulo_financeiro"] = rotulos.status_financeiro
+    templates.env.filters["rotulo_familia"] = rotulos.familia
 
 
 _registrar_rotulos()

@@ -211,20 +211,69 @@
 
   // ------------------------------------------------------------------------
   // Busca e inclusão de produto (sempre no preço recomendado; ajuste na linha)
+  // Painel com os filtros do cotador offline: família, fornecedor, tamanho, fios, gramatura.
+  // As opções vêm de /produtos/facetas; a lista, de /produtos/buscar com os filtros.
   // ------------------------------------------------------------------------
   let produtoSelecionado = null;
+  let ultimosResultados = [];
+  const painel = document.getElementById("painel-busca");
   const buscaInput = document.getElementById("busca-produto");
   const resultadosDiv = document.getElementById("resultados-busca");
-  if (buscaInput) {
-    const buscar = debounce(async () => {
-      const q = buscaInput.value.trim();
-      if (q.length < 2) { resultadosDiv.style.display = "none"; return; }
-      const r = await anaraFetch(`/produtos/buscar?q=${encodeURIComponent(q)}`);
-      if (!r.ok) return;
-      renderResultados(r.dados || []);
-    }, 200);
+  const btnAbrir = document.getElementById("btn-abrir-busca");
+  const filtros = $$("#painel-busca [data-filtro]");
+  let facetasCarregadas = false;
+
+  async function carregarFacetas() {
+    if (facetasCarregadas) return;
+    const r = await anaraFetch("/produtos/facetas");
+    if (!r.ok) return;
+    const f = r.dados;
+    const preencher = (id, opcoes) => {
+      const sel = document.getElementById(id);
+      opcoes.forEach(([v, rot]) => { const o = document.createElement("option"); o.value = v; o.textContent = rot; sel.appendChild(o); });
+    };
+    preencher("f-familia", f.familias.map(x => [x.valor, `${x.rotulo} (${x.n})`]));
+    preencher("f-fornecedor", f.fornecedores.map(x => [x.codigo, x.nome]));
+    preencher("f-tamanho", f.tamanhos.map(t => [t, t.replace("x", " × ")]));
+    preencher("f-fios", f.fios.map(t => [String(t), t + " fios"]));
+    preencher("f-gramatura", f.gramaturas.map(t => [String(t), t + " g/m²"]));
+    const nota = document.getElementById("busca-nota");
+    if (nota) nota.textContent = `Digite parte do nome ou use os filtros. ${f.total} produtos no catálogo.`;
+    facetasCarregadas = true;
+  }
+
+  function filtrosAtivos() {
+    return filtros.some(s => s.value) || (buscaInput.value.trim().length >= 2);
+  }
+
+  const buscar = debounce(async () => {
+    if (!filtrosAtivos()) { resultadosDiv.innerHTML = ""; return; }
+    const params = new URLSearchParams({
+      q: buscaInput.value.trim(),
+      familia: document.getElementById("f-familia").value,
+      fornecedor: document.getElementById("f-fornecedor").value,
+      tamanho: document.getElementById("f-tamanho").value,
+      fios: document.getElementById("f-fios").value,
+      gramatura: document.getElementById("f-gramatura").value,
+    });
+    const r = await anaraFetch(`/produtos/buscar?${params}`);
+    if (!r.ok) { anaraToast(r.erro, "erro"); return; }
+    renderResultados(r.dados || []);
+  }, 200);
+
+  if (btnAbrir) {
+    btnAbrir.addEventListener("click", async () => {
+      const aberto = !painel.hidden;
+      painel.hidden = aberto;
+      btnAbrir.setAttribute("aria-expanded", String(!aberto));
+      btnAbrir.textContent = aberto ? "+ Adicionar produto" : "Fechar";
+      if (!aberto) { await carregarFacetas(); buscaInput.focus(); }
+    });
     buscaInput.addEventListener("input", buscar);
-    document.addEventListener("click", (e) => { if (!resultadosDiv.contains(e.target) && e.target !== buscaInput) resultadosDiv.style.display = "none"; });
+    filtros.forEach(s => s.addEventListener("change", buscar));
+    document.getElementById("btn-limpar-busca").addEventListener("click", () => {
+      buscaInput.value = ""; filtros.forEach(s => s.value = ""); resultadosDiv.innerHTML = ""; buscaInput.focus();
+    });
   }
   function tagFornecedor(nome) {
     if (!nome) return "";
@@ -232,28 +281,40 @@
     return `<span class="tag ${classe}">${esc(nome.split(" ")[0])}</span>`;
   }
   function renderResultados(produtos) {
+    ultimosResultados = produtos;
     if (!produtos.length) {
-      resultadosDiv.innerHTML = `<div class="item muted">Nenhum produto encontrado.${ECONOMIA ? ` <a class="link" href="/calculadora?cotacao_id=${COTACAO_ID}">Calcular um produto novo</a>` : ""}</div>`;
-      resultadosDiv.style.display = "block"; return;
+      resultadosDiv.innerHTML = `<div class="vazio muted">Nenhum produto encontrado. Tente outra palavra ou limpe os filtros.${ECONOMIA ? ` <a class="link" href="/calculadora?cotacao_id=${COTACAO_ID}">Calcular um produto personalizado</a>` : ""}</div>`;
+      return;
     }
-    resultadosDiv.innerHTML = produtos.map((p, i) => `
-      <div class="item" data-idx="${i}">
-        <div class="nome">${esc(p.nome)} ${tagFornecedor(p.fornecedor)}${p.preco_travado ? ' <span class="lock">🔒 preço fixo</span>' : ""}</div>
-        <div class="spec">${esc(p.especificacao || p.categoria || "")}${p.sem_custo ? ' · <span class="tag tag-review">sob consulta</span>' : ""}</div>
-      </div>`).join("");
-    resultadosDiv.style.display = "block";
-    $$(".item[data-idx]", resultadosDiv).forEach(el => el.addEventListener("click", () => selecionarProduto(produtos[parseInt(el.dataset.idx, 10)])));
+    resultadosDiv.innerHTML = produtos.map((p, i) => {
+      const meta = [p.familia_rotulo || p.familia, p.tamanho ? p.tamanho.replace("x", " × ") : null,
+                    p.thread_count ? p.thread_count + " fios" : null, p.gsm ? p.gsm + " g/m²" : null].filter(Boolean).map(esc).join(" · ");
+      const lado = p.sem_custo ? '<span class="tag tag-review">sob consulta</span>'
+                 : (p.preco_travado ? '<span class="lock">🔒 preço fixo</span>' : "");
+      return `<div class="item" data-idx="${i}" role="button" tabindex="0">
+        <div><div class="nome">${esc(p.nome)} ${tagFornecedor(p.fornecedor)}</div>
+          <div class="spec">${esc(p.especificacao || p.categoria || "")}</div>
+          <div class="meta">${meta}</div></div>
+        <div class="lado">${lado}<button class="btn btn-ghost btn-xs" type="button">Escolher</button></div>
+      </div>`;
+    }).join("");
+    $$(".item[data-idx]", resultadosDiv).forEach(el => {
+      const escolher = () => selecionarProduto(ultimosResultados[parseInt(el.dataset.idx, 10)]);
+      el.addEventListener("click", escolher);
+      el.addEventListener("keydown", (e) => { if (e.key === "Enter") escolher(); });
+    });
   }
   function selecionarProduto(p) {
     produtoSelecionado = p;
-    resultadosDiv.style.display = "none"; buscaInput.value = "";
+    $$(".item.ativo", resultadosDiv).forEach(el => el.classList.remove("ativo"));
     const box = document.getElementById("form-add-item"); box.hidden = false;
     document.getElementById("produto-selecionado-nome").innerHTML = `${esc(p.nome)} ${tagFornecedor(p.fornecedor)}`;
-    const meta = [p.especificacao, p.familia].filter(Boolean).map(esc);
+    const meta = [p.especificacao, p.familia_rotulo || p.familia].filter(Boolean).map(esc);
     if (p.sem_custo) meta.push('<span class="tag tag-review">sob consulta — sem preço automático</span>');
     if (p.precisa_revisao && p.revisao_motivo) meta.push(esc(p.revisao_motivo));
     document.getElementById("produto-selecionado-meta").innerHTML = meta.join(" · ");
     document.getElementById("add-qtd").value = 1; document.getElementById("add-qtd").focus();
+    box.scrollIntoView({block: "nearest"});
     atualizarPreviewAdd();
   }
   window.cancelarAdd = function () { produtoSelecionado = null; document.getElementById("form-add-item").hidden = true; };
