@@ -134,12 +134,36 @@ e **a data decide** qual delas o próximo cálculo usa.
 - Lista **fechada** de premissas editáveis pela tela. Formulário genérico sobre `chave`
   deixaria alguém cadastrar "icms = banana" e achar que configurou algo
 
-## Aprovação
+## Aprovação e política comercial (Fase 3A — 16/09/2026)
 
-Qualquer preço negociado **abaixo** do recomendado exige aprovação administrativa, mesmo que a
-margem final continue boa — a autonomia de desconto do vendedor é zero. Preço acima do
-recomendado é livre, com recálculo de comissão. Alteração posterior invalida a aprovação
-anterior. Enquanto aguarda aprovação: salva como rascunho, **não** gera PDF final.
+**A autonomia de desconto deixou de ser zero em 16/09/2026.** A política comercial canônica
+(`app/politica_comercial.py`, `app/comercial_service.py`, `MargemRegra` com política) dá à
+vendedora um **piso de margem** por item, congelado no item (`piso_margem_pct`):
+
+- **Daune:** margem-alvo 12%, piso 12% (sem colchão), comissão **fixa 5%**, preço
+  **travado** — vendedora e admin recebem 409 ao tentar outro unitário na cotação comum.
+  Mudar isso é nova política versionada, não override
+- **Decor Tricot:** alvo 12%, piso 10%, comissão 10% → 5%
+- **Demais (KTC, geral):** alvo = anterior + 2 p.p., piso = anterior − 1 p.p., comissão 10% → 5%
+- **Comissão é da cotação, não do item:** desconto **ponderado por valor** do bloco variável
+  (não-Daune) → `max(5%, 10% × (1 − desconto))` → presa pela **comissão máxima que preserva o
+  piso** de cada item (da decomposição canônica do motor) → nunca abaixo de 5% sozinha
+- **Abaixo do piso com 5%** é **exceção comercial** (`MARGEM_ABAIXO_PISO`), aprovável pelo
+  workflow canônico — não é blocker. Validação **item a item**; um item rentável não esconde outro
+- **Preço acima do recomendado** é livre; a comissão nunca passa de 10%
+- **Item anterior à política** (sem `politica_comercial`) continua avaliado como foi formado
+  (comissão por faixa, autonomia zero) e é apontado por `premissas_desatualizadas`; reprecificar é
+  ato explícito
+- **A vendedora vê a SUA comissão estimada** (R$ e taxa efetiva da cotação) — mudança deliberada
+  da regra da Sessão 4. Continua sem ver custo, margem, piso, lucro, comissão por item e a
+  mecânica de proteção. É **estimativa de pricing** (base: receita comercial); a comissão pagável
+  é do financeiro (OQ-01 no audit)
+- Alteração de preço, quantidade ou política invalida a aprovação anterior (os campos da política
+  entram no fingerprint). Enquanto aguarda aprovação: rascunho, **não** gera PDF final
+- **Frete** não entra no desconto nem na base da comissão
+- Impacto e trilha: `relatorios/impacto_politica_comercial_2026-09-16.md`,
+  `scripts/aplicar_politica_comercial_2026_09_16.py`, AuditLog correlação
+  `politica-comercial-2026-09-16-*`. **Offline V2 está STALE** — não distribuir como preço
 
 ## Workflow comercial (Sessão 6)
 
@@ -151,8 +175,9 @@ do workflow — dar sentido a eles é da Sessão 7.
 - **Aprovação aprova uma CONFIGURAÇÃO, não uma cotação.** Toda decisão fica presa a um
   `fingerprint` do estado material. Mudou item, quantidade, preço, destino fiscal, condição
   ou premissa — a decisão vira `INVALIDADA`: ela era sobre outra proposta
-- **Preço abaixo do recomendado exige aprovação, mesmo com margem boa.** A autonomia de
-  desconto do vendedor é zero. Margem real abaixo da alvo também exige, de forma independente
+- **Exceção comercial desde 16/09/2026:** margem realizada abaixo do **piso** do item
+  (`MARGEM_ABAIXO_PISO`) — ver "Aprovação e política comercial". Preço travado (Daune) ou item
+  anterior à política: preço abaixo do recomendado continua sendo exceção (`PRECO_ABAIXO`)
 - **`preco_recomendado` ≠ `preco_base`.** O recomendado é o que o motor forma para o cenário
   **desta** cotação; o base é a referência do catálogo, formada noutro contexto fiscal.
   Medir desconto contra o base faria toda venda interestadual parecer exceção
@@ -319,6 +344,9 @@ Alembic em `0013` (`auditlog`, vigência da condição de pagamento, `can_manage
 **Sessão 7 — CRM, pipeline e UX comercial: EXECUTADA, aguardando auditoria.** Alembic em `0017`.
 
 **Sessão 8 — relatórios, saúde e prontidão para o piloto: EXECUTADA.** Sem migration nova — relatórios são derivados. O sistema sobe, autentica e responde: `scripts/smoke_test.py`.
+
+**Fase 3A — política comercial canônica (16/09/2026): EXECUTADA.** Alembic em `0018`. 1142
+testes. Backend pronto para a UX reativa; a UX em si é a próxima fase, ainda não autorizada.
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

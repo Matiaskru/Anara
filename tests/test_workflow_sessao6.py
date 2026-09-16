@@ -109,7 +109,7 @@ def add_item(session, cot, produto, quantidade=5.0, ator=None):
     from app.routers.cotacoes import adicionar_item
     chamar(adicionar_item, RequestFalsa(ator or _novo_usuario("ADMIN")),
            cotacao_id=cot.id, produto_id=produto.id, quantidade=quantidade,
-           modo="margem", valor=0.14, session=session)
+           modo="margem", valor=None, session=session)
     session.commit()
     return ws.itens_de(session, cot.id)[-1]
 
@@ -177,13 +177,14 @@ def test_preco_acima_do_recomendado_nao_exige_aprovacao(session, daune, cliente)
 
 
 def test_margem_abaixo_do_alvo_exige_aprovacao(session, daune, cliente):
+    """Daune (política de 16/09/2026): piso = alvo = 12%. Abaixo dele é exceção de PISO."""
     p = novo_produto(session, daune, custo=100.0)
     cot = nova_cotacao(session, cliente)
     item = add_item(session, cot, p)
     negociar(session, cot, item, recomendado_de(item) - D("30.00"))
 
     motivos = {e.motivo for e in ws.avaliar(session, cot).excecoes}
-    assert wf.PRECO_ABAIXO in motivos and wf.MARGEM_ABAIXO in motivos
+    assert wf.PRECO_ABAIXO in motivos and wf.MARGEM_ABAIXO_PISO in motivos
 
 
 def test_p0_desconto_num_item_nao_se_esconde_atras_de_outro(session, daune, cliente):
@@ -230,17 +231,22 @@ def test_p0_negociacao_recalcula_todos_os_componentes(session, daune, cliente):
                                    + D(item.comissao_valor) + D(item.lucro))
 
 
-def test_p0_comissao_muda_quando_a_negociacao_cruza_a_faixa(session, daune, cliente):
-    """A faixa de comissão é função do markup — e o markup é função do preço cobrado."""
+def test_comissao_daune_e_fixa_em_qualquer_preco(session, daune, cliente):
+    """Política de 16/09/2026: a comissão Daune é 5% fixa — não acompanha markup nem preço.
+
+    Até a Fase 3A a comissão era por faixa de markup e este teste provava que ela cruzava
+    faixas com o preço. A variação por desconto passou a ser da cotação inteira, para os
+    itens não-Daune — coberta em `test_negociacao_comercial.py`.
+    """
     p = novo_produto(session, daune, custo=100.0)
     cot = nova_cotacao(session, cliente)
     item = add_item(session, cot, p)
 
-    faixas = set()
+    comissoes = set()
     for preco in ("250.00", "300.00", "400.00", "600.00"):
         negociar(session, cot, item, preco)
-        faixas.add(D(item.comissao_pct))
-    assert len(faixas) > 1, "a comissão não acompanhou o markup"
+        comissoes.add(D(item.comissao_pct))
+    assert comissoes == {D("0.05")}
 
 
 # ===========================================================================
@@ -389,7 +395,7 @@ def test_p0_emitida_e_imutavel(session, daune, cliente):
     from app.routers.cotacoes import adicionar_item, atualizar_cabecalho, remover_item
     req = RequestFalsa(aprovador())
     for funcao, kw in ((adicionar_item, dict(produto_id=p.id, quantidade=1.0,
-                                             modo="margem", valor=0.14)),
+                                             modo="margem", valor=None)),
                        (remover_item, dict(item_id=item.id)),
                        (atualizar_cabecalho, dict(condicao_pagamento="30/60"))):
         with pytest.raises(HTTPException) as erro:

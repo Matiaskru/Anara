@@ -52,15 +52,17 @@ def margens_isoladas(session):
     resolvida lá — e o teste que quebraria seria o de outra pessoa, sem relação com o que
     este arquivo estava provando.
     """
-    antes = {r.id for r in session.exec(select(MargemRegra)).all()}
+    antes = {r.id: r.valid_to for r in session.exec(select(MargemRegra)).all()}
     yield
     for r in session.exec(select(MargemRegra)).all():
         if r.id not in antes:
             session.delete(r)
-    # e reabre a vigência das regras que o teste encerrou
+    # e devolve a vigência que cada regra tinha ANTES do teste — não "reabre o que fechou
+    # hoje": as 21 regras anteriores à política de 16/09/2026 nasceram encerradas nessa data,
+    # e reabri-las faria a régua antiga competir com a nova
     for r in session.exec(select(MargemRegra)).all():
-        if r.id in antes and r.valid_to == HOJE:
-            r.valid_to = None
+        if r.id in antes and r.valid_to != antes[r.id]:
+            r.valid_to = antes[r.id]
             session.add(r)
     session.commit()
 
@@ -450,9 +452,12 @@ def test_rascunho_em_dia_nao_e_marcado(session, daune, ator):
     x = novo_produto(session, daune, "DRAFT-2", custo=100.0)
     versionar(session, x, "100.00", fonte="V1", ator=ator)
     session.commit()
+    from app import politica_comercial as pol
     item = CotacaoItem(cotacao_id=0, produto_id=x.id, nome_produto=x.nome, quantidade=1,
                        custo_unitario=100.0, preco_base=200.0, preco_negociado=200.0,
-                       margem_liquida=0.14, faturamento=200.0, custo_total=100.0, lucro=10.0)
+                       margem_liquida=0.14, faturamento=200.0, custo_total=100.0, lucro=10.0,
+                       # um item de hoje carrega a política que o formou (Daune)
+                       politica_comercial=pol.ROTULO, piso_margem_pct=0.12, comissao_formacao_pct=0.05, preco_travado=True)
     session.add(item)
     session.commit()
     assert adm.premissas_desatualizadas(session, None, [item])["desatualizado"] is False
@@ -940,7 +945,7 @@ def _montar_item(session, cotacao, produto, ator_req):
     from app.routers.admin import _erro  # noqa: F401  (garante import do módulo)
     from app.routers.cotacoes import adicionar_item
     _chamar(adicionar_item, ator_req, cotacao_id=cotacao.id, produto_id=produto.id,
-            quantidade=3.0, modo="margem", valor=0.14, session=session)
+            quantidade=3.0, modo="margem", valor=None, session=session)
     session.commit()
     return session.exec(select(CotacaoItem)
                         .where(CotacaoItem.cotacao_id == cotacao.id)).all()[-1]

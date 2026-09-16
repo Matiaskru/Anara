@@ -43,6 +43,18 @@ CAMPOS_CONFIDENCIAIS = frozenset({
     # memória e premissas
     "memoria", "memoria_json", "memoria_calculo", "memoria_do_preco", "memoria_fiscal",
     "etapas", "waterfall", "premissas", "cost_method", "custo_confianca",
+    # política comercial de 16/09/2026 — a mecânica de proteção da margem é interna. A
+    # vendedora vê a comissão estimada da cotação (`comissao_estimada_*`); não vê o piso,
+    # a comissão por item, a máxima para o piso nem quanto a negociação consumiu de margem.
+    "piso_margem_pct", "piso_pct", "margem_piso", "margem_anterior_pct",
+    "comissao_formacao_pct", "comissao_aplicada_pct", "comissao_max_piso_pct",
+    "comissao_maxima_piso_pct", "comissao_proporcional_pct", "comissao_variavel_pct",
+    "comissao_base_pct", "comissao_min_pct", "comissao_travada_valor",
+    "comissao_variavel_valor", "receita_comissionavel", "desconto_ratio_comissao",
+    "recomendado_variavel", "negociado_variavel", "limitada_pelo_piso", "limitada_por",
+    "absorvido_por_comissao", "absorvido_por_margem", "absorvido_por_impostos_e_frete",
+    "margem_realizada_pct", "margem_agregada_pct", "viola_piso", "deficit_unitario",
+    "tolerancia_unitaria", "economia", "politica_comercial",
 })
 
 #: Campos que um item de cotação pode mostrar a um vendedor. Tudo o mais é cortado.
@@ -50,16 +62,20 @@ CAMPOS_ITEM_COMERCIAL = (
     "id", "produto_id", "ordem", "nome_produto", "especificacao", "categoria",
     "quantidade", "preco_negociado", "preco_base", "faturamento",
     "diferenca_pct_vs_base", "modo_edicao", "valor_editado",
+    # Fase 3A: o recomendado é a referência que a vendedora negocia a partir de; se a linha é
+    # editável (Daune não é) e por quê.
+    "preco_recomendado", "editavel", "motivo_nao_editavel", "preco_travado", "total_linha",
 )
 
 #: Campos que um produto pode mostrar num resultado de busca comercial.
 CAMPOS_PRODUTO_COMERCIAL = (
     "id", "nome", "especificacao", "categoria", "familia", "preco_base",
-    "fornecedor", "sem_custo", "thread_count", "gsm", "precisa_revisao",
+    "fornecedor", "sem_custo", "thread_count", "gsm", "precisa_revisao", "preco_travado",
 )
 
 #: Totais de cotação que um vendedor pode ver: o que ele vai cobrar, e nada sobre o que custa.
-CAMPOS_TOTAIS_COMERCIAL = ("faturamento", "num_itens")
+CAMPOS_TOTAIS_COMERCIAL = ("faturamento", "num_itens",
+                           "comissao_estimada_valor", "comissao_estimada_pct_efetiva")
 
 
 def _limpar(valor: Any) -> Any:

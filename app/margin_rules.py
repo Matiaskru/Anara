@@ -3,6 +3,15 @@
 A margem aqui é sempre **margem líquida**: o que sobra depois de custo, ICMS, PIS/COFINS,
 encargo financeiro e comissão. Não é markup.
 
+Desde 16/09/2026 (Fase 3A) a regra resolvida carrega a **política comercial** do escopo
+junto com a margem: piso de autonomia da vendedora, comissão de formação do recomendado e
+preço travado. Regra sem esses campos é anterior à política e continua valendo com a
+semântica antiga para quem a pinou.
+
+**A resolução é por data.** `ref` default é hoje: uma regra encerrada ontem não forma preço
+hoje, e uma cadastrada para o ano que vem não forma preço agora. Passar `ref=None`
+explicitamente ignora a vigência — é para inspeção, não para precificar.
+
 Precedência (a de menor `prioridade` ganha; empate desempata pela regra mais específica):
 
 1. override explícito feito na cotação — tratado na cotação, não aqui;
@@ -12,10 +21,14 @@ Precedência (a de menor `prioridade` ganha; empate desempata pela regra mais es
 5. regra geral.
 """
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Optional, Sequence
 
 from app.dinheiro import D, para_float
+
+#: Sentinela: "sem filtro de vigência". Diferente de `None`, que agora significa "hoje".
+SEM_VIGENCIA = object()
 
 
 @dataclass
@@ -24,10 +37,24 @@ class MargemResolvida:
     regra: str
     regra_id: Optional[int] = None
     origem: str = "tabela"
+    # --- política comercial do escopo (Fase 3A); None = regra anterior à política ---
+    piso_pct: Optional[Decimal] = None
+    comissao_formacao_pct: Optional[Decimal] = None
+    preco_travado: bool = False
+    politica: Optional[str] = None
+    margem_anterior_pct: Optional[Decimal] = None
+
+    @property
+    def tem_politica(self) -> bool:
+        return self.politica is not None
 
     def como_dict(self) -> dict:
         return {"margem_pct": para_float(self.margem_pct), "regra": self.regra,
-                "regra_id": self.regra_id, "origem": self.origem}
+                "regra_id": self.regra_id, "origem": self.origem,
+                "piso_pct": para_float(self.piso_pct),
+                "comissao_formacao_pct": para_float(self.comissao_formacao_pct),
+                "preco_travado": bool(self.preco_travado), "politica": self.politica,
+                "margem_anterior_pct": para_float(self.margem_anterior_pct)}
 
 
 MARGEM_ULTIMO_RECURSO = Decimal("0.15")
@@ -91,9 +118,20 @@ def resolver_margem(regras: Sequence, fornecedor_id: Optional[int] = None,
                     familia: Optional[str] = None, thread_count: Optional[int] = None,
                     sku_key: Optional[str] = None,
                     override_pct: Optional[float] = None, ref=None) -> MargemResolvida:
+    """A regra vigente em `ref` (default: hoje) para este produto.
+
+    **C-NEW-13.** Até 16/09/2026 `pricing_service.margem_padrao` chamava isto sem `ref`, e
+    `ref=None` era "ignore a vigência": uma regra encerrada pelo painel de administração
+    continuava formando preço, e a nova só ganhava se tivesse prioridade menor. Agora `None`
+    resolve por hoje; quem quer a lista sem filtro de data passa `SEM_VIGENCIA`.
+    """
     if override_pct is not None:
         return MargemResolvida(D(override_pct), "Margem definida manualmente nesta cotação",
                                origem="override")
+    if ref is None:
+        ref = date.today()
+    elif ref is SEM_VIGENCIA:
+        ref = None
 
     candidatas = [r for r in regras
                   if _bate(r, fornecedor_id, familia, thread_count, sku_key, ref)]
@@ -102,6 +140,17 @@ def resolver_margem(regras: Sequence, fornecedor_id: Optional[int] = None,
                                "Nenhuma regra de margem cadastrada bateu — usando 15% como último "
                                "recurso. Cadastrar a regra no painel.", origem="fallback")
 
-    candidatas.sort(key=lambda r: (getattr(r, "prioridade", 100), -_especificidade(r), r.id or 0))
+    # Empate de prioridade e especificidade: ganha a vigência mais recente, e só então o id
+    # menor. Sem isso, a regra nova de um escopo (mesma prioridade, mesma especificidade)
+    # perderia para a antiga no dia da virada, em que as duas ainda respondem.
+    candidatas.sort(key=lambda r: (getattr(r, "prioridade", 100), -_especificidade(r),
+                                   -(getattr(r, "valid_from", None) or date.min).toordinal(),
+                                   r.id or 0))
     escolhida = candidatas[0]
-    return MargemResolvida(D(escolhida.margem_pct), escolhida.nome, escolhida.id)
+    return MargemResolvida(
+        D(escolhida.margem_pct), escolhida.nome, escolhida.id,
+        piso_pct=D(getattr(escolhida, "piso_pct", None)),
+        comissao_formacao_pct=D(getattr(escolhida, "comissao_formacao_pct", None)),
+        preco_travado=bool(getattr(escolhida, "preco_travado", False)),
+        politica=getattr(escolhida, "politica", None),
+        margem_anterior_pct=D(getattr(escolhida, "margem_anterior_pct", None)))

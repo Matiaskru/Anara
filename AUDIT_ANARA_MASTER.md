@@ -838,3 +838,68 @@ reconciliados com a Base Mestra na onda correspondente.
 **Consequência que precisa estar dita:** a suíte verde **não** prova que o sistema está correto.
 Três testes hoje passam justamente porque protegem comportamento que a regra aprovada condena
 (B-01, B-06 e B-15). Nenhum teste precisa ser **removido**; nove são reescritos ou ampliados.
+
+
+---
+
+## 7. Fase 3A — política comercial canônica (16/09/2026)
+
+Sessão que implementou no sistema oficial a decisão comercial de 16/09/2026: margem-alvo,
+piso de autonomia da vendedora, comissão de formação, comissão variável da cotação,
+comissão fixa e preço travado Daune. Migration **0018** (aditiva). Nenhuma cotação, item,
+snapshot ou aprovação alterado — provado por digest tabela a tabela
+(`relatorios/fase3a_estado_banco_antes.json` × `_depois.json`): só `margemregra` (21 regras
+encerradas em 16/09 + 21 sucessoras), `premissa` (+2) e `auditlog` (+23) mudaram.
+
+### C-NEW-13 — `pricing_service.margem_padrao` ignorava a vigência da regra de margem (P1, MÉDIO) — **RESOLVIDO em 16/09/2026**
+
+`resolver_margem(regras, ..., ref=None)` tratava `ref=None` como "sem filtro de vigência", e
+`margem_padrao` nunca passava `ref`. Consequência: uma regra encerrada pelo painel
+(`admin_service.aplicar_margem` fecha `valid_to`) **continuava formando preço**, e a regra
+nova só vencia se tivesse prioridade menor — o teste `test_margem_futura_so_vale_depois_da_data`
+passava porque chamava o resolvedor direto, com `ref`. O CLAUDE.md afirmava "vigência futura
+funciona" para `resolver_margem`; era verdade para a função e falso para o serviço.
+
+**Correção:** `ref=None` passa a significar **hoje**; `SEM_VIGENCIA` é a sentinela explícita
+para inspeção sem data. Empate de prioridade e especificidade desempata pela vigência mais
+recente. Regressão: `tests/test_margens.py::test_margem_padrao_do_servico_resolve_por_hoje`.
+
+### C-NEW-14 — `POST /configuracoes/margem` edita a regra de margem NO LUGAR (P1, MÉDIO) — **ABERTO**
+
+`app/routers/configuracoes.py::salvar_margem` faz `regra.margem_pct = ...; session.commit()`
+— reescreve a linha em vez de versionar, sem `AuditLog`, sem fonte, sem vigência. É o
+oposto do que `admin_service.aplicar_margem` faz, e desde 16/09/2026 uma edição por ali
+também deixaria `piso_pct`/`comissao_formacao_pct` incoerentes com a margem. **Fora do
+escopo desta fase** (não é redesign, mas é rota legada da tela de configurações).
+Recomendação: apontar a aba "Margens" para `/admin/margem/preview → aplicar` e remover a
+rota. Enquanto isso, **não usar** `/configuracoes` para margem.
+
+### OQ-01 — Base contratual da comissão (OPEN_QUESTION, comercial/financeiro)
+
+O motor calcula a comissão como **percentual da receita comercial** (`faturamento` = preço
+comercial × quantidade, com impostos dentro) — é a base do gross-up desde a planilha
+original, e a Fase 3A a **preservou** para formar preço e para a **comissão estimada**
+mostrada à vendedora. A documentação canônica e o SUPER PROMPT não fixam se a comissão
+contratual da vendedora incide sobre receita bruta, receita líquida de impostos, valor
+recebido ou outra base, nem quando ela é devida (emissão, faturamento, recebimento).
+
+**Não foi inventada reconciliação.** O sistema documenta a comissão como **ESTIMATIVA DE
+PRICING** (`resumo_comercial.comissao_estimada_*`, payload da negociação) e não implementa
+liquidação. A comissão realizada/pagável é assunto do financeiro e de uma fase própria.
+Decisão pendente: diretoria + financeiro.
+
+### Notas da fase
+
+- **Offline V2 = STALE.** O cotador offline V2 (`~/ANARA_COTADOR_WORKSPACE/`, 15/09/2026)
+  usa monkeypatch "margem fixa 15% + comissão 10%", que **não é** a política canônica. Não
+  distribuir como fonte de preço após 16/09/2026. A próxima versão offline deve ser regerada a
+  partir do sistema oficial (handoff novo). Nada no workspace foi tocado.
+- **`Produto.margem_padrao_pct` é cache informativo** e envelheceu com a política (349 produtos
+  guardam 12–18%/14%). Não foi reescrito (não é premissa; não é usado para formar preço). A
+  busca de produtos (`/produtos/buscar`) passou a devolver a margem **resolvida** da regra
+  vigente, para a tela não oferecer o cache como default.
+- **`preco_base` do catálogo** continua o formado antes da política; é referência de catálogo,
+  não forma preço de item, e é recalculado por ação explícita (importação/catálogo).
+- Os **17 rascunhos reais** passam a ser apontados por `premissas_desatualizadas` como
+  formados com a política anterior: continuam com seus números; reprecificar é o botão
+  "atualizar premissas" — ou emitir com premissa antiga, que exige alçada (`PREMISSA_VELHA`).

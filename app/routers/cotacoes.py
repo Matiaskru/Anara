@@ -1,12 +1,13 @@
 import json
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from sqlmodel import Session, select
 
 from app import admin_service as adm
 from app import arquivamento
+from app import comercial_service as com
 from app import config_service as cfg
 from app import pricing_service as ps
 from app.confidencial import item_comercial, sem_confidenciais, totais_comerciais
@@ -91,13 +92,21 @@ def proximo_numero(session: Session) -> str:
     return f"{prefixo}{n:04d}"
 
 
-def montar_regras(cotacao: Cotacao, session: Session, produto=None):
+def montar_regras(cotacao: Cotacao, session: Session, produto=None, item=None):
     """TaxRuleSet efetivo **do item** + a regra fiscal textual aplicada.
 
     `regras` volta None quando o fiscal ou a condição de pagamento não se resolveram — nesse
     caso não existe preço confiável a formar, e o chamador grava o bloqueio no item.
+
+    Com `item`, a comissão de formação é a que o item **congelou** (Fase 3A): recalcular um
+    rascunho não o migra de política em silêncio. Sem item, é a política vigente do produto.
     """
-    regras, contexto = ps.regras_da_cotacao(session, cotacao, produto)
+    if item is not None:
+        regras, contexto = ps.regras_da_cotacao(
+            session, cotacao, produto,
+            comissao_formacao_pct=com.comissao_de_formacao_do_item(item))
+    else:
+        regras, contexto = ps.regras_da_cotacao(session, cotacao, produto)
     return regras, contexto["icms_regra"], contexto
 
 
@@ -158,6 +167,16 @@ def _item_para_json(it: CotacaoItem, pode_ver_economia: bool = True) -> dict:
         "fornecedor_nome": it.fornecedor_nome, "cost_method": it.cost_method,
         "margem_padrao_pct": it.margem_padrao_pct, "margem_regra": it.margem_regra,
         "comissao_pct": it.comissao_pct, "markup_implicito": it.markup_implicito,
+        # Fase 3A — o recomendado é referência comercial; se a linha aceita outro unitário
+        # é operacional. Piso, comissão de formação e política são economia.
+        "preco_recomendado": it.preco_recomendado,
+        "preco_travado": bool(it.preco_travado),
+        "editavel": not bool(it.preco_travado),
+        "motivo_nao_editavel": (com.MOTIVO_TRAVADO if it.preco_travado else None),
+        "total_linha": it.faturamento,
+        "piso_margem_pct": it.piso_margem_pct,
+        "comissao_formacao_pct": it.comissao_formacao_pct,
+        "politica_comercial": it.politica_comercial,
     }
     return completo if pode_ver_economia else item_comercial(completo)
 
@@ -174,10 +193,14 @@ def _totais(itens: list, pode_ver_economia: bool = True) -> dict:
     faturamento = soma(i.faturamento for i in itens)
     custo = soma(i.custo_total for i in itens)
     lucro = soma(i.lucro for i in itens)
+    resumo = wf.resumo_comercial(itens)
     completo = {"faturamento": para_float(faturamento), "custo_total": para_float(custo),
                 "lucro": para_float(lucro),
                 "margem_liquida": para_float(divide(lucro, faturamento) or ZERO),
-                "num_itens": len(itens)}
+                "num_itens": len(itens),
+                # Fase 3A: a comissão estimada da cotação é da vendedora também.
+                "comissao_estimada_valor": resumo["comissao_estimada_valor"],
+                "comissao_estimada_pct_efetiva": resumo["comissao_estimada_pct_efetiva"]}
     return completo if pode_ver_economia else totais_comerciais(completo)
 
 
@@ -565,9 +588,14 @@ def atualizar_premissas(request: Request, cotacao_id: int,
         _aplicar_resultado(it, res, regras, ctx)
         it.memoria_json = ps.memoria_json(ps.memoria_do_preco(
             session, produto, cotacao, preco_negociado=res.preco_negociado,
-            quantidade=it.quantidade))
+            quantidade=it.quantidade,
+            comissao_formacao_pct=com.comissao_de_formacao_do_item(it)))
         session.add(it)
 
+    session.flush()
+    # Reprecificar é o ato explícito que traz o rascunho para a política vigente — e a
+    # comissão da cotação é reaplicada sobre os itens já com a política nova.
+    com.recalcular_comissao(session, cotacao)
     cotacao.premissas_mantidas_aprovadas = False
     session.add(cotacao)
     session.commit()
@@ -589,12 +617,14 @@ def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao.id)).all()
     for it in itens:
         produto = session.get(Produto, it.produto_id) if it.produto_id else None
-        regras, _regra, ctx = montar_regras(cotacao, session, produto)
+        regras, _regra, ctx = montar_regras(cotacao, session, produto, item=it)
         res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
                         regras, it.preco_base)
         _aplicar_resultado(it, res, regras, ctx)
         session.add(it)
     session.flush()
+    # A comissão é da cotação: reaplicada a todos os itens da política de uma vez.
+    com.recalcular_comissao(session, cotacao, itens)
     ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="recálculo dos itens")
     session.commit()
 
@@ -704,6 +734,10 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
         return JSONResponse(sem_custo if ve_economia(request)
                             else sem_confidenciais(sem_custo))
 
+    if margem.preco_travado:
+        # Preço travado (Daune): a prévia mostra o único preço possível, qualquer que seja a
+        # alavanca pedida — e diz que é travado. Tentar gravar outro é recusado ao adicionar.
+        modo, valor = "margem", para_float(margem.margem_pct)
     res = _calcular(modo, custo_vivo, quantidade, valor, regras, produto.preco_base)
     # Fronteira da API: `como_dict()` já entrega tudo em float, com o dinheiro em centavos.
     # Serializar Decimal aqui quebraria o JSON (ou, com `default=str`, mandaria dinheiro como
@@ -721,6 +755,8 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
         "comissao_pct": para_float(regras.comissao_para_markup(res.markup_implicito)),
         "margem_padrao_pct": para_float(margem.margem_pct), "margem_regra": margem.regra,
         "sem_custo": False,
+        "preco_travado": bool(margem.preco_travado),
+        "aviso": (com.MOTIVO_TRAVADO if margem.preco_travado else None),
     }
     # O vendedor precisa do preço e do total para negociar; o resto do payload é o motor.
     # `sem_confidenciais` corta por nome de campo, então um campo novo que alguém adicione
@@ -742,6 +778,13 @@ def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, marge
     item.margem_padrao_pct = margem.margem_pct
     item.margem_regra = margem.regra
     item.margem_regra_id = margem.regra_id
+    # A política comercial que formou este item fica congelada nele (Fase 3A): piso, comissão
+    # de formação, preço travado e qual política era. Regra sem política deixa tudo nulo, e o
+    # item é avaliado com a semântica anterior.
+    item.piso_margem_pct = para_float(margem.piso_pct)
+    item.comissao_formacao_pct = para_float(margem.comissao_formacao_pct)
+    item.preco_travado = bool(margem.preco_travado)
+    item.politica_comercial = margem.politica
     # A versão de custo que está valendo AGORA fica presa ao item. Depois disto, a
     # genealogia deste preço não depende mais de nenhum lookup vivo.
     vigente = cs.referencia_vigente(session, produto.id)
@@ -791,6 +834,17 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
         modo, valor = "preco", preco
     else:
         res = _calcular(modo, custo, quantidade, valor, regras, produto.preco_base)
+        if margem.preco_travado and regras is not None:
+            # Daune: o único unitário aceito é o recomendado da política. Qualquer alavanca
+            # que produza outro preço é recusada — explicitamente, para todos os papéis.
+            recomendado = dinheiro(calcular_por_margem(custo, 1, margem.margem_pct,
+                                                       regras).preco_negociado)
+            if dinheiro(res.preco_negociado) != recomendado:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(f"O preço de '{produto.nome}' é travado pela política comercial "
+                            f"de 16/09/2026: só pode ser R$ {recomendado} (recomendado). "
+                            f"R$ {dinheiro(res.preco_negociado)} foi recusado."))
 
     ordem_atual = session.exec(select(CotacaoItem)
                                .where(CotacaoItem.cotacao_id == cotacao_id)).all()
@@ -803,8 +857,13 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
     _preencher_item(session, item, produto, margem, memoria_custo)
     _aplicar_resultado(item, res, regras, ctx)
     item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
-        session, produto, cotacao, preco_negociado=res.preco_negociado, quantidade=quantidade))
+        session, produto, cotacao, preco_negociado=res.preco_negociado, quantidade=quantidade,
+        comissao_formacao_pct=com.comissao_de_formacao_do_item(item)))
     session.add(item)
+    session.flush()
+    # A comissão é da cotação: um item novo muda a comissão aplicada aos outros.
+    com.recalcular_comissao(session, cotacao)
+    ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="item adicionado")
     session.commit()
     session.refresh(item)
     return JSONResponse(_item_para_json(item, ve_economia(request)))
@@ -826,8 +885,16 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
 
     produto = session.get(Produto, item.produto_id) if item.produto_id else None
-    regras, _regra, ctx = montar_regras(cotacao, session, produto)
+    regras, _regra, ctx = montar_regras(cotacao, session, produto, item=item)
     res = _calcular(modo, item.custo_unitario, quantidade, valor, regras, item.preco_base)
+    if item.preco_travado and regras is not None and item.custo_unitario \
+            and item.margem_padrao_pct is not None:
+        # Daune: quantidade muda; o unitário, não. Vendedora e admin recebem a mesma recusa.
+        recomendado = dinheiro(calcular_por_margem(item.custo_unitario, 1,
+                                                   item.margem_padrao_pct,
+                                                   regras).preco_negociado)
+        if dinheiro(res.preco_negociado) != recomendado:
+            raise com.PrecoTravado(item, recomendado, res.preco_negociado)
 
     item.quantidade = quantidade
     item.modo_edicao = modo
@@ -836,8 +903,12 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
     if produto:
         item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
             session, produto, cotacao, preco_negociado=res.preco_negociado,
-            quantidade=quantidade))
+            quantidade=quantidade,
+            comissao_formacao_pct=com.comissao_de_formacao_do_item(item)))
     session.add(item)
+    session.flush()
+    com.recalcular_comissao(session, cotacao)
+    ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="item editado")
     session.commit()
     session.refresh(item)
     return JSONResponse(_item_para_json(item, ve_economia(request)))
@@ -878,6 +949,7 @@ def remover_item(request: Request, cotacao_id: int, item_id: int,
         session.delete(item)
         session.flush()
         if cotacao is not None:
+            com.recalcular_comissao(session, cotacao)
             ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="item removido")
         session.commit()
     return JSONResponse({"ok": True})
@@ -1044,6 +1116,8 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
                             ps.margem_padrao(session, produto_atual), memoria_custo)
         _aplicar_resultado(novo_item, res, regras, ctx)
         session.add(novo_item)
+    session.flush()
+    com.recalcular_comissao(session, nova)
     session.commit()
     return RedirectResponse(url=f"/cotacoes/{nova.id}", status_code=303)
 

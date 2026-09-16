@@ -7,7 +7,9 @@ from app.busca import buscar as buscar_produtos
 from app.confidencial import produto_comercial
 from app.permissoes import exigir_economia, ve_economia
 from app.db import get_session
-from app.models import BaseImportacao, Fornecedor, Produto
+from app.dinheiro import para_float
+from app.margin_rules import resolver_margem
+from app.models import MargemRegra, BaseImportacao, Fornecedor, Produto
 from app.templating import templates
 
 router = APIRouter()
@@ -66,12 +68,22 @@ def buscar(request: Request, q: str = "", fornecedor: str = "",
                     and fornecedores[p.fornecedor_id].codigo == fornecedor]
     produtos = buscar_produtos(produtos, q, {i: f.nome for i, f in fornecedores.items()},
                                limite=40)
+    # A margem que a tela oferece como default é a da regra VIGENTE, resolvida agora — não a
+    # coluna-cache `Produto.margem_padrao_pct`, que envelhece quando a política muda (a de
+    # 16/09/2026 mudou todas). `preco_travado` é operacional, como `sem_custo`: diz que a
+    # linha não aceita outro unitário, sem revelar número nenhum.
+    regras = session.exec(select(MargemRegra)).all()
+    politicas = {p.id: resolver_margem(regras, fornecedor_id=p.fornecedor_id,
+                                       familia=p.familia, thread_count=p.thread_count,
+                                       sku_key=p.sku_key) for p in produtos}
     completo = [{
         "id": p.id, "nome": p.nome, "especificacao": p.especificacao, "categoria": p.categoria,
         "familia": p.familia, "custo_unitario": p.custo_unitario, "preco_base": p.preco_base,
         "fornecedor": (fornecedores[p.fornecedor_id].nome if p.fornecedor_id in fornecedores
                        else None),
-        "cost_method": p.cost_method, "margem_padrao_pct": p.margem_padrao_pct,
+        "cost_method": p.cost_method,
+        "margem_padrao_pct": para_float(politicas[p.id].margem_pct),
+        "preco_travado": bool(politicas[p.id].preco_travado),
         "precisa_revisao": p.precisa_revisao, "revisao_motivo": p.revisao_motivo,
         "sem_custo": not bool(p.custo_unitario),
         "thread_count": p.thread_count, "gsm": p.gsm,

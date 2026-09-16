@@ -187,6 +187,7 @@ async function adicionarItem() {
   });
   const resp = await fetch(`/cotacoes/${COTACAO_ID}/itens`, { method: "POST", body });
   const item = await resp.json();
+  if (!resp.ok) { anaraToast(item.detail || item.erro || "Não foi possível adicionar o item."); return; }
   adicionarLinhaTabela(item);
   cancelarAdd();
   recalcularTotais();
@@ -241,6 +242,13 @@ async function editarItem(itemId, modoForcado) {
   const body = new URLSearchParams({ quantidade: qtd, modo: modo, valor: valor });
   const resp = await fetch(`/cotacoes/${COTACAO_ID}/itens/${itemId}`, { method: "PUT", body });
   const it = await resp.json();
+  if (!resp.ok) {
+    // Recusa explícita do servidor (ex.: preço Daune travado): avisa e recarrega a linha
+    // como está gravada, em vez de deixar na tela um valor que não existe.
+    anaraToast(it.detail || it.erro || "Não foi possível atualizar o item.");
+    setTimeout(() => location.reload(), 900);
+    return;
+  }
 
   const tr = document.querySelector(`tr[data-item-id="${itemId}"]`);
   tr.dataset.faturamento = it.faturamento;

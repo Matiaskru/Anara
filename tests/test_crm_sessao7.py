@@ -125,7 +125,7 @@ def cotacao_da_op(session, op, cliente, **kw):
 def add_item(session, cot, produto, quantidade=5.0):
     from app.routers.cotacoes import adicionar_item
     chamar(adicionar_item, RequestFalsa(_novo_usuario("ADMIN")), cotacao_id=cot.id,
-           produto_id=produto.id, quantidade=quantidade, modo="margem", valor=0.14,
+           produto_id=produto.id, quantidade=quantidade, modo="margem", valor=None,
            session=session)
     session.commit()
     return ws.itens_de(session, cot.id)[-1]

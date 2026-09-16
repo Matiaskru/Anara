@@ -10,6 +10,7 @@ from datetime import date
 from sqlmodel import Session, select
 
 from app.db import engine
+from app import politica_comercial as _pol
 from app.models import (
     AliquotaInterestadual, RegraFcp,
     CmtPreco, CondicaoPagamento, EstadoFiscal, Fornecedor, MargemRegra, MaterialPreco,
@@ -64,6 +65,18 @@ PREMISSAS = [
          descricao="LEGADO — PIS/COFINS efetivo fixo da metodologia anterior (até 09/09/2026). "
                    "Não alimenta precificação nova: ver pis_cofins_nominal_pct.",
          fonte=FONTE_PLANILHA),
+    # Política comercial de 16/09/2026 (Fase 3A): a comissão variável da cotação, para os
+    # itens não-Daune. Daune tem comissão fixa na própria regra de margem (5%).
+    dict(chave=_pol.CHAVE_COMISSAO_BASE, valor_num=float(_pol.COMISSAO_BASE_PCT), unidade="%",
+         descricao="Comissão-base da comissão variável da cotação (itens não-Daune): vale com "
+                   "desconto zero e cai proporcionalmente ao desconto ponderado por valor.",
+         fonte=_pol.FONTE, valid_from=_pol.DATA_VIGENCIA,
+         notas="Estimativa de pricing sobre a receita comercial (preço × quantidade). Não é a "
+               "comissão pagável, que depende de faturamento e recebimento."),
+    dict(chave=_pol.CHAVE_COMISSAO_MINIMA, valor_num=float(_pol.COMISSAO_MINIMA_PCT), unidade="%",
+         descricao="Comissão mínima da cotação: a comissão variável nunca cai sozinha abaixo "
+                   "disto. Se com ela algum item ficar abaixo do piso, é exceção a aprovar.",
+         fonte=_pol.FONTE, valid_from=_pol.DATA_VIGENCIA),
     # A premissa `icms_fallback_pct` foi APOSENTADA na Onda 1: cenário fiscal que não se
     # resolve vira REVIEW_REQUIRED, não vira 18%. A linha some da semeadura; bases antigas que
     # já a têm continuam com ela guardada, sem efeito — nenhum código a lê mais.
@@ -375,6 +388,35 @@ MARGENS = [
          notas="Regra geral, usada só quando não há regra de fornecedor nem de família."),
 ]
 
+# As 21 regras acima foram ENCERRADAS em 16/09/2026 pela política comercial da Fase 3A — não
+# apagadas: os itens que as pinaram continuam sendo lidos por elas. Num banco novo elas nascem
+# já encerradas; no banco real, quem as encerra é `scripts/aplicar_politica_comercial_2026_09_16.py`.
+for _regra in MARGENS:
+    _regra.setdefault("valid_from", date(2026, 8, 28))    # a data em que foram semeadas
+    _regra.setdefault("valid_to", _pol.DATA_VIGENCIA)
+
+
+def _regras_da_politica_2026_09_16(antigas) -> list:
+    """Uma regra nova por regra antiga, mesmo escopo e prioridade, derivada — não digitada."""
+    novas = []
+    for antiga in antigas:
+        pol = _pol.regra_da_politica(antiga["margem_pct"], antiga.get("fornecedor_codigo"))
+        escopo = {k: v for k, v in antiga.items()
+                  if k not in ("nome", "margem_pct", "notas", "valid_to", "valid_from")}
+        novas.append(dict(
+            escopo, nome=_pol.nome_da_regra_nova(antiga["nome"]),
+            margem_pct=float(pol["margem_pct"]), piso_pct=float(pol["piso_pct"]),
+            comissao_formacao_pct=float(pol["comissao_formacao_pct"]),
+            preco_travado=bool(pol["preco_travado"]),
+            margem_anterior_pct=float(pol["margem_anterior_pct"]),
+            politica=_pol.ROTULO, fonte=_pol.FONTE, valid_from=_pol.DATA_VIGENCIA,
+            notas=(f"{_pol.FONTE}. Sucede '{antiga['nome']}' "
+                   f"({antiga['margem_pct'] * 100:.0f}%).")))
+    return novas
+
+
+MARGENS_2026_09_16 = _regras_da_politica_2026_09_16(MARGENS)
+
 # ---------------------------------------------------------------------------
 # Condições de pagamento (encargo financeiro centralizado num lugar só)
 # ---------------------------------------------------------------------------
@@ -558,9 +600,9 @@ def semear(verbose: bool = True) -> dict:
                 s.add(RegraFiscalVenda(**r)); n += 1
         contagem["regras_fiscais"] = n
 
-        # margens
+        # margens — as anteriores (encerradas em 16/09/2026) e as da política vigente
         n = 0
-        for regra in MARGENS:
+        for regra in MARGENS + MARGENS_2026_09_16:
             dados = dict(regra)
             codigo = dados.pop("fornecedor_codigo", None)
             dados["fornecedor_id"] = fornecedor_por_codigo.get(codigo) if codigo else None

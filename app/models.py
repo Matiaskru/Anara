@@ -651,6 +651,18 @@ class MargemRegra(SQLModel, table=True):
     valid_to: Optional[date] = None
     ativo: bool = True
     notas: Optional[str] = None
+    # --- Política comercial de 16/09/2026 (Fase 3A) ---
+    # A regra deixa de dizer só "qual é a margem-alvo" e passa a dizer a política inteira do
+    # escopo: o PISO abaixo do qual a vendedora perde a autonomia, a comissão que FORMA o
+    # preço recomendado, e se o preço é travado (Daune). NULO em todos = regra anterior à
+    # política, que o sistema continua interpretando com a semântica antiga (comissão por
+    # faixa de markup, autonomia de desconto zero) — nunca reescrita.
+    piso_pct: Optional[float] = None            # piso de autonomia da vendedora
+    comissao_formacao_pct: Optional[float] = None   # comissão usada no gross-up do recomendado
+    preco_travado: bool = False                 # vendedora (e admin) não alteram o unitário
+    margem_anterior_pct: Optional[float] = None # rastreabilidade: a margem que esta regra sucedeu
+    politica: Optional[str] = None              # rótulo da política que criou a regra
+    fonte: Optional[str] = None                 # "Decisão comercial ANARA — 16/09/2026"
 
 
 class CondicaoPagamento(SQLModel, table=True):
@@ -1039,6 +1051,15 @@ class CotacaoItem(SQLModel, table=True):
     # de pagamento e talvez outro custo. Confundir os dois faria toda cotação interestadual
     # parecer um desconto, e o aprovador seria chamado para autorizar exceção inexistente.
     preco_recomendado: Optional[float] = None
+    # --- Política comercial congelada no item (Fase 3A, 16/09/2026) ---
+    # O item carrega a política que formou o preço dele, como carrega o fiscal e os pinos:
+    # o piso de autonomia, a comissão de formação, se o preço é travado e QUAL política era.
+    # NULO = item formado antes da política (ou por regra sem política): o workflow o avalia
+    # com a semântica anterior e a detecção de premissa velha o aponta — nunca o reescreve.
+    piso_margem_pct: Optional[float] = None
+    comissao_formacao_pct: Optional[float] = None
+    preco_travado: bool = False
+    politica_comercial: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

@@ -384,6 +384,8 @@ ALCANCE_PREMISSA = {
     "outras_desp_usd_un": "todo produto importado (KTC), via nacionalização",
     "pis_cofins_nominal_pct": "TODOS os produtos, em qualquer cotação",
     "pis_cofins_pct": "TODOS os produtos, em qualquer cotação",
+    "comissao_base_pct": "comissão variável de TODA cotação nova (itens não-Daune)",
+    "comissao_min_pct": "comissão variável de TODA cotação nova (itens não-Daune)",
 }
 
 
@@ -563,10 +565,18 @@ def escopo_da_margem(session: Session, *, fornecedor_id=None, familia=None, sku_
             "familias": sorted({p.familia for p in alvo if p.familia})}
 
 
+def _mesmo_escopo(r, *, sku_key, fornecedor_id, familia) -> bool:
+    return (r.ativo and (r.valid_to is None)
+            and (r.sku_key or None) == (sku_key or None)
+            and (r.fornecedor_id or None) == (fornecedor_id or None)
+            and ((r.familia or "").lower() or None) == ((familia or "").lower() or None))
+
+
 def preview_margem(session: Session, *, margem_pct, nome: str, fornecedor_id=None,
                    familia=None, sku_key=None, prioridade: int = 50,
                    fonte: str = "", vigente_a_partir_de: Optional[date] = None,
-                   motivo: Optional[str] = None) -> Proposta:
+                   motivo: Optional[str] = None, piso_pct=None, comissao_formacao_pct=None,
+                   preco_travado: Optional[bool] = None) -> Proposta:
     fonte = valida_fonte(fonte)
     nova = valida_percentual(margem_pct, "margem")
     inicio = vigente_a_partir_de or date.today()
@@ -625,7 +635,17 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
                    fornecedor_id=None, familia=None, sku_key=None, prioridade: int = 50,
                    fonte: str = "", vigente_a_partir_de: Optional[date] = None,
                    motivo: Optional[str] = None, origem: str = "admin-ui",
-                   correlacao: Optional[str] = None) -> Optional[MargemRegra]:
+                   correlacao: Optional[str] = None, piso_pct=None,
+                   comissao_formacao_pct=None, preco_travado: Optional[bool] = None
+                   ) -> Optional[MargemRegra]:
+    """Versiona a margem de um escopo. **A política do escopo é herdada**, não perdida.
+
+    Desde 16/09/2026 a regra carrega piso, comissão de formação e preço travado. Uma regra
+    nova criada pelo painel só com a margem herdaria NULOS — e o produto voltaria em
+    silêncio à semântica anterior (comissão por faixa, autonomia zero). Por isso o que não
+    for informado é copiado da regra do mesmo escopo que está sendo encerrada; a margem
+    anterior fica registrada em `margem_anterior_pct`.
+    """
     regras = session.exec(select(MargemRegra)).all()
     token_agora = _hash_estado(sorted(
         [{"id": r.id, "m": str(r.margem_pct), "vf": str(r.valid_from),
@@ -643,19 +663,32 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
 
     inicio = vigente_a_partir_de or date.today()
     # Regra anterior EXATAMENTE do mesmo escopo tem a vigência encerrada — não é apagada.
+    encerrada = None
     for r in regras:
-        mesmo_escopo = (r.ativo and (r.valid_to is None)
-                        and (r.sku_key or None) == (sku_key or None)
-                        and (r.fornecedor_id or None) == (fornecedor_id or None)
-                        and ((r.familia or "").lower() or None) == ((familia or "").lower() or None))
-        if mesmo_escopo:
+        if _mesmo_escopo(r, sku_key=sku_key, fornecedor_id=fornecedor_id, familia=familia):
             r.valid_to = inicio
             session.add(r)
+            # a herança vem da regra mais recente do escopo — a que estava formando preço
+            if encerrada is None or (r.valid_from or date.min) >= (encerrada.valid_from or date.min):
+                encerrada = r
+    herdar = lambda valor, campo: (valor if valor is not None      # noqa: E731
+                                   else getattr(encerrada, campo, None))
+    piso = herdar(piso_pct, "piso_pct")
+    comissao = herdar(comissao_formacao_pct, "comissao_formacao_pct")
+    travado = herdar(preco_travado, "preco_travado")
 
     nova = MargemRegra(nome=nome, fornecedor_id=fornecedor_id, familia=familia,
                        sku_key=sku_key, margem_pct=para_float(D(margem_pct)),
                        prioridade=prioridade, valid_from=inicio, ativo=True,
-                       notas=f"{fonte}{' · ' + motivo if motivo else ''}")
+                       notas=f"{fonte}{' · ' + motivo if motivo else ''}",
+                       piso_pct=para_float(D(piso)) if piso is not None else None,
+                       comissao_formacao_pct=(para_float(D(comissao))
+                                              if comissao is not None else None),
+                       preco_travado=bool(travado),
+                       margem_anterior_pct=(para_float(D(encerrada.margem_pct))
+                                            if encerrada is not None else None),
+                       politica=getattr(encerrada, "politica", None),
+                       fonte=fonte or None)
     session.add(nova)
     session.flush()
     registrar(session, ator=ator, acao="CRIAR_VERSAO", entidade="MargemRegra",
@@ -754,16 +787,28 @@ def premissas_desatualizadas(session: Session, cotacao, itens: Sequence[CotacaoI
                 "custo_vigente": para_float(D(vigente.cnet_brl)),
                 "versao_vigente": vigente.versao,
             })
+    # Terceira coisa que envelhece (Fase 3A): a **política comercial**. Um rascunho formado
+    # antes de 16/09/2026 não tem piso nem comissão de formação congelados; o produto dele
+    # hoje resolve para uma regra com política. Detecta e nomeia — a reprecificação continua
+    # sendo o botão de atualizar, e o item continua sendo avaliado como foi formado.
+    from app.comercial_service import itens_anteriores_a_politica
+    politica_anterior = itens_anteriores_a_politica(session, itens)
+
     partes = []
     if desatualizados:
         partes.append(f"{len(desatualizados)} item(ns) usam custo anterior ao vigente.")
     for p in premissas_novas:
         partes.append(f"{p['rotulo']}: esta cotação usa {p['no_item']}, "
                       f"e o valor atual é {p['vigente']}.")
+    if politica_anterior:
+        partes.append(f"{len(politica_anterior)} item(ns) foram formados com a política "
+                      "comercial anterior a 16/09/2026 (margem-alvo, piso e comissão de "
+                      "formação diferentes).")
 
-    return {"desatualizado": bool(desatualizados or premissas_novas),
+    return {"desatualizado": bool(desatualizados or premissas_novas or politica_anterior),
             "itens": desatualizados,
             "premissas": premissas_novas,
+            "politica_anterior": politica_anterior,
             "texto": (" ".join(partes) + " Nada foi alterado — atualizar é uma ação explícita."
                       if partes else "Todas as premissas do rascunho estão vigentes.")}
 
@@ -776,6 +821,8 @@ ROTULO_PREMISSA = {
     "outras_desp_usd_un": "Outras despesas de importação",
     "pis_cofins_nominal_pct": "PIS/COFINS nominal da venda",
     "pis_cofins_pct": "PIS/COFINS (legado)",
+    "comissao_base_pct": "Comissão-base da cotação",
+    "comissao_min_pct": "Comissão mínima da cotação",
 }
 
 

@@ -95,6 +95,7 @@ def test_memoria_do_item_tambem_e_serializavel(session, material):
             "status_pagamento", "motivo_pagamento", "encargo_label", "encargo_aviso",
             "uf_origem_fiscal", "uf_destino_fiscal", "finalidade", "origem_fiscal",
             "difal_responsavel", "motivo_bloqueio", "pis_cofins_nota",
+            "politica_comercial",       # rótulo da política de 16/09/2026 — é texto mesmo
         ), f"fiscal.{campo} virou texto: {valor!r}"
 
 

@@ -10,8 +10,9 @@ monta os parâmetros e devolve:
 * a **memória do preço**: o waterfall inteiro, da especificação técnica ao preço final.
 """
 import json
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Optional, Tuple
 
 from sqlmodel import Session, select
@@ -166,12 +167,32 @@ def _id_da_fonte(fonte):
     return int(m.group(1)) if m else None
 
 
+#: Sentinela para `regras_da_cotacao(comissao_formacao_pct=...)`: "resolva pela política do
+#: produto". Diferente de `None`, que é "comissão por faixa de markup" (item anterior à
+#: política de 16/09/2026).
+PELA_POLITICA_DO_PRODUTO = object()
+
+
 def regras_da_cotacao(session: Session, cotacao: Cotacao,
-                      produto: Optional[Produto] = None) -> Tuple[Optional[TaxRuleSet], dict]:
+                      produto: Optional[Produto] = None, *,
+                      comissao_formacao_pct=PELA_POLITICA_DO_PRODUTO
+                      ) -> Tuple[Optional[TaxRuleSet], dict]:
     """TaxRuleSet efetivo **do item** + contexto, para exibir e para snapshot.
 
     Devolve `(None, contexto)` quando o fiscal ou a condição de pagamento não se resolvem: não
     se forma preço com premissa faltando. O contexto sempre diz o motivo.
+
+    ## Comissão (Fase 3A, 16/09/2026)
+
+    A comissão que entra no gross-up é a de **formação** da política do produto — 10% para
+    não-Daune, 5% para Daune —, e não mais a faixa por markup. Chega aqui de três jeitos:
+
+    * `PELA_POLITICA_DO_PRODUTO` (default): resolve a regra de margem vigente do produto e usa
+      a comissão de formação dela; produto sem política (ou sem produto) cai na tabela de
+      faixas, que continua sendo lida para interpretar cotação antiga;
+    * um percentual: o que o **item** congelou (`CotacaoItem.comissao_formacao_pct`) — é o
+      que o recálculo de um rascunho usa, para não migrar item antigo de política em silêncio;
+    * `None`: item anterior à política — tabela de faixas.
     """
     fiscal = fiscal_do_item(session, cotacao, produto)
     condicoes = session.exec(select(CondicaoPagamento)).all()
@@ -190,6 +211,18 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     pis_cofins = (pis_cofins_efetivo(pis_nominal, icms_excluido)
                   if icms_excluido is not None else None)
     comissao = cfg.tabela_comissao(session)
+    politica = None
+    if comissao_formacao_pct is PELA_POLITICA_DO_PRODUTO:
+        if produto is not None:
+            politica = margem_padrao(session, produto)
+            comissao_formacao_pct = (para_float(politica.comissao_formacao_pct)
+                                     if politica.tem_politica else None)
+        else:
+            comissao_formacao_pct = None
+    if comissao_formacao_pct is not None:
+        # Faixa única: `comissao_para_markup` devolve este percentual para qualquer markup, e o
+        # gross-up segue idêntico — a comissão fixa entra sem uma segunda fórmula.
+        comissao = [(0.0, para_float(D(comissao_formacao_pct)))]
 
     contexto = {
         "fiscal": fiscal,
@@ -217,6 +250,9 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
         "encargo_confirmado": encargo.confirmado, "encargo_aviso": encargo.aviso,
         "status_pagamento": encargo.status, "motivo_pagamento": encargo.motivo,
         "comissao_tabela": comissao,
+        "comissao_formacao_pct": (para_float(D(comissao_formacao_pct))
+                                  if comissao_formacao_pct is not None else None),
+        "politica_comercial": politica.politica if politica is not None else None,
         # --- identidades para pinar no item ---
         "condicao_pagamento_id": condicao_usada.id if condicao_usada else None,
         "aliquota_interestadual_id": _id_da_fonte(fiscal.fonte),
@@ -255,11 +291,39 @@ def cenario_padrao_catalogo(session: Session) -> Cotacao:
 # Margem padrão
 # ---------------------------------------------------------------------------
 def margem_padrao(session: Session, produto: Produto,
-                  override_pct: Optional[float] = None) -> MargemResolvida:
+                  override_pct: Optional[float] = None, ref: Optional[date] = None
+                  ) -> MargemResolvida:
+    """A regra de margem — e a política comercial — vigente para o produto **na data**.
+
+    `ref` default é hoje. Até 16/09/2026 a chamada não passava data e o resolvedor tratava a
+    ausência como "sem filtro de vigência": regra encerrada continuava formando preço
+    (C-NEW-13). Uma política versionada por data só funciona se a data for consultada.
+    """
     regras = session.exec(select(MargemRegra)).all()
     return resolver_margem(regras, fornecedor_id=produto.fornecedor_id,
                            familia=produto.familia, thread_count=produto.thread_count,
-                           sku_key=produto.sku_key, override_pct=override_pct)
+                           sku_key=produto.sku_key, override_pct=override_pct,
+                           ref=ref or date.today())
+
+
+@dataclass
+class PoliticaComercialVigente:
+    """As premissas globais da política de comissão, lidas do banco — nunca inventadas."""
+    comissao_base_pct: Decimal
+    comissao_min_pct: Decimal
+    base_id: Optional[int]
+    min_id: Optional[int]
+
+
+def politica_comercial_vigente(session: Session, ref: Optional[date] = None
+                               ) -> Optional[PoliticaComercialVigente]:
+    """`None` enquanto a política não foi semeada/aplicada: o sistema não assume 10%/5%."""
+    from app.politica_comercial import CHAVE_COMISSAO_BASE, CHAVE_COMISSAO_MINIMA
+    base = cfg.premissa(session, CHAVE_COMISSAO_BASE, ref)
+    minimo = cfg.premissa(session, CHAVE_COMISSAO_MINIMA, ref)
+    if base is None or minimo is None or base.valor_num is None or minimo.valor_num is None:
+        return None
+    return PoliticaComercialVigente(D(base.valor_num), D(minimo.valor_num), base.id, minimo.id)
 
 
 # ---------------------------------------------------------------------------
@@ -414,8 +478,11 @@ def calcular_exw(session: Session, produto: Produto):
 #: novo é a nominal, e o efetivo é DERIVADO dela com o `icms_pct` do próprio item — que já está
 #: congelado no snapshot fiscal da linha. Pinar a legada continuaria prendendo a genealogia a
 #: uma premissa que não alimenta mais cálculo nenhum. Itens antigos mantêm o pino que têm.
+#: `comissao_base_pct` e `comissao_min_pct` entraram em 16/09/2026 (Fase 3A): são as premissas
+#: da comissão variável da cotação. Item anterior à política não as tem pinadas — e é por
+#: isso mesmo que `admin_service.premissas_desatualizadas` o reconhece como anterior.
 CHAVES_PINADAS = ("fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un",
-                  "pis_cofins_nominal_pct")
+                  "pis_cofins_nominal_pct", "comissao_base_pct", "comissao_min_pct")
 
 
 def pinar_premissas(session: Session, ref_data=None) -> dict:
@@ -689,12 +756,19 @@ def frescor(session: Session, data_ref: Optional[date]) -> dict:
 # ---------------------------------------------------------------------------
 def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotacao] = None,
                      preco_negociado: Optional[float] = None, quantidade: float = 1,
-                     margem_override: Optional[float] = None) -> dict:
-    """Waterfall completo: da especificação (ou do custo do fornecedor) ao preço final."""
+                     margem_override: Optional[float] = None,
+                     comissao_formacao_pct=PELA_POLITICA_DO_PRODUTO) -> dict:
+    """Waterfall completo: da especificação (ou do custo do fornecedor) ao preço final.
+
+    `comissao_formacao_pct` segue a convenção de `regras_da_cotacao`: o recálculo de um item
+    existente passa a comissão que o item congelou, para a memória descrever o preço dele —
+    não o que um item novo teria.
+    """
     from app.pricing_engine import calcular_por_margem, calcular_por_preco
 
     cot = cotacao or cenario_padrao_catalogo(session)
-    regras, contexto = regras_da_cotacao(session, cot, produto)
+    regras, contexto = regras_da_cotacao(session, cot, produto,
+                                         comissao_formacao_pct=comissao_formacao_pct)
     custo = custo_net(session, produto)
     margem = margem_padrao(session, produto, margem_override)
 

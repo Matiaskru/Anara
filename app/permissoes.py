@@ -45,8 +45,10 @@ def autenticado(request: Request) -> bool:
 def ve_economia(request: Request) -> bool:
     """Pode receber custo, CNET, EXW, margem, lucro, markup e a memória do preço.
 
-    OWNER e ADMIN. Os dois papéis de vendedor, não — nem o comissionado, cuja comissão
-    continua sendo calculada no servidor sem lhe ser exibida.
+    OWNER e ADMIN. Os dois papéis de vendedor, não. Desde 16/09/2026 (Fase 3A) a vendedora
+    vê a **comissão estimada da cotação** (R$ e taxa efetiva) — decisão deliberada da
+    política comercial —, mas continua sem ver a comissão por item, o piso, a margem e a
+    mecânica de proteção; esses seguem sendo economia.
     """
     u = usuario_da_request(request)
     return bool(u and u.ativo and u.papel in PAPEIS_ECONOMICOS)

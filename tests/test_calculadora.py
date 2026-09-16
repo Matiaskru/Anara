@@ -45,8 +45,17 @@ def test_calcula_lencol_que_nao_esta_no_catalogo(s):
     assert r["calculavel"] is True
     assert r["custo"]["industrial"]["exw_usd"] == aprox(13.07, abs=0.01)
     assert r["custo"]["net_brl"] == aprox(73.09, abs=0.05)
-    assert r["margem"]["margem_pct"] == aprox(0.18)      # lençol ≥ 300TC
-    assert r["comercial"]["preco_negociado"] == aprox(146.73, abs=0.1)
+    # Política comercial de 16/09/2026: lençol ≥ 300TC 18% → 20%, comissão de formação 10%.
+    assert r["margem"]["margem_pct"] == aprox(0.20)
+    assert r["margem"]["comissao_formacao_pct"] == aprox(0.10)
+    # preço = NET ÷ (1 − ICMS − PIS/COFINS − encargo − comissão − margem): a identidade do
+    # gross-up com comissão fixa, sobre os componentes que a própria memória declara
+    from app.dinheiro import D, dinheiro
+    f = r["fiscal"]
+    denominador = (1 - D(f["icms_pct"]) - D(f["pis_cofins_pct"]) - D(f["encargo_pct"])
+                   - D("0.10") - D("0.20"))
+    assert r["comercial"]["preco_negociado"] == aprox(
+        dinheiro(D(r["custo"]["net_brl"]) / denominador), abs=0.01)
 
 
 def test_o_preco_da_calculadora_e_o_mesmo_da_cotacao(s):
@@ -66,7 +75,7 @@ def test_calcula_toalha_pela_taxa_por_kg(s):
     r = calcular(s, "Bath Towel", 70, 140, gsm=500)
     assert r["calculavel"] is True
     assert r["custo"]["industrial"]["exw_usd"] == aprox(4.165, abs=0.01)  # 0,49 kg × 8,50
-    assert r["margem"]["margem_pct"] == aprox(0.12)
+    assert r["margem"]["margem_pct"] == aprox(0.14)      # toalha: 12% → 14% em 16/09/2026
 
 
 def test_toalha_listrada_usa_a_taxa_de_piscina(s):

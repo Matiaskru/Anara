@@ -157,22 +157,27 @@ def test_mesma_cotacao_aceita_tres_fornecedores(s):
 def test_item_entra_com_a_margem_padrao_do_produto(s):
     cotacao_id = criar_cotacao(s)
     ktc = add_item(s, cotacao_id, 1)
-    assert ktc["margem_padrao_pct"] == aprox(0.16)
-    assert ktc["margem_liquida"] == aprox(0.16, abs=MARGEM_DO_CENTAVO)
+    # Política comercial de 16/09/2026: lençol < 300TC saiu de 16% para 18% (anterior + 2 p.p.).
+    assert ktc["margem_padrao_pct"] == aprox(0.18)
+    assert ktc["margem_liquida"] == aprox(0.18, abs=MARGEM_DO_CENTAVO)
 
     decor = add_item(s, cotacao_id, 3, quantidade=5)
-    assert decor["margem_padrao_pct"] == aprox(0.14)
+    assert decor["margem_padrao_pct"] == aprox(0.12)      # Decor: 12% desde 16/09/2026
     # `MARGEM_DO_CENTAVO`, como nas demais linhas deste arquivo: o `1e-6` de antes era mais
     # apertado que meio centavo dividido pela receita e só passava porque, com a alíquota fixa
     # de 7,59%, o resíduo do arredondamento caía do lado positivo neste item.
-    assert decor["margem_liquida"] == aprox(0.14, abs=MARGEM_DO_CENTAVO)
+    assert decor["margem_liquida"] == aprox(0.12, abs=MARGEM_DO_CENTAVO)
 
 
 def test_override_de_margem_guarda_padrao_e_negociada(s):
     cotacao_id = criar_cotacao(s)
     item = add_item(s, cotacao_id, 1, valor=0.12)
-    assert item["margem_padrao_pct"] == aprox(0.16)
-    assert item["margem_liquida"] == aprox(0.12, abs=MARGEM_DO_CENTAVO)
+    assert item["margem_padrao_pct"] == aprox(0.18)
+    # A alavanca "margem 12%" forma o preço com a comissão de formação (10%). Como esse preço
+    # fica abaixo do recomendado, a comissão da cotação cai (política de 16/09/2026) — e a
+    # margem REALIZADA fica acima dos 12% pedidos, nunca abaixo.
+    assert item["margem_liquida"] >= 0.12 - float(MARGEM_DO_CENTAVO)
+    assert item["comissao_pct"] < 0.10 and item["preco_negociado"] < item["preco_recomendado"]
 
 
 def test_produto_sem_custo_continua_cotavel(s):
@@ -203,7 +208,7 @@ def test_mudanca_no_cabecalho_recalcula_os_itens(s, campo, valor):
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     s.refresh(item)
     assert item.preco_negociado != aprox(preco_antes)
-    assert item.margem_liquida == aprox(0.16, abs=MARGEM_DO_CENTAVO)
+    assert item.margem_liquida == aprox(0.18, abs=MARGEM_DO_CENTAVO)
 
 
 def test_estado_origem_logistico_nao_mexe_mais_no_fiscal(s):
@@ -332,7 +337,7 @@ def test_memoria_do_preco_do_item_tem_o_waterfall(s):
     m = corpo(chamar(memoria_item, cotacao_id=cotacao_id, item_id=item["id"], session=s))
     assert m["custo"]["nacionalizacao"]["etapas"]
     assert m["fiscal"]["icms_pct"] == aprox(0.18)
-    assert m["margem"]["margem_pct"] == aprox(0.16)
+    assert m["margem"]["margem_pct"] == aprox(0.18)
     assert m["comercial"]["preco_negociado"] > 0
 
 
@@ -451,7 +456,7 @@ def test_editar_margem_direto_na_linha_do_item(s):
 
     cotacao_id = criar_cotacao(s)
     item = add_item(s, cotacao_id, 1, quantidade=10)
-    assert item["margem_liquida"] == aprox(0.16, abs=MARGEM_DO_CENTAVO)
+    assert item["margem_liquida"] == aprox(0.18, abs=MARGEM_DO_CENTAVO)
 
     class FormFalso:
         def __init__(self, dados): self._dados = dados
@@ -474,9 +479,11 @@ def test_editar_margem_direto_na_linha_do_item(s):
                                        RequestFalso({"quantidade": "10", "modo": "margem",
                                                      "valor": "0.11"}), session=s))
     atualizado = corpo(resposta)
-    assert atualizado["margem_liquida"] == aprox(0.11, abs=MARGEM_DO_CENTAVO)
+    # a alavanca define o preço; a margem realizada sobe com a queda da comissão da cotação
+    assert atualizado["margem_liquida"] >= 0.11 - float(MARGEM_DO_CENTAVO)
+    assert atualizado["comissao_pct"] < 0.10
     assert atualizado["preco_negociado"] < item["preco_negociado"]
-    assert atualizado["margem_padrao_pct"] == aprox(0.16)   # padrão continua registrado
+    assert atualizado["margem_padrao_pct"] == aprox(0.18)   # padrão continua registrado
 
     gravado = s.get(CotacaoItem, item["id"])
     s.refresh(gravado)

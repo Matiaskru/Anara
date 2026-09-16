@@ -580,10 +580,38 @@ nacionalização.
 
 # 11. Margens
 
-## 11.1 Matriz completa vigente
+## 11.0 Política comercial de 16/09/2026 — o que vale hoje
 
-Resolvida por **prioridade** — menor número vence. Todas vigentes desde 28/08/2026, nenhuma
-com data de encerramento.
+> **Decisão comercial ANARA — 16/09/2026** (Fase 3A). Versionada em `MargemRegra`: as 21
+> regras abaixo (§11.1) foram **encerradas em 16/09/2026** e ganharam uma sucessora por
+> escopo, com a política inteira do escopo — margem-alvo, **piso** de autonomia da vendedora,
+> comissão de **formação** e preço **travado**. Fonte: `Decisão comercial ANARA — 16/09/2026`;
+> trilha: `AuditLog` correlação `politica-comercial-2026-09-16-431b8c3a`.
+
+| Escopo | Margem anterior | **Margem-alvo** | **Piso** | **Comissão de formação** | Preço |
+|---|---|---|---|---|---|
+| Daune (qualquer família) | 14% | **12%** | **12%** (sem colchão) | **5%, fixa** | **travado** |
+| Decor Tricot | 14% | **12%** | **10%** | 10% → 5% (variável) | editável |
+| KTC — toalhas e roupão | 12% | **14%** | **11%** | 10% → 5% | editável |
+| KTC — lençóis < 300TC | 16% | **18%** | **15%** | 10% → 5% | editável |
+| KTC — lençóis ≥ 300TC | 18% | **20%** | **17%** | 10% → 5% | editável |
+| KTC — demais famílias | 15% | **17%** | **14%** | 10% → 5% | editável |
+| Geral — sem fornecedor | 15% | **17%** | **14%** | 10% → 5% | editável |
+
+Regra geral, aplicada por derivação e não por digitação: **nova = anterior + 2 p.p.**,
+**piso = anterior − 1 p.p.** (= alvo − 3 p.p.), comissão de formação 10% — exceto Daune e
+Decor, exceções totais. A regra nova registra `margem_anterior_pct`; nenhuma regra recebe
++2 p.p. duas vezes (`tests/test_margens.py::test_toda_regra_anterior_foi_sucedida_uma_vez`).
+
+**Impacto no preço recomendado** (cenário do catálogo, 310 SKUs com custo, mesmo CNET, mesmo
+fiscal): Daune **−3,58%** (52 SKUs); Decor **+5,90%** (16); demais **+15,32%** em média
+(242, mín +14,31%, máx +16,36%). Relatório completo por SKU:
+`relatorios/impacto_politica_comercial_2026-09-16.md`.
+
+## 11.1 Matriz anterior — vigente de 28/08/2026 a 15/09/2026
+
+Resolvida por **prioridade** — menor número vence. **Encerradas em 16/09/2026** (§11.0);
+continuam no banco para interpretar os itens que as pinaram.
 
 | Prior. | Regra | Escopo | Margem |
 |---|---|---|---|
@@ -634,7 +662,53 @@ fosse a realizada**.
 
 # 12. Comissão
 
-## 12.1 Tabela vigente
+## 12.0 Regra vigente desde 16/09/2026 — comissão da COTAÇÃO, contínua
+
+A tabela por faixa de markup (§12.1) **deixou de formar preço novo** em 16/09/2026. Continua
+no banco (`comissao_tabela`) para interpretar cotações anteriores.
+
+**Formação do preço recomendado:** comissão de formação da política — **10%** para não-Daune,
+**5%** para Daune — entra no denominador do gross-up no lugar da faixa.
+
+**Negociação:** uma comissão só por cotação, para o bloco variável (itens não-Daune com custo
+e preço recomendado):
+
+```
+R            = Σ preço_recomendado × quantidade       (bloco variável)
+N            = Σ preço_negociado  × quantidade
+desconto     = max(0, 1 − N ÷ R)                      ponderado por VALOR, nunca média de %
+proporcional = max(5%, 10% × (1 − desconto))          nunca acima de 10%
+variável     = max(5%, min(proporcional, min_i c_max_i))
+c_max_i      = lucro_sem_comissão_i ÷ receita_i − piso_i     (decomposição canônica do motor)
+```
+
+| Desconto ponderado | Comissão proporcional |
+|---|---|
+| 0% | 10,00% |
+| 5% | 9,50% |
+| 10% | 9,00% |
+| 18% | 8,20% |
+| 30% | 7,00% |
+| 50% ou mais | 5,00% |
+| preço acima da tabela | 10,00% (nunca sobe) |
+
+Leitura: o desconto reduz a comissão na proporção; a empresa consome o colchão de margem até
+o piso; quando um item encosta no piso, o desconto adicional é absorvido pela comissão; a
+comissão nunca cai sozinha abaixo de **5%**; se com 5% algum item fica abaixo do piso, a
+negociação sai da autonomia — **exceção comercial** (`MARGEM_ABAIXO_PISO`), aprovável pelo
+workflow canônico, não blocker. A validação do piso é **item a item**: um item rentável não
+esconde outro abaixo do piso.
+
+**Daune:** fora do bloco variável — preço travado e comissão fixa de 5%.
+
+**O que a vendedora vê:** uma comissão estimada só — total em R$ e **taxa efetiva**
+= comissão total ÷ receita dos itens comissionáveis (Daune + bloco variável; frete fora; item
+sem custo fora). É **estimativa de pricing** sobre a base canônica (receita comercial); a
+comissão pagável depende do financeiro — ver OQ-01 no `AUDIT_ANARA_MASTER.md`.
+
+**Frete** não entra no desconto, na base da comissão nem na taxa efetiva.
+
+## 12.1 Tabela anterior — por faixa de markup (até 15/09/2026)
 
 `comissao_tabela = [[0.0, 0.05], [0.6, 0.06], [0.7, 0.07], [0.8, 0.08], [0.9, 0.09], [1.0, 0.10]]`
 

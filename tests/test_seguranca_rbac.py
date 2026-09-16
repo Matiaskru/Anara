@@ -82,7 +82,10 @@ def cenario(session):
         session.commit()
         session.refresh(cliente)
 
-    fornecedor = session.exec(select(Fornecedor).where(Fornecedor.codigo == "DAUNE")).first()
+    # Decor Tricot, e não Daune: desde 16/09/2026 o preço Daune é travado, e estes testes
+    # precisam de um produto cujo preço o vendedor possa digitar.
+    fornecedor = session.exec(select(Fornecedor)
+                              .where(Fornecedor.codigo == "DECOR_TRICOT")).first()
     produto = Produto(sku_key="RBAC-1", nome="Produto RBAC", custo_unitario=377.11,
                       preco_base=600.0, fornecedor_id=fornecedor.id, familia="Flat Sheet",
                       cost_method=CostMethod.national_supplier.value, margem_padrao_pct=0.14)
@@ -98,7 +101,7 @@ def cenario(session):
     session.refresh(cot)
 
     chamar(adicionar_item, RequestFalsa(_novo_usuario("ADMIN")), cotacao_id=cot.id,
-           produto_id=produto.id, quantidade=10.0, modo="margem", valor=0.14,
+           produto_id=produto.id, quantidade=10.0, modo="margem", valor=None,
            session=session)
     session.commit()
     from app.models import CotacaoItem

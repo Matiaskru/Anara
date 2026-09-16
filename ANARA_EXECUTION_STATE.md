@@ -2,7 +2,36 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **05/09/2026 — fim da Sessão 8**
+Última atualização: **16/09/2026 — fim da Fase 3A (política comercial canônica)**
+
+---
+
+# Fase 3A — política comercial canônica (16/09/2026) — EXECUTADA
+
+Decisão comercial de 16/09/2026 implementada no sistema oficial, versionada e auditável.
+Alembic **`0018`** (aditiva). **1142 testes** passando. Servidor religado em 127.0.0.1:8420.
+
+| O quê | Onde |
+|---|---|
+| Política pura (constantes da decisão, derivação das regras, comissão proporcional/ponderada/variável) | `app/politica_comercial.py` |
+| Preview/aplicação da negociação, payloads vendedora × admin, detecção de rascunho anterior | `app/comercial_service.py`, `app/routers/negociacao.py` |
+| Comissão fixa e máxima para o piso no motor | `app/pricing_engine.py` |
+| Regra de margem com piso/comissão/travado, resolução por data (C-NEW-13) | `app/margin_rules.py`, `app/pricing_service.py` |
+| Exceção `MARGEM_ABAIXO_PISO`, fingerprint com política, comissão estimada no resumo | `app/workflow.py` |
+| Preço Daune travado (409), recálculo da cotação após cada mutação de item | `app/routers/cotacoes.py` |
+| Regras novas + premissas de comissão semeadas; script de aplicação com backup e trilha | `app/seeds.py`, `scripts/aplicar_politica_comercial_2026_09_16.py` |
+| Relatório de impacto por SKU | `scripts/relatorio_impacto_politica_comercial.py` → `relatorios/impacto_politica_comercial_2026-09-16.md` |
+| Testes novos | `tests/test_margens.py` (reescrito), `tests/test_politica_comercial.py`, `tests/test_negociacao_comercial.py` |
+
+Banco real: 21 regras encerradas em 16/09 + 21 sucessoras, 2 premissas, 23 linhas de trilha
+(`politica-comercial-2026-09-16-431b8c3a`); cotações, itens, snapshots, produtos e custos
+**idênticos** ao backup. Backups: `data/backups/anara.db.antes-fase3a-migration-0018-*`,
+`data/backups/anara.db.antes-politica-comercial-2026-09-16-*`,
+`~/Anara-Cotacao-Backups/anara_fase3a_pre_*.db`.
+
+Aberto: **C-NEW-14** (`/configuracoes/margem` edita no lugar), **OQ-01** (base contratual da
+comissão), offline V2 **stale**. Próxima fase: a UX reativa sobre `/cotacoes/{id}/negociacao` —
+**não iniciada, não autorizada**.
 
 ---
 

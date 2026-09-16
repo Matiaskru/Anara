@@ -21,11 +21,17 @@ Aprovação é decisão **comercial**. Ela não substitui dado econômico ausent
 um número que não existe — e é por isso que blocker duro e exceção comercial são conceitos
 separados aqui, com funções separadas.
 
-## Preço abaixo do recomendado é exceção, mesmo com margem boa
+## Autonomia da vendedora — a regra mudou em 16/09/2026
 
-A regra é do projeto e é deliberada: a autonomia de desconto do vendedor é **zero**. Se a
-margem continuar saudável, ótimo — a aprovação existe para que a decisão de abrir mão de
-receita seja de quem tem alçada, não para verificar se sobrou lucro.
+Até a Fase 3A a autonomia de desconto era **zero**: preço abaixo do recomendado exigia
+aprovação mesmo com margem boa. A política comercial de 16/09/2026 dá à vendedora um
+**piso de margem** por item (`piso_margem_pct`, congelado no item): abaixo do recomendado e
+acima do piso é autonomia; abaixo do piso — depois de a comissão da cotação ter caído até o
+mínimo — é **exceção comercial** (`MARGEM_ABAIXO_PISO`), aprovável pelo workflow canônico.
+
+Dois casos continuam com a regra antiga, de propósito: o item com **preço travado** (Daune),
+cujo negociado só pode ser o recomendado — se estiver abaixo, é exceção; e o item **anterior
+à política** (sem piso congelado), que segue sendo avaliado como foi formado.
 
 Nada aqui conhece FastAPI, Jinja nem sessão de banco: recebe os objetos já lidos e devolve
 resultado. O que grava é `workflow_service`.
@@ -120,7 +126,8 @@ FRETE_BLOQUEIA = {"FRETE_A_COTAR", "FRETE_REVIEW_REQUIRED", "FRETE_ICMS_REVIEW_R
 
 # Motivos estruturados de exceção comercial (§20). Texto livre nunca é a fonte da semântica.
 PRECO_ABAIXO = "PRECO_ABAIXO_RECOMENDADO"
-MARGEM_ABAIXO = "MARGEM_ABAIXO_ALVO"
+MARGEM_ABAIXO = "MARGEM_ABAIXO_ALVO"          # item anterior à política: alvo é a régua
+MARGEM_ABAIXO_PISO = "MARGEM_ABAIXO_PISO"     # política de 16/09/2026: piso é a régua
 PREMISSA_VELHA = "PREMISSA_DESATUALIZADA_MANTIDA"
 OUTRA_EXCECAO = "OUTRA_EXCECAO_COMERCIAL"
 
@@ -244,13 +251,14 @@ class Excecao:
     diferenca_pct: Optional[str] = None
     margem_alvo: Optional[str] = None
     margem_real: Optional[str] = None
+    margem_piso: Optional[str] = None
 
     def como_dict(self) -> dict:
         return {"motivo": self.motivo, "escopo": self.escopo, "detalhe": self.detalhe,
                 "preco_recomendado": self.preco_recomendado,
                 "preco_negociado": self.preco_negociado, "diferenca": self.diferenca,
                 "diferenca_pct": self.diferenca_pct, "margem_alvo": self.margem_alvo,
-                "margem_real": self.margem_real}
+                "margem_real": self.margem_real, "margem_piso": self.margem_piso}
 
 
 def blockers_do_item(item) -> List[Blocker]:
@@ -303,16 +311,25 @@ def blockers_da_cotacao(cotacao, itens: Sequence, frete: Optional[dict] = None
 # ---------------------------------------------------------------------------
 # Exceções comerciais
 # ---------------------------------------------------------------------------
+def item_tem_politica(item) -> bool:
+    """O item foi formado pela política de 16/09/2026 (tem piso congelado)?"""
+    return (getattr(item, "politica_comercial", None) is not None
+            and getattr(item, "piso_margem_pct", None) is not None)
+
+
 def excecoes_do_item(item) -> List[Excecao]:
     """Onde este item foge da política comercial.
 
-    Duas regras independentes, e a primeira é a que mais surpreende:
+    Três réguas, escolhidas pelo que o item congelou — nunca pelo que vale hoje:
 
-    * **preço abaixo do recomendado é exceção mesmo com margem boa.** A autonomia de
-      desconto do vendedor é zero — abrir mão de receita é decisão de quem tem alçada, não
-      consequência de o lucro ter sobrado;
-    * **margem real abaixo da alvo é exceção**, ainda que o preço não tenha caído (pode ter
-      subido o custo, mudado o imposto ou entrado frete).
+    * **preço travado** (Daune) ou **item anterior à política**: preço abaixo do recomendado
+      é exceção mesmo com margem boa — a autonomia é zero;
+    * **item da política de 16/09/2026**: abaixo do recomendado é autonomia; o que exige
+      aprovação é a **margem realizada abaixo do piso**, medida com a comissão que a
+      cotação já reduziu até o mínimo (`comercial_service` recalcula o item antes);
+    * **margem real abaixo da régua** (alvo no legado, piso na política) é exceção ainda
+      que o preço não tenha caído — pode ter subido o custo, mudado o imposto ou entrado
+      frete.
     """
     achados = []
     rotulo = item.nome_produto or f"item #{item.id}"
@@ -321,36 +338,54 @@ def excecoes_do_item(item) -> List[Excecao]:
     # uma venda interestadual normal pareceria desconto.
     recomendado = dinheiro(item.preco_recomendado) if item.preco_recomendado else None
     negociado = dinheiro(item.preco_negociado) if item.preco_negociado else None
+    politica = item_tem_politica(item)
+    travado = bool(getattr(item, "preco_travado", False))
 
-    if recomendado and negociado and negociado < recomendado:
+    if recomendado and negociado and negociado < recomendado and (travado or not politica):
         diferenca = negociado - recomendado
         achados.append(Excecao(
             motivo=PRECO_ABAIXO, escopo=rotulo,
             detalhe=(f"Negociado R$ {negociado} contra R$ {recomendado} de recomendado. "
-                     "Preço abaixo do recomendado exige aprovação mesmo quando a margem "
-                     "continua saudável."),
+                     + ("O preço deste produto é travado pela política comercial: não há "
+                        "autonomia de desconto."
+                        if travado else
+                        "Preço abaixo do recomendado exige aprovação mesmo quando a margem "
+                        "continua saudável.")),
             preco_recomendado=str(recomendado), preco_negociado=str(negociado),
             diferenca=str(diferenca),
             diferenca_pct=str(divide(diferenca, recomendado))))
 
     alvo = D(item.margem_padrao_pct)
+    piso = D(getattr(item, "piso_margem_pct", None)) if politica else None
+    regua = piso if piso is not None else alvo
     real = D(item.margem_liquida)
-    if alvo is not None and real is not None and item.custo_unitario:
+    if regua is not None and real is not None and item.custo_unitario:
         preco = dinheiro(item.preco_negociado) or ZERO
-        deficit = deficit_de_lucro_unitario(preco, alvo, real)
+        deficit = deficit_de_lucro_unitario(preco, regua, real)
         tolerancia = tolerancia_de_arredondamento(
             getattr(item, "quantidade", 1), componentes_quantizados_do_item(item))
         # Sem preço não há receita contra a qual medir déficit — e um item nesse estado está
         # bloqueado por outro motivo, não aprovado por omissão. Mantém-se a comparação estrita.
-        material = deficit > tolerancia if preco > ZERO else real < alvo
+        material = deficit > tolerancia if preco > ZERO else real < regua
         if material:
-            achados.append(Excecao(
-                motivo=MARGEM_ABAIXO, escopo=rotulo,
-                detalhe=(f"Margem real de {real * 100:.2f}% contra alvo de "
-                         f"{alvo * 100:.2f}%"
-                         + (f" — R$ {dinheiro(deficit)} de lucro a menos por unidade."
-                            if preco > ZERO else ".")),
-                margem_alvo=str(alvo), margem_real=str(real)))
+            if piso is not None:
+                achados.append(Excecao(
+                    motivo=MARGEM_ABAIXO_PISO, escopo=rotulo,
+                    detalhe=(f"Margem realizada de {real * 100:.2f}% abaixo do piso de "
+                             f"autonomia de {piso * 100:.2f}% (alvo {alvo * 100:.2f}%), já "
+                             "com a comissão da cotação reduzida ao mínimo"
+                             + (f" — R$ {dinheiro(deficit)} de lucro a menos por unidade."
+                                if preco > ZERO else ".")),
+                    margem_alvo=str(alvo) if alvo is not None else None,
+                    margem_real=str(real), margem_piso=str(piso)))
+            else:
+                achados.append(Excecao(
+                    motivo=MARGEM_ABAIXO, escopo=rotulo,
+                    detalhe=(f"Margem real de {real * 100:.2f}% contra alvo de "
+                             f"{alvo * 100:.2f}%"
+                             + (f" — R$ {dinheiro(deficit)} de lucro a menos por unidade."
+                                if preco > ZERO else ".")),
+                    margem_alvo=str(alvo), margem_real=str(real)))
     return achados
 
 
@@ -374,19 +409,33 @@ def excecoes_da_cotacao(cotacao, itens: Sequence,
 
 
 def resumo_comercial(itens: Sequence) -> dict:
-    """Totais do documento, para a tela do aprovador. Nada aqui recalcula economia."""
+    """Totais do documento, para a tela do aprovador. Nada aqui recalcula economia.
+
+    A comissão estimada (Fase 3A) é a **soma do que cada item já gravou** em
+    `comissao_valor`; a taxa efetiva divide essa soma pela receita dos itens comissionáveis
+    — os que têm custo e comissão gravada. Item sem custo não entra em nenhum dos dois.
+    Nunca média de percentuais.
+    """
     recomendado = ZERO
     negociado = ZERO
+    comissao = ZERO
+    receita_comissionavel = ZERO
     for it in itens:
         qtd = D0(it.quantidade)
         if it.preco_recomendado:
             recomendado += dinheiro(D0(it.preco_recomendado) * qtd)
         negociado += D0(it.faturamento)
+        if getattr(it, "comissao_valor", None) is not None and D0(it.custo_unitario) > ZERO:
+            comissao += D0(it.comissao_valor)
+            receita_comissionavel += D0(it.faturamento)
     diferenca = negociado - recomendado
     return {"total_recomendado": para_float(recomendado),
             "total_negociado": para_float(negociado),
             "diferenca": para_float(diferenca),
-            "diferenca_pct": para_float(divide(diferenca, recomendado))}
+            "diferenca_pct": para_float(divide(diferenca, recomendado)),
+            "comissao_estimada_valor": para_float(comissao),
+            "comissao_estimada_pct_efetiva": para_float(divide(comissao, receita_comissionavel)),
+            "receita_comissionavel": para_float(receita_comissionavel)}
 
 
 # ---------------------------------------------------------------------------
@@ -400,6 +449,9 @@ CAMPOS_MATERIAIS_ITEM = (
     "custo_unitario", "margem_padrao_pct", "margem_liquida", "comissao_pct",
     "icms_pct", "difal_pct", "encargo_pct", "custo_referencia_id",
     "condicao_pagamento_id", "aliquota_interestadual_id", "premissas_pinadas",
+    # Fase 3A: a política que formou o item é material — piso, comissão de formação, preço
+    # travado e a versão da política. Mudou a política, mudou a decisão que se tomaria.
+    "piso_margem_pct", "comissao_formacao_pct", "preco_travado", "politica_comercial",
 )
 #: Os campos da COTAÇÃO. `observacoes` e notas internas ficam de fora de propósito: são
 #: descritivas, não mudam economia nem contexto fiscal, e invalidar aprovação por causa

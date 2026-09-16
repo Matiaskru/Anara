@@ -405,6 +405,50 @@ def calcular_por_margem(custo, qtd, margem_alvo,
     return r
 
 
+# ---------------------------------------------------------------------------
+# Política comercial (Fase 3A, 16/09/2026) — comissão fixa e comissão máxima para o piso
+# ---------------------------------------------------------------------------
+def com_comissao_fixa(regras: TaxRuleSet, comissao_pct) -> TaxRuleSet:
+    """O mesmo `TaxRuleSet`, com a comissão presa em um percentual, qualquer que seja o markup.
+
+    A política de 16/09/2026 trocou a comissão por faixa de markup por uma comissão de
+    **formação** (10% não-Daune, 5% Daune) e uma comissão **negociada** da cotação inteira.
+    Nada muda no gross-up: uma tabela de faixa única `[(0, pct)]` faz `comissao_para_markup`
+    devolver `pct` para todo markup, e o motor segue idêntico — é assim que a comissão fixa
+    entra sem uma segunda fórmula.
+    """
+    return TaxRuleSet(icms_pct=regras.icms_pct, pis_cofins_pct=regras.pis_cofins_pct,
+                      encargo_financeiro_pct=regras.encargo_financeiro_pct,
+                      comissao_tabela=[(ZERO, D0(comissao_pct))], origem_uf=regras.origem_uf,
+                      frete_cf_unitario=regras.frete_cf_unitario,
+                      frete_rv_pct=regras.frete_rv_pct)
+
+
+def comissao_maxima_para_margem(custo, qtd, preco, margem_piso,
+                                regras: TaxRuleSet) -> Optional[Decimal]:
+    """A maior comissão (fração da receita) que ainda deixa a linha na margem-piso.
+
+    Sai da **decomposição canônica** da linha, não de uma fórmula paralela: roda
+    `calcular_por_preco` com comissão zero — impostos, custo total e frete quantizados
+    exatamente como o motor os quantiza — e o lucro que sobra é o que pode ser repartido
+    entre comissão e margem:
+
+        lucro₀      = receita − impostos − custo_total − frete_CF − frete_RV     (comissão = 0)
+        c_max       = lucro₀ ÷ receita − piso
+
+    Pode ser negativa: o item já está abaixo do piso mesmo sem comissão nenhuma. `None`
+    quando não há receita ou custo — sem eles não existe margem para preservar.
+    """
+    custo_d = D0(custo)
+    preco_d = dinheiro(preco) or ZERO
+    if custo_d <= ZERO or preco_d <= ZERO or D0(qtd) <= ZERO:
+        return None
+    sem_comissao = calcular_por_preco(custo_d, qtd, preco_d, com_comissao_fixa(regras, ZERO))
+    if sem_comissao.faturamento <= ZERO:
+        return None
+    return divide(sem_comissao.lucro, sem_comissao.faturamento) - D0(margem_piso)
+
+
 def calcular_por_markup(custo, qtd, markup,
                         regras: TaxRuleSet, preco_base=None) -> ResultadoPrecificacao:
     """Modo A: usuário define o markup sobre o custo NET; preço é derivado:

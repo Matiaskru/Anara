@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| HEAD | `6600f68` |
-| Alembic | `0017` — **nenhuma migration no Product Cleanup** |
-| Suíte | **895 passando**, 0 falhas (`python3 -m pytest -q`, 60 s) |
+| HEAD | commit da Fase 3A (16/09/2026) — política comercial canônica |
+| Alembic | `0018` — política comercial (colunas aditivas em `margemregra` e `cotacaoitem`) |
+| Suíte | **1142 passando**, 0 falhas (`python3 -m pytest -q`, ~90 s) |
 | Código | ~11.500 linhas em `app/`, 40 módulos, 15 routers, 33 templates |
 | Banco | SQLite em `data/anara.db`, 33 tabelas |
 | Atualizado em | 09/09/2026, ao fim do Product Cleanup |
@@ -231,6 +231,16 @@ memorizar.
 - **Recálculo:** `atualizar_cabecalho` recalcula todos os itens quando muda condição de
   pagamento, destino, origem ou contribuinte (`cotacoes.py:286-313`)
 - **Imutabilidade:** `ws.exigir_editavel(cotacao, ...)` recusa alteração após emissão
+
+### `/cotacoes/{id}/negociacao` · `/negociacao/preview` · `/negociacao` (POST) — Fase 3A
+Preview canônico da negociação (`app/routers/negociacao.py` → `comercial_service`). Corpo
+JSON `{"itens": [{"item_id", "preco_negociado"}]}`. `preview` não grava; `POST /negociacao`
+grava, recalcula a cotação inteira e invalida aprovação. Vendedora recebe
+`payload_vendedora` (itens com recomendado/negociado/total/editável, subtotais, desconto,
+frete, total, **comissão estimada em R$ e taxa efetiva**, `autonomia_status`,
+`requer_aprovacao`); OWNER/ADMIN recebem também `economia` (piso, margem realizada, lucro,
+comissão por item, máxima para o piso, quanto o desconto consumiu de comissão/margem/impostos).
+Preço de item travado (Daune) diferente do recomendado: **409**.
 
 ### `/cotacoes/{id}/itens/{item_id}/memoria` — Memória do preço
 - **Arquivo:** `app/routers/cotacoes.py:568`
@@ -511,7 +521,11 @@ Append-only. `oportunidade_id`, `de`, `para`, `ator_id`, `em`, `nota`
 - Comercial: `nome_produto`, `especificacao`, `quantidade`, `preco_base`,
   `preco_recomendado`, `preco_negociado`, `faturamento`, `modo_edicao`, `valor_editado`
 - Econômico: `custo_unitario` (**NOT NULL**), `margem_padrao_pct`, `margem_liquida`,
-  `comissao_pct`, `lucro`, `impostos`, `markup_implicito`
+  `comissao_pct` (a comissão **aplicada** — desde 16/09/2026 é a da cotação, não a da faixa),
+  `lucro`, `impostos`, `markup_implicito`
+- **Política comercial congelada** (Fase 3A): `piso_margem_pct`, `comissao_formacao_pct`,
+  `preco_travado`, `politica_comercial`. NULO = item anterior a 16/09/2026, avaliado com a
+  semântica anterior e apontado por `premissas_desatualizadas`
 - Fiscal: `icms_pct`, `difal_pct`, `encargo_pct`, `status_fiscal`, `motivo_fiscal`,
   `uf_destino_fiscal`, `finalidade`
 - Status: `status_custo_item`, `confirmation_pending`, `status_pagamento`,
@@ -551,7 +565,11 @@ Versionado. `produto_id`, `versao`, `valor`, `valor_bruto`, `cnet_brl`, `moeda`,
 `ativo`, `fonte`, `fonte_data`
 
 ### `MargemRegra` (`models.py:639`)
-Resolvida **por prioridade**, nunca por `if` espalhado. Escopo: fornecedor, família ou SKU.
+Resolvida **por prioridade e por data** (`ref` default = hoje — C-NEW-13), nunca por `if`
+espalhado. Escopo: fornecedor, família ou SKU. Desde 16/09/2026 carrega a política do escopo:
+`piso_pct`, `comissao_formacao_pct`, `preco_travado`, `margem_anterior_pct`, `politica`,
+`fonte`. As 21 regras anteriores estão encerradas (`valid_to = 2026-09-16`) e têm uma
+sucessora cada.
 
 ### `CondicaoPagamento` (`models.py:656`)
 `codigo`, `label`, `encargo_pct`, `confirmado`, vigência.
@@ -601,9 +619,10 @@ CUSTO NET (R$)        ← resolvido AGORA por ps.custo_para_precificar(), não l
   ↓  pricing_engine
 markup E → gross-up por (ICMS + PIS/COFINS + encargo financeiro + comissão + RV logístico)
   ↓
-PREÇO RECOMENDADO
-  ↓  negociação
-PREÇO NEGOCIADO → faturamento → impostos → comissão → frete → LUCRO (resíduo) → MARGEM
+PREÇO RECOMENDADO     ← comissão de FORMAÇÃO da política (10% não-Daune, 5% Daune)
+  ↓  negociação (Fase 3A: comercial_service)
+PREÇO NEGOCIADO → comissão da COTAÇÃO (variável, presa pelo piso) → impostos → frete
+                → LUCRO (resíduo) → MARGEM REALIZADA → piso? autonomia : exceção
 ```
 
 ## 5.2 Fórmulas reais
@@ -646,6 +665,22 @@ margem = lucro / faturamento
 `custo_efetivo = custo + regras.frete_cf_unitario` — o CF do frete entra no **numerador**;
 o RV entra no **denominador** (`TaxRuleSet.rates_variaveis()`).
 
+**Política comercial de 16/09/2026** (`app/politica_comercial.py`, puro; `app/comercial_service.py`,
+com banco; `pricing_engine.com_comissao_fixa` / `comissao_maxima_para_margem`):
+
+```
+comissão de formação   faixa única [(0, c)] no TaxRuleSet → o gross-up não muda
+desconto ponderado     max(0, 1 − Σneg/Σrec)            bloco variável = não-Daune com custo e recomendado
+proporcional           max(5%, 10% × (1 − desconto))
+c_max_i                lucro_sem_comissão_i / receita_i − piso_i     (calcular_por_preco com comissão 0)
+comissão variável      max(5%, min(proporcional, min_i c_max_i))
+item                   calcular_por_preco(custo, qtd, negociado, com_comissao_fixa(regras, variável))
+exceção                déficit(preço, piso, margem_realizada) > tolerância_de_arredondamento → MARGEM_ABAIXO_PISO
+```
+
+Daune: preço travado (409 ao tentar outro unitário, para qualquer papel) e comissão fixa 5%.
+Item anterior à política: comissão por faixa, autonomia zero — não é migrado sem ato explícito.
+
 ## 5.3 Os conceitos, separados
 
 | Conceito | O que é | Onde |
@@ -658,7 +693,11 @@ o RV entra no **denominador** (`TaxRuleSet.rates_variaveis()`).
 | **Receita real** | `preço negociado × quantidade`, quantizado | `faturamento` |
 | **Lucro** | **Resíduo** da receita menos os componentes já quantizados | `lucro` |
 | **Margem alvo** | A pedida | `margem_alvo` / `margem_padrao_pct` |
-| **Margem líquida** | A realizada | `margem_liquida` |
+| **Margem líquida** | A realizada — com a comissão da cotação | `margem_liquida` |
+| **Piso de autonomia** | Abaixo dele a vendedora perde a autonomia (Fase 3A) | `piso_margem_pct` |
+| **Comissão de formação** | A que forma o recomendado (10% / 5% Daune) | `comissao_formacao_pct` |
+| **Comissão aplicada** | A da cotação, presa pelo piso, ≥ 5% | `comissao_pct` / `comissao_valor` |
+| **Comissão estimada** | Σ `comissao_valor` e taxa efetiva — estimativa de pricing, não pagável | `resumo_comercial` |
 
 > `preco_recomendado ≠ preco_base`. Medir desconto contra o base faria toda venda
 > interestadual parecer exceção (`workflow.py:207-211`).

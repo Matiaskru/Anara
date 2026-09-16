@@ -41,6 +41,7 @@ import pytest
 from fastapi import HTTPException
 from sqlmodel import select
 
+from app import politica_comercial as _pol
 from app import workflow as wf
 from app import workflow_service as ws
 from app.models import (
@@ -124,7 +125,10 @@ def item(session, cot, prod, *, preco, qtd=10, recomendado=None, margem_real=Non
         margem_padrao_pct=prod.margem_padrao_pct, faturamento=preco * qtd,
         custo_total=prod.custo_unitario * qtd, lucro=0.0, modo_edicao="preco",
         valor_editado=preco, status_fiscal="OK", status_pagamento="OK",
-        status_custo_item="CONFIRMADO")
+        status_custo_item="CONFIRMADO",
+        # a política que um item Daune de hoje congela (16/09/2026): piso 12%, 5%, travado
+        politica_comercial=_pol.ROTULO, piso_margem_pct=0.12, comissao_formacao_pct=0.05,
+        preco_travado=True)
     session.add(it)
     session.commit()
     session.refresh(it)
