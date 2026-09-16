@@ -271,6 +271,6 @@ async function manterPremissas(id) {
   if (aviso) aviso.innerHTML = '<div>Decisão registrada: esta cotação mantém as premissas atuais.</div>';
 }
 </script>
-<script src="/static/js/cotacao.js"></script>
-{% if economia %}<script src="/static/js/memoria.js"></script>{% endif %}
+<script src="/static/js/cotacao.js?v={{ versao_estatica }}"></script>
+{% if economia %}<script src="/static/js/memoria.js?v={{ versao_estatica }}"></script>{% endif %}
 {% endblock %}

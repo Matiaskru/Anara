@@ -137,6 +137,10 @@ def custo_pendente(status) -> bool:
     return str(status or "").upper() in ("A_COTAR", "REVIEW_REQUIRED")
 
 
+#: Versão dos arquivos estáticos. Entra como `?v=` nas URLs de CSS/JS para o navegador não
+#: reaproveitar um cache da fase anterior (o JavaScript antigo quebrava a tela nova).
+VERSAO_ESTATICA = "3c1"
+templates.env.globals["versao_estatica"] = VERSAO_ESTATICA
 templates.env.globals["custo_pendente"] = custo_pendente
 templates.env.globals["pill_pos_venda"] = pill_pos_venda
 templates.env.globals["pill_financeiro"] = pill_financeiro

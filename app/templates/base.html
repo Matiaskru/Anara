@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Anara{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/anara.css">
+  <link rel="stylesheet" href="/static/css/anara.css?v={{ versao_estatica }}">
   <link rel="icon" href="/static/img/anara_mark_copper.png">
   {% block extra_head %}{% endblock %}
 </head>
@@ -67,8 +67,8 @@
     </main>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="/static/js/toast.js"></script>
-  <script src="/static/js/ui.js"></script>
+  <script src="/static/js/toast.js?v={{ versao_estatica }}"></script>
+  <script src="/static/js/ui.js?v={{ versao_estatica }}"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

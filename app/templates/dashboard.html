@@ -166,5 +166,5 @@
 
 {% block extra_scripts %}
 <script>const SERIE_MENSAL = {{ serie|tojson }};</script>
-<script src="/static/js/dashboard.js"></script>
+<script src="/static/js/dashboard.js?v={{ versao_estatica }}"></script>
 {% endblock %}

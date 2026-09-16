@@ -82,4 +82,4 @@
 <div class="drawer" id="drawer-memoria"><button class="fechar" onclick="fecharMemoria()">×</button><div id="conteudo-memoria"></div></div>
 {% endif %}
 {% endblock %}
-{% block extra_scripts %}{% if ve_economia(request) %}<script src="/static/js/memoria.js"></script>{% endif %}{% endblock %}
+{% block extra_scripts %}{% if ve_economia(request) %}<script src="/static/js/memoria.js?v={{ versao_estatica }}"></script>{% endif %}{% endblock %}
