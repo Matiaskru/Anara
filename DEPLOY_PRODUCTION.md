@@ -24,14 +24,9 @@ Na máquina de origem (Mac), antes de qualquer conta externa:
 - [ ] **ROTACIONAR_CREDENCIAL** — a senha antiga não vale mais na plataforma (a única conta
       real usa outra senha, provado em 17/09/2026). Se ela foi reaproveitada em qualquer
       outro lugar (e-mail, Wi-Fi, planilha protegida), troque lá **antes** do push.
-- [ ] Decisão sobre `referencia/` (tabelas de preço de fornecedor, PDFs de cotação,
-      docx de orçamento — 932 KB). **Não é lida em runtime.** Só
-      `scripts/importar_fornecedores_nacionais.py` e `tests/test_tarifario_daune_anastacio.py`
-      a usam. Recomendação: **não subir ao GitHub**. Para tirar do histórico (após copiar a
-      pasta para `~/Anara-Cotacao-Backups/referencia/`):
-      `git filter-repo --path referencia --invert-paths --force` e acrescentar
-      `referencia/` ao `.gitignore`. Impacto: o teste do tarifário Daune pula quando a
-      pasta não existe; o script de importação precisa da pasta local.
+- [x] `referencia/` removida do histórico em 17/09/2026 (pasta local, ignorada; cópia em
+      `~/Anara-Cotacao-Backups/referencia/`). Impacto: o teste do tarifário Daune pula sem a
+      pasta; `scripts/importar_fornecedores_nacionais.py` precisa dela localmente.
 - [x] **Dados herdados (D-01 no audit):** resolvido em 17/09/2026 — as 17 cotações foram
       restauradas do backup (voltam arquivadas; apague pelo Admin as que não quiser manter).
 - [ ] Gere a chave de sessão e guarde no gerenciador de senhas (não em arquivo do repo):

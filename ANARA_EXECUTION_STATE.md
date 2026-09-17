@@ -247,8 +247,11 @@ O repositório foi inicializado nesta fase e é **local**. Commit inicial
 > | `ded3b2e` | `80bba80` | Hardening de acesso e senha |
 > | `6a85baf` | `96fd799` | Preparação para produção |
 >
-> `referencia/` continua versionada (tabelas de preço de fornecedor): decidir antes do
-> push — `DEPLOY_PRODUCTION.md` → PREPARAÇÃO.
+> **Segunda reescrita (17/09/2026, antes do primeiro push):** `referencia/` removida de todo
+> o histórico (`git filter-repo --path referencia --invert-paths`), pasta mantida local e
+> ignorada, cópia em `~/Anara-Cotacao-Backups/referencia/`. Os hashes mudaram de novo — mapa em
+> `anara_git_commit_map_20260917_referencia.txt`; na tabela acima, a coluna "depois" vale para
+> a primeira reescrita. Remote: `https://github.com/Matiaskru/Anara.git`.
 
 > Estes números são o retrato de **03/09/2026**. O usuário usa a plataforma entre sessões,
 > então contagens de cotações/itens **podem ter mudado legitimamente**. Divergência nessas
