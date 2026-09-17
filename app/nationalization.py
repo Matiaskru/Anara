@@ -63,6 +63,13 @@ def nacionalizar(exw_usd, peso_kg, ii_pct,
     ii_pct = D(ii_pct)
     if exw_usd is None:
         return ResultadoNacionalizacao(None, avisos=["Sem EXW: não dá para nacionalizar."])
+    if not exw_usd.is_finite() or exw_usd <= 0:
+        # EXW zero ou negativo nunca é preço de fábrica. Nacionalizá-lo devolvia "outras
+        # despesas × câmbio" (R$ 1,29) como se fosse custo — e esse custo formava preço.
+        return ResultadoNacionalizacao(
+            None, avisos=[f"EXW inválido ({exw_usd}): não dá para nacionalizar."])
+    if peso_kg is not None and (not peso_kg.is_finite() or peso_kg < 0):
+        return ResultadoNacionalizacao(None, avisos=[f"Peso inválido ({peso_kg} kg)."])
     if peso_kg is None:
         avisos.append("Produto sem peso — frete internacional considerado zero. Confirmar peso com a KTC.")
         peso_kg = ZERO

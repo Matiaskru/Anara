@@ -6,6 +6,25 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 
 ---
 
+# Auditoria de crise P0 — econômica, fiscal e comercial (17/09/2026) — EXECUTADA
+
+**Deploy comercial estava bloqueado** pelo bug "mudar o cenário não recalcula os itens". Causa
+raiz encontrada e corrigida (CR-01/CR-02: editar quantidade congelava o item em preço fixo, e
+o preço fixo sobrevivia à troca de cenário). Sete correções de código (CR-01…CR-07), zero P0
+aberto; P1 abertos são de dado/fonte/decisão (ver `AUDIT_ANARA_MASTER.md` §11). Sem migration.
+
+Provas depois das correções: pytest SQLite **1.436/0**, PostgreSQL **1.436/0**; matriz fiscal
+418.176 cenários sem divergência do oracle nem violação; fuzz 10.000 casos sem falha; 116
+goldens; 12/12 transições Playwright; oracle KTC 106/106; backtest KTC 0 subcusto; Daune 52/52;
+comissão e arredondamento ao centavo; smoke OWNER/SELLER 78/0. Cotações que podem ter ido ao
+cliente: exposição conhecida R$ 0,00 contra a Anara (0022 correta; 0019 +R$ 86,40 a favor).
+Artefatos em `~/Anara-Cotacao-Backups/CRISIS_AUDIT_20260917/` (`CRISIS_AUDIT_FINAL.md`,
+`CRISIS_PRODUCT_REVIEW.md`, CSVs). Scripts `scripts/crisis/`, testes `tests/crisis/`.
+
+Efeito operacional das correções: 87 SKUs passam a REVALIDAR (71 KTC com cotação de mai–jul e 16
+Decor) — cotam e emitem, **não fecham venda** até reconfirmação no Admin; venda a não
+contribuinte fora de SP/RJ continua bloqueada até cadastrar base interna e FCP (FIS-01).
+
 # Preparação para produção / deploy (17/09/2026) — EXECUTADA, sem publicar
 
 Alembic **`0022`** (`0022_enums_portaveis`: no PostgreSQL converte os três enums nativos em

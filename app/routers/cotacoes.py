@@ -665,12 +665,19 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
     session.add(cotacao)
     session.commit()
 
-    if mudou_precificacao:
+    # O formulário não é a única coisa que muda o cenário: finalidade do cliente, origem
+    # fiscal, alíquota cadastrada. Se o cenário que forma preço HOJE não é o que está
+    # congelado nos itens, salvar o cabeçalho reforma os preços — nunca deixa um item
+    # afirmando um ICMS que a cotação não tem mais.
+    if mudou_precificacao or cenario_dos_itens_divergiu(session, cotacao):
         _recalcular_todos_itens(cotacao, session)
         return RedirectResponse(url=f"/cotacoes/{cotacao_id}?cenario=atualizado",
                                 status_code=303)
 
     return RedirectResponse(url=f"/cotacoes/{cotacao_id}?salvo=1", status_code=303)
+
+
+cenario_dos_itens_divergiu = com.cenario_dos_itens_divergiu
 
 
 @router.post("/cotacoes/{cotacao_id}/premissas/atualizar")
@@ -709,6 +716,12 @@ def atualizar_premissas(request: Request, cotacao_id: int,
         it.custo_unitario = custo or 0.0
         margem = ps.margem_padrao(session, produto)
         regras, _regra, ctx = montar_regras(cotacao, session, produto)
+        if it.modo_edicao == "margem" and it.custo_unitario > 0:
+            # A alavanca de um item em modo margem é a margem-alvo. Trazer o rascunho para
+            # as premissas de hoje inclui a política de hoje: manter o alvo antigo (18%)
+            # enquanto o recomendado passa a 20% fabricava um "desconto" que ninguém deu e
+            # cortava a comissão da vendedora (cotação 0021 na auditoria de 17/09/2026).
+            it.valor_editado = para_float(margem.margem_pct)
         res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
                         regras, it.preco_base)
         _preencher_item(session, it, produto, margem, memoria_custo)
@@ -735,24 +748,39 @@ def atualizar_premissas(request: Request, cotacao_id: int,
 
 
 def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
-    """Recalcula item a item: cada um resolve o próprio cenário fiscal.
+    """Mudou o cenário (destino, contribuinte, condição, frete): **todo preço é reformado**.
 
-    Todo recálculo pode mudar o fingerprint — e aprovação vale para uma configuração, não
-    para uma cotação. Por isso a invalidação vem junto, aqui, e não como algo que a tela
-    precise lembrar de fazer.
+    Cada item volta ao preço que o motor forma para o cenário NOVO, na margem-alvo do item
+    (`modo_edicao = "margem"`). Um preço negociado era uma decisão sobre OUTRO cenário — mantê-lo
+    exibiria como válido um número formado com outro ICMS, outro DIFAL ou outro encargo. Foi o
+    que a auditoria de 17/09/2026 reproduziu: editar a quantidade congelava o item em modo
+    "preço", e a troca de destino SP→RJ não contribuinte deixava R$ 69,88 onde o motor formava
+    R$ 76,38. Quem quiser desconto renegocia sobre o preço do cenário certo.
+
+    Preço travado (Daune) e item sem custo (cota pelo preço, já bloqueado) não são tocados
+    além do recálculo normal. Toda mudança invalida a aprovação anterior — ela era sobre
+    outra configuração.
     """
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao.id)).all()
     for it in itens:
         produto = session.get(Produto, it.produto_id) if it.produto_id else None
+        if it.custo_unitario and it.custo_unitario > 0 and it.margem_padrao_pct is not None:
+            it.modo_edicao = "margem"
+            it.valor_editado = it.margem_padrao_pct
         regras, _regra, ctx = montar_regras(cotacao, session, produto, item=it)
         res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
                         regras, it.preco_base)
         _aplicar_resultado(it, res, regras, ctx)
+        if produto is not None and regras is not None:
+            it.memoria_json = ps.memoria_json(ps.memoria_do_preco(
+                session, produto, cotacao, preco_negociado=res.preco_negociado,
+                quantidade=it.quantidade,
+                comissao_formacao_pct=com.comissao_de_formacao_do_item(it)))
         session.add(it)
     session.flush()
     # A comissão é da cotação: reaplicada a todos os itens da política de uma vez.
     com.recalcular_comissao(session, cotacao, itens)
-    ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="recálculo dos itens")
+    ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="cenário alterado — preços reformados")
     session.commit()
 
 
@@ -846,8 +874,9 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
     # divergir, senão o preço muda ao clicar em "adicionar".
     custo_vivo = ps.custo_para_precificar(session, produto)[0]
     if not custo_vivo:
-        # Sem custo não há margem, mas o preço exibido continua sendo quantia comercial.
-        preco = dinheiro(valor if modo == "preco" else (produto.preco_base or 0))
+        # Sem custo não há margem, mas o preço exibido continua sendo quantia comercial —
+        # e só existe se alguém o digitou (o preço-base do catálogo não é referência).
+        preco = dinheiro(valor if modo == "preco" else 0)
         sem_custo = {
             "sem_custo": True, "preco_base": produto.preco_base,
             "margem_padrao_pct": para_float(margem.margem_pct), "margem_regra": margem.regra,
@@ -955,8 +984,11 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
     custo, memoria_custo = ps.custo_para_precificar(session, produto)
     custo = custo or 0.0
     if custo <= 0:
-        # sem custo: cota pelo preço, margem fica em branco (não se inventa margem)
-        preco = valor if modo == "preco" else (produto.preco_base or 0)
+        # sem custo: cota pelo preço que a pessoa DIGITAR, margem fica em branco (não se
+        # inventa margem). O `preco_base` do catálogo não serve de default: é um cache
+        # formado noutro cenário e, na Daune, o preço de venda legado (+96% sobre o
+        # recomendado) — um número fabricado apareceria como "seu preço" (NAC-05).
+        preco = valor if modo == "preco" else 0.0
         res = _calcular("preco", 0.0, quantidade, preco, regras, produto.preco_base)
         modo, valor = "preco", preco
     else:
@@ -1000,9 +1032,12 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
 async def editar_item(cotacao_id: int, item_id: int, request: Request,
                       session: Session = Depends(get_session)):
     form = await request.form()
-    quantidade = float(form.get("quantidade"))
-    modo = form.get("modo", "preco")
-    valor = float(form.get("valor"))
+    try:
+        quantidade = float(str(form.get("quantidade") or "").replace(",", "."))
+    except ValueError:
+        quantidade = 0.0
+    if not quantidade > 0:
+        return JSONResponse({"erro": "A quantidade precisa ser maior que zero."}, status_code=400)
 
     cotacao = session.get(Cotacao, cotacao_id)
     if cotacao is not None:
@@ -1010,6 +1045,27 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
     item = session.get(CotacaoItem, item_id)
     if not cotacao or not item or item.cotacao_id != cotacao_id:
         return JSONResponse({"erro": "não encontrado"}, status_code=404)
+
+    # Sem `modo` no formulário é edição SÓ de quantidade: o item mantém a alavanca que tem
+    # (margem-alvo ou preço negociado). Até 17/09/2026 a tela mandava `modo=preco` com o
+    # preço corrente, e isso convertia silenciosamente um item de margem em preço fixo —
+    # que depois não acompanhava a troca de cenário, e que virava R$ 0,00 permanente quando
+    # o cenário estava bloqueado na hora da edição.
+    modo = (form.get("modo") or "").strip() or None
+    if modo is None or modo == "quantidade":
+        modo, valor = item.modo_edicao or "margem", item.valor_editado
+        if valor is None:
+            modo, valor = "margem", item.margem_padrao_pct
+    else:
+        try:
+            valor = float(str(form.get("valor") or "").replace(",", "."))
+        except ValueError:
+            valor = 0.0
+        if modo == "preco" and not valor > 0:
+            return JSONResponse({"erro": "O preço unitário precisa ser maior que zero."},
+                                status_code=400)
+        if modo in ("margem", "markup") and valor is not None and valor < 0:
+            return JSONResponse({"erro": "Margem/markup não podem ser negativos."}, status_code=400)
 
     produto = session.get(Produto, item.produto_id) if item.produto_id else None
     regras, _regra, ctx = montar_regras(cotacao, session, produto, item=item)
@@ -1265,14 +1321,23 @@ def gerar_pdf(request: Request, cotacao_id: int, session: Session = Depends(get_
     # que diga o que fazer — não um objeto JSON na barra de endereços, que foi o que ele viu
     # ao tentar gerar a primeira proposta.
     bloqueios = bloqueios_fiscais(itens)
+    # 17/09/2026: o rascunho não sai com item formado num cenário que já não é o da cotação.
+    # A prévia é ferramenta de trabalho e pode sair incompleta (linha sem preço, marcada);
+    # o que ela não pode é mostrar um preço formado com outro ICMS como se fosse deste
+    # cenário — isso não é rascunho, é dado errado.
+    divergentes = com.cenario_dos_itens_divergiu(session, cotacao, itens)
+    if divergentes:
+        bloqueios.append(
+            f"{len(divergentes)} item(ns) foram formados com um cenário fiscal diferente do "
+            "atual da cotação. Clique em \"Atualizar cenário e recalcular\" antes de gerar o PDF.")
     if bloqueios:
         return pagina_de_erro(
             request, titulo="Não foi possível gerar o PDF",
             introducao="Antes de continuar, resolva:",
             motivos=bloqueios,
             ajuda=("O rascunho continua salvo e editável. O documento comercial só sai "
-                   "quando todos os itens têm cenário fiscal e condição de pagamento "
-                   "resolvidos."),
+                   "quando todos os itens têm cenário fiscal, condição de pagamento e preço "
+                   "resolvidos para o cenário atual."),
             voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação")
 
     # Sessão 6: preview e documento final são a mesma folha para quem recebe. Enquanto a

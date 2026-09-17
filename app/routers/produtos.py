@@ -153,7 +153,10 @@ def buscar(request: Request, q: str = "", fornecedor: str = "", familia: str = "
                                        sku_key=p.sku_key) for p in produtos}
     completo = [{
         "id": p.id, "nome": p.nome, "especificacao": p.especificacao, "categoria": p.categoria,
-        "familia": p.familia, "custo_unitario": p.custo_unitario, "preco_base": p.preco_base,
+        "familia": p.familia, "custo_unitario": p.custo_unitario,
+        # preço-base só quando o produto forma preço: sem custo ele é cache de outro cenário
+        # (na Daune, o preço de venda legado) e enganaria quem busca (NAC-05, 17/09/2026)
+        "preco_base": p.preco_base if situacao_comercial(p) == "DISPONIVEL" else None,
         "fornecedor": (fornecedores[p.fornecedor_id].nome if p.fornecedor_id in fornecedores
                        else None),
         "cost_method": p.cost_method,

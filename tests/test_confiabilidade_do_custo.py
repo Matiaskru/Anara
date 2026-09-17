@@ -57,6 +57,11 @@ def ktc(session):
 
 def _produto(session, fornecedor, **campos):
     n = next(_SEQ)
+    # Desde 17/09/2026 uma cotação direta SEM DATA é REVALIDAR (não se sabe se envelheceu).
+    # Os cenários deste módulo falam de cotação direta VÁLIDA: datada de hoje.
+    if campos.get("exw_cotado_usd") and "exw_cotado_data" not in campos:
+        from datetime import date
+        campos["exw_cotado_data"] = date.today()
     p = Produto(sku_key=f"CONF-{n:03d}", nome=f"SKU de confiabilidade {n}",
                 familia="Flat Sheet", fornecedor_id=fornecedor.id, ativo=True,
                 margem_padrao_pct=0.18, **campos)

@@ -803,10 +803,18 @@ def premissas_desatualizadas(session: Session, cotacao, itens: Sequence[CotacaoI
     # antes de 16/09/2026 não tem piso nem comissão de formação congelados; o produto dele
     # hoje resolve para uma regra com política. Detecta e nomeia — a reprecificação continua
     # sendo o botão de atualizar, e o item continua sendo avaliado como foi formado.
-    from app.comercial_service import itens_anteriores_a_politica
+    from app.comercial_service import cenario_dos_itens_divergiu, itens_anteriores_a_politica
     politica_anterior = itens_anteriores_a_politica(session, itens)
+    # Quarta coisa (17/09/2026): o **cenário fiscal** do item não é mais o da cotação —
+    # finalidade do cliente mudou, origem fiscal mudou, alíquota foi recadastrada.
+    cenario_divergente = [{"item_id": it.id, "nome": it.nome_produto}
+                          for it in cenario_dos_itens_divergiu(session, cotacao, itens)]
 
     partes = []
+    if cenario_divergente:
+        partes.append(f"{len(cenario_divergente)} item(ns) foram formados com um cenário "
+                      "fiscal diferente do atual da cotação (destino, finalidade, origem ou "
+                      "alíquota mudaram).")
     if desatualizados:
         partes.append(f"{len(desatualizados)} item(ns) usam custo anterior ao vigente.")
     for p in premissas_novas:
@@ -817,10 +825,12 @@ def premissas_desatualizadas(session: Session, cotacao, itens: Sequence[CotacaoI
                       "comercial anterior a 16/09/2026 (margem-alvo, piso e comissão de "
                       "formação diferentes).")
 
-    return {"desatualizado": bool(desatualizados or premissas_novas or politica_anterior),
+    return {"desatualizado": bool(desatualizados or premissas_novas or politica_anterior
+                                  or cenario_divergente),
             "itens": desatualizados,
             "premissas": premissas_novas,
             "politica_anterior": politica_anterior,
+            "cenario_divergente": cenario_divergente,
             "texto": (" ".join(partes) + " Nada foi alterado — atualizar é uma ação explícita."
                       if partes else "Todas as premissas do rascunho estão vigentes.")}
 

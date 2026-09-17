@@ -115,6 +115,35 @@ def _nome_simulado(produto: Produto) -> str:
     return nome_canonico(produto)
 
 
+class EntradaInvalida(ValueError):
+    """Medida, gramatura ou construção fora do que o motor aceita. Nunca vira preço."""
+
+
+def validar_entrada(familia: str, largura_cm, comprimento_cm, gsm=None, abas=None,
+                    flap_cm=None) -> None:
+    """Recusa o que não é uma peça: medida ou gramatura zero/negativa/não numérica, número de
+    abas fora do §18, flap não positivo. Até 17/09/2026 largura −190 produzia consumo
+    negativo e a nacionalização devolvia um custo pequeno e positivo que virava preço."""
+    def positivo(v):
+        try:
+            return v is not None and float(v) > 0 and float(v) != float("inf")
+        except (TypeError, ValueError):
+            return False
+    tipo = TIPO_POR_FAMILIA.get(familia)
+    if tipo in ("tecido", "fronha", "toalha"):
+        if not positivo(largura_cm) or not positivo(comprimento_cm):
+            raise EntradaInvalida("Largura e comprimento precisam ser números maiores que zero.")
+        if float(largura_cm) > 1000 or float(comprimento_cm) > 1000:
+            raise EntradaInvalida("Medida acima de 10 m não é uma peça de enxoval — confira a unidade (cm).")
+    if tipo == "toalha" and not positivo(gsm):
+        raise EntradaInvalida("Gramatura (g/m²) precisa ser maior que zero.")
+    if tipo == "fronha":
+        if abas not in (None, 0, 2, 3, 4):
+            raise EntradaInvalida("Fronha só com 0, 2, 3 ou 4 abas (§18).")
+        if flap_cm is not None and not positivo(flap_cm):
+            raise EntradaInvalida("Flap precisa ser maior que zero.")
+
+
 def calcular(session: Session, familia: str, largura_cm: Optional[float],
              comprimento_cm: Optional[float], material_id: Optional[int] = None,
              gsm: Optional[int] = None, plain_or_stripe: str = "plain",
@@ -132,6 +161,10 @@ def calcular(session: Session, familia: str, largura_cm: Optional[float],
                        "cotação a eles."),
         }
 
+    try:
+        validar_entrada(familia, largura_cm, comprimento_cm, gsm, abas, flap_cm)
+    except EntradaInvalida as e:
+        return {"calculavel": False, "familia": familia, "motivo": str(e), "entrada_invalida": True}
     produto = produto_simulado(session, familia, largura_cm, comprimento_cm, material_id, gsm,
                                plain_or_stripe, outros_custos_usd, acabamento,
                                abas=abas, flap_cm=flap_cm, festone=festone)
@@ -157,6 +190,8 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
     Calculável entra com o custo do motor industrial. Sem fórmula entra sem custo, marcado para
     revisão — vira um pedido de cotação à KTC, e aparece no relatório de qualidade.
     """
+    if calculavel and familia in FAMILIAS_CALCULAVEIS:
+        validar_entrada(familia, largura_cm, comprimento_cm, gsm, abas, flap_cm)   # levanta
     produto = produto_simulado(session, familia, largura_cm, comprimento_cm, material_id, gsm,
                                plain_or_stripe, acabamento=acabamento, abas=abas,
                                flap_cm=flap_cm, festone=festone)

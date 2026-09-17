@@ -1042,3 +1042,64 @@ cotações voltam **arquivadas**, como estavam; o dono apagará pelo Admin as qu
 Suítes SQLite e Postgres verdes, ensaio de migração SQLite → Postgres repetido: 1.231 linhas,
 0 divergências, 0 FKs órfãs, sequences em `MAX(id)`. Guardiões não reformulados.
 
+## 11. Auditoria de crise P0 — econômica, fiscal e comercial (17/09/2026)
+
+Relatório completo, artefatos (CSV da matriz fiscal com 418.176 cenários, backtest KTC,
+inventário, anomalias, fuzz, cotações) e `CRISIS_AUDIT_FINAL.md` em
+`~/Anara-Cotacao-Backups/CRISIS_AUDIT_20260917/`. Scripts em `scripts/crisis/`; regressão em
+`tests/crisis/`.
+
+### CR-01 — Preço negociado/congelado sobrevivia à mudança de cenário (P0) — **RESOLVIDO**
+
+`_recalcular_todos_itens` respeitava `modo_edicao=preco`: um item negociado (ou congelado por
+CR-02) mantinha o preço formado com outro ICMS/DIFAL/encargo. SP contribuinte → RJ não
+contribuinte deixava R$ 69,88 onde o motor formava R$ 76,38. Agora a mudança de cenário reforma
+todos os preços na margem-alvo do item, invalida a aprovação e avisa; o salvar também detecta
+divergência item × cenário atual (`comercial_service.cenario_dos_itens_divergiu`) — finalidade do
+cliente, origem fiscal, alíquota — e reforma; o PDF de rascunho recusa item em cenário divergente.
+
+### CR-02 — Editar quantidade convertia o item em preço fixo; R$ 0,00 permanente (P0) — **RESOLVIDO**
+
+A tela mandava `modo=preco&valor=<preço corrente>` ao editar a quantidade. Com o cenário bloqueado
+o valor era 0 e ficava (ANARA-2026-0021 item 49). `editar_item` sem `modo` mantém a alavanca;
+preço ou quantidade ≤ 0 → 400.
+
+### CR-03 — "Atualizar e recalcular" mantinha a alavanca de margem antiga (P1) — **RESOLVIDO**
+
+Item formado a 18% com regra hoje em 20% saía com "desconto" de 4,8% e comissão cortada
+(ANARA-2026-0021 itens 50/52). Em modo margem, `valor_editado` passa a ser a margem-alvo vigente.
+
+### CR-04 — Motor aceitava medida/gramatura ≤ 0 (P1) — **RESOLVIDO**
+
+Largura −190 produzia EXW negativo; a nacionalização devolvia "outras despesas × câmbio" (R$ 1,29)
+como custo e isso virava preço. `ktc_engine`, `nationalization` e `calculadora` recusam.
+
+### CR-05 — Nacionalização assumia I.I. = 0 / peso 0 e saía CONFIRMADO (P1) — **RESOLVIDO**
+
+`custo_net` registra `premissas_faltantes`; `status_canonico_do_custo` devolve REVIEW_REQUIRED.
+
+### CR-06 — Cotação KTC envelhecida, preço histórico e Decor "confirmar se é custo" saíam CONFIRMADO (P1) — **RESOLVIDO**
+
+Cotação direta com frescor STALE ou sem data → **REVALIDAR** (71 SKUs KTC: cota e emite, não
+fecha venda até reconfirmar); `preco_ktc_usd` histórico → REVIEW_REQUIRED; fornecedor nacional
+com `precisa_revisao` e sem referência versionada → REVALIDAR (16 Decor). Referência versionada
+(Sessão 5) prevalece sobre o flag legado.
+
+### CR-07 — `preco_base` obsoleto virava preço de item sem custo (P2) — **RESOLVIDO**
+
+Sem custo, o item entra sem preço até alguém digitar; busca e lista só mostram `preco_base` de
+produto DISPONÍVEL.
+
+### Abertos (dado/fonte/decisão — nenhum reduz preço formado hoje)
+
+- **FIS-01 (P1, dado)** — não contribuinte só resolve para SP e RJ: 25 UFs sem `icms_interno_base`
+  e sem regra de FCP. O sistema **bloqueia** (seguro); vender exige cadastrar.
+- **KTC-01 (P1)** — cotação direta ignorada quando `cost_method=KTC_CALCULATED` (motor +4% acima da
+  PI 23/08 em 6 SKUs): conservador; decisão de fonte de verdade.
+- **KTC-03 (P1)** — calculadora grava "· plain" com `plain_or_stripe=stripe` (SKUs 350/351).
+- **KTC-04 (P1)** — 200TC calculável contra o §15. **KTC-05 (P1)** — toalha #85 motor −6,45%.
+- **NAC-01 (P1)** — linha Daune "280 g" sem documento, idêntica ao 180 g do fornecedor.
+- **INV-TC (P1, fonte)** — fronhas 400 fios com EXW menor que 300 fios na cotação IQA14052026.
+- **UX-01 (P2)** — nova cotação pré-seleciona "contribuinte = SIM".
+- P2/P3 dos relatórios `KTC_RESUMO.md`, `NACIONAIS_RESUMO.md`, `INVENTARIO_RESUMO.md`.
+

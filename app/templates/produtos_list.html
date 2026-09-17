@@ -60,7 +60,7 @@
         <td><span class="tag {{ 'tag-calc' if p.cost_method == 'KTC_CALCULATED' else ('tag-legacy' if p.cost_method == 'LEGACY_EXCEL' else 'tag-quoted') }}">{{ p.cost_method or '—' }}</span></td>
         <td class="num">{{ p.custo_unitario|brl if p.custo_unitario else '—' }}</td>
         {% endif %}
-        <td class="num">{{ p.preco_base|brl if p.preco_base else '—' }}</td>
+        <td class="num">{{ p.preco_base|brl if (p.preco_base and sit == 'DISPONIVEL') else '—' }}</td>
         {% if ve_economia(request) %}
         <td class="num">{{ p.margem_padrao_pct|pct }}</td>
         <td class="muted small">{{ p.custo_ref_documento or '—' }}{% if p.custo_ref_data %}<span class="sub">{{ p.custo_ref_data|data }}</span>{% endif %}</td>

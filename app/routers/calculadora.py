@@ -72,13 +72,16 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
     form = await request.form()
     dados = _parametros(form)
     calculavel = form.get("calculavel", "sim") == "sim"
-    produto = calc.salvar_no_catalogo(
-        session, familia=dados["familia"], largura_cm=dados["largura_cm"],
-        comprimento_cm=dados["comprimento_cm"], material_id=dados["material_id"],
-        gsm=dados["gsm"], plain_or_stripe=dados["plain_or_stripe"],
-        acabamento=dados["acabamento"], calculavel=calculavel,
-        observacao=form.get("observacao") or None, abas=dados["abas"],
-        flap_cm=dados["flap_cm"], festone=dados["festone"])
+    try:
+        produto = calc.salvar_no_catalogo(
+            session, familia=dados["familia"], largura_cm=dados["largura_cm"],
+            comprimento_cm=dados["comprimento_cm"], material_id=dados["material_id"],
+            gsm=dados["gsm"], plain_or_stripe=dados["plain_or_stripe"],
+            acabamento=dados["acabamento"], calculavel=calculavel,
+            observacao=form.get("observacao") or None, abas=dados["abas"],
+            flap_cm=dados["flap_cm"], festone=dados["festone"])
+    except calc.EntradaInvalida as e:
+        return JSONResponse({"erro": str(e)}, status_code=400)
 
     cotacao_id = form.get("cotacao_id")
     if not cotacao_id:
@@ -100,7 +103,7 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
     if custo_vivo:
         modo, valor = "margem", dados["margem_override"]     # None = margem da regra
     else:
-        modo, valor = "preco", (produto.preco_base or 0.0)
+        modo, valor = "preco", 0.0                   # sem custo: sem preço até alguém digitar
     resposta = adicionar_item(request, cotacao.id, produto_id=produto.id, quantidade=quantidade,
                               modo=modo, valor=valor, session=session)
     if getattr(resposta, "status_code", 200) >= 400:

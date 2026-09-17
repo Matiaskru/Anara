@@ -36,7 +36,7 @@
 {% if request.query_params.get('premissas') == 'atualizadas' %}
 <div class="banner banner-ok"><div>Premissas atualizadas e preços recalculados.</div></div>
 {% elif request.query_params.get('cenario') == 'atualizado' %}
-<div class="banner banner-ok"><div>Cenário atualizado e preços recalculados.</div></div>
+<div class="banner banner-ok"><div><strong>Cenário atualizado: todos os preços foram reformados para o cenário novo.</strong> Preços negociados antes valiam para o cenário anterior e voltaram ao recomendado — renegocie sobre estes.</div></div>
 {% elif request.query_params.get('salvo') %}
 <div class="banner banner-ok"><div>Dados salvos. Nada que mudasse o cálculo foi alterado.</div></div>
 {% endif %}

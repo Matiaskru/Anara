@@ -517,6 +517,9 @@ def premissas_nacionalizacao(session: Session) -> PremissasNacionalizacao:
 CUSTO_DERIVADO_AGORA = "DERIVADO_DAS_PREMISSAS_VIGENTES"
 CUSTO_DO_FORNECEDOR_NACIONAL = "CUSTO_CADASTRADO_DO_FORNECEDOR"
 CUSTO_DO_CATALOGO = "CATALOGO_SEM_EXW"
+#: EXW que só existe como "preço KTC histórico do catálogo" (`Produto.preco_ktc_usd`), sem
+#: data, documento nem fonte — nacionaliza, mas não é evidência (auditoria de 17/09/2026).
+CUSTO_HISTORICO_SEM_EVIDENCIA = "PRECO_KTC_HISTORICO_SEM_EVIDENCIA"
 
 
 def status_canonico_do_custo(cnet, memoria: dict) -> str:
@@ -554,10 +557,23 @@ def status_canonico_do_custo(cnet, memoria: dict) -> str:
     """
     if not cnet or D0(cnet) <= 0:
         return StatusCusto.a_cotar.value
-    fonte = (memoria or {}).get("net_fonte")
-    if fonte == CUSTO_DO_CATALOGO:
+    memoria = memoria or {}
+    fonte = memoria.get("net_fonte")
+    if fonte in (CUSTO_DO_CATALOGO, CUSTO_HISTORICO_SEM_EVIDENCIA):
+        return StatusCusto.review_required.value
+    # Nacionalização que precisou assumir zero (I.I. sem alíquota confiável, peso
+    # desconhecido) formou um número com premissa faltando. É problema de premissa, não
+    # envelhecimento: REVIEW_REQUIRED — nunca CONFIRMADO com aviso escondido na memória.
+    if memoria.get("premissas_faltantes"):
         return StatusCusto.review_required.value
     if fonte in (CUSTO_DERIVADO_AGORA, CUSTO_DO_FORNECEDOR_NACIONAL):
+        # Referência direta que envelheceu (cotação KTC além do limite de frescor) ou
+        # cadastrada com pedido de revisão aberto: tem número próprio e utilizável, mas não
+        # sustenta compromisso firme antes de reconfirmar — é o REVALIDAR do CLAUDE.md.
+        # Até 17/09/2026 saía CONFIRMADO: 71 SKUs KTC com cotação de maio/junho e 16 Decor
+        # com "confirmar se é custo ou preço de venda" passavam pelo portão de WON.
+        if memoria.get("exw_frescor") == "STALE" or memoria.get("precisa_revisao"):
+            return StatusCusto.revalidar.value
         return StatusCusto.confirmado.value
     # Origem não declarada: não se inventa confiança para ela.
     return StatusCusto.review_required.value
@@ -633,6 +649,14 @@ def custo_net(session: Session, produto: Produto) -> dict:
                 "pelo preço, mas a margem não pode ser calculada até o custo entrar.")
         memoria["net_brl"] = produto.custo_unitario
         memoria["net_fonte"] = CUSTO_DO_FORNECEDOR_NACIONAL
+        # Pedido de revisão só pesa quando não há referência versionada: a versão registrada
+        # pelo caminho canônico (Sessão 5) é evidência mais nova que um flag de importação.
+        if produto.precisa_revisao and vigente is None:
+            memoria["precisa_revisao"] = produto.revisao_motivo or True
+            memoria["avisos"].append(
+                "Custo cadastrado com pedido de revisão em aberto"
+                + (f": {produto.revisao_motivo}" if produto.revisao_motivo else "")
+                + ". Cotável; compromisso firme só depois de reconfirmar.")
         return memoria
 
     # --- KTC ---
@@ -661,15 +685,28 @@ def custo_net(session: Session, produto: Produto) -> dict:
         else:
             memoria["avisos"].extend(resultado.avisos)
 
+    historico = False
     if exw is None and produto.exw_cotado_usd:
         exw = produto.exw_cotado_usd
         origem_exw = (f"EXW cotado pela KTC em "
                       f"{produto.exw_cotado_data.strftime('%d/%m/%Y') if produto.exw_cotado_data else '—'}"
                       f" ({produto.exw_cotado_fonte or 'fonte não registrada'})")
+        fresc = frescor(session, produto.exw_cotado_data)
+        memoria["exw_frescor"] = fresc["status"]
+        memoria["exw_frescor_texto"] = fresc["texto"]
+        if fresc["status"] in ("STALE", "UNKNOWN"):
+            memoria["avisos"].append(
+                "Cotação direta da KTC envelhecida ou sem data (" + fresc["texto"] + "): o "
+                "preço sai, o compromisso firme espera a reconfirmação.")
+            if fresc["status"] == "UNKNOWN":
+                memoria["exw_frescor"] = "STALE"
     if exw is None:
         exw = produto.preco_ktc_usd
         if exw is not None:
+            historico = True
             origem_exw = f"Preço KTC histórico do catálogo ({produto.cotacao_origem or 'origem não registrada'})"
+            memoria["avisos"].append("EXW vem do preço KTC histórico do catálogo, sem data nem "
+                                     "documento — não é evidência para compromisso.")
 
     memoria["exw_usd"] = para_float(exw)
     memoria["exw_origem"] = origem_exw
@@ -698,7 +735,15 @@ def custo_net(session: Session, produto: Produto) -> dict:
     memoria["avisos"].extend(nac.avisos)
     memoria["net_brl"] = para_float(nac.net_brl)
     memoria["net_usd"] = para_float(nac.net_usd)
-    memoria["net_fonte"] = CUSTO_DERIVADO_AGORA
+    memoria["net_fonte"] = CUSTO_HISTORICO_SEM_EVIDENCIA if historico else CUSTO_DERIVADO_AGORA
+    # O que a nacionalização precisou assumir como zero fica declarado — e decide o status.
+    faltantes = []
+    if ii is None:
+        faltantes.append("ii")
+    if peso_kg is None:
+        faltantes.append("peso")
+    if faltantes:
+        memoria["premissas_faltantes"] = faltantes
     memoria["caminho"] = ("Especificação → motor industrial KTC → EXW → nacionalização → NET"
                           if metodo == CostMethod.ktc_calculated.value
                           else "Último preço KTC válido → nacionalização → NET")

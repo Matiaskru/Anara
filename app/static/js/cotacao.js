@@ -177,7 +177,9 @@
     if (!(qtd > 0)) { input.value = Math.trunc(parseFloat(anterior)); return; }
     if (qtd === parseFloat(anterior)) return;
     input.classList.add("salvando");
-    const body = new URLSearchParams({quantidade: qtd, modo: "preco", valor: tr.dataset.preco});
+    // Só a quantidade: o servidor mantém a alavanca do item (margem-alvo ou preço negociado).
+    // Mandar `modo=preco` com o preço corrente congelava o item num preço de outro cenário.
+    const body = new URLSearchParams({quantidade: qtd});
     const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/itens/${tr.dataset.itemId}`, {method: "PUT", body});
     input.classList.remove("salvando");
     if (!r.ok) { anaraToast(r.erro, "erro"); input.value = Math.trunc(parseFloat(anterior)); return; }

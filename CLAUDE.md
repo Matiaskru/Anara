@@ -352,6 +352,23 @@ completo está em `DEPLOY_PRODUCTION.md`; o que segue é o que o código passou 
   commit algum; os hashes anteriores mudaram (mapa em `ANARA_EXECUTION_STATE.md`).
   `referencia/` continua sendo o motivo para não fazer push sem decidir (ver PREPARAÇÃO)
 
+## Auditoria de crise — reprecificação e confiança do custo (17/09/2026)
+
+- **Mudou o cenário (destino, contribuinte, condição, frete, finalidade, origem, alíquota) →
+  todo preço é reformado** na margem-alvo do item, a aprovação cai e a tela avisa. Preço
+  negociado era decisão sobre OUTRO cenário e não sobrevive; renegocia-se sobre o preço certo
+  (`_recalcular_todos_itens`, `comercial_service.cenario_dos_itens_divergiu`)
+- **Editar quantidade não muda a alavanca do item** (`PUT /itens/{id}` sem `modo`); preço e
+  quantidade ≤ 0 são recusados. "Atualizar e recalcular" leva a alavanca à política vigente
+- **Status canônico do custo**: cotação KTC direta com frescor STALE ou sem data → REVALIDAR;
+  `preco_ktc_usd` histórico → REVIEW_REQUIRED; nacionalização com I.I./peso assumidos → 
+  REVIEW_REQUIRED; nacional com `precisa_revisao` sem referência versionada → REVALIDAR.
+  REVALIDAR cota e emite, não fecha venda
+- **Motor recusa medida/gramatura ≤ 0**; EXW ≤ 0 não nacionaliza; `preco_base` de produto sem
+  custo não é preço nem referência
+- Oracles e scanners em `scripts/crisis/` (matriz fiscal, fuzz, goldens, backtest, Playwright);
+  regressão em `tests/crisis/`. Relatório: `~/Anara-Cotacao-Backups/CRISIS_AUDIT_20260917/`
+
 ## Relatórios e runtime (Sessão 8)
 
 **As definições métricas moram em `app/metrics_service.py`, um lugar só.** Dashboard, CSV e
@@ -478,6 +495,9 @@ Alembic em `0019`.
 Alembic em `0021` (`passwordresettoken`, aditiva). Próximas (não iniciadas, não
 autorizadas): frete nacional definitivo, cadastro fiscal pendente, offline V3, cutover
 (publicação real).
+
+**Auditoria de crise P0 (17/09/2026): EXECUTADA** — bug de reprecificação corrigido (CR-01/02),
+sete correções, 0 P0 aberto, 1.436 testes (SQLite e Postgres). Ver `AUDIT_ANARA_MASTER.md` §11.
 
 **Preparação para produção (17/09/2026): EXECUTADA.** Alembic em `0022` (enums como
 VARCHAR, no-op no SQLite). O repositório é Git **local**, sem remote e sem push. O

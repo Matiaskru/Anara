@@ -75,8 +75,8 @@ def mundo(session):
 
     produto = Produto(sku_key=f"E2E-{n:03d}", nome=f"Lençol E2E {n}", familia="Flat Sheet",
                       fornecedor_id=ktc.id, cost_method=CostMethod.ktc_quoted.value,
-                      exw_cotado_usd=10.0, peso_kg=1.0, margem_padrao_pct=0.18,
-                      preco_base=100.0, ativo=True)
+                      exw_cotado_usd=10.0, exw_cotado_data=date.today(), peso_kg=1.0,
+                      margem_padrao_pct=0.18, preco_base=100.0, ativo=True)
     session.add(produto)
     session.commit()
     session.refresh(produto)

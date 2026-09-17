@@ -104,6 +104,17 @@ class ResultadoKTC:
                              for k, v in self.detalhes.items()}}
 
 
+def _dimensao_valida(valor) -> bool:
+    """Medida ou gramatura precisa ser número finito e POSITIVO. Largura negativa produzia
+    consumo negativo, EXW negativo e — depois da nacionalização — um custo pequeno e positivo
+    que parecia preço (auditoria de 17/09/2026). Zero e negativo bloqueiam, não calculam."""
+    try:
+        d = D(valor)
+    except Exception:                                    # noqa: BLE001
+        return False
+    return d is not None and d.is_finite() and d > 0
+
+
 def _falta(p: ParametrosKTC, campos: List[str]) -> List[str]:
     return [c for c in campos if getattr(p, c, None) is None]
 
@@ -124,7 +135,7 @@ def calcular_tecido_plano(largura_cm, comprimento_cm, p: ParametrosKTC) -> Resul
     obrigatorios = ["material_price_usd_m2", "cmt_usd", "shrinkage", "waste",
                     "quality_allowance", "ktc_margin", "hem_width_total_cm", "hem_length_total_cm"]
     faltando = _falta(p, obrigatorios)
-    if not largura_cm or not comprimento_cm:
+    if not _dimensao_valida(largura_cm) or not _dimensao_valida(comprimento_cm):
         faltando.append("dimensoes")
     if faltando:
         return ResultadoKTC(None, REVIEW_REQUIRED, faltando=faltando,
@@ -265,7 +276,8 @@ def calcular_fronha(largura_cm, comprimento_cm, p: ParametrosKTC,
             None, REVIEW_REQUIRED, faltando=["numero_de_abas"],
             avisos=[f"Construção com {abas} aba(s) não está no §18. Aprovadas: "
                     f"{', '.join(str(x) for x in ABAS_VALIDAS)}."])
-    if not largura_cm or not comprimento_cm:
+    if not (_dimensao_valida(largura_cm) and _dimensao_valida(comprimento_cm)
+            and _dimensao_valida(flap_cm)):
         return ResultadoKTC(None, REVIEW_REQUIRED, faltando=["dimensoes"],
                             avisos=["Fronha sem dimensão nominal não é calculável."])
 
@@ -303,9 +315,10 @@ def calcular_toalha(largura_cm, comprimento_cm, gsm, p: ParametrosKTC) -> Result
     cadastrados para a construção; sem cadastro, ficam fora (e não são inventados).
     """
     p.normalizar()
-    if not (largura_cm and comprimento_cm and gsm):
+    if not (_dimensao_valida(largura_cm) and _dimensao_valida(comprimento_cm)
+            and _dimensao_valida(gsm)):
         return ResultadoKTC(None, REVIEW_REQUIRED, faltando=["dimensoes_ou_gsm"],
-                            avisos=["Toalha sem largura/comprimento/GSM estruturados."])
+                            avisos=["Toalha sem largura/comprimento/GSM estruturados e positivos."])
     if p.price_usd_kg is None:
         return ResultadoKTC(None, REVIEW_REQUIRED, faltando=["price_usd_kg"],
                             avisos=["Não há preço por kg cadastrado para essa construção de toalha. "

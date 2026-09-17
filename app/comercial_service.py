@@ -79,6 +79,47 @@ def regras_do_item(session: Session, cotacao: Cotacao, item: CotacaoItem,
                                 comissao_formacao_pct=comissao_de_formacao_do_item(item))
 
 
+def cenario_dos_itens_divergiu(session: Session, cotacao: Cotacao,
+                               itens: Optional[Sequence[CotacaoItem]] = None) -> list:
+    """Itens cujo cenário congelado (origem, destino, finalidade, ICMS, encargo, status) não é
+    o que `regras_da_cotacao` resolve AGORA para esta cotação. Lista vazia = itens e cabeçalho
+    dizem o mesmo.
+
+    O formulário não é a única coisa que muda o cenário: a finalidade do cliente, a origem
+    fiscal e as alíquotas cadastradas também mudam — e nada disso passa pelo botão de
+    salvar. Esta é a prova que o salvar e a tela usam para não deixar um item afirmando um
+    ICMS que a cotação não tem mais (auditoria de 17/09/2026).
+    """
+    divergentes = []
+    itens = list(itens if itens is not None else ws.itens_de(session, cotacao.id))
+
+    def dif(a, b):
+        if a is None and b is None:
+            return False
+        if isinstance(a, (int, float)) or isinstance(b, (int, float)):
+            return D0(a) != D0(b)
+        return (a or "") != (b or "")
+
+    for it in itens:
+        # Item sem snapshot fiscal próprio (legado anterior à Onda 1, ou montado à mão) não
+        # afirma cenário nenhum — não há o que divergir.
+        if not it.produto_id or it.status_fiscal is None or (
+                it.uf_destino_fiscal is None and it.icms_pct is None):
+            continue
+        produto = session.get(Produto, it.produto_id)
+        _regras, ctx = regras_do_item(session, cotacao, it, produto)
+        if (dif(it.uf_origem_fiscal, ctx.get("uf_origem_fiscal"))
+                or dif(it.uf_destino_fiscal, ctx.get("uf_destino_fiscal"))
+                or (it.finalidade is not None and dif(it.finalidade, ctx.get("finalidade")))
+                or dif(it.status_fiscal, ctx.get("status_fiscal"))
+                or dif(it.status_pagamento, ctx.get("status_pagamento"))
+                or (ctx.get("status_fiscal") == "OK" and dif(it.icms_pct, ctx.get("icms_pct")))
+                or (ctx.get("status_pagamento") == "OK"
+                    and dif(it.encargo_pct, ctx.get("encargo_pct")))):
+            divergentes.append(it)
+    return divergentes
+
+
 # ---------------------------------------------------------------------------
 # A avaliação
 # ---------------------------------------------------------------------------
