@@ -78,3 +78,6 @@ Thumbs.db
 *~
 .idea/
 .vscode/
+
+# --- dados de fornecedor: ficam só nesta máquina (cópia em ~/Anara-Cotacao-Backups/referencia) ---
+referencia/
