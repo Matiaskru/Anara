@@ -1,0 +1,4 @@
+# Só para desenvolver e testar. Não é instalado em produção.
+-r requirements.txt
+pytest==7.4.4
+pdfplumber==0.11.10

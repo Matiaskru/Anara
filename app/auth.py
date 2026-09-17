@@ -46,6 +46,21 @@ class ConfiguracaoInsegura(RuntimeError):
     """Falta configuração de segurança obrigatória. Falhar aqui é o comportamento correto."""
 
 
+#: Valores que já apareceram em documentação, `.env.example` ou demonstração. Um deles
+#: em produção é o mesmo que um segredo publicado.
+_PLACEHOLDERS = ("cole-aqui", "exemplo", "example", "changeme", "change-me", "troque",
+                 "secret", "segredo", "demo-", "placeholder", "xxxxxxxx")
+
+
+def chave_e_placeholder(chave: str) -> bool:
+    """Rejeita o que não é segredo: texto de exemplo, repetição de um caractere, ou tão
+    pouca variedade que se adivinha. Não substitui gerar a chave — só barra o óbvio."""
+    baixa = chave.lower()
+    if any(p in baixa for p in _PLACEHOLDERS):
+        return True
+    return len(set(chave)) < 12
+
+
 def _resolver_secret() -> str:
     """Segredo de sessão. **Nunca** um default conhecido.
 
@@ -62,6 +77,10 @@ def _resolver_secret() -> str:
             raise ConfiguracaoInsegura(
                 "ANARA_SECRET_KEY tem menos de 32 caracteres. Gere uma com "
                 "`python3 -c \"import secrets; print(secrets.token_urlsafe(48))\"`.")
+        if chave_e_placeholder(chave):
+            raise ConfiguracaoInsegura(
+                "ANARA_SECRET_KEY é um valor de exemplo ou de demonstração, não um segredo. "
+                "Gere uma com `python3 -c \"import secrets; print(secrets.token_urlsafe(48))\"`.")
         return chave
     if PRODUCAO:
         raise ConfiguracaoInsegura(

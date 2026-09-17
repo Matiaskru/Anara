@@ -663,6 +663,10 @@ def test_p0_admin_sem_alcada_nao_aprova(session, daune, cliente):
                          can_approve_quotes=True)
     assert so_economia.gerencia_economia is True and so_economia.aprova_cotacoes is False
     assert com_alcada.aprova_cotacoes is True
+    # a aprovação grava `aprovador_id`: no PostgreSQL a FK exige que a pessoa exista
+    session.add(so_economia)
+    session.add(com_alcada)
+    session.commit()
 
     p = novo_produto(session, daune, custo=100.0)
     cot = nova_cotacao(session, cliente)

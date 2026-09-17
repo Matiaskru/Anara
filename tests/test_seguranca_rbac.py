@@ -166,8 +166,15 @@ def test_secret_key_nao_tem_default_conhecido_no_codigo():
             no.value.value = ""                      # zera docstrings e strings soltas
     codigo = ast.unparse(arvore)
 
-    assert "anara-cotacao-local-secret" not in codigo
-    assert "[SENHA-LEGADA-REMOVIDA]" not in codigo
+    # nenhum `os.environ.get("ANARA_SECRET_KEY", <default>)`: o segredo não tem fallback.
+    # (Os valores antigos não são repetidos aqui de propósito — o histórico foi sanitizado
+    # em 17/09/2026 e um teste não é lugar de guardar credencial aposentada.)
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.Call) and isinstance(no.func, ast.Attribute) \
+                and no.func.attr == "get" and len(no.args) >= 2 \
+                and isinstance(no.args[0], ast.Constant) and "SECRET" in str(no.args[0].value) \
+                and isinstance(no.args[1], ast.Constant) and no.args[1].value:
+            raise AssertionError("ANARA_SECRET_KEY com valor default no código")
     # e nenhuma constante de módulo chamada SENHA
     assert not any(isinstance(n, ast.Assign)
                    and any(getattr(a, "id", "") == "SENHA" for a in n.targets)

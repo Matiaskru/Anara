@@ -23,8 +23,8 @@ comercial é o mesmo para todos**.
 | O quê | Como |
 |---|---|
 | Plataforma | ícone **"Plataforma Anara"** na área de trabalho, ou `python3 iniciar_plataforma.py` |
-| Endereço | http://127.0.0.1:8420 |
-| Banco | `data/anara.db` (SQLite) — migrations e seeds rodam sozinhas no startup |
+| Endereço | http://127.0.0.1:8420 (local). Em produção: `0.0.0.0:$PORT` pelo `Procfile` — ver `DEPLOY_PRODUCTION.md` |
+| Banco | `data/anara.db` (SQLite) — migrations e seeds rodam sozinhas no startup. Produção: PostgreSQL por `DATABASE_URL`, esquema só pelo Alembic |
 | Testes | `python3 -m pytest tests/ -q` |
 | Backups | automáticos em `data/backups/` antes de cada migration, e diário 20h em `~/Anara-Cotacao-Backups/` |
 

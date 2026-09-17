@@ -967,3 +967,68 @@ OQ-01, cadastro fiscal pendente, offline V3 (STALE), produção/deploy.
 gravar para trazer a timeline (a gravação em si é sem reload); a cotação no celular rola a
 tabela de produtos horizontalmente; comparação com o ano anterior no gráfico só aparece com
 dado real (hoje não há); o gerador legado `gerar_cotacao.py` fica no repositório sem uso.
+
+## 10. Preparação para produção (17/09/2026)
+
+### C-NEW-15 — SQLite nunca aplicou chaves estrangeiras (P1, MÉDIO) — **MITIGADO**
+
+`PRAGMA foreign_keys` fica desligado por padrão, então itens com `cotacao_id=0` e
+`auditlog.ator_id` sem usuário passavam. No PostgreSQL a FK vale. Dados reais conferidos: 0
+órfãos em todas as FKs (`scripts/migrar_sqlite_para_postgres.py`). Testes ajustados
+(`cotacao_de_apoio`, atores persistidos). Não se ligou o PRAGMA no SQLite local de propósito:
+mudaria o comportamento do banco em uso sem migration.
+
+### C-NEW-16 — Migrations com booleano como inteiro (P0 para Postgres, ALTO) — **RESOLVIDO**
+
+0002, 0003, 0005 e 0007 tinham `ativo = 1`, `confiavel = 0`, `interna_inclui_fcp = 1` em SQL
+cru. `alembic upgrade head` num Postgres vazio quebrava em 0003. Agora vão como parâmetro
+(`:sim` → `True`); no SQLite o efeito é idêntico. `tests/test_producao_deploy.py` varre.
+
+### C-NEW-17 — Enums nativos congelados no Postgres (P0 para Postgres, ALTO) — **RESOLVIDO**
+
+`0001` declarava `sa.Enum(name=...)`, que no Postgres cria tipo nativo com a lista de
+2026-09-01 — `CostMethod` ganhou seis membros e `StatusCotacao` o workflow desde então, sem
+migration, porque no SQLite era `VARCHAR`. Migration `0022` (Postgres → `VARCHAR(64)`; SQLite
+no-op) e modelos com `native_enum=False`.
+
+### C-NEW-18 — `scripts/smoke_test.py` estava desatualizado (P2, BAIXO) — **RESOLVIDO**
+
+Criava oportunidade com etapa legada `COTACAO` (recusada desde a Fase 3B) e esperava 200
+onde `/emitir` e `/enviar` passaram a redirecionar (Fase 3C). Corrigido; `smoke_producao.py`
+reaproveita os fluxos.
+
+### C-NEW-19 — Fontes licenciadas servidas publicamente (P2, MÉDIO) — **MITIGADO**
+
+`app/static/fonts/*.ttf` (Didot, Futura) saíam por `/static` sem autenticação. Agora
+`/static/fonts/` responde 404 a anônimo; a tela de login usa a pilha de fallback. Publicação
+em CDN continua fora de questão.
+
+### OQ-02 — `referencia/` no repositório publicado (OPEN_QUESTION, comercial)
+
+Não é lida em runtime; contém tabelas de preço de fornecedor, PDFs de cotação e orçamento.
+Pode ficar fora do repositório de produção com impacto em um script de importação e um
+teste (que já pula sem os arquivos). Decisão do dono antes do push — comandos em
+`DEPLOY_PRODUCTION.md`.
+
+### D-01 — 17 cotações herdadas apagadas pela plataforma em 17/09/2026 11:25:54 (DADOS, decisão do dono)
+
+Durante a preparação para produção, o `data/server.log` do servidor local (127.0.0.1:8420)
+registra `POST /cotacoes/lote` → `GET /cotacoes?arquivadas=sim&apagadas=17`, pela conta
+OWNER (a trilha de auditoria mostra a mesma conta ativa das 10:54 às 11:14). Foram apagadas de
+vez as cotações **1–16 e 19** (todas arquivadas antes, como a regra exige); o banco passou de
+23 para 6 cotações e o `sha256` saiu de `5b0c5cc0…` para `a5af8aee…`. **Nenhum processo da
+preparação escreveu no banco real** — os smokes provam o isolamento e não chamam `/lote`.
+
+Backup automático feito pela própria exclusão: `data/backups/anara.db.exclusao-lote-20260917-112554`
+(23 cotações), copiado para `~/Anara-Cotacao-Backups/anara_pre_exclusao_lote_owner_20260917-112554.db`.
+
+Consequência: quatro guardiões do conjunto herdado (`tests/legado.py`, baseline Fase 0)
+**falham**, também no código anterior (provado com `git stash`):
+`test_workflow_sessao6::test_historico_legado_nao_e_falsificado`,
+`test_crm_sessao7::test_p0_historico_legado_nao_ganha_oportunidade_ficticia`,
+`test_fundacao::test_cotacoes_e_itens_historicos_nao_mudaram` e
+`test_fundacao::test_bases_de_importacao_preservadas`. O backup pré-exclusão tem sha256 igual
+ao baseline desta sessão (`5b0c5cc0…`): nada mais mudou no banco. Decisão do dono,
+não do código: (a) restaurar o backup se a exclusão não foi intencional (`BACKUP.md`), ou
+(b) aposentar/atualizar os guardiões do conjunto herdado. Não foi resolvido em silêncio.
+

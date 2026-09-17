@@ -1,5 +1,9 @@
 # Backup, restore e rollback — Anara
 
+> Este documento é do **SQLite local**. Em produção (PostgreSQL no Railway) o backup é
+> `pg_dump` — seção BACKUP/RESTORE de `DEPLOY_PRODUCTION.md`. O `fazer_backup()` da aplicação
+> só copia arquivo e devolve vazio fora do SQLite.
+
 Política escrita na Fase 0. Vale para o banco `data/anara.db`, que é o único lugar onde
 mora dado que não pode ser reconstruído: cotações emitidas, snapshots, custos, premissas
 publicadas e histórico.

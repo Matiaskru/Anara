@@ -6,6 +6,44 @@ Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etap
 
 ---
 
+# Preparação para produção / deploy (17/09/2026) — EXECUTADA, sem publicar
+
+Alembic **`0022`** (`0022_enums_portaveis`: no PostgreSQL converte os três enums nativos em
+`VARCHAR(64)`; **no-op no SQLite**). Nada foi publicado: sem remote, sem push, sem conta
+externa, banco real intocado (sha256 `5b0c5cc0…` antes e depois).
+
+| Item | Resultado |
+|---|---|
+| Banco por URL | `ANARA_DB_URL` > `DATABASE_URL` > `data/anara.db` relativo ao repo; `postgres://` normalizado para psycopg 3 |
+| Postgres vazio + `alembic upgrade head` | **0001 → 0022 aplicadas** (PostgreSQL 17.9 efêmero). Antes: 0003/0005/0007 quebravam com `ativo = 1` em coluna boolean — corrigido para parâmetro |
+| Suíte no Postgres (`ANARA_TEST_DB_URL`) | **1.241 passaram, 1 pulado, 4 falhas** — exatamente as mesmas 4 do SQLite (guardiões do conjunto herdado, D-01), em 1 min 49 s. Antes dos ajustes: FK aplicada derrubava `auditlog.ator_id` sem usuário, `cotacao_id=0`, `cliente_id=0`, `aprovador_id` fictício; `drop_all` não ordenava o ciclo cotacao ↔ oportunidade; um `IntegrityError` condenava a sessão compartilhada |
+| Migrador `scripts/migrar_sqlite_para_postgres.py` | cópia do banco real → Postgres de teste: **1.231 linhas, 36 tabelas, 0 divergências, 0 FKs órfãs**; recusa destino ocupado; `--substituir-destino <nome>`; `--so-verificar` idempotente |
+| Smoke production-like `scripts/smoke_producao.py` | SQLite: **79 ok / 0 falhas**; `--postgres` (via migrador): **81 ok / 0 falhas** — comando do `Procfile`, `ANARA_ENV=producao`, cookie Secure, OWNER/SELLER, URLs proibidas 403, PDF rascunho/final varridos, log sem segredo |
+| Railway | `railway.json` (Railpack, `alembic upgrade head` no pre-deploy, healthcheck `/health`), `Procfile`, `requirements.txt`, `.python-version` |
+| Histórico Git | **sanitizado** com `git filter-repo --replace-text`; ver "Git" abaixo |
+
+O que mudou no código: `app/db.py` (URL, `criar_engine`, `url_segura`), `app/migrations.py`
+(sem DDL nem backup de arquivo fora do SQLite), `app/models.py` (enums `native_enum=False`),
+`app/auth.py` (`chave_e_placeholder`), `app/main.py` (fontes atrás do login, avisos de
+produção), `app/routers/importar.py` (uploads dentro do repo), `alembic/env.py`,
+migrations 0002/0003/0005/0007 (booleanos por parâmetro), `tests/conftest.py`
+(`ANARA_TEST_DB_URL`, atores persistidos, sessão recuperável, `cotacao_de_apoio`),
+`scripts/smoke_test.py` (etapa `RASCUNHO`, 303 em emitir/enviar). Novos:
+`DEPLOY_PRODUCTION.md`, `scripts/migrar_sqlite_para_postgres.py`, `scripts/smoke_producao.py`,
+`tests/test_producao_deploy.py` (22 testes), `railway.json`, `Procfile`, `requirements*.txt`,
+`.python-version`, `alembic/versions/0022_enums_portaveis.py`.
+
+**Banco real durante a sessão:** às 11:25:54 a conta OWNER apagou de vez, pela plataforma
+local, 17 cotações herdadas já arquivadas (ids 1–16 e 19; `AUDIT_ANARA_MASTER.md` D-01). Backup
+automático `data/backups/anara.db.exclusao-lote-20260917-112554` (sha256 idêntico ao baseline
+`5b0c5cc0…` desta sessão) e cópia externa. **Quatro testes-guardiões** do conjunto herdado
+passaram a falhar por isso, também no código anterior — decisão do dono, ver D-01.
+Suíte SQLite final: **1.241 passaram, 1 pulado, 4 falhas (as guardiãs)**.
+
+**Pendências para publicar (manuais, fora desta sessão):** decidir `referencia/` (recomendado
+tirar do repo antes do push), criar GitHub privado e Railway, SMTP real, domínio. Roteiro
+em `DEPLOY_PRODUCTION.md`.
+
 # Hardening de acesso por perfil · login · recuperação de senha (17/09/2026) — EXECUTADO
 
 Alembic **`0021`** (`0021_password_reset_token`, aditiva: tabela `passwordresettoken`, só o
@@ -186,12 +224,30 @@ congelada, as 4 bases e as premissas vigentes, com digest por tabela e por colun
 O repositório foi inicializado nesta fase e é **local**. Commit inicial
 `Estado herdado do sistema Anara (pré-Fase 0)` é o ponto de retorno do código.
 
-> **BLOQUEIO DE PUBLICAÇÃO REMOTA.** `app/auth.py:10-11` tem senha compartilhada em texto
-> claro (`SENHA = "[SENHA-LEGADA-REMOVIDA]"`) e `SECRET_KEY` com fallback fixo, e isso está no histórico
-> do Git desde o commit inicial. Enquanto essa credencial existir no histórico: **nenhum
-> remote, nenhum push, nenhum GitHub**. Some-se a isso que `referencia/` versiona tabelas
-> de preço de fornecedor. Liberar exige a Onda 4 (reforma de autenticação) **ou** uma
-> sanitização explícita de histórico autorizada em separado.
+> **Histórico sanitizado em 17/09/2026.** `app/auth.py` do commit inicial tinha uma senha
+> compartilhada em texto claro (constante `SENHA`) e um `SECRET_KEY` com fallback fixo; o
+> valor da senha também foi citado neste arquivo e num teste, o que o levou a **todos** os
+> commits. `git filter-repo --replace-text` substituiu os dois valores por
+> `[SENHA-LEGADA-REMOVIDA]` / `[SECRET-LEGADO-REMOVIDO]` em toda a história. Bundle
+> anterior à reescrita: `~/Anara-Cotacao-Backups/anara_git_pre_sanitize_20260917-093018.bundle`.
+> Integridade: `git fsck` limpo, árvore de trabalho idêntica (mesmo hash de árvore do HEAD),
+> `git log --all -p` sem o valor. **Os hashes de todos os commits mudaram** — os que
+> aparecem nas tabelas deste arquivo e dos documentos irmãos são os anteriores; o mapa
+> completo está em `~/Anara-Cotacao-Backups/anara_git_commit_map_20260917.txt` e os
+> principais abaixo. A única conta real não usa a senha antiga (hash argon2id conferido);
+> se ela foi reaproveitada fora da plataforma, rotacionar lá antes do push.
+>
+> | Commit (antes) | Commit (depois) | O que é |
+> |---|---|---|
+> | `413d6bd` | `68903cf` | Estado herdado (pré-Fase 0) |
+> | `165d75e` | `fcfb793` | Fase 0 — Fundação |
+> | `5551a25` | `b85948c` | Sessão 4 — autenticação |
+> | `4ef4f8a` | `635b7f6` | Fase 3C — redesign |
+> | `ded3b2e` | `80bba80` | Hardening de acesso e senha |
+> | `6a85baf` | `96fd799` | Preparação para produção |
+>
+> `referencia/` continua versionada (tabelas de preço de fornecedor): decidir antes do
+> push — `DEPLOY_PRODUCTION.md` → PREPARAÇÃO.
 
 > Estes números são o retrato de **03/09/2026**. O usuário usa a plataforma entre sessões,
 > então contagens de cotações/itens **podem ter mudado legitimamente**. Divergência nessas

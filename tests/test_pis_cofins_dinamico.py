@@ -35,6 +35,7 @@ from app import pricing_service as ps
 from app.custo_service import cnet_nacional
 from app.dinheiro import D
 from app.models import CostMethod, Cotacao, Fornecedor, Produto
+from conftest import cotacao_de_apoio
 from app.pricing_engine import (
     TaxRuleSet, calcular_por_margem, calcular_por_preco, icms_excluido_da_base,
     pis_cofins_efetivo,
@@ -459,7 +460,7 @@ def test_snapshot_historico_de_7_59_nao_e_recalculado(session, fornecedores):
     from app.models import CotacaoItem
 
     historico = CotacaoItem(
-        cotacao_id=0, produto_id=None, nome_produto="Item de 2026 · metodologia antiga",
+        cotacao_id=cotacao_de_apoio(session), produto_id=None, nome_produto="Item de 2026 · metodologia antiga",
         quantidade=1, custo_unitario=100.0, preco_base=185.82, preco_negociado=185.82,
         margem_liquida=0.14, faturamento=185.82, custo_total=100.0, lucro=26.01,
         icms_pct=0.18, encargo_pct=0.016, status_fiscal="OK",

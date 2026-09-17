@@ -34,9 +34,9 @@ NOTA = ("NCM corrigido na Sessão 2: 6309.00.10 é posição de artigos usados e
 def upgrade() -> None:
     con = op.get_bind()
     con.execute(sa.text(
-        "UPDATE ncmregra SET ncm = '6208.91.00', confiavel = 1, "
+        "UPDATE ncmregra SET ncm = '6208.91.00', confiavel = :sim, "
         "descricao_ncm = 'Roupões de algodão — 6208.91.00', notas = :n "
-        "WHERE ncm = '6309.00.10'"), {"n": NOTA})
+        "WHERE ncm = '6309.00.10'"), {"n": NOTA, "sim": True})
     # O NCM gravado nos produtos acompanha; o I.I. do produto NÃO é tocado.
     con.execute(sa.text(
         "UPDATE produto SET ncm = '6208.91.00' WHERE ncm = '6309.00.10'"))
@@ -47,4 +47,5 @@ def downgrade() -> None:
     con.execute(sa.text(
         "UPDATE produto SET ncm = '6309.00.10' WHERE ncm = '6208.91.00'"))
     con.execute(sa.text(
-        "UPDATE ncmregra SET ncm = '6309.00.10', confiavel = 0 WHERE ncm = '6208.91.00'"))
+        "UPDATE ncmregra SET ncm = '6309.00.10', confiavel = :nao WHERE ncm = '6208.91.00'"),
+        {"nao": False})

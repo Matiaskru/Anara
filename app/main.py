@@ -26,6 +26,12 @@ app = FastAPI(title="Anara Cotações")
 PUBLIC_PATHS = {"/login", "/logout", "/health", "/primeiro-acesso",
                 "/esqueci-senha", "/redefinir-senha"}
 
+#: As fontes (Didot, Futura) são licenciadas para a Anara, não para distribuição. Ficam
+#: em `/static` porque o CSS precisa delas, mas só quem está autenticado as recebe; a tela
+#: de login usa a pilha de fallback do CSS. Anônimo recebe 404 — nem redirect ao login,
+#: que num `@font-face` viraria uma requisição de HTML inútil.
+FONTES_PRIVADAS = "/static/fonts/"
+
 
 def _usuario_do_cookie(request: Request):
     """Resolve a identidade do cookie **contra o banco**, a cada request.
@@ -61,11 +67,15 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
         request.state.usuario = None
-        if path.startswith("/static") or path in PUBLIC_PATHS:
+        if path.startswith("/static") and not path.startswith(FONTES_PRIVADAS):
+            return await call_next(request)
+        if path in PUBLIC_PATHS:
             return await call_next(request)
 
         usuario = _usuario_do_cookie(request)
         if usuario is None:
+            if path.startswith(FONTES_PRIVADAS):
+                return JSONResponse({"detail": "Not Found"}, status_code=404)
             return RedirectResponse(url=f"/login?next={path}", status_code=303)
         request.state.usuario = usuario
         return await call_next(request)
@@ -135,17 +145,52 @@ def on_startup():
     Tudo idempotente e não destrutivo: migration só cria tabela/coluna nova (com backup do
     banco antes), e as seeds só inserem o que ainda não existe.
     """
-    init_db()
-    migrar(verbose=False)
+    import logging
+    log = logging.getLogger("anara.startup")
+
+    from app.db import E_SQLITE, caminho_do_banco
+    if E_SQLITE:
+        init_db()
+    # No PostgreSQL o esquema é do Alembic (pre-deploy). `migrar()` só reporta o que falta.
+    pendentes = migrar(verbose=False).get("pendentes", [])
+    if pendentes:
+        log.error("esquema desatualizado em %s: %s — rode `alembic upgrade head`",
+                  caminho_do_banco(), ", ".join(pendentes))
     backfill(verbose=False)
     semear(verbose=False)
+    for aviso in avisos_de_producao():
+        log.warning(aviso)
     # Recuperação de senha por e-mail: em produção sem SMTP ela não funciona, e isso precisa
     # aparecer no log de subida — não só na hora em que alguém clicar em "Esqueci minha senha".
-    import logging
     from app import mail
     estado = mail.situacao()
     if not estado["operacional"]:
         logging.getLogger("anara.mail").warning(estado["aviso"])
+
+
+def avisos_de_producao() -> list:
+    """O que está mal configurado para produção, em frases — **sem valor de variável**.
+
+    Nada aqui derruba o processo: `ANARA_SECRET_KEY` ausente já derruba em `app.auth`, e
+    o resto (URL base sem HTTPS, SQLite em produção) é erro de deploy que precisa aparecer
+    no log da primeira subida, não ser descoberto por uma vendedora.
+    """
+    from app.auth import PRODUCAO
+    from app.db import E_SQLITE
+    if not PRODUCAO:
+        return []
+    avisos = []
+    base = os.environ.get("ANARA_BASE_URL", "").strip()
+    if not base:
+        avisos.append("ANARA_BASE_URL não definida: o link de redefinição de senha usará a "
+                      "origem do pedido, que atrás de um proxy pode ser http://.")
+    elif not base.lower().startswith("https://"):
+        avisos.append("ANARA_BASE_URL não usa HTTPS: o cookie de sessão é Secure e o link de "
+                      "redefinição de senha precisa de https://.")
+    if E_SQLITE:
+        avisos.append("ANARA_ENV=producao com SQLite: o disco de um serviço cloud é efêmero e "
+                      "o banco some no próximo deploy. Configure DATABASE_URL (PostgreSQL).")
+    return avisos
 
 
 @app.get("/health")

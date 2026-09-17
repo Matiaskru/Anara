@@ -53,6 +53,22 @@ def engine_teste(tmp_path_factory):
     # `tmp_path_factory`, e não `tempfile`: o backup do banco nasce em `backups/`
     # AO LADO do arquivo do banco, então o diretório temporário do pytest é o que
     # mantém a suíte fora de `data/backups/` — e é o pytest que o limpa depois.
+    url_externa = os.environ.get("ANARA_TEST_DB_URL", "").strip()
+    if url_externa:
+        # PostgreSQL de teste (efêmero): o esquema é recriado do zero. A URL de produção
+        # nunca entra aqui — quem exporta ANARA_TEST_DB_URL está dizendo "pode apagar".
+        from app.db import criar_engine, normalizar_url
+        engine = criar_engine(normalizar_url(url_externa))
+        # `drop_all` não consegue ordenar o ciclo cotacao ↔ oportunidade; derrubar o schema
+        # inteiro é mais simples e é exatamente o que "banco de teste" significa.
+        from sqlalchemy import text
+        with engine.begin() as con:
+            con.execute(text("drop schema public cascade"))
+            con.execute(text("create schema public"))
+        SQLModel.metadata.create_all(engine)
+        yield engine
+        engine.dispose()
+        return
     caminho = str(tmp_path_factory.mktemp("anara-teste-banco") / "anara-teste.db")
     engine = create_engine(f"sqlite:///{caminho}", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(engine)
@@ -72,12 +88,89 @@ def session(engine_teste):
     db.engine = engine_teste
     seeds.engine = engine_teste
     seeds.semear(verbose=False)
+    _persistir_atores_de_teste(engine_teste)
 
     with Session(engine_teste) as s:
         yield s
 
     db.engine = engine_original
     seeds.engine = engine_original
+
+
+def _persistir_atores_de_teste(engine):
+    """No PostgreSQL os quatro atores de `_novo_usuario` precisam existir na tabela.
+
+    A suíte monta o usuário na `Request` sem gravá-lo — e no SQLite isso passa porque o
+    `PRAGMA foreign_keys` está desligado: `auditlog.ator_id = 1` sem `usuario` 1 é aceito.
+    O PostgreSQL faz valer a FK, e a mesma trilha de auditoria recusa o insert. Gravar os
+    atores (mesmos ids, mesmos e-mails) é o que deixa a suíte provar o resto no Postgres —
+    e a sequence é reposicionada, senão o próximo usuário sem id colidiria com o 1.
+    """
+    if getattr(engine.url, "drivername", "sqlite").startswith("sqlite"):
+        return
+    from sqlalchemy import text
+    from sqlmodel import Session, select
+
+    from app.models import Usuario
+    with Session(engine) as s:
+        existentes = {u.id for u in s.exec(select(Usuario)).all()}
+        for papel in ("OWNER", "ADMIN", "VENDEDOR_INTERNO", "VENDEDOR_COMISSIONADO"):
+            u = _novo_usuario(papel)
+            if u.id not in existentes:
+                s.add(u)
+        s.commit()
+        s.exec(text("select setval(pg_get_serial_sequence('usuario', 'id'), "
+                    "(select max(id) from usuario))"))
+        s.commit()
+
+
+def cliente_de_apoio(session) -> int:
+    """Um cliente real para cotações de teste — `cliente_id=0` só passava porque o SQLite
+    não aplica FK; o PostgreSQL recusa. Criado uma vez por sessão e reaproveitado."""
+    from sqlmodel import select
+
+    from app.models import Cliente
+    cliente = session.exec(select(Cliente)
+                           .where(Cliente.nome == "Cliente de apoio da suíte")).first()
+    if cliente is None:
+        cliente = Cliente(nome="Cliente de apoio da suíte", ativo=True)
+        session.add(cliente)
+        session.commit()
+    return cliente.id
+
+
+def cotacao_de_apoio(session) -> int:
+    """Uma cotação real para pendurar itens de teste — idem, para `cotacao_id=0`/`999`."""
+    from sqlmodel import select
+
+    from app.models import Cotacao
+    cot = session.exec(select(Cotacao).where(Cotacao.vendedor == "__apoio-da-suite__")).first()
+    if cot is None:
+        cot = Cotacao(cliente_id=cliente_de_apoio(session), vendedor="__apoio-da-suite__")
+        session.add(cot)
+        session.commit()
+    return cot.id
+
+
+@pytest.fixture(autouse=True)
+def _sessao_recuperavel(request):
+    """Um teste que estoura uma constraint não pode condenar os que vêm depois.
+
+    A `session` é de escopo de sessão. No SQLite quase nada estoura (FK desligada); no
+    PostgreSQL um `IntegrityError` deixa a transação "abortada" e TODO teste seguinte
+    morreria com `PendingRollbackError` — 600 erros por causa de um. Se o teste terminou com
+    a transação inativa, o rollback aqui devolve a sessão utilizável. Quando a transação
+    está sã, nada é feito: nenhum estado que um teste deixou é descartado.
+    """
+    yield
+    if "session" in request.fixturenames:
+        try:
+            s = request.getfixturevalue("session")
+        except Exception:                                # noqa: BLE001
+            return
+        tx = s.get_transaction()
+        if tx is not None and not tx.is_active:
+            s.rollback()
 
 
 # ---------------------------------------------------------------------------

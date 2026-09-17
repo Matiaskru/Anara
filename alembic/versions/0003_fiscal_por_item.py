@@ -129,8 +129,9 @@ def upgrade() -> None:
         con.execute(sa.text(
             "INSERT INTO aliquotainterestadual (uf_origem, uf_destino, origem_fiscal, aliquota, "
             "prioridade, regra, valid_from, ativo, fonte) "
-            "VALUES (:o, :d, :n, :a, 100, :r, CURRENT_DATE, 1, :f)"),
-            {"o": uf_o, "d": uf_d, "n": natureza, "a": aliquota, "r": regra, "f": FONTE})
+            "VALUES (:o, :d, :n, :a, 100, :r, CURRENT_DATE, :sim, :f)"),
+            {"o": uf_o, "d": uf_d, "n": natureza, "a": aliquota, "r": regra, "f": FONTE,
+             "sim": True})
 
     for p in PREMISSAS:
         existe = con.execute(sa.text("SELECT COUNT(*) FROM premissa WHERE chave = :c"),
@@ -138,10 +139,10 @@ def upgrade() -> None:
         if not existe:
             con.execute(sa.text(
                 "INSERT INTO premissa (chave, valor_txt, unidade, descricao, valid_from, ativo, "
-                "fonte, criado_em) VALUES (:c, :v, :u, :d, CURRENT_DATE, 1, :f, "
+                "fonte, criado_em) VALUES (:c, :v, :u, :d, CURRENT_DATE, :sim, :f, "
                 "CURRENT_TIMESTAMP)"),
                 {"c": p["chave"], "v": p["valor_txt"], "u": p.get("unidade"),
-                 "d": p["descricao"], "f": p["fonte"]})
+                 "d": p["descricao"], "f": p["fonte"], "sim": True})
 
 
 def downgrade() -> None:

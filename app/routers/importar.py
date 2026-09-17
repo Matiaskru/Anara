@@ -14,8 +14,17 @@ from app.permissoes import exigir_admin
 
 router = APIRouter()
 
-TMP_DIR = os.path.expanduser("~/Anara-Cotacao/data/tmp_uploads")
-os.makedirs(TMP_DIR, exist_ok=True)
+#: Uploads temporários ao lado do banco, DENTRO do repositório — nunca `~/...`, que só
+#: existia no Mac de origem. Se o diretório não puder ser criado (disco somente-leitura),
+#: cai para o tempdir do sistema: o upload é descartável, o que importa é não travar.
+from app.db import RAIZ  # noqa: E402
+
+TMP_DIR = os.path.join(RAIZ, "data", "tmp_uploads")
+try:
+    os.makedirs(TMP_DIR, exist_ok=True)
+except OSError:
+    import tempfile
+    TMP_DIR = tempfile.mkdtemp(prefix="anara-uploads-")
 
 
 @router.get("/importar", response_class=HTMLResponse)

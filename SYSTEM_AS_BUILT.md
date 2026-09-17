@@ -1584,15 +1584,13 @@ Ver seção 18.
 | **B-13** | 21 divergências entre `models.py` e o esquema real do banco: 5 índices, 2 FKs, 10 NOT NULL, 4 booleanos | MÉDIO | Sim | Consequência do `ALTER TABLE ADD COLUMN` do SQLite | Não | **Sim** |
 | **B-21** | `ANARA_DB_URL` não isolava a aplicação — só o Alembic a lia. Apontar para uma cópia migrava a cópia e **escrevia na produção** | — | — | **RESOLVIDO.** `app/db.py` resolve a variável; `scripts/smoke_test.py` prova o isolamento antes de escrever e aborta se não conseguir | — | — |
 
-## 18.1 Publicação remota: BLOQUEADA
+## 18.1 Publicação remota: preparada, não executada (17/09/2026)
 
-Uma senha compartilhada saiu do código na Sessão 4 mas **continua nos commits `413d6bd` e
-`165d75e`**. Além disso, `referencia/` versiona tabela de preço de fornecedor.
-
-Enquanto isso: **sem remote, sem push, sem GitHub.** Confirmado: `git remote -v` está vazio.
-
-Liberar exige sanitização do histórico ou decisão explícita de que a credencial aposentada é
-inócua.
+A senha compartilhada antiga foi removida de **todo** o histórico (`git filter-repo`), com
+bundle anterior guardado fora do repositório; os hashes históricos mudaram (mapa em
+`ANARA_EXECUTION_STATE.md`). `referencia/` ainda versiona tabela de preço de fornecedor —
+decisão pendente antes do push. **Sem remote, sem push, sem GitHub** até autorização
+explícita; o roteiro está em `DEPLOY_PRODUCTION.md` (§26).
 
 ---
 
@@ -1940,6 +1938,40 @@ Playwright e acusa economia no texto da vendedora, HTTP ≥ 400 e erro de consol
   `PASSWORD_RESET_TOKEN`, `PASSWORD_RESET` — nunca senha ou token.
 - **UX**: "Marcar as com cara de teste" removido de Cotações; `/dashboard` é a home canônica
   do admin (links do menu e do próprio dashboard).
+
+# 26. Preparação para produção — banco por URL, PostgreSQL, Railway (17/09/2026)
+
+**Regra:** o esquema é do Alembic, os dados são do migrador, o segredo é do ambiente.
+
+- **`app/db.py`** resolve `ANARA_DB_URL` > `DATABASE_URL` > `data/anara.db` (relativo ao
+  repositório; `~/Anara-Cotacao` deixou de existir em `app/`). `normalizar_url` leva
+  `postgres://` a `postgresql+psycopg://`; `criar_engine` dá `check_same_thread` só ao SQLite
+  e `pool_pre_ping` ao Postgres; `url_segura()` esconde a senha; `E_SQLITE` diz o dialeto
+- **`app/migrations.py`**: `migrar()` fora do SQLite **não faz DDL** — devolve `pendentes`
+  e o startup loga erro pedindo `alembic upgrade head`; `fazer_backup()` devolve `""`
+- **Enums**: `Fornecedor.tipo`, `Fornecedor.cost_method_padrao`, `Cotacao.status` declaram
+  `Enum(native_enum=False, length=64)`; migration `0022` converte os tipos nativos que `0001`
+  criava no Postgres (congelados em 2026-09-01: `daune_direct`, `emitida`… seriam recusados)
+  e é no-op no SQLite. Migrations 0002/0003/0005/0007 passaram booleanos por parâmetro
+- **FK**: o SQLite nunca aplicou; o Postgres aplica. Dados reais: 0 órfãos. Suíte: atores
+  persistidos, `cotacao_de_apoio()` em vez de `cotacao_id=0`, sessão recuperada após
+  `IntegrityError`
+- **Startup**: `init_db()` só no SQLite; `avisos_de_producao()` (sem valor de variável);
+  `/static/fonts/` exige sessão (404 anônimo); `auth.chave_e_placeholder` recusa segredo de
+  exemplo/repetitivo
+- **Processo**: `Procfile` → `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8420}
+  --proxy-headers`; `railway.json` → Railpack, pre-deploy `alembic upgrade head`, healthcheck
+  `/health`; `requirements.txt` pinado; `.python-version` 3.12
+- **Cutover**: `scripts/migrar_sqlite_para_postgres.py` — origem `mode=ro`, exige mesmo
+  `alembic_version`, destino vazio (as três tabelas semeadas por migration são substituídas),
+  `--substituir-destino <nome>`, uma transação, ids preservados, ciclo `cotacao ↔
+  oportunidade` resolvido por UPDATE final, sequences em `MAX(id)`, comparação linha a
+  linha e FKs, relatório JSON, `--so-verificar`
+- **Prova**: `scripts/smoke_producao.py [--postgres URL]` — comando do Procfile,
+  `ANARA_ENV=producao`, cookie Secure/HttpOnly/SameSite, OWNER (dashboard, economia, fluxo,
+  emissão, PDF final e rascunho varridos), SELLER (→ `/vendas`, 403 nas URLs proibidas, HTML e
+  JSON sem economia, comissão própria), esqueci-senha genérico, fontes, log sem segredo,
+  banco real intocado. Resultado 17/09/2026: SQLite 79 ok, Postgres 81 ok, 0 falhas
 
 # 23. Check final
 

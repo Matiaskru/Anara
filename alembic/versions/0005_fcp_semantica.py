@@ -41,19 +41,20 @@ def upgrade() -> None:
 
     con = op.get_bind()
     con.execute(sa.text(
-        "UPDATE regrafcp SET situacao = CASE WHEN exige_confirmacao = 1 THEN 'DESCONHECIDO' "
-        "ELSE 'APLICA' END WHERE situacao IS NULL"))
+        "UPDATE regrafcp SET situacao = CASE WHEN exige_confirmacao = :sim THEN 'DESCONHECIDO' "
+        "ELSE 'APLICA' END WHERE situacao IS NULL"), {"sim": True})
     with op.batch_alter_table("regrafcp", schema=None) as batch_op:
         batch_op.drop_column("exige_confirmacao")
 
     # RJ é a única UF com composição fixada pela regra canônica.
     con.execute(sa.text(
-        "UPDATE estadofiscal SET icms_interno_base = 0.20, interna_inclui_fcp = 1 "
-        "WHERE uf = 'RJ'"))
+        "UPDATE estadofiscal SET icms_interno_base = 0.20, interna_inclui_fcp = :sim "
+        "WHERE uf = 'RJ'"), {"sim": True})
     con.execute(sa.text(
         "INSERT INTO regrafcp (uf_destino, fcp_pct, situacao, prioridade, regra, valid_from, "
         "ativo, fonte) VALUES ('RJ', 0.02, 'APLICA', 100, "
-        "'FECP do Rio de Janeiro — regra geral', CURRENT_DATE, 1, :f)"), {"f": FONTE_RJ})
+        "'FECP do Rio de Janeiro — regra geral', CURRENT_DATE, :sim, :f)"),
+        {"f": FONTE_RJ, "sim": True})
 
 
 def downgrade() -> None:

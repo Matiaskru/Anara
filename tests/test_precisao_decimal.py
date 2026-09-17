@@ -20,6 +20,7 @@ from app.dinheiro import (
     reconcilia, soma,
 )
 from app.models import CondicaoPagamento, Produto
+from conftest import cliente_de_apoio
 from app.nationalization import PremissasNacionalizacao, nacionalizar
 from app.payment_terms import resolver_encargo
 from app.pricing_engine import TaxRuleSet, calcular_por_margem, calcular_por_preco
@@ -332,7 +333,7 @@ def test_30_json_nao_introduz_perda_monetaria():
 def test_31_banco_roundtrip_preserva_o_centavo(session):
     """Decimal → coluna REAL do SQLite → Decimal, sem perda de quantia."""
     from app.models import Cotacao, CotacaoItem
-    cot = Cotacao(cliente_id=0, estado_destino="São Paulo", condicao_pagamento="30")
+    cot = Cotacao(cliente_id=cliente_de_apoio(session), estado_destino="São Paulo", condicao_pagamento="30")
     session.add(cot)
     session.commit()
     valores = [D("99.90"), D("0.01"), D("1234.56"), D("0.10"), D("1000000.99")]
@@ -355,7 +356,7 @@ def test_31_banco_roundtrip_preserva_o_centavo(session):
 def test_37_preco_negociado_99_90_continua_99_90_apos_o_banco(session):
     """O caso do §37, escrito à mão: R$ 99,90 tem que voltar exatamente R$ 99,90."""
     from app.models import Cotacao, CotacaoItem
-    cot = Cotacao(cliente_id=0, estado_destino="São Paulo", condicao_pagamento="30")
+    cot = Cotacao(cliente_id=cliente_de_apoio(session), estado_destino="São Paulo", condicao_pagamento="30")
     session.add(cot)
     session.commit()
     r = calcular_por_preco(50.0, 1, "99.90", REGRAS)
@@ -422,7 +423,7 @@ def test_33_calcular_varias_vezes_da_o_mesmo_resultado():
 def test_35_calcular_salvar_carregar_recalcular_e_idempotente(session):
     """Salvar e recalcular não pode mover um centavo — nem na quinta volta."""
     from app.models import Cotacao, CotacaoItem
-    cot = Cotacao(cliente_id=0, estado_destino="São Paulo", condicao_pagamento="30")
+    cot = Cotacao(cliente_id=cliente_de_apoio(session), estado_destino="São Paulo", condicao_pagamento="30")
     session.add(cot)
     session.commit()
     r = calcular_por_margem(377.11, 3, 0.14, REGRAS)

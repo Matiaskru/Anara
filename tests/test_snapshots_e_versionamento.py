@@ -45,7 +45,8 @@ def test_material_versionado_nao_reescreve_o_historico(session):
 def test_cotacao_guarda_a_margem_padrao_que_usou(session):
     """Alterar a regra de margem depois não muda o que já está gravado no item."""
     from app.models import CotacaoItem
-    item = CotacaoItem(cotacao_id=999, ordem=0, nome_produto="Teste", quantidade=1,
+    from conftest import cotacao_de_apoio
+    item = CotacaoItem(cotacao_id=cotacao_de_apoio(session), ordem=0, nome_produto="Teste", quantidade=1,
                        custo_unitario=50.0, preco_base=100.0, preco_negociado=100.0,
                        margem_liquida=0.16, faturamento=100.0, custo_total=50.0, lucro=16.0,
                        margem_padrao_pct=0.16, margem_regra="KTC — Flat Sheet < 300TC")

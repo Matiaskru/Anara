@@ -141,13 +141,14 @@ faturamento nem integração com ERP.
 
 ---
 
-## Publicação remota: BLOQUEADA
+## Publicação remota: preparada (17/09/2026)
 
-Uma senha compartilhada saiu do código na Sessão 4, mas continua nos commits `413d6bd` e
-`165d75e`. Além disso, `referencia/` versiona tabela de preço de fornecedor.
-
-**Piloto local: permitido. Push e publicação: bloqueados** até o histórico ser sanitizado ou
-haver decisão explícita de que a credencial aposentada é inócua.
+A senha compartilhada antiga foi **removida de todo o histórico** (`git filter-repo`,
+bundle anterior em `~/Anara-Cotacao-Backups/`) e a única conta real não a usa. O que falta
+para publicar é decisão e execução manual, não código: `DEPLOY_PRODUCTION.md` tem o roteiro
+(GitHub privado → Railway → PostgreSQL → migração dos dados → smoke). `referencia/` continua
+versionada localmente e a recomendação é tirá-la do repositório antes do push (ver PREPARAÇÃO
+lá). **Nada foi publicado em 17/09/2026.**
 
 ---
 

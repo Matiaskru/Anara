@@ -12,7 +12,7 @@ Plataforma comercial e de precificação da Anara (enxoval hoteleiro). Fornecedo
 
 ## Stack
 
-Python 3.12 · FastAPI · SQLModel/SQLAlchemy · SQLite (Postgres previsto para produção) ·
+Python 3.12 · FastAPI · SQLModel/SQLAlchemy · SQLite local / PostgreSQL em produção (`DATABASE_URL`) ·
 Jinja2 · ReportLab · openpyxl · pytest. ~8.800 linhas, 56 módulos, 14 templates, 173 testes.
 
 ## Princípios inegociáveis
@@ -318,6 +318,40 @@ derivado de `ws.avaliar`). Fórmula em template ou JavaScript é regressão.
 - **"Cara de teste" não é feature**: `arquivamento.candidatas_a_teste` é interna e não
   aparece em Cotações
 
+## Produção: banco por URL, Postgres, Railway (17/09/2026)
+
+**O esquema é do Alembic, os dados são do migrador, o segredo é do ambiente.** O roteiro
+completo está em `DEPLOY_PRODUCTION.md`; o que segue é o que o código passou a assumir.
+
+- **Banco por URL**: `ANARA_DB_URL` (isolamento explícito) > `DATABASE_URL` (injetada pela
+  plataforma) > `data/anara.db` **relativo ao repositório** — `~/Anara-Cotacao/...` não
+  existe mais em `app/`. `postgres://` vira `postgresql+psycopg://` (`app.db.normalizar_url`);
+  `check_same_thread` só vai para o SQLite; `url_segura()` é a única forma da URL que pode
+  aparecer em log
+- **No PostgreSQL a aplicação não altera esquema.** `migrations.migrar()` só reporta o que
+  falta (`pendentes`) e `fazer_backup()` devolve `""`; quem cria coluna é `alembic upgrade
+  head` no pre-deploy. Migration que falha aborta o deploy — é o comportamento desejado
+- **SQLite nunca aplicou FK; o Postgres aplica.** `auditlog.ator_id` precisa de usuário
+  real; a suíte grava os quatro atores de teste quando roda com `ANARA_TEST_DB_URL`
+- **Booleano em SQL cru vai como parâmetro** (`:sim` → `True`), nunca `= 1`. Enums
+  (`cotacao.status`, `fornecedor.tipo`, `fornecedor.cost_method_padrao`) são
+  `Enum(native_enum=False, length=64)` → `VARCHAR(64)` nos dois bancos, gravando o **nome**
+  do membro (migration `0022`, no-op no SQLite)
+- **`0.0.0.0:$PORT` pelo `Procfile`/`railway.json`**; local continua `127.0.0.1:8420` por
+  `iniciar_plataforma.py`. `/health` público e mínimo é o healthcheck
+- **Produção recusa segredo com cara de exemplo** (`auth.chave_e_placeholder`) e avisa na
+  subida, sem valor de variável, quando `ANARA_BASE_URL` não é https ou o banco é SQLite
+- **Fontes licenciadas (`/static/fonts/`) só para quem está autenticado**; anônimo recebe
+  404. O resto de `/static` é público
+- **Cutover**: `scripts/migrar_sqlite_para_postgres.py` (origem somente-leitura, destino
+  vazio ou `--substituir-destino <nome>`, uma transação, ids preservados, sequences em
+  `MAX(id)`, comparação linha a linha, FKs validadas, relatório JSON).
+  `scripts/smoke_producao.py [--postgres URL]` sobe o servidor como no Railway e ataca como
+  na internet — OWNER, SELLER, URLs proibidas, PDF, log sem segredo
+- **Histórico Git sanitizado em 17/09/2026**: a senha compartilhada antiga não existe em
+  commit algum; os hashes anteriores mudaram (mapa em `ANARA_EXECUTION_STATE.md`).
+  `referencia/` continua sendo o motivo para não fazer push sem decidir (ver PREPARAÇÃO)
+
 ## Relatórios e runtime (Sessão 8)
 
 **As definições métricas moram em `app/metrics_service.py`, um lugar só.** Dashboard, CSV e
@@ -442,13 +476,15 @@ Alembic em `0019`.
 (16/09/2026): EXECUTADA.** Alembic em `0020` (`cotacao.observacao_cliente`, aditiva).
 **Hardening de acesso por perfil, login e recuperação de senha (17/09/2026): EXECUTADO.**
 Alembic em `0021` (`passwordresettoken`, aditiva). Próximas (não iniciadas, não
-autorizadas): frete nacional definitivo, cadastro fiscal pendente, offline V3,
-produção/deploy.
+autorizadas): frete nacional definitivo, cadastro fiscal pendente, offline V3, cutover
+(publicação real).
 
-O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
-continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o
-histórico ser sanitizado ou haver decisão explícita de que a credencial aposentada é inócua —
-e, de todo modo, `referencia/` versiona tabela de preço de fornecedor. Sem remote, sem push.
+**Preparação para produção (17/09/2026): EXECUTADA.** Alembic em `0022` (enums como
+VARCHAR, no-op no SQLite). O repositório é Git **local**, sem remote e sem push. O
+histórico foi **sanitizado** (a senha compartilhada antiga não está em nenhum commit; bundle
+anterior em `~/Anara-Cotacao-Backups/`). `referencia/` ainda versiona tabela de preço de
+fornecedor — decidir antes do push (`DEPLOY_PRODUCTION.md` → PREPARAÇÃO). Publicar é ato
+manual e autorizado à parte.
 
 Antes de qualquer sessão: o procedimento de `BACKUP.md`. Depois: comparar contra
 `relatorios/baseline_fase0.json`, que continua sendo o baseline imutável.

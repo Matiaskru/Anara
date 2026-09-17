@@ -26,7 +26,7 @@ from app.models import (
     StatusCusto,
 )
 from app.pricing_engine import calcular_por_margem
-from conftest import RequestFalsa, _novo_usuario
+from conftest import RequestFalsa, _novo_usuario, cliente_de_apoio, cotacao_de_apoio
 
 HOJE = date.today()
 AMANHA = HOJE + timedelta(days=1)
@@ -154,7 +154,7 @@ def test_p0_nova_cotacao_usa_v2_e_a_antiga_continua_com_v1(session, daune, ator)
     preco_com_v1 = preco_de(session, x)
 
     # a cotação "antiga": um item emitido com o custo da época
-    item_antigo = CotacaoItem(cotacao_id=0, produto_id=x.id, nome_produto=x.nome,
+    item_antigo = CotacaoItem(cotacao_id=cotacao_de_apoio(session), produto_id=x.id, nome_produto=x.nome,
                               quantidade=1, custo_unitario=100.0, preco_base=200.0,
                               preco_negociado=float(preco_com_v1), margem_liquida=0.14,
                               faturamento=float(preco_com_v1), custo_total=100.0, lucro=0.0)
@@ -367,7 +367,7 @@ def test_token_do_preview_nao_transporta_valor(session, daune):
 def test_p0_nao_apaga_versao_usada_em_cotacao(session, daune, ator):
     x = novo_produto(session, daune, "DEL-1", custo=100.0)
     v1 = versionar(session, x, "100.00", fonte="V1", ator=ator)
-    session.add(CotacaoItem(cotacao_id=0, produto_id=x.id, nome_produto=x.nome, quantidade=1,
+    session.add(CotacaoItem(cotacao_id=cotacao_de_apoio(session), produto_id=x.id, nome_produto=x.nome, quantidade=1,
                             custo_unitario=100.0, preco_base=200.0, preco_negociado=200.0,
                             margem_liquida=0.14, faturamento=200.0, custo_total=100.0,
                             lucro=10.0))
@@ -420,7 +420,7 @@ def test_p0_rascunho_nao_atualiza_automaticamente(session, daune, ator):
     versionar(session, x, "100.00", fonte="V1", ator=ator)
     session.commit()
 
-    cot = Cotacao(cliente_id=0, estado_origem="São Paulo", uf_origem_fiscal="SP",
+    cot = Cotacao(cliente_id=cliente_de_apoio(session), estado_origem="São Paulo", uf_origem_fiscal="SP",
                   estado_destino="São Paulo", contribuinte_icms=True, finalidade="REVENDA",
                   condicao_pagamento="30", numero="DRAFT-5", status="rascunho")
     session.add(cot)
@@ -453,7 +453,7 @@ def test_rascunho_em_dia_nao_e_marcado(session, daune, ator):
     versionar(session, x, "100.00", fonte="V1", ator=ator)
     session.commit()
     from app import politica_comercial as pol
-    item = CotacaoItem(cotacao_id=0, produto_id=x.id, nome_produto=x.nome, quantidade=1,
+    item = CotacaoItem(cotacao_id=cotacao_de_apoio(session), produto_id=x.id, nome_produto=x.nome, quantidade=1,
                        custo_unitario=100.0, preco_base=200.0, preco_negociado=200.0,
                        margem_liquida=0.14, faturamento=200.0, custo_total=100.0, lucro=10.0,
                        # um item de hoje carrega a política que o formou (Daune)
@@ -952,7 +952,7 @@ def _montar_item(session, cotacao, produto, ator_req):
 
 
 def _nova_cotacao(session, numero):
-    c = Cotacao(cliente_id=0, estado_origem="São Paulo", uf_origem_fiscal="SP",
+    c = Cotacao(cliente_id=cliente_de_apoio(session), estado_origem="São Paulo", uf_origem_fiscal="SP",
                 estado_destino="São Paulo", contribuinte_icms=True, finalidade="REVENDA",
                 condicao_pagamento="30", numero=numero, status="rascunho")
     session.add(c)

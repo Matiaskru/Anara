@@ -1,5 +1,7 @@
 """Migrations incrementais e idempotentes do SQLite da Anara.
 
+No PostgreSQL nada aqui altera esquema — ver `migrar()`.
+
 Regra do projeto: **nunca resetar o banco**. Aqui só se cria tabela nova e se acrescenta
 coluna nova; nada é apagado nem renumerado. Antes de qualquer alteração de esquema é feito um
 backup do arquivo do banco em `data/backups/`.
@@ -50,8 +52,21 @@ def pasta_de_backups(arquivo_do_banco_em_uso: str = "") -> str:
     return os.path.join(os.path.dirname(arquivo) or ".", "backups")
 
 
+def e_sqlite() -> bool:
+    """O `engine` vivo é SQLite? Lido do engine, não do global — pelo mesmo motivo de
+    `arquivo_do_banco()`: a suíte troca o engine, e a resposta tem de acompanhar."""
+    return getattr(getattr(engine, "url", None), "drivername", "sqlite").startswith("sqlite")
+
+
 def fazer_backup(motivo: str = "migration") -> str:
-    """Copia o arquivo do banco antes de mexer no esquema. Devolve o caminho do backup."""
+    """Copia o arquivo do banco antes de mexer no esquema. Devolve o caminho do backup.
+
+    Só existe para SQLite: o banco é um arquivo, e copiar o arquivo é o backup. No
+    PostgreSQL o backup é `pg_dump` (ver `DEPLOY_PRODUCTION.md`), feito fora do processo da
+    aplicação — aqui devolve `""` e não finge ter copiado nada.
+    """
+    if not e_sqlite():
+        return ""
     origem = arquivo_do_banco()
     if not origem or not os.path.exists(origem):
         return ""
@@ -151,7 +166,14 @@ def _default_sql(coluna):
 
 
 def migrar(verbose: bool = True) -> dict:
-    """Cria tabelas novas e acrescenta colunas novas. Idempotente."""
+    """Cria tabelas novas e acrescenta colunas novas. Idempotente.
+
+    **No PostgreSQL esta função não altera esquema.** Lá o esquema é do Alembic, aplicado
+    ANTES de a aplicação subir (`alembic upgrade head` no pre-deploy); um `ALTER TABLE`
+    improvisado no startup, com tipos traduzidos à mão (`DATETIME`, `INTEGER` para boolean),
+    criaria colunas erradas e concorreria com o Alembic. Se faltar tabela ou coluna, o
+    resultado diz o quê — e o startup avisa no log — mas quem corrige é a migration.
+    """
     inspetor = inspect(engine)
     tabelas_existentes = set(inspetor.get_table_names())
     tabelas_novas = [t for t in SQLModel.metadata.tables if t not in tabelas_existentes]
@@ -166,7 +188,16 @@ def migrar(verbose: bool = True) -> dict:
                 colunas_faltando.append((nome_tabela, coluna))
 
     if not tabelas_novas and not colunas_faltando:
-        return {"backup": "", "tabelas_criadas": [], "colunas_adicionadas": []}
+        return {"backup": "", "tabelas_criadas": [], "colunas_adicionadas": [],
+                "pendentes": []}
+
+    if not e_sqlite():
+        pendentes = sorted(tabelas_novas) + [f"{t}.{c.name}" for t, c in colunas_faltando]
+        if verbose:
+            print(f"[migrations] esquema desatualizado no {engine.url.drivername}: "
+                  f"{', '.join(pendentes)} — rode `alembic upgrade head`")
+        return {"backup": "", "tabelas_criadas": [], "colunas_adicionadas": [],
+                "pendentes": pendentes}
 
     backup = fazer_backup()
     if verbose and backup:
@@ -190,7 +221,7 @@ def migrar(verbose: bool = True) -> dict:
         print(f"[migrations] tabelas criadas: {', '.join(sorted(tabelas_novas))}")
 
     return {"backup": backup, "tabelas_criadas": sorted(tabelas_novas),
-            "colunas_adicionadas": adicionadas}
+            "colunas_adicionadas": adicionadas, "pendentes": []}
 
 
 def backfill(verbose: bool = True) -> dict:

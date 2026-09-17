@@ -13,6 +13,7 @@ import enum
 from datetime import date, datetime
 from typing import Optional
 
+from sqlalchemy import Enum as SAEnum
 from sqlmodel import Field, SQLModel
 
 
@@ -286,10 +287,12 @@ class Fornecedor(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     codigo: str = Field(index=True, unique=True)     # KTC | DAUNE | DECOR_TRICOT
     nome: str
-    tipo: TipoFornecedor = Field(default=TipoFornecedor.nacional)
+    tipo: TipoFornecedor = Field(default=TipoFornecedor.nacional,
+                                 sa_type=SAEnum(TipoFornecedor, native_enum=False, length=64))
     pais: Optional[str] = None
     moeda_custo: str = "BRL"
-    cost_method_padrao: CostMethod = Field(default=CostMethod.national_supplier)
+    cost_method_padrao: CostMethod = Field(default=CostMethod.national_supplier,
+                                           sa_type=SAEnum(CostMethod, native_enum=False, length=64))
     # UF de onde a NF deste fornecedor efetivamente sai. NULO = desconhecida — cai para a
     # premissa padrão, e a memória registra que veio de default, não de evidência.
     uf_origem_fiscal: Optional[str] = None
@@ -906,7 +909,8 @@ class Cotacao(SQLModel, table=True):
     numero: Optional[str] = Field(default=None, index=True)     # ANARA-2026-0001
     cliente_id: int = Field(foreign_key="cliente.id")
     vendedor: Optional[str] = None
-    status: StatusCotacao = Field(default=StatusCotacao.rascunho)
+    status: StatusCotacao = Field(default=StatusCotacao.rascunho,
+                                  sa_type=SAEnum(StatusCotacao, native_enum=False, length=64))
     condicao_pagamento: str = Field(default="30")
     estado_destino: Optional[str] = None
     # `estado_origem` é LEGADO e representa origem logística/comercial. **Não é usado no

@@ -324,7 +324,7 @@ def fluxo_comercial(cliente: Cliente, resultado: Resultado) -> dict:
 
     status, corpo, headers = cliente.pedir(
         "/oportunidades", {"cliente_id": cliente_id, "titulo": "Enxoval do smoke",
-                           "etapa": "COTACAO", "origem": "INBOUND",
+                           "etapa": "RASCUNHO", "origem": "INBOUND",
                            "valor_estimado": "50000"})
     if status != 303:
         resultado.falhou("criar oportunidade", f"{status} — {corpo[:200]}")
@@ -446,7 +446,7 @@ def fluxo_cotacao(cliente: Cliente, contexto: dict, resultado: Resultado):
         return
 
     status, corpo, _h = cliente.pedir(f"/cotacoes/{cot_id}/emitir", {})
-    if status != 200:
+    if status not in (200, 303):        # 303: o navegador volta para a cotação (Fase 3C)
         resultado.falhou("emitir", f"{status} — {corpo[:200]}")
         return
     resultado.passou("cotação emitida")
@@ -461,8 +461,9 @@ def fluxo_cotacao(cliente: Cliente, contexto: dict, resultado: Resultado):
         resultado.falhou("PDF final", f"{status}")
 
     status, corpo, _h = cliente.pedir(f"/cotacoes/{cot_id}/enviar", {})
-    (resultado.passou if status == 200 else resultado.falhou)(
-        "marcada como enviada", "" if status == 200 else f"{status}")
+    enviada = status in (200, 303)      # 303: o navegador volta para a cotação (Fase 3C)
+    (resultado.passou if enviada else resultado.falhou)(
+        "marcada como enviada", "" if enviada else f"{status}")
 
     # --- imutabilidade em runtime ---
     status, corpo, _h = cliente.pedir(f"/cotacoes/{cot_id}/atualizar",

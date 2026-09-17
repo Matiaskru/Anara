@@ -67,8 +67,8 @@ MAPA = [
 def _premissa(con, chave):
     linha = con.execute(sa.text(
         "SELECT valor_num, valor_txt FROM premissa "
-        "WHERE chave = :c AND ativo = 1 AND valid_to IS NULL "
-        "ORDER BY valid_from DESC, id DESC LIMIT 1"), {"c": chave}).fetchone()
+        "WHERE chave = :c AND ativo = :sim AND valid_to IS NULL "
+        "ORDER BY valid_from DESC, id DESC LIMIT 1"), {"c": chave, "sim": True}).fetchone()
     return (linha[0], linha[1]) if linha else (None, None)
 
 
@@ -101,7 +101,7 @@ def _preencher(con):
         con.execute(sa.text(
             "UPDATE baseimportacao SET valid_from = :de, valid_to = :ate, ativo = :at, "
             "fonte = :fonte WHERE id = :id"),
-            {"de": inicio, "ate": fim, "at": 1 if i == len(bases) - 1 else 0,
+            {"de": inicio, "ate": fim, "at": i == len(bases) - 1,
              "fonte": base["nome_arquivo"], "id": base["id"]})
 
     # --- ponte: recriada do zero, para a migration poder ser reaplicada sem duplicar ---
