@@ -1,31 +1,56 @@
 {% extends "base.html" %}
 {% block title %}Calculadora de custo KTC — Anara{% endblock %}
-{% block content %}
-<div class="page-header">
-  <div>
-    <h1>Calculadora de custo KTC</h1>
-    <div class="subtitle">
-      Quanto custa e por quanto vender um produto que ainda não está no catálogo.
-      {% if cotacao %}Calculando dentro da <a href="/cotacoes/{{ cotacao.id }}">{{ cotacao.numero }}</a>.{% endif %}
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo">
+    <div>
+      {% if cotacao %}<div class="crumbs"><a href="/cotacoes/{{ cotacao.id }}">Cotação {{ cotacao.numero }}</a></div>{% endif %}
+      <h1>Produto personalizado</h1>
     </div>
+    <span class="contexto oculta-mobile">Calcular uma especificação KTC que ainda não está no catálogo</span>
   </div>
-  {% if cotacao %}<a href="/cotacoes/{{ cotacao.id }}" class="btn btn-ghost">Voltar para a cotação</a>{% endif %}
+  <div class="acoes">{% if cotacao %}<a href="/cotacoes/{{ cotacao.id }}" class="btn btn-ghost btn-sm">Voltar para a cotação</a>{% endif %}</div>
 </div>
+{% endblock %}
 
+{% block content %}
+{% set cama = ['Flat Sheet', 'Top Sheet', 'Fitted Sheet', 'Duvet Cover', 'Duvet Insert', 'Pillow Case', 'Mattress Protector', 'Mattress Topper'] %}
+{% set banho = ['Bath Towel', 'Hand Towel', 'Wash Cloth', 'Pool Towel', 'Bath Mat', 'Bathrobe', 'Slipper'] %}
 <div class="grid-2">
   <div class="card">
     <h3 style="margin-bottom:12px;">O que o cliente pediu</h3>
     <form id="form-calc" onsubmit="return false;">
       <input type="hidden" name="cotacao_id" value="{{ cotacao.id if cotacao else '' }}">
-      <div class="field">
-        <label>Produto</label>
-        <select name="familia" id="familia" onchange="ajustarFormulario()">
-          <option value="">Selecione...</option>
-          {% for f in opcoes.familias %}
-          <option value="{{ f.familia }}" data-tipo="{{ f.tipo }}">{{ f.rotulo }}{% if f.tipo == 'sem_formula' %} — sem fórmula{% endif %}</option>
-          {% endfor %}
-        </select>
+      {# O que você quer calcular? Cartões, como no cotador offline — sem descer lista. #}
+      <label>O que você quer calcular?</label>
+      <select name="familia" id="familia" onchange="ajustarFormulario()" hidden aria-hidden="true" tabindex="-1">
+        <option value="">Selecione...</option>
+        {% for f in opcoes.familias %}
+        <option value="{{ f.familia }}" data-tipo="{{ f.tipo }}">{{ f.rotulo }}</option>
+        {% endfor %}
+      </select>
+      {% for grupo, lista in (('Cama', cama), ('Banho', banho)) %}
+      <div class="tiles-grupo">{{ grupo }}</div>
+      <div class="tiles" role="radiogroup" aria-label="{{ grupo }}">
+        {% for f in opcoes.familias if f.familia in lista %}
+        <button type="button" class="tile" role="radio" aria-checked="false" data-familia="{{ f.familia }}" onclick="escolherFamilia(this)">
+          <div class="t-nome">{{ f.rotulo }}</div>
+          <div class="t-sub">{{ 'medidas livres' if f.tipo != 'sem_formula' else 'sob consulta' }}</div>
+        </button>
+        {% endfor %}
       </div>
+      {% endfor %}
+      {% set outras = opcoes.familias|rejectattr('familia', 'in', cama)|rejectattr('familia', 'in', banho)|list %}
+      {% if outras %}
+      <div class="tiles-grupo">Outros</div>
+      <div class="tiles">
+        {% for f in outras %}
+        <button type="button" class="tile" role="radio" aria-checked="false" data-familia="{{ f.familia }}" onclick="escolherFamilia(this)">
+          <div class="t-nome">{{ f.rotulo }}</div><div class="t-sub">{{ 'medidas livres' if f.tipo != 'sem_formula' else 'sob consulta' }}</div>
+        </button>
+        {% endfor %}
+      </div>
+      {% endif %}
 
       <div id="bloco-medida" class="grid-2" style="display:none;">
         <div class="field"><label>Largura (cm)</label><input type="number" name="largura_cm" id="largura_cm" step="1"></div>

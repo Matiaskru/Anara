@@ -15,6 +15,16 @@ function mostrar(id, visivel) {
   document.getElementById(id).style.display = visivel ? "" : "none";
 }
 
+function escolherFamilia(btn) {
+  document.querySelectorAll(".tile").forEach(t => { t.classList.remove("ativo"); t.setAttribute("aria-checked", "false"); });
+  btn.classList.add("ativo");
+  btn.setAttribute("aria-checked", "true");
+  document.getElementById("familia").value = btn.dataset.familia;
+  ajustarFormulario();
+  const alvo = document.getElementById("bloco-medida");
+  if (alvo && alvo.style.display !== "none") alvo.querySelector("input")?.focus();
+}
+
 function ajustarFormulario() {
   const tipo = tipoDaFamilia();
   const calculavel = tipo === "tecido" || tipo === "toalha";

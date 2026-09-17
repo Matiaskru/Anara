@@ -4,39 +4,43 @@
 {% block topbar %}
 <div class="topbar">
   <div class="titulo"><h1>Dashboard</h1><span class="contexto">{{ periodo.rotulo }}{% if periodo.inicio %} · {{ periodo.inicio|data }} a {{ periodo.fim|data }}{% endif %}</span></div>
-  <form method="get" class="flex" id="filtros-dash">
-    <div class="seg" role="group" aria-label="Período">
-      {% for valor, rotulo in atalhos %}<a href="?periodo={{ valor }}{% for k, v in filtros.items() if v %}&{{ k }}={{ v }}{% endfor %}" class="{{ 'active' if atalho == valor else '' }}">{{ rotulo }}</a>{% endfor %}
-      <button type="button" class="{{ 'active' if personalizado else '' }}" onclick="document.getElementById('datas').hidden = !document.getElementById('datas').hidden">Personalizado</button>
-    </div>
-    <span id="datas" class="flex" {% if not personalizado %}hidden{% endif %}>
-      <input type="date" name="inicio" value="{{ inicio }}" class="input-sm" style="width:auto;" aria-label="De">
-      <input type="date" name="fim" value="{{ fim }}" class="input-sm" style="width:auto;" aria-label="Até">
-      <button class="btn btn-ghost btn-sm" type="submit">Aplicar</button>
-    </span>
-    {% if not personalizado %}<input type="hidden" name="periodo" value="{{ atalho }}">{% endif %}
-    <select name="vendedora" data-auto-submit class="input-sm" style="width:auto;" aria-label="Vendedora">
-      <option value="">Todas as vendedoras</option>
-      {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if filtros.vendedora == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
-    </select>
-    <select name="cliente_id" data-auto-submit class="input-sm" style="width:auto;" aria-label="Cliente">
-      <option value="">Todos os clientes</option>
-      {% for c in clientes %}<option value="{{ c.id }}" {{ 'selected' if filtros.cliente_id == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
-    </select>
-    <select name="fornecedor_id" data-auto-submit class="input-sm" style="width:auto;" aria-label="Fornecedor">
-      <option value="">Todos os fornecedores</option>
-      {% for f in fornecedores %}<option value="{{ f.id }}" {{ 'selected' if filtros.fornecedor_id == f.id|string else '' }}>{{ f.nome }}</option>{% endfor %}
-    </select>
-    <select name="familia" data-auto-submit class="input-sm" style="width:auto;" aria-label="Família">
-      <option value="">Todas as famílias</option>
-      {% for f in familias %}<option value="{{ f }}" {{ 'selected' if filtros.familia == f else '' }}>{{ f }}</option>{% endfor %}
-    </select>
-  </form>
   <div class="acoes"><a class="btn btn-ghost btn-sm" href="/relatorios">Relatórios</a><a class="btn btn-ghost btn-sm" href="/aprovacoes">Aprovações</a></div>
 </div>
 {% endblock %}
 
 {% block content %}
+<form method="get" class="filters" id="filtros-dash">
+  <div class="seg" role="group" aria-label="Período">
+    {% for valor, rotulo in atalhos %}<a href="?periodo={{ valor }}{% for k, v in filtros.items() if v %}&{{ k }}={{ v }}{% endfor %}" class="{{ 'active' if atalho == valor else '' }}">{{ rotulo }}</a>{% endfor %}
+    <button type="button" class="{{ 'active' if personalizado else '' }}" onclick="const d=document.getElementById('datas'); d.hidden=!d.hidden; if(!d.hidden) d.querySelector('input').focus();">Personalizado</button>
+  </div>
+  <span id="datas" class="flex" {% if not personalizado %}hidden{% endif %}>
+    <input type="date" name="inicio" value="{{ inicio }}" aria-label="De">
+    <span class="muted small">a</span>
+    <input type="date" name="fim" value="{{ fim }}" aria-label="Até">
+    <button class="btn btn-ghost btn-sm" type="submit">Aplicar</button>
+  </span>
+  {% if not personalizado %}<input type="hidden" name="periodo" value="{{ atalho }}">{% endif %}
+  <select name="vendedora" data-auto-submit aria-label="Vendedora">
+    <option value="">Todas as vendedoras</option>
+    {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if filtros.vendedora == u.id|string else '' }}>{{ u.nome }}</option>{% endfor %}
+  </select>
+  <select name="cliente_id" data-auto-submit aria-label="Cliente">
+    <option value="">Todos os clientes</option>
+    {% for c in clientes %}<option value="{{ c.id }}" {{ 'selected' if filtros.cliente_id == c.id|string else '' }}>{{ c.nome }}</option>{% endfor %}
+  </select>
+  <select name="fornecedor_id" data-auto-submit aria-label="Fornecedor">
+    <option value="">Todos os fornecedores</option>
+    {% for f in fornecedores %}<option value="{{ f.id }}" {{ 'selected' if filtros.fornecedor_id == f.id|string else '' }}>{{ f.nome }}</option>{% endfor %}
+  </select>
+  <select name="familia" data-auto-submit aria-label="Família">
+    <option value="">Todas as famílias</option>
+    {% for f in familias %}<option value="{{ f }}" {{ 'selected' if filtros.familia == f else '' }}>{{ f|rotulo_familia }}</option>{% endfor %}
+  </select>
+  {% if filtros.vendedora or filtros.cliente_id or filtros.fornecedor_id or filtros.familia or personalizado %}
+  <a class="btn btn-ghost btn-sm" href="/">Limpar</a>
+  {% endif %}
+</form>
 {% if painel.vazio %}
 <div class="empty-state"><h3>Nenhuma venda registrada ainda</h3><p>O dashboard se preenche conforme as vendas forem fechadas. Nada aqui é inventado para a tela parecer cheia.</p>
   <a class="btn btn-copper btn-sm" href="/vendas">Ir para Vendas</a></div>

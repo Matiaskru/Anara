@@ -231,6 +231,7 @@ label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; col
 .span-3 { grid-column: span 3; }
 form.grid-2 { max-width: 100%; }
 .input-sm { padding: 4px 7px; font-size: 12px; }
+select.input-sm { padding-right: 26px; }
 .input-inline { width: auto; display: inline-block; }
 .input-num { text-align: right; font-variant-numeric: tabular-nums; }
 .input-cell { padding: 4px 7px; font-size: 12.5px; border-color: transparent; background: transparent; }
@@ -248,7 +249,7 @@ form.grid-2 { max-width: 100%; }
 .filters .spacer { flex: 1; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius-sm);
   overflow: hidden; background: var(--surface); }
-.seg a, .seg button { border: 0; background: transparent; padding: 6px 11px; font-family: var(--font);
+.seg a, .seg button { border: 0; background: transparent; padding: 6px 11px; font-family: var(--font); white-space: nowrap;
   font-size: 12px; font-weight: 600; cursor: pointer; color: var(--gray); }
 .seg a.active, .seg button.active { background: var(--midnight); color: var(--cotton); }
 .seg a + a, .seg button + button { border-left: 1px solid var(--line); }
@@ -649,3 +650,13 @@ details.card[open] > summary::before { content: "▾ "; }
 .lista-busca .item .meta { font-size: 10.5px; color: var(--gray-2); }
 .lista-busca .item .lado { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .lista-busca .vazio { padding: 16px; }
+
+/* Escolha por cartões (calculadora): o que você quer calcular? */
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px; }
+.tile { display: block; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 10px 12px; cursor: pointer; font-family: var(--font); color: var(--ink); transition: border-color .12s, background .12s; }
+.tile:hover { border-color: var(--copper); }
+.tile.ativo { border-color: var(--midnight); background: var(--info-soft); box-shadow: inset 0 0 0 1px var(--midnight); }
+.tile .t-nome { font-size: 13px; font-weight: 700; }
+.tile .t-sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.tiles-grupo { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--gray); font-weight: 700; margin: 10px 0 6px; }
