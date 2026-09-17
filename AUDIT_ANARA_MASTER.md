@@ -1010,7 +1010,7 @@ Pode ficar fora do repositório de produção com impacto em um script de import
 teste (que já pula sem os arquivos). Decisão do dono antes do push — comandos em
 `DEPLOY_PRODUCTION.md`.
 
-### D-01 — 17 cotações herdadas apagadas pela plataforma em 17/09/2026 11:25:54 (DADOS, decisão do dono)
+### D-01 — 17 cotações herdadas apagadas pela plataforma em 17/09/2026 11:25:54 (DADOS) — **RESOLVIDO em 17/09/2026: restauradas**
 
 Durante a preparação para produção, o `data/server.log` do servidor local (127.0.0.1:8420)
 registra `POST /cotacoes/lote` → `GET /cotacoes?arquivadas=sim&apagadas=17`, pela conta
@@ -1031,4 +1031,14 @@ Consequência: quatro guardiões do conjunto herdado (`tests/legado.py`, baselin
 ao baseline desta sessão (`5b0c5cc0…`): nada mais mudou no banco. Decisão do dono,
 não do código: (a) restaurar o backup se a exclusão não foi intencional (`BACKUP.md`), ou
 (b) aposentar/atualizar os guardiões do conjunto herdado. Não foi resolvido em silêncio.
+
+**Resolução (decisão humana, 17/09/2026):** restaurar. Backup do banco atual antes
+(`~/Anara-Cotacao-Backups/anara_pre_restauracao_d01_*.db`, `data/backups/anara.db.pre-restauracao-d01-*`).
+Comparação tabela a tabela mostrou que o banco atual era exatamente o backup pré-exclusão menos
+17 `cotacao` e 46 `cotacaoitem` — nenhuma outra linha diferia. As 63 linhas foram inseridas
+numa única transação, com os ids originais, `PRAGMA foreign_key_check` vazio e
+`integrity_check` ok; depois disso todas as 37 tabelas são idênticas ao backup pré-exclusão. As
+cotações voltam **arquivadas**, como estavam; o dono apagará pelo Admin as que não quiser.
+Suítes SQLite e Postgres verdes, ensaio de migração SQLite → Postgres repetido: 1.231 linhas,
+0 divergências, 0 FKs órfãs, sequences em `MAX(id)`. Guardiões não reformulados.
 

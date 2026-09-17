@@ -36,9 +36,10 @@ migrations 0002/0003/0005/0007 (booleanos por parâmetro), `tests/conftest.py`
 **Banco real durante a sessão:** às 11:25:54 a conta OWNER apagou de vez, pela plataforma
 local, 17 cotações herdadas já arquivadas (ids 1–16 e 19; `AUDIT_ANARA_MASTER.md` D-01). Backup
 automático `data/backups/anara.db.exclusao-lote-20260917-112554` (sha256 idêntico ao baseline
-`5b0c5cc0…` desta sessão) e cópia externa. **Quatro testes-guardiões** do conjunto herdado
-passaram a falhar por isso, também no código anterior — decisão do dono, ver D-01.
-Suíte SQLite final: **1.241 passaram, 1 pulado, 4 falhas (as guardiãs)**.
+`5b0c5cc0…` desta sessão) e cópia externa. Quatro testes-guardiões do conjunto herdado passaram
+a falhar por isso. **D-01 RESOLVIDO no mesmo dia por decisão humana: as 63 linhas (17 cotações
++ 46 itens) foram restauradas do backup, ids preservados, 0 FKs órfãs** — ver D-01 no audit.
+Suítes finais após a restauração: SQLite e Postgres **sem falhas**.
 
 **Pendências para publicar (manuais, fora desta sessão):** decidir `referencia/` (recomendado
 tirar do repo antes do push), criar GitHub privado e Railway, SMTP real, domínio. Roteiro

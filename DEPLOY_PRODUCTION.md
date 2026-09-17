@@ -32,11 +32,8 @@ Na máquina de origem (Mac), antes de qualquer conta externa:
       `git filter-repo --path referencia --invert-paths --force` e acrescentar
       `referencia/` ao `.gitignore`. Impacto: o teste do tarifário Daune pula quando a
       pasta não existe; o script de importação precisa da pasta local.
-- [ ] **Dados herdados (D-01 no audit):** em 17/09/2026 11:25 a conta OWNER apagou de vez 17
-      cotações herdadas já arquivadas. Se foi intencional, atualize/aposente os quatro
-      testes-guardiões do conjunto herdado; se não, restaure
-      `~/Anara-Cotacao-Backups/anara_pre_exclusao_lote_owner_20260917-112554.db` (`BACKUP.md`)
-      **antes** do cutover — o migrador leva o que estiver em `data/anara.db`.
+- [x] **Dados herdados (D-01 no audit):** resolvido em 17/09/2026 — as 17 cotações foram
+      restauradas do backup (voltam arquivadas; apague pelo Admin as que não quiser manter).
 - [ ] Gere a chave de sessão e guarde no gerenciador de senhas (não em arquivo do repo):
       `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`
 - [ ] Tenha em mãos: SMTP (host, porta, usuário, senha, remetente) e o domínio desejado.
