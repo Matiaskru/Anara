@@ -35,7 +35,7 @@ FAMILIAS = [
     ("Pool Towel", "Toalha de piscina", "Toalha Piscina", "toalha"),
     ("Wash Cloth", "Toalha de lavabo", "Toalha Lavabo", "toalha"),
     ("Fitted Sheet", "Lençol com elástico", "Lençol com Elástico", "sem_formula"),
-    ("Pillow Case", "Fronha", "Fronha com Aba", "sem_formula"),
+    ("Pillow Case", "Fronha", "Fronha com Aba", "fronha"),
     ("Bathrobe", "Roupão", "Roupão", "sem_formula"),
     ("Duvet Insert", "Edredom / insert", "Edredom / Insert", "sem_formula"),
     ("Mattress Protector", "Protetor de colchão", "Protetor Colchão", "sem_formula"),
@@ -73,7 +73,8 @@ def produto_simulado(session: Session, familia: str, largura_cm: Optional[float]
                      comprimento_cm: Optional[float], material_id: Optional[int] = None,
                      gsm: Optional[int] = None, plain_or_stripe: str = "plain",
                      outros_custos_usd: float = 0.0,
-                     acabamento: Optional[str] = None) -> Produto:
+                     acabamento: Optional[str] = None, abas: Optional[int] = None,
+                     flap_cm: Optional[float] = None, festone: bool = False) -> Produto:
     """Monta um Produto **em memória** — não vai para o banco. Serve só para alimentar os
     mesmos motores que a cotação usa, sem duplicar regra nenhuma."""
     ktc = session.exec(select(Fornecedor).where(Fornecedor.codigo == "KTC")).first()
@@ -88,6 +89,13 @@ def produto_simulado(session: Session, familia: str, largura_cm: Optional[float]
         largura_cm=largura_cm, comprimento_cm=comprimento_cm,
         gsm=gsm, plain_or_stripe=plain_or_stripe, acabamento=acabamento,
     )
+    if TIPO_POR_FAMILIA.get(familia) == "fronha":
+        # A construção da fronha (§18) viaja no cadastro estruturado — é de lá que o motor
+        # lê abas, flap e festonê. Sem informar, vale o standard: 0 abas, flap 20 cm.
+        produto.construcao = f"{int(abas or 0)} abas" if abas else "standard"
+        produto.fechamento = f"flap {flap_cm:g} cm" if flap_cm else "flap 20 cm"
+        if festone:
+            produto.acabamento = ((acabamento + " · ") if acabamento else "") + "festonê"
     if material:
         produto.material_ref = material.material
         produto.thread_count = material.thread_count
@@ -112,7 +120,8 @@ def calcular(session: Session, familia: str, largura_cm: Optional[float],
              gsm: Optional[int] = None, plain_or_stripe: str = "plain",
              quantidade: float = 1, outros_custos_usd: float = 0.0,
              margem_override: Optional[float] = None, acabamento: Optional[str] = None,
-             cotacao: Optional[Cotacao] = None) -> dict:
+             cotacao: Optional[Cotacao] = None, abas: Optional[int] = None,
+             flap_cm: Optional[float] = None, festone: bool = False) -> dict:
     """Devolve a memória do preço completa, no mesmo formato da tela de memória da cotação."""
     if TIPO_POR_FAMILIA.get(familia) == "sem_formula" or familia not in FAMILIAS_CALCULAVEIS:
         return {
@@ -124,7 +133,8 @@ def calcular(session: Session, familia: str, largura_cm: Optional[float],
         }
 
     produto = produto_simulado(session, familia, largura_cm, comprimento_cm, material_id, gsm,
-                               plain_or_stripe, outros_custos_usd, acabamento)
+                               plain_or_stripe, outros_custos_usd, acabamento,
+                               abas=abas, flap_cm=flap_cm, festone=festone)
     memoria = ps.memoria_do_preco(session, produto, cotacao, quantidade=quantidade,
                                   margem_override=margem_override)
     memoria["calculavel"] = memoria.get("comercial") is not None
@@ -140,18 +150,24 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
                        comprimento_cm: Optional[float], material_id: Optional[int] = None,
                        gsm: Optional[int] = None, plain_or_stripe: str = "plain",
                        acabamento: Optional[str] = None, calculavel: bool = True,
-                       observacao: Optional[str] = None) -> Produto:
+                       observacao: Optional[str] = None, abas: Optional[int] = None,
+                       flap_cm: Optional[float] = None, festone: bool = False) -> Produto:
     """Grava o produto simulado no catálogo, para poder ser cotado e reaproveitado.
 
     Calculável entra com o custo do motor industrial. Sem fórmula entra sem custo, marcado para
     revisão — vira um pedido de cotação à KTC, e aparece no relatório de qualidade.
     """
     produto = produto_simulado(session, familia, largura_cm, comprimento_cm, material_id, gsm,
-                               plain_or_stripe, acabamento=acabamento)
+                               plain_or_stripe, acabamento=acabamento, abas=abas,
+                               flap_cm=flap_cm, festone=festone)
     medida = (f"{int(largura_cm)}x{int(comprimento_cm)}"
               if largura_cm and comprimento_cm else "sem medida")
     detalhe = produto.material_ref or (f"{gsm} GSM" if gsm else "sem tecido")
     produto.sku_key = f"CALC · {familia} · {medida} · {detalhe} · {plain_or_stripe}"
+    if TIPO_POR_FAMILIA.get(familia) == "fronha":
+        # construções diferentes são SKUs diferentes: 4 abas com festonê não é a standard
+        produto.sku_key += f" · {produto.construcao} · {produto.fechamento}" + \
+            (" · festonê" if festone else "")
 
     existente = session.exec(select(Produto).where(Produto.sku_key == produto.sku_key)).first()
     if existente:

@@ -27,12 +27,13 @@ function escolherFamilia(btn) {
 
 function ajustarFormulario() {
   const tipo = tipoDaFamilia();
-  const calculavel = tipo === "tecido" || tipo === "toalha";
+  const calculavel = tipo === "tecido" || tipo === "toalha" || tipo === "fronha";
   mostrar("bloco-medida", calculavel);
-  mostrar("bloco-tecido", tipo === "tecido");
+  mostrar("bloco-tecido", tipo === "tecido" || tipo === "fronha");
+  mostrar("bloco-fronha", tipo === "fronha");
   mostrar("bloco-toalha", tipo === "toalha");
   mostrar("bloco-comercial", calculavel);
-  mostrar("bloco-extras", tipo === "tecido");
+  mostrar("bloco-extras", tipo === "tecido" || tipo === "fronha");
   mostrar("btn-calcular", calculavel);
   mostrar("sem-formula", tipo === "sem_formula");
   mostrar("acoes-registro", tipo === "sem_formula");

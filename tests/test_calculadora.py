@@ -86,7 +86,8 @@ def test_toalha_listrada_usa_a_taxa_de_piscina(s):
 
 def test_familia_sem_formula_nao_inventa(s):
     from app.calculadora import calcular
-    for familia in ("Fitted Sheet", "Pillow Case", "Bathrobe", "Duvet Insert"):
+    # Fronha saiu desta lista: o §18 fechou a regra (Sessão 2) e a calculadora passou a usá-la.
+    for familia in ("Fitted Sheet", "Bathrobe", "Duvet Insert"):
         r = calcular(s, familia, 50, 70)
         assert r["calculavel"] is False
         assert "não calcula" in r["motivo"]
@@ -190,3 +191,26 @@ def test_produto_personalizado_entra_na_cotacao_com_preco_formado(s):
     assert item.preco_negociado == item.preco_recomendado
     assert item.faturamento == aprox(item.preco_negociado * 3)
     assert item.politica_comercial and item.icms_pct is not None
+
+
+def test_fronha_calcula_pelo_paragrafo_18_com_abas_flap_e_festone(s):
+    """A calculadora usa a mesma regra de fronha do catálogo (§18): construção muda o corte e o CMT."""
+    from app.calculadora import calcular, salvar_no_catalogo
+    m = material(s, "250TC Sateen CVC 70/30")
+    standard = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=0, flap_cm=20)
+    assert standard["calculavel"] is True
+    industrial = standard["custo"]["industrial"]
+    assert industrial["exw_usd"] == aprox(2.0417, abs=0.002)          # backtest §18, 0 abas
+    assert industrial["detalhes"]["corte_cm"].startswith("54x165")
+    quatro = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=4, flap_cm=20)
+    assert quatro["custo"]["industrial"]["exw_usd"] == aprox(2.8148, abs=0.002)
+    festone = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=4, flap_cm=20, festone=True)
+    assert festone["custo"]["industrial"]["exw_usd"] == aprox(2.9337, abs=0.002)
+    # construção fora do §18 não é arredondada: o motor recusa
+    uma = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=1, flap_cm=20)
+    assert uma["calculavel"] is False
+    # construções diferentes viram SKUs diferentes no catálogo
+    a = salvar_no_catalogo(s, "Pillow Case", 50, 70, material_id=m.id, abas=0, flap_cm=20)
+    b = salvar_no_catalogo(s, "Pillow Case", 50, 70, material_id=m.id, abas=4, flap_cm=20, festone=True)
+    assert a.id != b.id and a.custo_unitario < b.custo_unitario
+    assert "4 abas" in (b.construcao or "") and "festonê" in (b.acabamento or "")

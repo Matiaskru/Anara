@@ -824,7 +824,7 @@ Revisão dos 173 testes atuais contra a Base Mestra:
 |---|---|---|
 | `test_fiscal.py::test_interestadual_contribuinte_e_4` | Afirma 4% para qualquer fornecedor | Reescrever: 4% só para importada; nacional 7%/12% |
 | `test_fiscal.py` (paramétrico de carga final) | Correto, mas não cobre finalidade | Ampliar com a matriz contribuinte × finalidade |
-| `test_calculadora.py::test_familia_sem_formula_nao_inventa` | Inclui `Pillow Case` como não calculável | Remover fronha da lista; manter Fitted |
+| `test_calculadora.py::test_familia_sem_formula_nao_inventa` | Inclui `Pillow Case` como não calculável | **Feito em 17/09/2026**: fronha saiu da lista; a calculadora ("Produto personalizado") calcula pelo §18 com abas (0/2/3/4), flap e festonê, e o teste `test_fronha_calcula_pelo_paragrafo_18_com_abas_flap_e_festone` reproduz os backtests |
 | `test_motor_comercial.py` | Não cobre CF/RV | Ampliar com frete e ADV/GRIS |
 | `test_motor_comercial::test_condicao_nao_cadastrada_usa_regua_antiga_com_aviso` | **Protege a interpolação proibida** (B-15): afirma que `"30/60/90/120/150/180"` devolve 9,6% pela régua legada | **Reescrever na Onda 1** — a condição desconhecida tem de exigir cadastro ou override, não devolver número |
 | `test_fiscal::test_cenario_desconhecido_cai_no_fallback_com_aviso` | Protege o fallback de 18% (B-06) | **Substituir na Onda 1** — cenário irresolvível vira `REVIEW_REQUIRED` |

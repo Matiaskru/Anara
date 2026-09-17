@@ -48,6 +48,10 @@ def _parametros(form) -> dict:
         "outros_custos_usd": numero("outros_custos_usd", 0.0) or 0.0,
         "margem_override": (margem / 100 if margem and margem > 1 else margem),
         "acabamento": form.get("acabamento") or None,
+        # fronha (§18): construção. Fora do que o motor aprova, ele mesmo recusa.
+        "abas": int(numero("abas", 0) or 0),
+        "flap_cm": numero("flap_cm"),
+        "festone": (form.get("festone") or "") in ("sim", "on", "1", "true"),
     }
 
 
@@ -73,7 +77,8 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
         comprimento_cm=dados["comprimento_cm"], material_id=dados["material_id"],
         gsm=dados["gsm"], plain_or_stripe=dados["plain_or_stripe"],
         acabamento=dados["acabamento"], calculavel=calculavel,
-        observacao=form.get("observacao") or None)
+        observacao=form.get("observacao") or None, abas=dados["abas"],
+        flap_cm=dados["flap_cm"], festone=dados["festone"])
 
     cotacao_id = form.get("cotacao_id")
     if not cotacao_id:
