@@ -23,7 +23,7 @@
       #}
       <nav>
         {% if ve_economia(request) %}
-        <a href="/" class="{{ 'active' if active == 'dashboard' else '' }}">
+        <a href="/dashboard" class="{{ 'active' if active == 'dashboard' else '' }}">
           <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="9" width="3" height="5" rx=".5"/><rect x="6.5" y="5" width="3" height="9" rx=".5"/><rect x="11" y="2" width="3" height="12" rx=".5"/></svg>
           Dashboard</a>
         {% endif %}

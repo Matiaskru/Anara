@@ -29,6 +29,14 @@ def _int_ou_none(valor: str) -> Optional[int]:
 
 
 @router.get("/", response_class=HTMLResponse)
+def raiz(request: Request, session: Session = Depends(get_session)):
+    """`/` é o que se digita para "abrir o sistema": cada papel vai para a sua home."""
+    exigir_autenticado(request)
+    return RedirectResponse(url="/dashboard" if ve_economia(request) else "/vendas",
+                            status_code=303)
+
+
+@router.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request, periodo: str = "12m", inicio: str = "", fim: str = "",
               vendedora: str = "", cliente_id: str = "", fornecedor_id: str = "",
               familia: str = "", session: Session = Depends(get_session)):
@@ -63,4 +71,5 @@ def dashboard(request: Request, periodo: str = "12m", inicio: str = "", fim: str
         "fornecedores": session.exec(select(Fornecedor).order_by(Fornecedor.nome)).all(),
         "familias": sorted({p.familia for p in produtos if p.familia}),
         "qs": getattr(request.url, "query", ""),
+        "base_dashboard": "/dashboard",
     })

@@ -2,7 +2,35 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **16/09/2026 — fim da Fase 3C (redesign comercial, Dashboard Admin e PDF cliente)**
+Última atualização: **17/09/2026 — hardening de acesso por perfil, login e recuperação de senha**
+
+---
+
+# Hardening de acesso por perfil · login · recuperação de senha (17/09/2026) — EXECUTADO
+
+Alembic **`0021`** (`0021_password_reset_token`, aditiva: tabela `passwordresettoken`, só o
+hash do token). Backups antes: `data/backups/anara.db.antes-auth-migration-0021-*` e
+`~/Anara-Cotacao-Backups/anara_auth_pre_20260917-085347.db`. Nada de pricing, fiscal,
+comissão, CRM, PDF ou dados comerciais foi tocado.
+
+| O quê | Onde |
+|---|---|
+| Destino por papel decidido no backend: vendedora → `/vendas`; OWNER/ADMIN → `/dashboard` (rota canônica; `/` redireciona por papel; a vendedora em `/dashboard` volta para `/vendas`) | `app/routers/login.py` (`landing`), `app/routers/dashboard.py` (`raiz`, `dashboard`), `base.html` |
+| Vendedora não recebe economia em HTML nem em JSON: `situacao` devolve `motivo=PRECISA_APROVACAO` (não o código `MARGEM_ABAIXO_PISO`); bloqueios em linguagem comercial (`rotulos.BLOCKER_COMERCIAL`); aviso de premissas sem valores internos; varredura de todas as telas e endpoints da vendedora em teste | `app/routers/workflow.py`, `app/rotulos.py`, `_cotacao_situacao.html`, `cotacao_detail.html`, `tests/test_auth_perfis.py` |
+| "Marcar as com cara de teste" saiu da lista de Cotações (a função `arquivamento.candidatas_a_teste` continua interna, só em teste) | `cotacoes_list.html`, `app/routers/cotacoes.py` |
+| Login: ANARA · e-mail · senha · Entrar · "Esqueci minha senha"; sem seletor de papel, sem texto técnico | `login.html` |
+| **Esqueci minha senha** (`/esqueci-senha`, resposta genérica e mesmo custo de tempo para e-mail inexistente) e **redefinir** (`/redefinir-senha?token=…`): token `secrets.token_urlsafe(32)`, só `sha256` no banco, 30 min, uso único, gerar um novo encerra os anteriores, redefinir incrementa `sessao_versao` e registra `AuditLog` sem senha/token | `app/recuperacao_senha.py`, `app/routers/login.py`, `esqueci_senha.html`, `redefinir_senha.html`, `app/models.py` (`PasswordResetToken`) |
+| E-mail por ENV (`ANARA_MAIL_HOST/PORT/USER/PASSWORD/FROM/TLS`); sem SMTP: DEV escreve no log `anara.mail` (nunca na página), `ANARA_MAIL_BACKEND=memoria` para testes; produção sem SMTP avisa no startup e em `/health/detalhe` (`recuperacao_senha_por_email`) | `app/mail.py`, `app/main.py`, `app/routers/relatorios_comerciais.py` |
+| Usuários (OWNER/`can_manage_users`): criar sem senha → link de primeiro acesso (48 h, mesma infraestrutura); "Enviar redefinição de senha" por pessoa; senha nunca visível; `CREATE_USER`/`SET_PASSWORD` na trilha | `app/routers/usuarios.py`, `admin_usuarios.html` |
+| 18 testes / 23 pontos do enunciado | `tests/test_auth_perfis.py` |
+
+Sessão/cookie revisados: `HttpOnly`, `SameSite=lax`, `Secure` em produção, segredo de ENV,
+argon2id, logout — sem mudança necessária. Testes ajustados só na interface: destino do
+admin (`/dashboard`) em `test_fase3b`, `test_copy_e_navegacao`, `test_fase3c`.
+
+**Primeiro acesso:** implementado pela mesma infraestrutura do reset (conta criada sem senha
+conhecida pelo gestor). `ANARA_BASE_URL` define a origem do link; sem ela, a origem do
+pedido (ou `http://127.0.0.1:8420`).
 
 ---
 

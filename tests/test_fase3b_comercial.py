@@ -235,7 +235,7 @@ def test_04_admin_continua_acessando_dashboard(session):
     from app.routers.login import landing
     r = chamar(dashboard, RequestFalsa(_novo_usuario("ADMIN")), session=session)
     assert r.status_code == 200
-    assert landing(_novo_usuario("OWNER")) == "/"
+    assert landing(_novo_usuario("OWNER")) == "/dashboard"       # home canônica do admin
 
 
 # ===========================================================================

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anara — Redefinir senha</title>
+  <link rel="stylesheet" href="/static/css/anara.css?v={{ versao_estatica }}">
+  <link rel="icon" href="/static/img/anara_mark_copper.png">
+</head>
+<body>
+  <div class="login-page">
+    <form class="login-card" method="post" action="/redefinir-senha">
+      <div class="marca">
+        <img src="/static/img/anara_mark_copper.png" alt="">
+        <div class="word">ANARA</div>
+      </div>
+      {% if concluido %}
+      <p class="aviso-ok aviso" role="status" style="margin:0 0 14px;">Senha redefinida. Entre com a senha nova.</p>
+      <a class="btn btn-copper" href="/login" style="display:flex;">Ir para o login</a>
+      {% elif not valido %}
+      <p class="erro" role="alert" style="margin:0 0 14px;">{{ erro or 'Este link de redefinição não é válido ou já expirou.' }}</p>
+      <a class="btn btn-copper" href="/esqueci-senha" style="display:flex;">Pedir um link novo</a>
+      <div class="rodape-login"><a href="/login">Voltar para o login</a></div>
+      {% else %}
+      <input type="hidden" name="token" value="{{ token }}">
+      <p class="muted small" style="margin:0 0 14px;">Crie uma senha nova com pelo menos 8 caracteres.</p>
+      <div class="field">
+        <label for="senha">Nova senha</label>
+        <input id="senha" type="password" name="senha" minlength="8" autocomplete="new-password" autofocus required>
+      </div>
+      <div class="field">
+        <label for="confirmar">Confirmar nova senha</label>
+        <input id="confirmar" type="password" name="confirmar" minlength="8" autocomplete="new-password" required>
+      </div>
+      <button class="btn btn-copper" type="submit">Salvar senha</button>
+      {% if erro %}<div class="erro" role="alert">{{ erro }}</div>{% endif %}
+      {% endif %}
+    </form>
+  </div>
+</body>
+</html>

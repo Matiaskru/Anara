@@ -27,6 +27,7 @@ TELAS_COMERCIAIS = [
     "cotacoes_list.html", "cotacao_nova.html", "cotacao_detail.html", "_cotacao_situacao.html",
     "produtos_list.html", "relatorios.html", "relatorio_cotacoes.html",
     "relatorio_aprovacoes.html", "login.html", "primeiro_acesso.html",
+    "esqueci_senha.html", "redefinir_senha.html",
     "erro_acao.html", "base.html",
 ]
 
@@ -115,7 +116,7 @@ def test_menu_e_por_tarefa_e_curto():
     # Fase 3C: Dashboard (só OWNER/ADMIN) → Vendas → Clientes → Cotações → Produtos, e depois
     # as portas por permissão (Aprovações, Admin). Relatórios saiu do menu principal: mora
     # dentro do Admin e do Dashboard. "Meu dia" e o quadro antigo continuam alcançáveis.
-    assert destinos[:5] == ["/", "/vendas", "/clientes", "/cotacoes", "/produtos"]
+    assert destinos[:5] == ["/dashboard", "/vendas", "/clientes", "/cotacoes", "/produtos"]
     assert "/relatorios" not in destinos, "Relatórios voltou ao menu principal"
     assert len(destinos) <= 7, f"o menu voltou a crescer: {destinos}"
 

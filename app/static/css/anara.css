@@ -660,3 +660,7 @@ details.card[open] > summary::before { content: "▾ "; }
 .tile .t-nome { font-size: 13px; font-weight: 700; }
 .tile .t-sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
 .tiles-grupo { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--gray); font-weight: 700; margin: 10px 0 6px; }
+
+.login-card .rodape-login { text-align: center; margin-top: 14px; font-size: 12px; }
+.login-card .rodape-login a { color: var(--gray); }
+.login-card .rodape-login a:hover { color: var(--ink); text-decoration: underline; }

@@ -80,15 +80,16 @@ def login_submit(request: Request, email: str = Form(""), senha: str = Form(""),
 
 
 def landing(usuario, destino: str = "/") -> str:
-    """Onde a pessoa cai depois de entrar (Fase 3B).
+    """Onde a pessoa cai depois de entrar. **O papel decide, não a pessoa.**
 
-    Vendedora → **Vendas**, a superfície do trabalho dela. OWNER/ADMIN → o dashboard atual
-    (o novo é da Fase 3C). Um `next` explícito para outra tela continua valendo; só a raiz
-    é trocada — e, para a vendedora, a raiz também redireciona (`/` → `/vendas`).
+    Vendedora → `/vendas`, a superfície do trabalho dela. OWNER/ADMIN → `/dashboard`. Um
+    `next` explícito para outra tela continua valendo (o login foi pedido a partir dela);
+    só a raiz é trocada — e a raiz também redireciona por papel (`/` → `/vendas` para a
+    vendedora, `/` → `/dashboard` para quem vê economia).
     """
     from app.models import PAPEIS_ECONOMICOS
-    if destino in ("", "/") and usuario.papel not in PAPEIS_ECONOMICOS:
-        return "/vendas"
+    if destino in ("", "/"):
+        return "/dashboard" if usuario.papel in PAPEIS_ECONOMICOS else "/vendas"
     return destino
 
 
@@ -172,3 +173,87 @@ def primeiro_acesso_criar(request: Request, nome: str = Form(""), email: str = F
 
     resp = RedirectResponse(url="/", status_code=303)
     return aplicar_cookie(resp, usuario.id, usuario.sessao_versao)
+
+
+# ---------------------------------------------------------------------------
+# Esqueci minha senha / redefinir senha — por token, uso único, hash no banco
+# ---------------------------------------------------------------------------
+from app import recuperacao_senha as rs  # noqa: E402
+
+
+def _base_url(request: Request) -> str:
+    """Onde o link de redefinição aponta. `ANARA_BASE_URL` manda; senão, a origem do pedido."""
+    import os
+    configurada = os.environ.get("ANARA_BASE_URL", "").strip()
+    if configurada:
+        return configurada
+    base = getattr(request, "base_url", None)
+    return str(base).rstrip("/") if base else "http://127.0.0.1:8420"
+
+
+@router.get("/esqueci-senha", response_class=HTMLResponse)
+def esqueci_senha_form(request: Request):
+    return templates.TemplateResponse(request, "esqueci_senha.html", {"enviado": False})
+
+
+@router.post("/esqueci-senha", response_class=HTMLResponse)
+def esqueci_senha_submit(request: Request, email: str = Form(""),
+                         session: Session = Depends(get_session)):
+    """Sempre a mesma resposta, exista a conta ou não — e o mesmo tempo de resposta.
+
+    Se a conta existe e está ativa, o token nasce (só o hash fica no banco) e o e-mail sai
+    pelo backend configurado. Se não existe, nada acontece — e a tela não diz isso.
+    """
+    alvo = (email or "").strip().lower()
+    usuario = session.exec(select(Usuario).where(Usuario.email == alvo)).first() if alvo else None
+    if usuario is not None and usuario.ativo:
+        try:
+            rs.enviar_instrucoes(session, usuario, _base_url(request), finalidade=rs.RESET,
+                                 criado_por="esqueci-senha")
+            session.commit()
+        except Exception:                                # noqa: BLE001
+            # e-mail indisponível (produção sem SMTP) ou falha de envio: a resposta ao
+            # usuário continua genérica; a causa vai para o log, não para a tela
+            session.rollback()
+            import logging
+            logging.getLogger("anara.mail").exception("falha ao enviar redefinição de senha")
+    else:
+        # mesmo custo de tempo de quem tem conta: gera e descarta um token
+        hash_senha("hash-de-comparacao-para-tempo-constante")
+    return templates.TemplateResponse(request, "esqueci_senha.html",
+                                      {"enviado": True, "mensagem": rs.RESPOSTA_GENERICA})
+
+
+@router.get("/redefinir-senha", response_class=HTMLResponse)
+def redefinir_senha_form(request: Request, token: str = "",
+                         session: Session = Depends(get_session)):
+    valido = rs.validar(session, token) is not None
+    return templates.TemplateResponse(request, "redefinir_senha.html",
+                                      {"token": token if valido else "", "valido": valido,
+                                       "erro": None, "concluido": False}, status_code=200 if valido else 400)
+
+
+@router.post("/redefinir-senha", response_class=HTMLResponse)
+def redefinir_senha_submit(request: Request, token: str = Form(""), senha: str = Form(""),
+                           confirmar: str = Form(""), session: Session = Depends(get_session)):
+    def recusar(motivo: str, valido: bool = True, status: int = 400):
+        return templates.TemplateResponse(
+            request, "redefinir_senha.html",
+            {"token": token if valido else "", "valido": valido, "erro": motivo,
+             "concluido": False}, status_code=status)
+
+    if rs.validar(session, token) is None:
+        return recusar("Este link de redefinição não é válido ou já expirou. Peça um novo.",
+                       valido=False)
+    if len(senha) < SENHA_MINIMA:
+        return recusar(f"A senha precisa ter pelo menos {SENHA_MINIMA} caracteres.")
+    if senha != confirmar:
+        return recusar("As duas senhas não são iguais.")
+    try:
+        rs.consumir(session, token, senha)
+    except rs.TokenInvalido as erro:
+        session.rollback()
+        return recusar(str(erro), valido=False)
+    session.commit()
+    return templates.TemplateResponse(request, "redefinir_senha.html",
+                                      {"token": "", "valido": True, "erro": None, "concluido": True})

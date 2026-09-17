@@ -111,6 +111,20 @@ BLOCKER = {
     "FRETE_GRUPO": "Há uma pendência no frete deste embarque.",
 }
 
+#: O mesmo bloqueio, dito para a vendedora: o que fazer, sem vocabulário econômico.
+BLOCKER_COMERCIAL = {
+    "SEM_ITENS": "A cotação não tem nenhum produto.",
+    "SEM_PRECO": "O item está sem preço.",
+    "FISCAL_REVIEW_REQUIRED": "O cenário fiscal do item ainda não foi resolvido.",
+    "PAGAMENTO_REVIEW_REQUIRED": "A condição de pagamento do item ainda não foi resolvida.",
+    "CUSTO_A_COTAR": "O item está sob consulta: ainda não há preço para propor.",
+    "CUSTO_REVIEW_REQUIRED": "O item precisa de revisão antes de ir para a proposta.",
+    "FRETE_A_COTAR": "O frete ainda precisa ser cotado.",
+    "FRETE_REVIEW_REQUIRED": "O frete precisa de revisão.",
+    "FRETE_ICMS_REVIEW_REQUIRED": "O frete está pendente de validação fiscal.",
+    "FRETE_GRUPO": "Há uma pendência no frete deste embarque.",
+}
+
 EXCECAO = {
     "PRECO_ABAIXO_RECOMENDADO": "Preço abaixo do recomendado",
     "MARGEM_ABAIXO_ALVO": "Margem abaixo da meta",
@@ -251,6 +265,11 @@ def acao(codigo) -> str:
 
 def blocker(codigo) -> str:
     return _traduz(BLOCKER, codigo)
+
+
+def blocker_comercial(codigo) -> str:
+    """Bloqueio em linguagem comercial — para quem não vê economia."""
+    return BLOCKER_COMERCIAL.get(str(codigo or "").strip(), "Há uma pendência neste item.")
 
 
 def excecao(codigo) -> str:

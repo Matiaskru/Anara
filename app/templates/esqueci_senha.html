@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anara — Esqueci minha senha</title>
+  <link rel="stylesheet" href="/static/css/anara.css?v={{ versao_estatica }}">
+  <link rel="icon" href="/static/img/anara_mark_copper.png">
+</head>
+<body>
+  <div class="login-page">
+    <form class="login-card" method="post" action="/esqueci-senha">
+      <div class="marca">
+        <img src="/static/img/anara_mark_copper.png" alt="">
+        <div class="word">ANARA</div>
+      </div>
+      {% if enviado %}
+      <p class="aviso-ok aviso" role="status" style="margin:0 0 14px;">{{ mensagem }}</p>
+      <div class="rodape-login"><a href="/login">Voltar para o login</a></div>
+      {% else %}
+      <p class="muted small" style="margin:0 0 14px;">Informe o e-mail da sua conta. Você receberá um link para criar uma senha nova.</p>
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input id="email" type="email" name="email" autocomplete="username" autofocus required>
+      </div>
+      <button class="btn btn-copper" type="submit">Enviar instruções</button>
+      <div class="rodape-login"><a href="/login">Voltar para o login</a></div>
+      {% endif %}
+    </form>
+  </div>
+</body>
+</html>

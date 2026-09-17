@@ -49,8 +49,12 @@
 {% if premissas_novas and premissas_novas.desatualizado and editavel %}
 <div class="banner banner-info aviso-premissas"><div>
   <strong>Existem premissas mais recentes disponíveis</strong>
+  {% if economia %}
   {% for p in premissas_novas.premissas %}<div class="small">{{ p.rotulo }}: esta cotação usa {{ p.no_item }}; o valor atual é {{ p.vigente }}{% if p.vigente_desde %} (desde {{ p.vigente_desde }}){% endif %}.</div>{% endfor %}
-  {% if premissas_novas.itens and economia %}<div class="small">{{ premissas_novas.itens|length }} item(ns) usam custo anterior ao vigente.</div>{% endif %}
+  {% if premissas_novas.itens %}<div class="small">{{ premissas_novas.itens|length }} item(ns) usam custo anterior ao vigente.</div>{% endif %}
+  {% else %}
+  <div class="small">Os preços desta cotação foram formados com parâmetros que mudaram desde então. Atualizar recalcula os preços com os valores de hoje.</div>
+  {% endif %}
   <div class="flex mt-8">
     <form method="post" action="/cotacoes/{{ cotacao.id }}/premissas/atualizar"><button class="btn btn-copper btn-sm" type="submit">Atualizar e recalcular</button></form>
     <button class="btn btn-ghost btn-sm" type="button" onclick="manterPremissas({{ cotacao.id }})">Manter os valores desta cotação</button>

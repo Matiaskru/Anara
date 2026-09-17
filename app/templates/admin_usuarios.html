@@ -13,9 +13,14 @@
   <a href="/admin" class="btn btn-ghost">Voltar para Admin</a>
 </div>
 
-{% set avisos = {'criado': 'Acesso criado.', 'papel': 'Papel atualizado.',
+{% set avisos = {'criado': 'Acesso criado.',
+                 'criado_link': 'Acesso criado. A pessoa recebeu por e-mail um link para definir a própria senha (válido por 48 horas).',
+                 'criado_sem_email': 'Acesso criado, mas o e-mail de primeiro acesso não pôde ser enviado. Defina uma senha em "Trocar senha" ou configure o envio de e-mail.',
+                 'papel': 'Papel atualizado.',
                  'permissao': 'Permissão atualizada.', 'situacao': 'Situação atualizada.',
-                 'senha': 'Senha definida. As sessões abertas dessa pessoa foram encerradas.'} %}
+                 'senha': 'Senha definida. As sessões abertas dessa pessoa foram encerradas.',
+                 'redefinicao': 'Link de redefinição enviado por e-mail (válido por 30 minutos, uso único).',
+                 'redefinicao_dev': 'Link de redefinição gerado. Sem e-mail configurado neste ambiente, ele foi escrito no log do servidor.'} %}
 {% if request.query_params.get('ok') in avisos %}
 <div class="card" style="background:#E7F0E9; margin-bottom:14px;">
   {{ avisos[request.query_params.get('ok')] }}
@@ -96,6 +101,9 @@
         </td>
 
         <td>
+          <form method="post" action="/admin/usuarios/{{ u.id }}/redefinir" style="margin-bottom:6px;">
+            <button class="btn btn-ghost btn-sm" type="submit" {% if not u.ativo %}disabled{% endif %}>Enviar redefinição de senha</button>
+          </form>
           <details>
             <summary class="btn btn-ghost btn-sm" style="display:inline-block;">Trocar senha</summary>
             <form method="post" action="/admin/usuarios/{{ u.id }}/senha"
@@ -130,10 +138,10 @@
       </select>
     </div>
     <div class="field">
-      <label>Senha inicial</label>
-      <input type="password" name="senha" minlength="8" required autocomplete="new-password">
+      <label>Senha inicial (opcional)</label>
+      <input type="password" name="senha" minlength="8" autocomplete="new-password" placeholder="deixe em branco para enviar link">
       <small style="color:var(--gray);font-size:11px;">
-        Mínimo 8 caracteres. Combine com a pessoa e peça que ela troque depois.
+        Em branco, a pessoa recebe por e-mail um link para definir a própria senha. Prefira assim: ninguém precisa combinar senha.
       </small>
     </div>
     <div style="grid-column: span 2;">

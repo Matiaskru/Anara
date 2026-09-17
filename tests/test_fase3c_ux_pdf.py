@@ -176,7 +176,7 @@ def test_01_menu_da_vendedora_e_do_admin(session):
         request=RequestFalsa(_novo_usuario("OWNER")), active="")
     nav = pagina.split("<nav>")[1].split("</nav>")[0]
     destinos = re.findall(r'href="(/[^"]*)"', nav)
-    assert destinos == ["/", "/vendas", "/clientes", "/cotacoes", "/produtos", "/aprovacoes", "/admin"]
+    assert destinos == ["/dashboard", "/vendas", "/clientes", "/cotacoes", "/produtos", "/aprovacoes", "/admin"]
 
 
 def test_02_login_limpo_sem_texto_tecnico():

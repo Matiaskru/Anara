@@ -94,7 +94,10 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
     # à parte deixava o produto calculado entrar com preço zero e sem recomendado.
     from app.routers.cotacoes import adicionar_item
     quantidade = dados["quantidade"] or 1
-    if produto.custo_unitario:
+    # A decisão "tem custo para formar preço?" usa o custo VIVO (premissas vigentes), o
+    # mesmo que `adicionar_item` vai resolver — nunca a coluna cache do produto.
+    custo_vivo, _memoria = ps.custo_para_precificar(session, produto)
+    if custo_vivo:
         modo, valor = "margem", dados["margem_override"]     # None = margem da regra
     else:
         modo, valor = "preco", (produto.preco_base or 0.0)

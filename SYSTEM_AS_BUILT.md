@@ -4,8 +4,8 @@
 
 | | |
 |---|---|
-| HEAD | commit da Fase 3C (16/09/2026) — redesign comercial e proposta cliente |
-| Alembic | `0020` — `cotacao.observacao_cliente` (aditiva) |
+| HEAD | commit do hardening de acesso (17/09/2026) — perfis, login e recuperação de senha |
+| Alembic | `0021` — `passwordresettoken` (aditiva) |
 | Suíte | **1200 passando**, 0 falhas (`python3 -m pytest -q`) |
 | Código | ~13.000 linhas em `app/`, 41 módulos, 15 routers, 34 templates |
 | Banco | SQLite em `data/anara.db`, 33 tabelas |
@@ -1916,6 +1916,30 @@ rascunho). Sem preço recomendado, tabela, desconto, fornecedor, custo, margem, 
 usuários de demonstração e um cenário comercial pequeno, e sobe o servidor; nunca toca em
 `data/anara.db`. `scripts/visual_3c.py` fotografa as telas (desktop e celular) com
 Playwright e acusa economia no texto da vendedora, HTTP ≥ 400 e erro de console.
+
+# 25. Hardening de acesso por perfil, login e recuperação de senha (17/09/2026)
+
+- **Destino por papel no backend** (`login.landing`): vendedora → `/vendas`; OWNER/ADMIN →
+  `/dashboard`. `/` redireciona por papel; vendedora em `/dashboard`, `/admin`,
+  `/configuracoes`, `/calculadora`, `/relatorios/economico`, `/saude`, `/aprovacoes`,
+  `/admin/usuarios`, memória de preço → 403 (ou redirect para `/vendas`, no dashboard).
+- **Payload da vendedora**: `situacao` devolve `{"motivo": "PRECISA_APROVACAO", "escopo"}`;
+  bloqueios em `rotulos.BLOCKER_COMERCIAL`; aviso de premissas sem valores. A varredura de
+  `tests/test_auth_perfis.py` cobre Vendas, Venda, Clientes, Cliente 360, Cotações, Cotação,
+  painel, Produtos, Relatórios (HTML) e negociação, situação, busca, facetas, vendas do
+  cliente, prévia de item (JSON).
+- **Recuperação de senha** (`app/recuperacao_senha.py` + `PasswordResetToken`): token de
+  32 bytes, `sha256` no banco, `expira_em` (30 min reset · 48 h primeiro acesso), `usado_em`,
+  `criado_por`; `gerar` encerra os ativos; `consumir` troca o hash pelo `auth.hash_senha`,
+  incrementa `sessao_versao`, encerra os demais e registra `PASSWORD_RESET`. Rotas públicas
+  `/esqueci-senha` e `/redefinir-senha` (`main.PUBLIC_PATHS`).
+- **E-mail** (`app/mail.py`): `backend()` = `smtp` | `memoria` | `dev` | `indisponivel`;
+  `situacao()` vai ao log de startup e a `/health/detalhe`.
+- **Usuários** (`app/routers/usuarios.py`): criação sem senha → link de primeiro acesso;
+  `POST /admin/usuarios/{id}/redefinir`; trilha `CREATE_USER`, `SET_PASSWORD`,
+  `PASSWORD_RESET_TOKEN`, `PASSWORD_RESET` — nunca senha ou token.
+- **UX**: "Marcar as com cara de teste" removido de Cotações; `/dashboard` é a home canônica
+  do admin (links do menu e do próprio dashboard).
 
 # 23. Check final
 

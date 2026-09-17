@@ -4,7 +4,7 @@
 {% if prontidao and prontidao.blockers %}
 <div class="banner banner-warn" style="margin-bottom:10px;">
   <div><strong>Falta informação para emitir</strong>
-    <ul>{% for b in prontidao.blockers %}<li><strong>{{ b.escopo }}</strong> — {{ b.detalhe or b.codigo|rotulo_blocker }}</li>{% endfor %}</ul>
+    <ul>{% for b in prontidao.blockers %}<li><strong>{{ b.escopo }}</strong> — {% if economia %}{{ b.detalhe or b.codigo|rotulo_blocker }}{% else %}{{ b.codigo|rotulo_blocker_comercial }}{% endif %}</li>{% endfor %}</ul>
     <span class="muted small">Aprovação não resolve isto: o número ainda não existe.</span></div>
 </div>
 {% endif %}

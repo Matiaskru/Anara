@@ -58,7 +58,7 @@
     <tbody>
     {% for c in cotacoes %}
       <tr class="clicavel" data-href="/cotacoes/{{ c.id }}">
-        <td><input type="checkbox" name="ids" value="{{ c.id }}" class="check-cotacao" data-teste="{{ '1' if c.id in sugestoes_teste else '0' }}" aria-label="Selecionar {{ c.numero or c.id }}"></td>
+        <td><input type="checkbox" name="ids" value="{{ c.id }}" class="check-cotacao" aria-label="Selecionar {{ c.numero or c.id }}"></td>
         <td class="primaria">{{ c.numero or ('#' ~ c.id) }}
           {% if c.arquivada_em %}<span class="sub">arquivada {{ c.arquivada_em|data_curta }}</span>{% endif %}</td>
         <td>{{ clientes.get(c.cliente_id).nome if clientes.get(c.cliente_id) else '—' }}</td>
@@ -80,7 +80,6 @@
     <span>Com as selecionadas:</span>
     {% if not mostrar_arquivadas %}
     <button class="btn btn-ghost btn-xs" name="acao" value="arquivar" type="submit">Arquivar</button>
-    {% if sugestoes_teste %}<button class="btn btn-ghost btn-xs" type="button" onclick="marcarTestes()">Marcar as com cara de teste ({{ sugestoes_teste|length }})</button>{% endif %}
     {% else %}
     <button class="btn btn-ghost btn-xs" name="acao" value="restaurar" type="submit">Restaurar</button>
     <button class="btn btn-danger-ghost btn-xs" name="acao" value="apagar" type="submit"
@@ -95,7 +94,5 @@
 {% block extra_scripts %}
 <script>
 function marcarTodas(origem) { document.querySelectorAll(".check-cotacao").forEach(c => { c.checked = origem.checked; }); }
-// "cara de teste" = rascunho, sem PDF e sem aceite. É sugestão: quem decide é você.
-function marcarTestes() { document.querySelectorAll(".check-cotacao").forEach(c => { c.checked = c.dataset.teste === "1"; }); }
 </script>
 {% endblock %}

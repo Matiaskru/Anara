@@ -277,6 +277,8 @@ def health_detalhe(request: Request, session: Session = Depends(get_session)):
         saida["status"] = "degradado"
         saida["banco"] = f"erro: {type(erro).__name__}"
 
+    from app import mail
+    saida["recuperacao_senha_por_email"] = mail.situacao()
     from app.models import Cotacao, Produto
     saida["tabelas"] = {
         "produtos": len(session.exec(select(Produto)).all()),

@@ -23,7 +23,8 @@ app = FastAPI(title="Anara Cotações")
 #: `/primeiro-acesso` é público porque só existe quando **não há** conta alguma — não há
 #: cookie possível para autenticá-lo. A própria rota se recusa a responder assim que a
 #: primeira conta é criada; o portão é o estado do banco, não esta lista.
-PUBLIC_PATHS = {"/login", "/logout", "/health", "/primeiro-acesso"}
+PUBLIC_PATHS = {"/login", "/logout", "/health", "/primeiro-acesso",
+                "/esqueci-senha", "/redefinir-senha"}
 
 
 def _usuario_do_cookie(request: Request):
@@ -138,6 +139,13 @@ def on_startup():
     migrar(verbose=False)
     backfill(verbose=False)
     semear(verbose=False)
+    # Recuperação de senha por e-mail: em produção sem SMTP ela não funciona, e isso precisa
+    # aparecer no log de subida — não só na hora em que alguém clicar em "Esqueci minha senha".
+    import logging
+    from app import mail
+    estado = mail.situacao()
+    if not estado["operacional"]:
+        logging.getLogger("anara.mail").warning(estado["aviso"])
 
 
 @app.get("/health")

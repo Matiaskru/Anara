@@ -30,8 +30,13 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlmodel import Session, select
 
+import secrets
+
+from app import admin_service as adm
+from app import recuperacao_senha as rs
 from app.auth import hash_senha
 from app.db import get_session
+from app.routers.login import _base_url
 from app.models import Papel, Usuario
 from app.permissoes import exigir_autenticado, gerencia_usuarios, usuario_da_request
 from app.templating import pagina_de_erro, templates
@@ -93,17 +98,60 @@ def criar(request: Request, nome: str = Form(""), email: str = Form(""),
         return _erro(request, ["Informe um e-mail válido."])
     if papel not in {p.value for p in Papel}:
         return _erro(request, ["Escolha um papel."])
-    if len(senha) < 8:
+    if senha and len(senha) < 8:
         return _erro(request, ["A senha inicial precisa de pelo menos 8 caracteres."])
     if session.exec(select(Usuario).where(Usuario.email == alvo)).first():
         return _erro(request, [f"Já existe um acesso com o e-mail {alvo}."])
 
     ator = usuario_da_request(request)
-    session.add(Usuario(email=alvo, nome=nome_limpo, papel=papel,
-                        senha_hash=hash_senha(senha),
-                        criado_por=getattr(ator, "email", None)))
+    # Sem senha informada, a conta nasce com um hash que ninguém conhece (segredo aleatório
+    # descartado) e a pessoa define a própria senha pelo link de primeiro acesso — a mesma
+    # infraestrutura do "Esqueci minha senha". O gestor nunca combina senha com ninguém.
+    novo = Usuario(email=alvo, nome=nome_limpo, papel=papel,
+                   senha_hash=hash_senha(senha) if senha else hash_senha(secrets.token_urlsafe(32)),
+                   criado_por=getattr(ator, "email", None))
+    session.add(novo)
+    session.flush()
+    adm.registrar(session, ator=ator, acao="CREATE_USER", entidade="Usuario", entidade_id=novo.id,
+                  escopo=alvo, depois=f"{papel} · {'senha inicial definida' if senha else 'primeiro acesso por link'}",
+                  origem="admin-ui")
+    resultado = "criado"
+    if not senha:
+        try:
+            rs.enviar_instrucoes(session, novo, _base_url(request), finalidade=rs.PRIMEIRO_ACESSO,
+                                 ator=ator)
+            resultado = "criado_link"
+        except Exception:                                # noqa: BLE001
+            import logging
+            logging.getLogger("anara.mail").exception("falha ao enviar primeiro acesso")
+            resultado = "criado_sem_email"
     session.commit()
-    return RedirectResponse(url="/admin/usuarios?ok=criado", status_code=303)
+    return RedirectResponse(url=f"/admin/usuarios?ok={resultado}", status_code=303)
+
+
+@router.post("/admin/usuarios/{usuario_id}/redefinir")
+def iniciar_redefinicao(request: Request, usuario_id: int,
+                        session: Session = Depends(get_session)):
+    """Envia à pessoa um link de redefinição (30 minutos, uso único). Nenhuma senha passa
+    pelo gestor: quem define a senha nova é quem vai usá-la."""
+    ator = _exigir_gestor(request)
+    alvo = session.get(Usuario, usuario_id)
+    if alvo is None:
+        return _erro(request, ["Usuário não encontrado."])
+    if not alvo.ativo:
+        return _erro(request, ["Reative o acesso antes de enviar a redefinição de senha."])
+    try:
+        backend = rs.enviar_instrucoes(session, alvo, _base_url(request), finalidade=rs.RESET,
+                                       ator=ator)
+    except Exception:                                    # noqa: BLE001
+        session.rollback()
+        import logging
+        logging.getLogger("anara.mail").exception("falha ao enviar redefinição")
+        return _erro(request, ["Não foi possível enviar o e-mail de redefinição. O envio de "
+                               "e-mail não está configurado neste ambiente."])
+    session.commit()
+    return RedirectResponse(url=f"/admin/usuarios?ok={'redefinicao' if backend != 'dev' else 'redefinicao_dev'}",
+                            status_code=303)
 
 
 @router.post("/admin/usuarios/{usuario_id}/papel")
@@ -191,6 +239,10 @@ def trocar_senha(request: Request, usuario_id: int, senha: str = Form(""),
     alvo.senha_hash = hash_senha(senha)
     alvo.sessao_versao += 1        # sessões abertas com a senha antiga deixam de valer
     session.add(alvo)
+    rs.encerrar_ativos(session, alvo.id)      # links de redefinição pendentes caem junto
+    adm.registrar(session, ator=usuario_da_request(request), acao="SET_PASSWORD",
+                  entidade="Usuario", entidade_id=alvo.id, escopo=alvo.email,
+                  depois="senha definida pelo gestor", origem="admin-ui")
     session.commit()
     return RedirectResponse(url="/admin/usuarios?ok=senha", status_code=303)
 

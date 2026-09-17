@@ -1168,6 +1168,24 @@ class Usuario(SQLModel, table=True):
         return self.ativo and (self.papel == Papel.owner.value or bool(self.can_manage_users))
 
 
+class PasswordResetToken(SQLModel, table=True):
+    """Token de redefinição / definição de senha — **só o hash** fica no banco.
+
+    O token puro vai uma vez para o e-mail da pessoa e nunca é gravado: quem ler a tabela
+    não consegue redefinir a senha de ninguém. Uso único (`usado_em`), expiração curta
+    (`expira_em`) e, ao gerar um novo, os anteriores ainda ativos do mesmo usuário são
+    encerrados. Nunca guarda a senha nova.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    usuario_id: int = Field(foreign_key="usuario.id", index=True)
+    token_hash: str = Field(index=True, unique=True)
+    finalidade: str = Field(default="reset")              # reset | primeiro_acesso
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+    expira_em: datetime
+    usado_em: Optional[datetime] = None
+    criado_por: Optional[str] = None                       # "esqueci-senha" ou e-mail do gestor
+
+
 class AuditLog(SQLModel, table=True):
     """Trilha de auditoria administrativa — quem mudou o quê, quando e por quê.
 

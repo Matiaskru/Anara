@@ -82,7 +82,9 @@ def situacao(request: Request, cotacao_id: int, session: Session = Depends(get_s
     else:
         # O vendedor precisa saber QUE há exceção e de que tipo, para pedir aprovação —
         # não os números internos que a sustentam.
-        corpo["excecoes"] = [{"motivo": e.motivo, "escopo": e.escopo}
+        # `motivo` sai como rótulo comercial: o código interno (`MARGEM_ABAIXO_PISO`) nomeia
+        # a mecânica de proteção da margem, que a vendedora não recebe.
+        corpo["excecoes"] = [{"motivo": "PRECISA_APROVACAO", "escopo": e.escopo}
                              for e in prontidao.excecoes]
     return JSONResponse(corpo)
 

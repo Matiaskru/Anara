@@ -274,7 +274,7 @@ pinta a resposta: negociação (`/cotacoes/{id}/negociacao[/preview]`), item
 derivado de `ws.avaliar`). Fórmula em template ou JavaScript é regressão.
 
 - **Menu por papel**: vendedora Vendas · Clientes · Cotações · Produtos; OWNER/ADMIN +
-  Dashboard (`/`), Aprovações (alçada) e Admin. Relatórios mora no Admin. Sem saudação
+  Dashboard (`/dashboard`), Aprovações (alçada) e Admin. Relatórios mora no Admin. Sem saudação
 - **Uma linguagem visual** (`app/static/css/anara.css`, `app/static/js/ui.js`): sidebar
   compacta, topbar baixa, tabelas densas, pills, modais/popovers, timeline, stepper, kanban,
   painel sticky, gráficos em SVG sem CDN. Telas antigas herdam a régua
@@ -297,6 +297,26 @@ derivado de `ws.avaliar`). Fórmula em template ou JavaScript é regressão.
   frete por extenso. Há teste que extrai o texto e falha se algo disso aparecer
 - **Demonstração só em cópia**: `scripts/demo_3c.py --db <cópia> --serve <porta>`;
   inspeção visual `scripts/visual_3c.py`. Nunca apontar para `data/anara.db`
+
+## Acesso por perfil e recuperação de senha (17/09/2026)
+
+- **O papel decide o destino, não a pessoa:** `landing()` manda vendedora para `/vendas` e
+  OWNER/ADMIN para `/dashboard`; `/` redireciona por papel. Login sem seletor de papel
+- **Zero economia para a vendedora em HTML e JSON**, por lista de permissão no servidor —
+  e `tests/test_auth_perfis.py` varre todas as telas e endpoints dela. O `situacao` devolve
+  `PRECISA_APROVACAO`, nunca `MARGEM_ABAIXO_PISO`; bloqueios saem por
+  `rotulos.BLOCKER_COMERCIAL`; o aviso de premissas não mostra valores internos
+- **Recuperação de senha por token** (`app/recuperacao_senha.py`): só o `sha256` fica em
+  `passwordresettoken` (migration 0021), 30 min, uso único, o novo encerra os anteriores,
+  redefinir derruba as sessões (`sessao_versao`) e vai ao `AuditLog` **sem** senha nem token.
+  "Esqueci minha senha" responde sempre a mesma frase, exista a conta ou não
+- **E-mail** (`app/mail.py`): SMTP por `ANARA_MAIL_*`; sem SMTP, DEV escreve no log
+  `anara.mail` e produção declara `recuperacao_senha_por_email` não operacional. Nunca
+  mostrar token/link na página
+- **Usuários:** conta nova nasce sem senha conhecida pelo gestor (link de primeiro acesso,
+  48 h); "Enviar redefinição" por pessoa; senha atual nunca é exibida
+- **"Cara de teste" não é feature**: `arquivamento.candidatas_a_teste` é interna e não
+  aparece em Cotações
 
 ## Relatórios e runtime (Sessão 8)
 
@@ -420,8 +440,10 @@ Alembic em `0019`.
 
 **Fase 3C — redesign da plataforma comercial, Dashboard OWNER/ADMIN e PDF cliente
 (16/09/2026): EXECUTADA.** Alembic em `0020` (`cotacao.observacao_cliente`, aditiva).
-1200 testes. Próximas (não iniciadas, não autorizadas): frete nacional definitivo, cadastro
-fiscal pendente, offline V3, produção/deploy.
+**Hardening de acesso por perfil, login e recuperação de senha (17/09/2026): EXECUTADO.**
+Alembic em `0021` (`passwordresettoken`, aditiva). Próximas (não iniciadas, não
+autorizadas): frete nacional definitivo, cadastro fiscal pendente, offline V3,
+produção/deploy.
 
 O repositório é Git **local**. A senha compartilhada **saiu do código** na Sessão 4, mas
 continua nos commits `413d6bd` e `165d75e`. **Publicação remota segue bloqueada** até o

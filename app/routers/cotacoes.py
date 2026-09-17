@@ -261,7 +261,6 @@ def listar(request: Request, status: str = "", cliente_id: str = "", vendedor: s
         "periodo_filtro": periodo, "busca": busca, "periodos": PERIODOS_LISTA,
         "mostrar_arquivadas": mostrar_arquivadas, "total_arquivadas": total_arquivadas,
         "itens_por_cotacao": {k: len(v) for k, v in itens_por_cotacao.items()},
-        "sugestoes_teste": {s["id"] for s in arquivamento.candidatas_a_teste(session)},
         "todos_clientes": sorted(clientes.values(), key=lambda c: c.nome),
         "vendas": vendas,
         # Aqui é FILTRO, e por isso a lista é completa: os estados herdados precisam ser
