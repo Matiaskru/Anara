@@ -43,7 +43,7 @@
     <thead><tr>
       <th style="min-width:260px;">Produto</th><th>Fornecedor</th><th>Família</th>
       {% if ve_economia(request) %}<th>Método</th><th class="num">Custo NET</th>{% endif %}
-      <th class="num">Preço de referência</th>
+      <th class="num" title="Preço B2B de referência no cenário padrão (São Paulo, 30 dias). O B2B de cada proposta é calculado para o destino e a condição dela.">B2B de referência</th>
       {% if ve_economia(request) %}<th class="num">Margem padrão</th><th>Origem do custo</th>{% endif %}
       <th>Situação</th>
       {% if ve_economia(request) %}<th></th>{% endif %}
@@ -75,7 +75,7 @@
   </table>
   </div>
 </div>
-<p class="nota">Preço de referência é o do catálogo, formado num cenário fiscal padrão. O preço recomendado de cada cotação é calculado para o destino, a condição de pagamento e o frete daquela proposta.{% if ultima_importacao %} Última importação de planilha em {{ ultima_importacao.importado_em|data }}.{% endif %}</p>
+<p class="nota">B2B de referência: preço recomendado no cenário padrão do catálogo (São Paulo, cliente não contribuinte, 30 dias). Em cada proposta, o B2B e a tabela são calculados para o destino e a condição de pagamento daquela cotação.{% if ultima_importacao %} Última importação de planilha em {{ ultima_importacao.importado_em|data }}.{% endif %}</p>
 
 {% if ve_economia(request) %}
 <div class="drawer-fundo" id="drawer-fundo" onclick="fecharMemoria()"></div>

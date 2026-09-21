@@ -156,25 +156,38 @@ def test_mesma_cotacao_aceita_tres_fornecedores(s):
                                                   "Decor Tricot"}
 
 
+def margem_esperada_no_b2b(item, alvo=0.20):
+    """22/09/2026: o B2B forma-se sobre a BASE COMERCIAL (margem ≥ alvo, < alvo + 1 centavo); a
+    margem REALIZADA usa o custo real e fica acima exatamente em (base − custo) ÷ preço."""
+    g = (lambda k: item[k]) if isinstance(item, dict) else (lambda k: getattr(item, k))
+    base = g("base_comercial_precificacao") or g("custo_unitario")
+    return alvo + (base - g("custo_unitario")) / g("preco_negociado")
+
+
 def test_item_entra_com_a_margem_padrao_do_produto(s):
     cotacao_id = criar_cotacao(s)
     ktc = add_item(s, cotacao_id, 1)
-    # Política comercial de 16/09/2026: lençol < 300TC saiu de 16% para 18% (anterior + 2 p.p.).
-    assert ktc["margem_padrao_pct"] == aprox(0.18)
-    assert ktc["margem_liquida"] == aprox(0.18, abs=MARGEM_DO_CENTAVO)
+    # Política comercial de 21/09/2026: lençol < 300TC tem margem FINAL de 20% no B2B; o B2B é
+    # o menor centavo com margem ≥ alvo, então a realizada fica em [alvo, alvo + 1 centavo).
+    assert ktc["margem_padrao_pct"] == aprox(0.20)
+    esperada = margem_esperada_no_b2b(ktc)
+    assert esperada <= ktc["margem_liquida"] < esperada + float(MARGEM_DO_CENTAVO) * 2
+    assert ktc["margem_liquida"] >= 0.20                      # a realizada nunca fica abaixo do alvo
 
     decor = add_item(s, cotacao_id, 3, quantidade=5)
-    assert decor["margem_padrao_pct"] == aprox(0.12)      # Decor: 12% desde 16/09/2026
-    # `MARGEM_DO_CENTAVO`, como nas demais linhas deste arquivo: o `1e-6` de antes era mais
-    # apertado que meio centavo dividido pela receita e só passava porque, com a alíquota fixa
-    # de 7,59%, o resíduo do arredondamento caía do lado positivo neste item.
-    assert decor["margem_liquida"] == aprox(0.12, abs=MARGEM_DO_CENTAVO)
+    assert decor["margem_padrao_pct"] == aprox(0.13)      # Decor: 13% desde 21/09/2026
+    # O B2B é o menor centavo com margem ≥ alvo POR UNIDADE; na linha (qtd 5) impostos e
+    # comissão são quantizados sobre o total e a margem realizada pode ficar um resíduo de
+    # arredondamento abaixo do alvo (aqui 12,999%). Dentro da tolerância do centavo — e o
+    # preço unitário nunca fica abaixo do B2B.
+    assert decor["margem_liquida"] == aprox(0.13, abs=MARGEM_DO_CENTAVO)
+    assert decor["preco_negociado"] == aprox(decor["preco_recomendado"])
 
 
 def test_override_de_margem_guarda_padrao_e_negociada(s):
     cotacao_id = criar_cotacao(s)
     item = add_item(s, cotacao_id, 1, valor=0.12)
-    assert item["margem_padrao_pct"] == aprox(0.18)
+    assert item["margem_padrao_pct"] == aprox(0.20)
     # A alavanca "margem 12%" forma o preço com a comissão de formação (10%). Como esse preço
     # fica abaixo do recomendado, a comissão da cotação cai (política de 16/09/2026) — e a
     # margem REALIZADA fica acima dos 12% pedidos, nunca abaixo.
@@ -210,7 +223,8 @@ def test_mudanca_no_cabecalho_recalcula_os_itens(s, campo, valor):
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     s.refresh(item)
     assert item.preco_negociado != aprox(preco_antes)
-    assert item.margem_liquida == aprox(0.18, abs=MARGEM_DO_CENTAVO)
+    esperada = margem_esperada_no_b2b(item)
+    assert esperada <= item.margem_liquida < esperada + float(MARGEM_DO_CENTAVO) * 2
 
 
 def test_estado_origem_logistico_nao_mexe_mais_no_fiscal(s):
@@ -256,14 +270,20 @@ def test_contribuinte_muda_o_preco_quando_a_venda_e_interestadual(s):
 
 
 def test_destino_com_fcp_nao_resolvido_bloqueia_a_cotacao(s):
-    """BA tem `fem` na tabela legada mas composição não determinada: não forma preço.
+    """Família fora do escopo reconciliado de FCP (21/09/2026) em destino interestadual a não
+    contribuinte: a incidência de FCP é DESCONHECIDA e não se forma preço.
 
     É a regra de que ausência de regra de FCP não é 0% — chegando até o item da cotação.
+    (BA, que era o exemplo até 20/09, passou a resolver para as famílias do escopo.)
     """
-    from app.models import CotacaoItem
+    from app.models import CotacaoItem, Produto
     from app.routers.cotacoes import bloqueios_fiscais
+    fora = Produto(sku_key="T9-FORA", nome="Cortina fora do escopo", categoria="Cortina",
+                   familia="Cortina Blackout", custo_unitario=100.0, preco_base=200.0,
+                   fornecedor_id=s.get(Produto, 3).fornecedor_id, ativo=True)
+    s.add(fora); s.commit(); s.refresh(fora)
     cotacao_id = criar_cotacao(s, estado_destino="Bahia", contribuinte_icms="nao")
-    add_item(s, cotacao_id, 1)
+    add_item(s, cotacao_id, fora.id)
     item = s.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)).first()
     assert item.status_fiscal == "REVIEW_REQUIRED"
     assert item.preco_negociado == 0.0, "não se forma preço com FCP indeterminado"
@@ -339,7 +359,8 @@ def test_memoria_do_preco_do_item_tem_o_waterfall(s):
     m = corpo(chamar(memoria_item, cotacao_id=cotacao_id, item_id=item["id"], session=s))
     assert m["custo"]["nacionalizacao"]["etapas"]
     assert m["fiscal"]["icms_pct"] == aprox(0.18)
-    assert m["margem"]["margem_pct"] == aprox(0.18)
+    assert m["margem"]["margem_pct"] == aprox(0.20)
+    assert m["b2b"]["preco_tabela"] == aprox(2 * m["b2b"]["preco_b2b"], abs=0.011)
     assert m["comercial"]["preco_negociado"] > 0
 
 
@@ -458,7 +479,8 @@ def test_editar_margem_direto_na_linha_do_item(s):
 
     cotacao_id = criar_cotacao(s)
     item = add_item(s, cotacao_id, 1, quantidade=10)
-    assert item["margem_liquida"] == aprox(0.18, abs=MARGEM_DO_CENTAVO)
+    esperada = margem_esperada_no_b2b(item)
+    assert esperada <= item["margem_liquida"] < esperada + float(MARGEM_DO_CENTAVO) * 2
 
     class FormFalso:
         def __init__(self, dados): self._dados = dados
@@ -481,11 +503,12 @@ def test_editar_margem_direto_na_linha_do_item(s):
                                        RequestFalso({"quantidade": "10", "modo": "margem",
                                                      "valor": "0.11"}), session=s))
     atualizado = corpo(resposta)
-    # a alavanca define o preço; a margem realizada sobe com a queda da comissão da cotação
+    # a alavanca define o preço (B2B a 11%); abaixo do B2B da regra, a comissão do item é a
+    # mínima da escada (5%) e a margem realizada é a pedida
     assert atualizado["margem_liquida"] >= 0.11 - float(MARGEM_DO_CENTAVO)
-    assert atualizado["comissao_pct"] < 0.10
+    assert atualizado["comissao_pct"] == aprox(0.05)
     assert atualizado["preco_negociado"] < item["preco_negociado"]
-    assert atualizado["margem_padrao_pct"] == aprox(0.18)   # padrão continua registrado
+    assert atualizado["margem_padrao_pct"] == aprox(0.20)   # padrão continua registrado
 
     gravado = s.get(CotacaoItem, item["id"])
     s.refresh(gravado)

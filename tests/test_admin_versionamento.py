@@ -456,8 +456,9 @@ def test_rascunho_em_dia_nao_e_marcado(session, daune, ator):
     item = CotacaoItem(cotacao_id=cotacao_de_apoio(session), produto_id=x.id, nome_produto=x.nome, quantidade=1,
                        custo_unitario=100.0, preco_base=200.0, preco_negociado=200.0,
                        margem_liquida=0.14, faturamento=200.0, custo_total=100.0, lucro=10.0,
-                       # um item de hoje carrega a política que o formou (Daune)
-                       politica_comercial=pol.ROTULO, piso_margem_pct=0.12, comissao_formacao_pct=0.05, preco_travado=True)
+                       # um item de hoje carrega a política que o formou (Daune, 21/09/2026)
+                       politica_comercial=pol.ROTULO_2026_09_21, piso_margem_pct=None,
+                       comissao_formacao_pct=0.05, preco_travado=False)
     session.add(item)
     session.commit()
     assert adm.premissas_desatualizadas(session, None, [item])["desatualizado"] is False

@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from sqlmodel import Session, select
 
+from app import config_service as cfg
 from app import workflow as wf
 from app import workflow_service as ws
 from app.db import get_session
@@ -238,4 +239,5 @@ def detalhe_pedido(request: Request, pedido_id: int,
         "desatualizado": atual != pedido.fingerprint,
         "pode_decidir": bool(getattr(ator, "aprova_cotacoes", False)),
         "prontidao": ws.avaliar(session, cot, frete=_frete(session, cot)),
+        "condicao_texto": cfg.condicao_textual(session, cot),
     })

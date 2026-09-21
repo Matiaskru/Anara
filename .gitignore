@@ -81,3 +81,7 @@ Thumbs.db
 
 # --- dados de fornecedor: ficam só nesta máquina (cópia em ~/Anara-Cotacao-Backups/referencia) ---
 referencia/
+
+# Saídas por execução dos scripts de 21/09/2026 (capturas, previews) — não versionar
+relatorios/e2e_2026_09_21/
+relatorios/dados_2026_09_21_*.json

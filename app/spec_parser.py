@@ -123,8 +123,13 @@ def parse_listrado(texto: str) -> str:
 
 def parse_construcao(texto: str) -> Optional[str]:
     t = (texto or "").lower()
+    # nomenclatura canônica do sistema: ABAS. O termo legado de catálogo é só lido (dado
+    # antigo) e traduzido — nunca gravado nem exibido.
     if "oxford" in t:
-        return "oxford"
+        return "4 abas"
+    m = __import__("re").search(r"(\d)\s*abas", t)
+    if m:
+        return f"{m.group(1)} abas"
     if "open bag" in t:
         return "open bag"
     if "housewife" in t or "house wife" in t:

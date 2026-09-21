@@ -172,6 +172,13 @@ class TaxRuleSet:
     # de um preço preliminar não fecharia com a margem-alvo.
     frete_cf_unitario: Decimal = ZERO
     frete_rv_pct: Decimal = ZERO
+    # --- base comissionável (política comercial de 21/09/2026) ---
+    # Fração da receita que NÃO entra na base da comissão: o ICMS próprio suportado pela
+    # Anara mais o DIFAL que ela recolhe — nunca o FCP, o PIS/COFINS, o encargo ou o frete.
+    # Zero (default) reproduz a regra anterior: comissão sobre o faturamento bruto. Quem
+    # decide o valor é `pricing_service.regras_da_cotacao`, a partir do que o motor fiscal
+    # decompôs para o item (`icms_pct − fcp_pct`).
+    comissao_base_icms_pct: Decimal = ZERO
 
     def __post_init__(self):
         """Fronteira de entrada: aceita float do banco, guarda Decimal.
@@ -185,7 +192,20 @@ class TaxRuleSet:
         self.encargo_financeiro_pct = D0(self.encargo_financeiro_pct)
         self.frete_cf_unitario = D0(self.frete_cf_unitario)
         self.frete_rv_pct = D0(self.frete_rv_pct)
+        self.comissao_base_icms_pct = D0(self.comissao_base_icms_pct)
         self.comissao_tabela = [(D0(mmin), D0(pct)) for mmin, pct in self.comissao_tabela]
+
+    def fator_base_comissao(self) -> Decimal:
+        """Quanto de cada real de receita é base comissionável: `1 − ICMS dedutível`."""
+        return D("1") - self.comissao_base_icms_pct
+
+    def comissao_efetiva_sobre_receita(self, comissao_pct) -> Decimal:
+        """A comissão como fração da RECEITA, dada a taxa sobre a base comissionável.
+
+        É o que entra no denominador do gross-up: `taxa × (1 − ICMS dedutível)`. Com base
+        bruta (legado) o fator é 1 e a conta é a de sempre.
+        """
+        return D0(comissao_pct) * self.fator_base_comissao()
 
     def taxa_fixa(self) -> Decimal:
         return self.icms_pct + self.pis_cofins_pct + self.encargo_financeiro_pct
@@ -239,6 +259,10 @@ class ResultadoPrecificacao:
     # --- precisão (Sessão 3B) ---
     preco_preciso: Optional[Decimal] = None   # antes do arredondamento comercial
     margem_alvo: Optional[Decimal] = None     # a que foi pedida; ≠ da que saiu
+    # --- política 21/09/2026: a comissão tem base própria ---
+    base_comissionavel: Optional[Decimal] = None   # receita − ICMS dedutível, ao centavo
+    comissao_pct: Optional[Decimal] = None         # taxa aplicada sobre a base
+    icms_base_comissao_pct: Optional[Decimal] = None   # a parcela deduzida (memória)
 
     @property
     def ajuste_arredondamento(self) -> Optional[Decimal]:
@@ -274,6 +298,9 @@ class ResultadoPrecificacao:
             "frete_rv": para_float(self.frete_rv),
             "preco_preciso": para_float(self.preco_preciso),
             "margem_alvo": para_float(self.margem_alvo),
+            "base_comissionavel": para_float(self.base_comissionavel),
+            "comissao_pct": para_float(self.comissao_pct),
+            "icms_base_comissao_pct": para_float(self.icms_base_comissao_pct),
         }
 
 
@@ -304,11 +331,11 @@ def _resolve_markup_de_preco(custo: Decimal, preco: Decimal, regras: TaxRuleSet)
     taxa_fixa = regras.rates_variaveis()
     faixas = regras.faixas() or [(ZERO, None, ZERO)]
     for mmin, mmax, pct in faixas:
-        e = preco * (1 - taxa_fixa - pct) / custo - 1
+        e = preco * (1 - taxa_fixa - regras.comissao_efetiva_sobre_receita(pct)) / custo - 1
         if e >= mmin and (mmax is None or e < mmax):
             return e, pct
     mmin, mmax, pct = faixas[-1]
-    e = preco * (1 - taxa_fixa - pct) / custo - 1
+    e = preco * (1 - taxa_fixa - regras.comissao_efetiva_sobre_receita(pct)) / custo - 1
     return e, pct
 
 
@@ -317,14 +344,14 @@ def _resolve_markup_de_margem(margem_alvo: Decimal, regras: TaxRuleSet):
     taxa_fixa = regras.rates_variaveis()
     faixas = regras.faixas() or [(ZERO, None, ZERO)]
     for mmin, mmax, pct in faixas:
-        denom = (1 - taxa_fixa - pct) - margem_alvo
+        denom = (1 - taxa_fixa - regras.comissao_efetiva_sobre_receita(pct)) - margem_alvo
         if denom <= 0:
             continue
         e = margem_alvo / denom
         if e >= mmin and (mmax is None or e < mmax):
             return e, pct
     mmin, mmax, pct = faixas[-1]
-    denom = (1 - taxa_fixa - pct) - margem_alvo
+    denom = (1 - taxa_fixa - regras.comissao_efetiva_sobre_receita(pct)) - margem_alvo
     if denom <= 0:
         denom = Decimal("0.000001")
     e = margem_alvo / denom
@@ -360,7 +387,13 @@ def calcular_por_preco(custo, qtd, preco_negociado,
     faturamento = dinheiro(preco * qtd)
     custo_total = dinheiro(custo * qtd)
     impostos = dinheiro(faturamento * regras.taxa_fixa())
-    comissao = dinheiro(faturamento * comissao_pct)
+    # Política de 21/09/2026: a comissão incide sobre a receita LÍQUIDA do ICMS que a Anara
+    # suporta (próprio + DIFAL do remetente), nunca sobre FCP, PIS/COFINS, encargo ou frete.
+    # A base fica cheia até a comissão virar centavo — quantizar a base e depois a comissão
+    # arredondaria duas vezes o mesmo número. Com `comissao_base_icms_pct = 0` (política
+    # anterior) a conta é exatamente a antiga: `faturamento × pct`.
+    base_comissionavel = faturamento * regras.fator_base_comissao()
+    comissao = dinheiro(base_comissionavel * comissao_pct)
     # O rate variável logístico só vira reais AGORA, sobre a receita final — nunca sobre um
     # preço preliminar.
     frete_rv = dinheiro(faturamento * regras.frete_rv_pct)
@@ -375,6 +408,8 @@ def calcular_por_preco(custo, qtd, preco_negociado,
         custo_total=custo_total, impostos=impostos, comissao=comissao, lucro=lucro,
         margem_liquida=margem, markup_implicito=markup, diferenca_pct_vs_base=diff,
         frete_cf=frete_cf, frete_rv=frete_rv, preco_preciso=preco,
+        base_comissionavel=dinheiro(base_comissionavel), comissao_pct=comissao_pct,
+        icms_base_comissao_pct=regras.comissao_base_icms_pct,
     )
 
 
@@ -396,13 +431,122 @@ def calcular_por_margem(custo, qtd, margem_alvo,
     markup, comissao_pct = _resolve_markup_de_margem(margem_alvo, regras)
     taxa_fixa = regras.rates_variaveis()
     f = (custo + regras.frete_cf_unitario) * (1 + markup)
-    denom = 1 - taxa_fixa - comissao_pct
+    denom = 1 - taxa_fixa - regras.comissao_efetiva_sobre_receita(comissao_pct)
     preco_preciso = (f / denom) if denom > 0 else ZERO
 
     r = calcular_por_preco(custo, qtd, preco_preciso, regras, preco_base)
     r.preco_preciso = preco_preciso
     r.margem_alvo = margem_alvo
     return r
+
+
+# ---------------------------------------------------------------------------
+# Política comercial de 21/09/2026 — B2B = menor centavo economicamente válido
+# ---------------------------------------------------------------------------
+#: Quantos centavos abaixo do preço preciso a busca começa. A margem sobre o preço comercial
+#: não é estritamente monótona centavo a centavo — impostos e comissão são arredondados
+#: separadamente —, então partir de "um pouco abaixo" e subir é o que garante achar o
+#: PRIMEIRO centavo válido, e não um centavo válido qualquer.
+_FOLGA_BUSCA_B2B = Decimal("0.05")
+#: Limite de passos da busca. O preço preciso já é a solução contínua; se em mil centavos a
+#: margem não fechar, o denominador está degenerado e é erro, não preço.
+_PASSOS_MAXIMOS_B2B = 1000
+
+
+class B2BIndeterminado(ValueError):
+    """Não existe preço em centavos que cumpra a margem-alvo — denominador não positivo."""
+
+
+def preco_b2b(custo, margem_alvo, regras: TaxRuleSet, preco_base=None) -> ResultadoPrecificacao:
+    """O preço B2B recomendado da política de 21/09/2026: o **menor preço em centavos** cuja
+    margem realizada (recomposta sobre o preço comercial, com todos os componentes
+    quantizados) é **≥ margem-alvo**.
+
+    Não é "resolver preciso, arredondar HALF_UP e subir 1 centavo": como impostos, comissão
+    e custo são arredondados separadamente, a margem pode oscilar alguns milésimos entre
+    centavos vizinhos, e o centavo imediatamente acima do preciso pode falhar enquanto um
+    abaixo passa. A busca é determinística:
+
+    1. resolve o preço preciso da forma fechada (`calcular_por_margem`);
+    2. parte de alguns centavos ABAIXO dele e desce até um centavo que **não** cumpre o alvo
+       (ou até R$ 0,01);
+    3. sobe de centavo em centavo até o primeiro que cumpre.
+
+    O resultado é sempre um par (`candidato − 0,01` falha, `candidato` cumpre) — é a
+    propriedade que os testes provam. O preço devolvido é unitário (quantidade 1): o B2B é a
+    referência da linha, e o total da linha continua sendo `preço × quantidade`.
+    """
+    custo = D0(custo)
+    margem_alvo = D0(margem_alvo)
+    if custo <= 0:
+        return _vazio(ZERO, 1)
+    solucao = calcular_por_margem(custo, 1, margem_alvo, regras, preco_base)
+    if solucao.preco_preciso is None or solucao.preco_preciso <= 0:
+        raise B2BIndeterminado(
+            "A margem-alvo somada às cargas do cenário não deixa preço positivo — não existe "
+            "B2B para este item neste cenário.")
+
+    def cumpre(p: Decimal) -> bool:
+        r = calcular_por_preco(custo, 1, p, regras, preco_base)
+        return r.faturamento > ZERO and r.margem_liquida >= margem_alvo
+
+    centavo = Decimal("0.01")
+    # piso da busca: alguns centavos abaixo do preciso, nunca abaixo de um centavo
+    candidato = (solucao.preco_preciso - _FOLGA_BUSCA_B2B).quantize(centavo, rounding="ROUND_DOWN")
+    if candidato < centavo:
+        candidato = centavo
+    passos = 0
+    # desce até falhar — garante que o vizinho de baixo do resultado é inválido
+    while candidato > centavo and cumpre(candidato):
+        candidato -= centavo
+        passos += 1
+        if passos > _PASSOS_MAXIMOS_B2B:
+            raise B2BIndeterminado("busca do B2B não convergiu para baixo")
+    passos = 0
+    while not cumpre(candidato):
+        candidato += centavo
+        passos += 1
+        if passos > _PASSOS_MAXIMOS_B2B:
+            raise B2BIndeterminado("busca do B2B não convergiu para cima")
+
+    r = calcular_por_preco(custo, 1, candidato, regras, preco_base)
+    r.preco_preciso = solucao.preco_preciso
+    r.margem_alvo = margem_alvo
+    return r
+
+
+def preco_de_tabela(preco_b2b_unitario, fator) -> Decimal:
+    """`dinheiro(fator × B2B)`. A tabela é derivada do B2B vigente — nunca cache."""
+    return dinheiro(D0(preco_b2b_unitario) * D0(fator)) or ZERO
+
+
+def desconto_vs_tabela(preco_negociado, preco_tabela) -> Decimal:
+    """`max(0, 1 − negociado ÷ tabela)`, exato em Decimal. Acima da tabela é 0, não negativo."""
+    tabela = D0(preco_tabela)
+    if tabela <= ZERO:
+        return ZERO
+    d = D("1") - D0(preco_negociado) / tabela
+    return d if d > ZERO else ZERO
+
+
+def preco_por_desconto(preco_tabela, desconto) -> Decimal:
+    """O preço comercial que corresponde a um desconto sobre a tabela, ao centavo.
+
+    Arredonda **para cima**: quem pede "20% de desconto" recebe o menor centavo cujo desconto
+    efetivo é ≤ 20%, nunca 20,003%. Arredondar para baixo empurraria o desconto efetivo para a
+    faixa seguinte da escada de comissão (20,003% → 7%, e não 8%) por um centavo que a
+    vendedora não pediu — e é o desconto EFETIVO, recomputado do preço em centavos, que
+    determina a faixa.
+    """
+    bruto = D0(preco_tabela) * (D("1") - D0(desconto))
+    if bruto <= ZERO:
+        return ZERO
+    # Um desconto derivado de um preço em centavos (`1 − preço ÷ tabela`) carrega o ruído da
+    # divisão na 34ª casa; sem esta limpeza, `233,34` voltaria como `233,340…01` e subiria um
+    # centavo que ninguém pediu. Nove casas é muito abaixo de qualquer centavo e muito acima
+    # do ruído.
+    bruto = bruto.quantize(Decimal("1e-9"), rounding="ROUND_HALF_UP")
+    return bruto.quantize(Decimal("0.01"), rounding="ROUND_UP")
 
 
 # ---------------------------------------------------------------------------
@@ -421,7 +565,8 @@ def com_comissao_fixa(regras: TaxRuleSet, comissao_pct) -> TaxRuleSet:
                       encargo_financeiro_pct=regras.encargo_financeiro_pct,
                       comissao_tabela=[(ZERO, D0(comissao_pct))], origem_uf=regras.origem_uf,
                       frete_cf_unitario=regras.frete_cf_unitario,
-                      frete_rv_pct=regras.frete_rv_pct)
+                      frete_rv_pct=regras.frete_rv_pct,
+                      comissao_base_icms_pct=regras.comissao_base_icms_pct)
 
 
 def comissao_maxima_para_margem(custo, qtd, preco, margem_piso,
@@ -462,7 +607,7 @@ def calcular_por_markup(custo, qtd, markup,
         return _vazio(ZERO, qtd)
 
     comissao_pct = regras.comissao_para_markup(markup)
-    denom = 1 - regras.rates_variaveis() - comissao_pct
+    denom = 1 - regras.rates_variaveis() - regras.comissao_efetiva_sobre_receita(comissao_pct)
     preco_preciso = ((custo + regras.frete_cf_unitario) * (1 + markup) / denom) \
         if denom > 0 else ZERO
 

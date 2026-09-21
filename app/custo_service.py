@@ -53,15 +53,24 @@ class CustoNacional:
     pis_cofins_credito: Decimal
     cnet: Decimal
     fator: Decimal
+    icms_pct: Decimal = DAUNE_ICMS_CREDITO
+    pis_cofins_pct: Decimal = DAUNE_PIS_COFINS_CREDITO
 
     def como_dict(self) -> dict:
-        # Memória: vai para JSON e para o snapshot da referência, então sai em float.
+        # Memória: vai para JSON e para o snapshot da referência, então sai em float. A
+        # fórmula é escrita com os percentuais REALMENTE aplicados — Decor (sem crédito de
+        # ICMS) não pode carregar um texto que fala em 12%.
+        icms = f"{para_float(self.icms_pct) * 100:g}%"
+        pc = f"{para_float(self.pis_cofins_pct) * 100:g}%"
         return {
             "gross": para_float(self.gross), "icms_credito": para_float(self.icms_credito),
+            "icms_credito_pct": para_float(self.icms_pct),
             "base_pis_cofins": para_float(self.base_pis_cofins),
             "pis_cofins_credito": para_float(self.pis_cofins_credito),
+            "pis_cofins_credito_pct": para_float(self.pis_cofins_pct),
             "cnet": para_float(self.cnet), "fator_efetivo": para_float(self.fator),
-            "formula": ("CNET = gross − gross×12% − (gross − gross×12%)×9,25%"),
+            "formula": (f"CNET = gross − gross×{icms} − (gross − gross×{icms})×{pc}"
+                        if self.icms_pct else f"CNET = gross − gross×{pc} (sem crédito de ICMS)"),
         }
 
 
@@ -83,7 +92,16 @@ def cnet_nacional(gross, icms_pct=DAUNE_ICMS_CREDITO,
     pis_cofins = base * pis_cofins_pct
     cnet = gross - icms - pis_cofins
     return CustoNacional(gross=gross, icms_credito=icms, base_pis_cofins=base,
-                         pis_cofins_credito=pis_cofins, cnet=cnet, fator=cnet / gross)
+                         pis_cofins_credito=pis_cofins, cnet=cnet, fator=cnet / gross,
+                         icms_pct=icms_pct, pis_cofins_pct=pis_cofins_pct)
+
+
+# --- Decor Tricot: créditos de ENTRADA (decisão de 21/09/2026) ---------------------------
+# Os valores do orçamento Decor são CUSTO DE COMPRA. Crédito de PIS/COFINS de 9,25% (regime
+# não cumulativo, como na Daune); SEM o crédito de ICMS de 12% da Daune — não há evidência
+# de ICMS destacado nessa compra. Fator efetivo 0,9075.
+DECOR_ICMS_CREDITO = Decimal("0")
+DECOR_PIS_COFINS_CREDITO = Decimal("0.0925")
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +279,28 @@ def registrar_daune(session: Session, produto: Produto, gross: float, *, fonte: 
         session, produto, cnet_brl=para_float(conta.cnet), metodo=CostMethod.daune_direct.value,
         status=status, fonte=fonte, documento=documento, data_ref=data_ref,
         valor_bruto=para_float(D(gross)), memoria=conta.como_dict(),
+        origem_registro=origem_registro, notas=notas)
+
+
+def registrar_decor(session: Session, produto: Produto, gross: float, *, fonte: str,
+                    documento: Optional[str] = None, data_ref: Optional[date] = None,
+                    status: str = StatusCusto.confirmado.value,
+                    origem_registro: str = "migracao-decor-2026-09-21",
+                    notas: Optional[str] = None) -> CustoReferencia:
+    """Registra uma referência Decor Tricot partindo do preço BRUTO (custo de compra).
+
+    Só crédito de PIS/COFINS (9,25% sobre o bruto); nenhum crédito de ICMS. A conta aberta
+    (bruto, crédito, ausência de ICMS, fator) fica na memória da versão.
+    """
+    conta = cnet_nacional(gross, icms_pct=DECOR_ICMS_CREDITO,
+                          pis_cofins_pct=DECOR_PIS_COFINS_CREDITO)
+    memoria = conta.como_dict()
+    memoria["credito_icms"] = "não aplicado — sem evidência de ICMS destacado na compra Decor"
+    memoria["decisao"] = "21/09/2026: valores do orçamento Decor tratados como CUSTO DE COMPRA"
+    return registrar_referencia(
+        session, produto, cnet_brl=para_float(conta.cnet), metodo=CostMethod.decor_direct.value,
+        status=status, fonte=fonte, documento=documento, data_ref=data_ref,
+        valor_bruto=para_float(D(gross)), memoria=memoria,
         origem_registro=origem_registro, notas=notas)
 
 

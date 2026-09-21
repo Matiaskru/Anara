@@ -1,0 +1,15 @@
+{
+  "banco": "/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb-a945-a11a0c33f049/scratchpad/anara_matriz25.db",
+  "produtos": 60,
+  "sinais": [
+    "0",
+    "0.3",
+    "1"
+  ],
+  "cenarios": 272160,
+  "bloqueados": 25920,
+  "violacoes": 0,
+  "por_tipo": {},
+  "amostra_violacoes": [],
+  "segundos": 2232
+}

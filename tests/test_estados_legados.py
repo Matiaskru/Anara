@@ -16,6 +16,7 @@ aprovação, sem emissão, sem snapshot e sem volta. Estes testes existem para q
 volte por outra porta.
 """
 import pytest
+import legado
 from sqlmodel import select
 
 from app import workflow as wf
@@ -166,7 +167,7 @@ def test_cotacao_19_continua_preservada():
     from sqlmodel import Session as S
     from app.models import CotacaoItem
 
-    caminho = os.path.abspath("data/anara.db")
+    caminho = legado.caminho_banco_real()
     if not os.path.exists(caminho):
         pytest.skip("banco operacional ausente")
 

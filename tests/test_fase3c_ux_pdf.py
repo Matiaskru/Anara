@@ -379,15 +379,16 @@ def test_11_tela_da_cotacao_vendedora_x_admin(session, vendedora, owner, fornece
     pagina = html(chamar(detalhe, RequestFalsa(vendedora), cotacao_id=cot.id, session=session))
     assert f'data-item-id="{itens[decor.id].id}"' in pagina
     assert 'data-preco-input' in pagina                                    # Decor: editável
-    assert 'data-travado="1"' in pagina and "fixo" in pagina               # Daune: preço fixo
+    # 21/09/2026: Daune deixou de ser travado — negocia como qualquer item da política nova
+    assert 'data-travado="1"' not in pagina and "🔒" not in pagina
+    assert "Tabela" in pagina and "B2B" in pagina and "Desconto" in pagina
     assert "Sua comissão estimada" in pagina and "Dentro da autonomia" in pagina
     assert "NEGOCIACAO_INICIAL" in pagina and '"comissao_estimada_valor"' in pagina
     baixo = pagina.lower()
     for termo in ECONOMIA_NA_TELA:
         assert termo not in baixo, f"cotação da vendedora mostrou '{termo}'"
     assert "377,11" not in pagina and "MARGEM_ABAIXO_PISO" not in pagina
-    # o motivo do preço fixo não explica margem nem comissão Daune
-    assert "12%" not in pagina and "5%" not in pagina.replace("2,5%", "")
+    assert "PRECO_ABAIXO_B2B" not in pagina and "oxford" not in baixo
 
     adm = html(chamar(detalhe, RequestFalsa(owner), cotacao_id=cot.id, session=session))
     assert "Economia da proposta" in adm and "data-lucro" in adm and "abrirMemoria" in adm
@@ -408,8 +409,9 @@ def test_12_negociacao_reativa_preview_aplicar_e_quantidade(session, vendedora, 
                          session=session))
     assert antes["autonomia_status"] == "DENTRO_DA_AUTONOMIA"
 
-    # preview: 4% de desconto — total, desconto e comissão mudam; nada é gravado
-    proposto = dinheiro(rec * D("0.96"))
+    # preview: proposta 30% ACIMA do B2B (desconto de 35% sobre a tabela → faixa de 6%) —
+    # total, desconto e a comissão DELA sobem; nada é gravado
+    proposto = dinheiro(rec * D("1.30"))
 
     class Corpo:
         def __init__(self, dados):
@@ -424,12 +426,28 @@ def test_12_negociacao_reativa_preview_aplicar_e_quantidade(session, vendedora, 
     prev = corpo(asyncio.run(preview(req, cot.id, session)))
     linha = prev["itens"][0]
     assert linha["preco_negociado"] == pytest.approx(float(proposto))
-    assert linha["desconto_linha_pct"] == pytest.approx(0.04, abs=1e-4)
-    assert prev["total_proposta"] < antes["total_proposta"]
-    assert prev["comissao_estimada_pct_efetiva"] < antes["comissao_estimada_pct_efetiva"]
+    assert linha["preco_b2b"] == pytest.approx(float(rec)) and linha["preco_tabela"] == pytest.approx(float(rec * 2), abs=0.011)
+    assert linha["desconto_vs_tabela_pct"] == pytest.approx(0.35, abs=1e-3)
+    assert linha["comissao_estimada_pct"] == pytest.approx(0.06)
+    assert antes["itens"][0]["comissao_estimada_pct"] == pytest.approx(0.05)     # no B2B: 5%
+    assert prev["total_proposta"] > antes["total_proposta"]
+    assert prev["comissao_estimada_pct_efetiva"] > antes["comissao_estimada_pct_efetiva"]
+    assert prev["autonomia_status"] == "DENTRO_DA_AUTONOMIA"
     assert encontrar_confidenciais(prev) == []
     session.refresh(it)
     assert dinheiro(it.preco_negociado) == rec                             # não gravou
+
+    # preview por DESCONTO: 20% sobre a tabela → 8% de comissão, mesmo preço que digitar 80% da tabela
+    req_d = RequestFalsa(vendedora)
+    req_d.json = Corpo({"itens": [{"item_id": it.id, "desconto_pct": "0.20"}]}).json
+    prev_d = corpo(asyncio.run(preview(req_d, cot.id, session)))
+    # o preço do desconto pedido é arredondado PARA CIMA ao centavo: o desconto efetivo nunca
+    # passa do digitado (20,003% cairia na faixa de 7%)
+    from decimal import Decimal
+    esperado = (D(linha["preco_tabela"]) * D("0.80")).quantize(Decimal("0.01"), rounding="ROUND_UP")
+    assert prev_d["itens"][0]["preco_negociado"] == pytest.approx(float(esperado))
+    assert prev_d["itens"][0]["desconto_vs_tabela_pct"] <= 0.20
+    assert prev_d["itens"][0]["comissao_estimada_pct"] == pytest.approx(0.08)
 
     # aplicar grava e o painel de situação continua dentro da autonomia
     req2 = RequestFalsa(vendedora)
@@ -456,6 +474,8 @@ def test_12_negociacao_reativa_preview_aplicar_e_quantidade(session, vendedora, 
     r = corpo(asyncio.run(editar_item(cot.id, it.id, req3, session)))
     assert r["quantidade"] == 20 and r["faturamento"] == pytest.approx(float(proposto * 20))
     assert encontrar_confidenciais(r) == []
+    session.refresh(it)
+    assert it.modo_edicao == "desconto"          # a alavanca persistida é o desconto vs tabela
 
 
 def test_13_daune_bloqueada_e_aprovacao_aparece_quando_necessaria(session, vendedora, owner,
@@ -477,13 +497,21 @@ def test_13_daune_bloqueada_e_aprovacao_aparece_quando_necessaria(session, vende
         async def json(self):
             return self._dados
 
+    # 21/09/2026: Daune não é mais travado. Abaixo do B2B é exceção comercial (aprovável),
+    # não recusa — e a vendedora só vê "precisa de aprovação", nunca a mecânica.
     req = RequestFalsa(vendedora)
     req.json = Corpo({"itens": [{"item_id": itens[daune.id].id,
                                  "preco_negociado": str(dinheiro(itens[daune.id].preco_recomendado) - 1)}]}).json
-    with pytest.raises(HTTPException) as erro:
-        asyncio.run(aplicar(req, cot.id, session))
-    assert erro.value.status_code == 409
-    assert "MARGEM" not in erro.value.detail and "travado" in erro.value.detail
+    r0 = corpo(asyncio.run(aplicar(req, cot.id, session)))
+    linha_daune = next(i for i in r0["itens"] if i["item_id"] == itens[daune.id].id)
+    assert linha_daune["autonomia_item"] == "REQUER_APROVACAO" and r0["requer_aprovacao"] is True
+    assert linha_daune["preco_travado"] is False and linha_daune["editavel"] is True
+    # volta ao B2B: dentro da autonomia de novo
+    req_b = RequestFalsa(vendedora)
+    req_b.json = Corpo({"itens": [{"item_id": itens[daune.id].id,
+                                   "preco_negociado": str(dinheiro(itens[daune.id].preco_recomendado))}]}).json
+    r1 = corpo(asyncio.run(aplicar(req_b, cot.id, session)))
+    assert r1["requer_aprovacao"] is False
 
     # Decor 20% abaixo do recomendado: exceção comercial → o painel pede aprovação
     req2 = RequestFalsa(vendedora)
@@ -725,7 +753,7 @@ def test_20_pdf_frete_por_extenso(session, vendedora, owner, fornecedores):
     assert h["frete"] == "Por conta do cliente" and t["total_geral"] == pytest.approx(float(subtotal))
     cot.freight_type = "A_COMBINAR"
     h, _i, t = pb.montar_documento(cot, cliente, itens, rascunho=True)
-    assert h["frete"] == "A combinar" and t["frete"] is None
+    assert h["frete"] == "A combinar — frete não incluído nesta proposta" and t["frete"] is None
     cot.freight_type = "CIF"
     cot.freight_valor = 150.0
     h, _i, t = pb.montar_documento(cot, cliente, itens, rascunho=True)

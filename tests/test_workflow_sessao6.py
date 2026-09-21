@@ -31,6 +31,15 @@ HOJE = date.today()
 # ---------------------------------------------------------------------------
 # Apoio
 # ---------------------------------------------------------------------------
+
+# Contexto legado (21/09/2026): este módulo prova a mecânica da política de 16/09/2026 pelos
+# routers; roda com aquela política reaberta como vigente. Ver `tests/politica_legada.py`.
+@pytest.fixture(scope="module", autouse=True)
+def _politica_legada(session):
+    from politica_legada import politica_16_09_vigente
+    with politica_16_09_vigente(session):
+        yield
+
 def chamar(funcao, request, **kwargs):
     args = {}
     for nome, p in inspect.signature(funcao).parameters.items():
@@ -869,7 +878,7 @@ def test_historico_legado_nao_e_falsificado(session):
     import os
     from sqlmodel import Session as S
 
-    caminho = os.path.abspath("data/anara.db")
+    caminho = legado.caminho_banco_real()
     eng = create_engine(f"sqlite:///file:{caminho}?mode=ro&uri=true")
     with S(eng) as prod:
         cotacoes = legado.somente_cotacoes(prod.exec(select(Cotacao)).all())

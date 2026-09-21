@@ -31,7 +31,7 @@
   <div class="kpi"><div class="label">Ticket médio</div><div class="value">{{ comercial.ticket_medio|brl if comercial.ticket_medio is not none else '—' }}</div></div>
   <div class="kpi"><div class="label">Última compra</div><div class="value">{{ comercial.ultima_compra|data if comercial.ultima_compra else '—' }}</div></div>
   <div class="kpi"><div class="label">Em aberto</div><div class="value">{{ comercial.valor_em_aberto|brl if comercial.valor_em_aberto is not none else '—' }}</div>{% if comercial.quantidade_em_aberto %}<div class="nota">{{ comercial.quantidade_em_aberto }} {{ 'venda' if comercial.quantidade_em_aberto == 1 else 'vendas' }} a receber</div>{% endif %}</div>
-  <div class="kpi"><div class="label">Atrasado</div><div class="value {{ 'margem-abaixo' if comercial.valor_atrasado else '' }}">{{ comercial.valor_atrasado|brl if comercial.valor_atrasado is not none else '—' }}</div></div>
+  <div class="kpi"><div class="label">Atrasado</div><div class="value {{ 'valor-alerta' if comercial.valor_atrasado else '' }}">{{ comercial.valor_atrasado|brl if comercial.valor_atrasado is not none else '—' }}</div></div>
 </div>
 
 <div class="tabs" data-tab-group="cliente" role="tablist">

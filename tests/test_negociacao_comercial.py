@@ -5,6 +5,12 @@ Decor 12/10 com comissão 10→5; comissão global única do bloco variável, po
 presa pelo piso e nunca abaixo de 5% sozinha; exceção aprovável quando o piso fura com 5%;
 payload da vendedora sem economia; rotas; invalidação de aprovação; detecção de rascunho
 anterior à política.
+
+**Contexto legado (21/09/2026).** A política de 16/09 foi sucedida pela política B2B; estes
+testes continuam valendo porque os itens que pinaram 16/09 são avaliados por ela. O módulo
+inteiro roda com a política de 16/09 reaberta como vigente (`politica_16_09_vigente`), para
+que os routers formem itens daquela política. A mecânica de 21/09 tem testes próprios em
+`test_politica_2026_09_21.py`.
 """
 import asyncio
 import json
@@ -31,6 +37,13 @@ from conftest import RequestFalsa, _novo_usuario
 from decimais import MARGEM_DO_CENTAVO, MEIO_CENTAVO, aprox  # noqa: E402
 
 _SEQ = iter(range(1, 100_000))
+
+
+@pytest.fixture(scope="module", autouse=True)
+def _politica_legada(session):
+    from politica_legada import politica_16_09_vigente
+    with politica_16_09_vigente(session):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -114,9 +127,14 @@ def produto_nacional(session, fornecedor, custo=100.0, familia="Pillow"):
 
 def produto_ktc(session, ktc, exw=10.0, familia="Flat Sheet", tc=300):
     sku = f"NEG-KTC-{next(_SEQ)}"
+    # Este módulo prova a MECÂNICA da política de 16/09 (piso, comissão global, c_max), que foi
+    # desenhada com custo = base de preço. Desde 22/09/2026 o custo real KTC exclui o I.I. e a
+    # base comercial carrega a proteção; para que os casos A–J continuem exercendo a mecânica
+    # (e não a folga extra de margem), o SKU de teste pina proteção comercial 0 — base = custo.
     p = Produto(sku_key=sku, nome=f"Lençol {sku}", familia=familia, thread_count=tc,
                 fornecedor_id=ktc.id, cost_method=CostMethod.ktc_quoted.value,
-                exw_cotado_usd=exw, peso_kg=1.0, preco_base=100.0, ativo=True)
+                exw_cotado_usd=exw, peso_kg=1.0, preco_base=100.0, ativo=True,
+                protecao_comercial_pct=0.0, protecao_comercial_fonte="teste: mecânica 16/09 com base = custo")
     session.add(p)
     session.commit()
     session.refresh(p)
@@ -545,15 +563,25 @@ def test_rotas_de_negociacao_para_a_vendedora(session, fornecedores, cliente, pa
 
     atual = corpo(chamar(negociacao_atual, RequestFalsa(vend), cotacao_id=cot.id,
                          session=session))
+    # 21/09/2026 acrescentou o subtotal de tabela e o desconto vs tabela (ambos comerciais;
+    # nulos para itens da política de 16/09, como os deste módulo).
     assert set(atual) == {"itens", "subtotal_recomendado", "subtotal_negociado", "desconto_pct",
                           "frete", "total_proposta", "comissao_estimada_pct_efetiva",
-                          "comissao_estimada_valor", "autonomia_status", "requer_aprovacao"}
+                          "comissao_estimada_valor", "autonomia_status", "requer_aprovacao",
+                          "subtotal_tabela", "desconto_vs_tabela_pct"}
+    assert atual["subtotal_tabela"] is None and atual["desconto_vs_tabela_pct"] is None
     # Fase 3C acrescentou dois campos de tela, ambos comerciais: o desconto da linha em
-    # relação ao recomendado e se o preço é fixo (já na lista de permissão do item).
-    assert set(atual["itens"][0]) == {"item_id", "produto_id", "nome_produto", "quantidade",
-                                      "preco_recomendado", "preco_negociado", "total_linha",
-                                      "editavel", "motivo_nao_editavel", "desconto_linha_pct",
-                                      "preco_travado"}
+    # relação ao recomendado e se o preço é fixo (já na lista de permissão do item). A política
+    # de 21/09 acrescentou tabela, B2B, desconto vs tabela, a comissão DELA no item e o status
+    # de autonomia do item — tudo comercial; para item de 16/09 vêm nulos.
+    campos_3a = {"item_id", "produto_id", "nome_produto", "quantidade",
+                 "preco_recomendado", "preco_negociado", "total_linha",
+                 "editavel", "motivo_nao_editavel", "desconto_linha_pct", "preco_travado"}
+    campos_21_09 = {"politica_nova", "preco_tabela", "preco_b2b", "desconto_vs_tabela_pct",
+                    "comissao_estimada_pct", "comissao_estimada_valor", "autonomia_item",
+                    "modo_negociacao"}
+    assert set(atual["itens"][0]) == campos_3a | campos_21_09
+    assert atual["itens"][0]["politica_nova"] is False and atual["itens"][0]["preco_tabela"] is None
     assert not (_chaves(atual) & set(CONFIDENCIAIS_DA_VENDEDORA))
     assert encontrar_confidenciais(atual) == []
     assert atual["comissao_estimada_valor"] > 0 and atual["autonomia_status"] == pol.DENTRO_DA_AUTONOMIA
@@ -651,7 +679,7 @@ def test_item_anterior_a_politica_mantem_regua_antiga_e_e_detectado(session, for
 
     novidades = adm.premissas_desatualizadas(session, cot, [it])
     assert novidades["desatualizado"] is True
-    assert novidades["politica_anterior"] and "16/09/2026" in novidades["texto"]
+    assert novidades["politica_anterior"] and "política comercial anterior" in novidades["texto"]
 
     # recálculo do cabeçalho NÃO migra o item: continua sem política
     av = com.recalcular_comissao(session, cot)

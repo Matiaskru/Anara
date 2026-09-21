@@ -745,7 +745,7 @@ def test_p0_historico_legado_nao_ganha_oportunidade_ficticia(session):
     from sqlmodel import Session as S
     import os
 
-    eng = create_engine(f"sqlite:///file:{os.path.abspath('data/anara.db')}?mode=ro&uri=true")
+    eng = create_engine(f"sqlite:///file:{legado.caminho_banco_real()}?mode=ro&uri=true")
     with S(eng) as prod:
         cotacoes = legado.somente_cotacoes(prod.exec(select(Cotacao)).all())
         assert len(cotacoes) == len(legado.COTACOES), "cotação herdada sumiu do banco"

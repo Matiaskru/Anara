@@ -89,7 +89,7 @@ def test_preco_base_da_planilha_nao_e_copiado(ambiente):
         s.commit()
 
         margem = ps.margem_padrao(s, produto)
-        assert margem.margem_pct == aprox(0.14)   # toalha KTC: 14% desde 16/09/2026
+        assert margem.margem_pct == aprox(0.16)   # toalha KTC: B2B 16% desde 21/09/2026
         cenario = ps.cenario_padrao_catalogo(s)
         regras, _ = ps.regras_da_cotacao(s, cenario, produto)
         produto.preco_base = calcular_por_margem(40.0, 1, margem.margem_pct, regras).preco_negociado
@@ -97,7 +97,7 @@ def test_preco_base_da_planilha_nao_e_copiado(ambiente):
         s.commit()
 
         conferido = calcular_por_preco(40.0, 1, produto.preco_base, regras)
-        assert conferido.margem_liquida == aprox(0.14, abs=MARGEM_DO_CENTAVO)
+        assert conferido.margem_liquida == aprox(0.16, abs=MARGEM_DO_CENTAVO)
 
 
 def test_produto_de_fornecedor_nacional_nao_e_desativado_pela_planilha(ambiente):

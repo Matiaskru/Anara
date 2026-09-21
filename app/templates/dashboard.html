@@ -60,7 +60,7 @@
   <div class="kpi"><div class="label">Faturado</div><div class="value small">{{ painel.valor_faturado|brl if painel.valor_faturado is not none else '—' }}</div></div>
   <div class="kpi"><div class="label">Pago</div><div class="value small">{{ painel.valor_pago|brl if painel.valor_pago is not none else '—' }}</div></div>
   <div class="kpi"><div class="label">A receber</div><div class="value small">{{ painel.a_receber|brl if painel.a_receber is not none else '—' }}</div>{% if painel.a_receber_quantidade %}<div class="nota">{{ painel.a_receber_quantidade }} vendas</div>{% endif %}</div>
-  <div class="kpi"><div class="label">Atrasado</div><div class="value small {{ 'margem-abaixo' if painel.atrasado else '' }}">{{ painel.atrasado|brl if painel.atrasado is not none else '—' }}</div>{% if painel.atrasado_quantidade %}<div class="nota">{{ painel.atrasado_quantidade }} vendas</div>{% endif %}</div>
+  <div class="kpi"><div class="label">Atrasado</div><div class="value small {{ 'valor-alerta' if painel.atrasado else '' }}">{{ painel.atrasado|brl if painel.atrasado is not none else '—' }}</div>{% if painel.atrasado_quantidade %}<div class="nota">{{ painel.atrasado_quantidade }} vendas</div>{% endif %}</div>
 </div>
 
 <div class="card">
@@ -143,7 +143,7 @@
       <div class="kpi-row" style="grid-template-columns: repeat(3, 1fr); margin:0;">
         <div class="kpi"><div class="label">Aguardando entrega</div><div class="value small">{{ painel.pos_venda.aguardando_entrega.quantidade }}</div><div class="nota">{{ painel.pos_venda.aguardando_entrega.valor|brl if painel.pos_venda.aguardando_entrega.valor is not none else '—' }}</div></div>
         <div class="kpi"><div class="label">Aguardando pagamento</div><div class="value small">{{ painel.pos_venda.aguardando_pagamento.quantidade }}</div><div class="nota">{{ painel.pos_venda.aguardando_pagamento.valor|brl if painel.pos_venda.aguardando_pagamento.valor is not none else '—' }}</div></div>
-        <div class="kpi"><div class="label">Atrasado</div><div class="value small {{ 'margem-abaixo' if painel.pos_venda.atrasado.quantidade else '' }}">{{ painel.pos_venda.atrasado.quantidade }}</div><div class="nota">{{ painel.pos_venda.atrasado.valor|brl if painel.pos_venda.atrasado.valor is not none else '—' }}</div></div>
+        <div class="kpi"><div class="label">Atrasado</div><div class="value small {{ 'valor-alerta' if painel.pos_venda.atrasado.quantidade else '' }}">{{ painel.pos_venda.atrasado.quantidade }}</div><div class="nota">{{ painel.pos_venda.atrasado.valor|brl if painel.pos_venda.atrasado.valor is not none else '—' }}</div></div>
       </div>
     </div>
     <div class="card">

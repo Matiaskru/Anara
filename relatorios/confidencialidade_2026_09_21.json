@@ -1,0 +1,5118 @@
+{
+ "resumo": {
+  "banco": "/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb-a945-a11a0c33f049/scratchpad/anara_audit25.db",
+  "cotacao": 28,
+  "cotacao_emitida": 29,
+  "item": 63,
+  "produto": "Single Top Sheet 190x250 300TC  ·  190x250 · 300 fios · 100% algodão",
+  "valores_item": {
+   "preco_tabela": 259.6,
+   "preco_b2b": 129.8,
+   "preco_negociado": 207.68,
+   "desconto_vs_tabela_pct": 0.2,
+   "comissao_pct": 0.08,
+   "comissao_valor": 136.24,
+   "faturamento": 2076.8,
+   "encargo_pct": 0.0336,
+   "percentual_sinal": 0.3
+  },
+  "numeros_procurados": {
+   "custo_unitario": [
+    "56,42",
+    "56.41882832089079",
+    "56.42",
+    "R$ 56,42",
+    "R$ 56,42"
+   ],
+   "custo_total": [
+    "564,19",
+    "564.1882832089079",
+    "564.19",
+    "R$ 564,19",
+    "R$ 564,19"
+   ],
+   "base_comercial_precificacao": [
+    "58,35",
+    "58.34830128046298",
+    "58.35",
+    "R$ 58,35",
+    "R$ 58,35"
+   ],
+   "preco_b2b_economico": [
+    "125,52",
+    "125.52",
+    "R$ 125,52",
+    "R$ 125,52"
+   ],
+   "lucro": [
+    "775,24",
+    "775.24",
+    "R$ 775,24",
+    "R$ 775,24"
+   ],
+   "margem_liquida": [
+    "0,3733",
+    "0.3732858243451464",
+    "0.3733",
+    "37,3%",
+    "37,33%",
+    "37.33%"
+   ],
+   "base_comissionavel": [
+    "1.702,98",
+    "1702.98",
+    "R$ 1.702,98",
+    "R$ 1.702,98"
+   ],
+   "encargo_pct": [
+    "0,0336",
+    "0.0336",
+    "3,36%",
+    "3.36%"
+   ],
+   "encargo_saldo_pct": [
+    "0,0480",
+    "0.048",
+    "0.0480",
+    "4,80%",
+    "4.80%"
+   ],
+   "icms_base_comissao_pct": [
+    "0,1800",
+    "0.1800",
+    "18,0%",
+    "18,00%",
+    "18.00%"
+   ]
+  },
+  "superficies": 156,
+  "vazamentos": 0,
+  "deve_ver_falhas": [],
+  "contraste_owner_admin": {
+   "OWNER": {
+    "economia_no_json": true,
+    "economia_na_tela": true,
+    "encargo_no_cenario_fiscal": true,
+    "memoria_do_item_200": true
+   },
+   "ADMIN": {
+    "economia_no_json": true,
+    "economia_na_tela": true,
+    "encargo_no_cenario_fiscal": true,
+    "memoria_do_item_200": true
+   }
+  },
+  "aliases_seguros": {
+   "preco_b2b": true,
+   "comissao_estimada_pct/valor": true,
+   "desconto_vs_tabela_pct": true,
+   "preco_tabela": true
+  },
+  "status_por_perfil": {
+   "VENDEDOR_INTERNO": {
+    "303": 4,
+    "403": 18,
+    "200": 46,
+    "400": 1
+   },
+   "VENDEDOR_COMISSIONADO": {
+    "303": 4,
+    "403": 18,
+    "200": 46,
+    "400": 1
+   }
+  }
+ },
+ "superficies": [
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin/cotacao/28/premissas",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin/premissas",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin/sku/223",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin/trilha",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin/usuarios",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2467,
+   "sha256": "7d10e718dde8cc91",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/aprovacoes",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/aprovacoes/1",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/calculadora",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/clientes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 6608,
+   "sha256": "56f676cba97345eb",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/clientes/2",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 11778,
+   "sha256": "d04ba2f930219043",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/clientes/2/contatos.json",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 2,
+   "sha256": "4f53cda18c2baa0c",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/clientes/2/vendas.json",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 70,
+   "sha256": "69af67b5ad22cf0b",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/comercial",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 3746,
+   "sha256": "f4b5c95f7ba359b6",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/configuracoes",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 11843,
+   "sha256": "9e92a1804b0b6bd1",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/nova",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 11401,
+   "sha256": "6aa4691108ae44a4",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "crédito",
+     "contexto": " <option value=\"CARTAO\" >               Cartão de crédito             </option>                     ",
+     "aceito": "cartão de crédito"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/28",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 20687,
+   "sha256": "9352111279a1a214",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "memoria",
+     "contexto": "rMemoria()\"></div> <div class=\"drawer\" id=\"drawer-memoria\"><button class=\"fechar\" onclick=\"fecharMem",
+     "aceito": "drawer-memoria"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "ick=\"fecharMemoria()\">×</button><div id=\"conteudo-memoria\"></div></div>        </div>     </main>   ",
+     "aceito": "conteudo-memoria"
+    },
+    {
+     "termo": "crédito",
+     "contexto": "50 dias</option><option value=\"CARTAO\" >Cartão de crédito</option>           </select>           <la",
+     "aceito": "cartão de crédito"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "todas</option></select>             <select id=\"f-fornecedor\" data-filtro aria-label=\"Fornecedor\"><o",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "<select id=\"f-fornecedor\" data-filtro aria-label=\"Fornecedor\"><option value=\"\">Fornecedor: todos</op",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "a-filtro aria-label=\"Fornecedor\"><option value=\"\">Fornecedor: todos</option></select>             <s",
+     "aceito": "fornecedor: todos"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/29",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 17296,
+   "sha256": "cfd1b5e8ae3c8fa7",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "memoria",
+     "contexto": "rMemoria()\"></div> <div class=\"drawer\" id=\"drawer-memoria\"><button class=\"fechar\" onclick=\"fecharMem",
+     "aceito": "drawer-memoria"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "ick=\"fecharMemoria()\">×</button><div id=\"conteudo-memoria\"></div></div>        </div>     </main>   ",
+     "aceito": "conteudo-memoria"
+    },
+    {
+     "termo": "crédito",
+     "contexto": "50 dias</option><option value=\"CARTAO\" >Cartão de crédito</option>           </select>           <la",
+     "aceito": "cartão de crédito"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/compromisso",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 112,
+   "sha256": "a07b9cce5f58fb63",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/itens/63/memoria",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/negociacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 877,
+   "sha256": "cfd96d875394b51d",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/painel",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 729,
+   "sha256": "2f26893cf8479efc",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/pdf",
+   "status": 200,
+   "tipo": "application/pdf",
+   "bytes": 402773,
+   "sha256": "1c3cd7d43457aabc",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/situacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 251,
+   "sha256": "2681bf5892e02086",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/dashboard",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/esqueci-senha",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 1084,
+   "sha256": "05888ff7c7525ee7",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/health",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 31,
+   "sha256": "68fd26fd028c249f",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/health/detalhe",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/importar",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/login",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 1162,
+   "sha256": "7268afc21b1670ab",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/oportunidades",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/oportunidades/3",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 9389,
+   "sha256": "58e7d728a5046c51",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/pipeline",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 8169,
+   "sha256": "284960021a7cb151",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/primeiro-acesso",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/produtos",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 167744,
+   "sha256": "92985a3d0bba4a9f",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 45x80 · 500 g/m² · 90/10<span class=\"sub\">45x",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 48x80 · 600 g/m² · 90/10<span class=\"sub\">48x",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x70 · 750 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x70 · 950 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x80 · 670 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x80 · 750 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x80 · 950 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x90 · 100% algodão<span class=\"sub\">50x90 ·",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x90 · 750 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x90 · 950 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "ELIS (Guaratinguetá)</option><option value=\"KTC\" >Kazareen Textile Company</option>   </select>   <s",
+     "aceito": "kazareen textile company"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fac",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fac",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Han",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Poo",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Poo",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Poo",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bed",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/produtos/buscar",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 22479,
+   "sha256": "ec112b0b01b92e69",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "1.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":1150,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.54,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":800,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.86,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":2050,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.83,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":2050,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.55,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":543,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.99,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":650,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.53,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":500,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "56.5,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":600,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":160,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.71,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.35,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.33,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.34,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": ":8.6,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":600,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": ":9.1,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":650,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "23.6,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.54,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.31,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "22.5,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.37,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.18,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":233,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.65,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "3.63,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "2.73,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":600,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "5.47,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":500,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.83,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":700,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.54,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":700,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "45.2,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":650,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.77,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":209.09,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":212.69,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":207.37,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":209.09,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":264.11,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":268.68,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":261.96,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":264.11,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":297.12,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":302.26,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":294.72,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":297.12,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":313.61,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":319.04,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":311.07,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":313.61,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":233,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "2.89,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.29,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "4.97,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.56,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "00.2,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "84.4,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.63,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "piso",
+     "contexto": ",\"familia\":\"Bath Mat\",\"familia_rotulo\":\"Toalha de piso\",\"tamanho\":\"50x70\",\"preco_base\":41.46,\"fornec",
+     "aceito": "toalha de piso"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/produtos/facetas",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 2486,
+   "sha256": "6f69d3db54c57225",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "\",\"n\":13},{\"valor\":\"Bath Mat\",\"rotulo\":\"Toalha de piso\",\"n\":12},{\"valor\":\"Hand Towel\",\"rotulo\":\"Toal",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "\":\"ELIS (Guaratinguetá)\"},{\"codigo\":\"KTC\",\"nome\":\"Kazareen Textile Company\"}],\"tamanhos\":[\"30x30\",\"3",
+     "aceito": "kazareen textile company"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/produtos/223/memoria",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/redefinir-senha",
+   "status": 400,
+   "tipo": "text/html",
+   "bytes": 907,
+   "sha256": "ac7e9ff71082e270",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 9155,
+   "sha256": "67284420284ba523",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/aprovacoes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 3995,
+   "sha256": "c193386706e74873",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/atividades.csv",
+   "status": 200,
+   "tipo": "text/csv",
+   "bytes": 70,
+   "sha256": "890f14f4e8b9bdb0",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/cotacoes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 4636,
+   "sha256": "e90ffec1ebd23294",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/cotacoes.csv",
+   "status": 200,
+   "tipo": "text/csv",
+   "bytes": 1811,
+   "sha256": "0a8714ef6e43120e",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/economico",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/oportunidades.csv",
+   "status": 200,
+   "tipo": "text/csv",
+   "bytes": 508,
+   "sha256": "d9dcfc968d17ee55",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/qualidade",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/relatorios/qualidade.json",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/saude",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/vendas",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 13120,
+   "sha256": "2fe038b157656518",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/vendas/3",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 14527,
+   "sha256": "b3dd8419498b0e46",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "fornecedor",
+     "contexto": "><input id=\"op-nota\" placeholder=\"ex.: fechou com fornecedor local\"></div>     <div class=\"modal-foo",
+     "aceito": "fornecedor local"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/29/pdf",
+   "status": 200,
+   "tipo": "application/pdf",
+   "bytes": 250769,
+   "sha256": "2ae26f485cf6554b",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/29/negociacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 877,
+   "sha256": "7967766fc1a655d5",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/cotacoes/29/situacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 330,
+   "sha256": "a755f72ed6aadbce",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/produtos/buscar?q=190x250",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 779,
+   "sha256": "457bdeb67bf32a29",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "24.9,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "amanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
+     "aceito": "kazareen textile company"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "manho\":\"190x250\",\"preco_base\":124.9,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
+     "aceito": "kazareen textile company"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "l de cima\",\"tamanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
+     "aceito": "\"fornecedor\":"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": " de cima\",\"tamanho\":\"190x250\",\"preco_base\":124.9,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
+     "aceito": "\"fornecedor\":"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/calc",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 251,
+   "sha256": "592400873007c1d5",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "base\":0.03923138510808647,\"preco_base\":124.9,\"sem_custo\":false,\"preco_travado\":false,\"aviso\":null,\"p",
+     "aceito": "sem_custo"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/calc(desconto)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 251,
+   "sha256": "15d339eeaf9eabdb",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "_base\":0.5588470776621297,\"preco_base\":124.9,\"sem_custo\":false,\"preco_travado\":false,\"aviso\":null,\"p",
+     "aceito": "sem_custo"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/negociacao/preview",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 878,
+   "sha256": "cb38d1dbc91af417",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/negociacao/preview(abaixo do B2B)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 870,
+   "sha256": "9b2ffcac6d8623dd",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/negociacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 877,
+   "sha256": "cfd96d875394b51d",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/js/calculadora.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 4473,
+   "sha256": "611c27ff992a5c5a",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "// Calculadora de custo KTC. O formulário muda conforme a família: t",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "ial.margem_liquida);   document.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "t.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl);   document.getElementById(\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "(r.aviso_preco) avisos.push(r.aviso_preco);   ((r.custo || {}).avisos || []).forEach(a => avisos.pus",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "al.preco_negociado);   document.getElementById(\"r-margem\").textContent = pctM(comercial.margem_liqui",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "mentById(\"r-margem\").textContent = pctM(comercial.margem_liquida);   document.getElementById(\"r-cust",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "sto || {}).net_brl);   document.getElementById(\"r-lucro\").textContent = brlM(comercial.lucro);    co",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ementById(\"r-lucro\").textContent = brlM(comercial.lucro);    const avisos = [];   if (r.aviso_preco)",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": " memória do preço da cotação, renderizada pelo // memoria.js.  let ultimoResultado = null;  function",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "esc).join(\"<br><br>\");   document.getElementById(\"memoria-inline\").innerHTML = renderMemoria(r);   m",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "inline\").innerHTML = renderMemoria(r);   mostrar(\"memoria-inline\", false);   document.getElementById",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "a-inline\", false);   document.getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; } ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "oria() {   const bloco = document.getElementById(\"memoria-inline\");   const aberto = bloco.style.dis",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": " \"none\" : \"block\";   document.getElementById(\"btn-memoria\").textContent =     aberto ? \"Ver memória ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "rece // registrar o pedido. O resultado é a mesma memória do preço da cotação, renderizada pelo // m",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": ".getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; }  function alternarMemoria() {",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "Id(\"btn-memoria\").textContent =     aberto ? \"Ver memória do preço\" : \"Esconder memória do preço\"; }",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "=     aberto ? \"Ver memória do preço\" : \"Esconder memória do preço\"; }  async function salvar(calcul",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/js/cotacao.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 27011,
+   "sha256": "453a2563d1c170af",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": ".forEach(el => el.textContent = txt); };     set(\"custo_total\", brl(e.custo_total)); set(\"receita\", ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "xtContent = txt); };     set(\"custo_total\", brl(e.custo_total)); set(\"receita\", brl(p.subtotal_negoc",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " i.item_id)}</td>         <td class=\"num\">${brl(i.custo_unitario)}</td>         <td class=\"num\">${pc",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "urn;       tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;       const m = $(\"[data-ma",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;       const m = $(\"[data-margem]\", tr",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "n).map(esc).join(\" · \");       const lado = p.sem_custo ? '<span class=\"tag tag-review\">sob consulta",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": ".familia].filter(Boolean).map(esc);     if (p.sem_custo) meta.push('<span class=\"tag tag-review\">sob",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "pan>`; return; }     alvo.innerHTML = r.dados.sem_custo ? `<span class=\"muted\">sem preço automático<",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "margem",
+     "contexto": "     set(\"lucro_total\", brl(e.lucro_total)); set(\"margem_agregada_pct\", pct(e.margem_agregada_pct, 2",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "e.lucro_total)); set(\"margem_agregada_pct\", pct(e.margem_agregada_pct, 2));     set(\"base_comissiona",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": ".absorvido_por_comissao));     set(\"absorvido_por_margem\", brl(e.absorvido_por_margem));     set(\"ab",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "  set(\"absorvido_por_margem\", brl(e.absorvido_por_margem));     set(\"absorvido_por_impostos_e_frete\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "cao = (m) => ({PRECO_ABAIXO_B2B: \"abaixo do B2B\", MARGEM_ABAIXO_PISO: \"abaixo do piso\",             ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "RECO_ABAIXO_RECOMENDADO: \"abaixo do recomendado\", MARGEM_ABAIXO_ALVO: \"abaixo do alvo\"}[m] || (m || ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "o_unitario)}</td>         <td class=\"num\">${pct(i.margem_alvo_pct, 2)}${i.piso_margem_pct !== null &",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": " class=\"num\">${pct(i.margem_alvo_pct, 2)}${i.piso_margem_pct !== null && i.versao_politica !== \"2026",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "21\" ? `<div class=\"small muted\">piso ${pct(i.piso_margem_pct, 2)}</div>` : \"\"}</td>         <td clas",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "2) : \"—\"}</td>         <td class=\"num ${abaixo ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizad",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "     <td class=\"num ${abaixo ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "um ${abaixo ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem_realizada_pct, 2)}</td>         <td class=\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "t.custo = i.custo_total;       const m = $(\"[data-margem]\", tr);       if (m) m.innerHTML = `<span c",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "(m) m.innerHTML = `<span class=\"${i.viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizad",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "`<span class=\"${i.viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": ".viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem_realizada_pct)}</span>`;     });   }    asy",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "quantidade: o servidor mantém a alavanca do item (margem-alvo ou preço negociado).     // Mandar `mo",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "d: produtoSelecionado.id, quantidade: qtd, modo: \"margem\", valor: produtoSelecionado.margem_padrao_p",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "e: qtd, modo: \"margem\", valor: produtoSelecionado.margem_padrao_pct || 0});     const r = await anar",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "tent = \"\"; return; }     if (r.dados.sem_regra_de_margem) { alvo.innerHTML = `<span class=\"tag tag-r",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "d: produtoSelecionado.id, quantidade: qtd, modo: \"margem\"});     const r = await anaraFetch(`/cotaco",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "t(\"receita\", brl(p.subtotal_negociado));     set(\"lucro_total\", brl(e.lucro_total)); set(\"margem_agr",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ubtotal_negociado));     set(\"lucro_total\", brl(e.lucro_total)); set(\"margem_agregada_pct\", pct(e.ma",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ada_pct, 2)}</td>         <td class=\"num\">${brl(i.lucro)}</td>         <td class=\"num\">${i.base_comi",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "i.item_id}\"]`); if (!tr) return;       tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "\"]`); if (!tr) return;       tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;       con",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "encargo",
+     "contexto": "to comercial acompanha ao vivo.   // Só texto — o encargo efetivo e a fórmula ficam no servidor.   /",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "{PRECO_ABAIXO_B2B: \"abaixo do B2B\", MARGEM_ABAIXO_PISO: \"abaixo do piso\",                           ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": ": \"abaixo do B2B\", MARGEM_ABAIXO_PISO: \"abaixo do piso\",                                       PRECO",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "gociação</span>')));       const abaixo = i.viola_piso;       return `<tr>         <td>${esc(nomes[i",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "  <td class=\"num\">${pct(i.margem_alvo_pct, 2)}${i.piso_margem_pct !== null && i.versao_politica !== ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "tica !== \"2026-09-21\" ? `<div class=\"small muted\">piso ${pct(i.piso_margem_pct, 2)}</div>` : \"\"}</td",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "6-09-21\" ? `<div class=\"small muted\">piso ${pct(i.piso_margem_pct, 2)}</div>` : \"\"}</td>         <td",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "     if (m) m.innerHTML = `<span class=\"${i.viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "icms_base",
+     "contexto": "= undefined ? brl(i.base_comissionavel) : \"—\"}${i.icms_base_comissao_pct ? `<div class=\"small muted\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "icms_base",
+     "contexto": "ssao_pct ? `<div class=\"small muted\">ICMS ${pct(i.icms_base_comissao_pct, 2)} fora</div>` : \"\"}</td>",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "comissao_item",
+     "contexto": "ML = (e.itens || []).map(i => {       const c = i.comissao_item || {};       const rotuloExcecao = (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "ome) return \"\";     const classe = nome.includes(\"Kazareen\") || nome.includes(\"KTC\") ? \"tag-ktc\" : (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "ainel com os filtros do cotador offline: família, fornecedor, tamanho, fios, gramatura.   // As opçõ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "alor, `${x.rotulo} (${x.n})`]));     preencher(\"f-fornecedor\", f.fornecedores.map(x => [x.codigo, x.",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "document.getElementById(\"f-familia\").value,       fornecedor: document.getElementById(\"f-fornecedor\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "lue,       fornecedor: document.getElementById(\"f-fornecedor\").value,       tamanho: document.getEle",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "div class=\"nome\">${esc(p.nome)} ${tagFornecedor(p.fornecedor)}</div>           <div class=\"spec\">${e",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "e\").innerHTML = `${esc(p.nome)} ${tagFornecedor(p.fornecedor)}`;     const meta = [p.especificacao, ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/js/dashboard.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 4033,
+   "sha256": "644c8b2fc22ff981",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "margem",
+     "contexto": "m.lucro === null ? \"—\" : brl(m.lucro)}`,         `Margem: ${m.margem === null ? \"—\" : pct(m.margem)}",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "null ? \"—\" : brl(m.lucro)}`,         `Margem: ${m.margem === null ? \"—\" : pct(m.margem)}`,         `",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "       `Margem: ${m.margem === null ? \"—\" : pct(m.margem)}`,         `Vendas: ${m.vendas}`];       i",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "// Gráfico \"Vendas e lucro por mês\" em SVG puro — sem biblioteca, sem C",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "teca, sem CDN. // Barras = valor vendido; linha = lucro; barras claras = mesmo mês do ano anterior (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "x=\"0 0 ${W} ${H}\" role=\"img\" aria-label=\"Vendas e lucro por mês\">`;   svg += `<g class=\"grid\">`;   f",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "}\" height=\"${h}\" rx=\"2\"></rect>`;     }     if (m.lucro !== null && m.lucro !== undefined) pontos.pu",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "\"2\"></rect>`;     }     if (m.lucro !== null && m.lucro !== undefined) pontos.push([cx, y(m.lucro), ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ll && m.lucro !== undefined) pontos.push([cx, y(m.lucro), i]);     svg += `<text x=\"${cx}\" y=\"${H - ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ndido === null ? \"—\" : brl(m.vendido)}`,         `Lucro: ${m.lucro === null ? \"—\" : brl(m.lucro)}`, ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ull ? \"—\" : brl(m.vendido)}`,         `Lucro: ${m.lucro === null ? \"—\" : brl(m.lucro)}`,         `Ma",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "         `Lucro: ${m.lucro === null ? \"—\" : brl(m.lucro)}`,         `Margem: ${m.margem === null ? \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/js/memoria.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 9999,
+   "sha256": "89962d713b20c659",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "aterfall inteiro, da especificação técnica (ou do custo do fornecedor) // até o preço final, em um d",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "Memoria(m) {   const p = m.produto || {};   const custo = m.custo || {};   const fornecedor = (m.for",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " {   const p = m.produto || {};   const custo = m.custo || {};   const fornecedor = (m.fornecedor ||",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "so-inline\">${esc(m.revisao_motivo)}</div>`;   if (custo.caminho) html += `<div style=\"font-size:11.5",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ":11.5px; color:var(--gray); margin:10px 0;\">${esc(custo.caminho)}</div>`;    // especificação   cons",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "al\", esc(p.material)));   const pesoEstimado = (m.custo || {}).peso;   if (p.peso_kg) {     spec.pus",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "ão\", spec.join(\"\"));    // motor industrial   if (custo.industrial && custo.industrial.etapas && cus",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "    // motor industrial   if (custo.industrial && custo.industrial.etapas && custo.industrial.etapas",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "f (custo.industrial && custo.industrial.etapas && custo.industrial.etapas.length) {     html += bloc",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "     html += bloco(\"Motor industrial KTC\", etapas(custo.industrial.etapas));     html += avisos(cust",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "pas(custo.industrial.etapas));     html += avisos(custo.industrial.avisos);   }    // EXW comparado ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ";   }    // EXW comparado   const exw = [];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calcu",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "h(linha(\"EXW calculado (parâmetros atuais)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " atuais)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado p",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "o_usd) exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "do pela KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "w_cotado_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {     const dif = custo.exw_",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "do_usd && custo.exw_cotado_usd) {     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;   ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "_usd) {     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;     exw.push(linha(\"Diferenç",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "sh(linha(\"Diferença\", usdM(dif) + ` (${pctM(dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_or",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "{pctM(dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_origem) exw.push(linha(\"Origem do EXW ap",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "gem) exw.push(linha(\"Origem do EXW aplicado\", esc(custo.exw_origem)));   html += bloco(\"EXW — calcul",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "(\"EXW — calculado × cotado\", exw.join(\"\"));    // custo de referência do fornecedor nacional   if (c",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " custo de referência do fornecedor nacional   if (custo.custo_ref) {     const c = custo.custo_ref; ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " de referência do fornecedor nacional   if (custo.custo_ref) {     const c = custo.custo_ref;     ht",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "r nacional   if (custo.custo_ref) {     const c = custo.custo_ref;     html += bloco(\"Custo do forne",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "onal   if (custo.custo_ref) {     const c = custo.custo_ref;     html += bloco(\"Custo do fornecedor\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "    const c = custo.custo_ref;     html += bloco(\"Custo do fornecedor\", [       linha(\"Valor de refe",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ",     ].join(\"\"));   }    // nacionalização   if (custo.nacionalizacao && custo.nacionalizacao.etapa",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "  // nacionalização   if (custo.nacionalizacao && custo.nacionalizacao.etapas) {     let extra = \"\";",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "ionalizacao.etapas) {     let extra = \"\";     if (custo.ncm) {       extra = linha(\"NCM aplicado\", e",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "to.ncm) {       extra = linha(\"NCM aplicado\", esc(custo.ncm.ncm) + \" · I.I. \" + pctM(custo.ncm.ii, 2",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "aplicado\", esc(custo.ncm.ncm) + \" · I.I. \" + pctM(custo.ncm.ii, 2),                     custo.ncm.co",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "I. \" + pctM(custo.ncm.ii, 2),                     custo.ncm.confiavel ? \"\" : \"marcado para validação",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "   html += bloco(\"Nacionalização\", extra + etapas(custo.nacionalizacao.etapas));   }   html += aviso",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "sto.nacionalizacao.etapas));   }   html += avisos(custo.avisos);    // comercial   const com = [];  ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " // comercial   const com = [];   com.push(linha(\"Custo NET\", brlM(custo.net_brl)));   com.push(linh",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "onst com = [];   com.push(linha(\"Custo NET\", brlM(custo.net_brl)));   com.push(linha(\"ICMS da venda\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "   } else {     com.push(linha(\"Preço\", \"—\", \"sem custo cadastrado: margem e lucro não podem ser cal",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "tml += avisos(custo.industrial.avisos);   }    // EXW comparado   const exw = [];   if (custo.exw_ca",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "dustrial.avisos);   }    // EXW comparado   const exw = [];   if (custo.exw_calculado_usd) exw.push(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "   // EXW comparado   const exw = [];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calculado (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "   const exw = [];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calculado (parâmetros atuais)\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calculado (parâmetros atuais)\", usdM(custo.exw",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "a(\"EXW calculado (parâmetros atuais)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado_usd) ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "s)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado pela KT",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "exw_calculado_usd)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.e",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "d)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.exw_cotado_usd)))",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": " exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado_usd &",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "a KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {     c",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "do_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {     const dif = custo.exw_calcul",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": " && custo.exw_cotado_usd) {     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;     exw.",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "{     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;     exw.push(linha(\"Diferença\", us",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "sto.exw_calculado_usd - custo.exw_cotado_usd;     exw.push(linha(\"Diferença\", usdM(dif) + ` (${pctM(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "ha(\"Diferença\", usdM(dif) + ` (${pctM(dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_origem) ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_origem) exw.push(linha(\"Origem do EXW aplicado",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "exw_cotado_usd)})`));   }   if (custo.exw_origem) exw.push(linha(\"Origem do EXW aplicado\", esc(custo",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "  if (custo.exw_origem) exw.push(linha(\"Origem do EXW aplicado\", esc(custo.exw_origem)));   html += ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "xw.push(linha(\"Origem do EXW aplicado\", esc(custo.exw_origem)));   html += bloco(\"EXW — calculado × ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "icado\", esc(custo.exw_origem)));   html += bloco(\"EXW — calculado × cotado\", exw.join(\"\"));    // cu",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "m)));   html += bloco(\"EXW — calculado × cotado\", exw.join(\"\"));    // custo de referência do fornec",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/js/toast.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 465,
+   "sha256": "8f7944f740d8ec38",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/js/ui.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 7582,
+   "sha256": "efb22062f2e912b0",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/css/anara.css",
+   "status": 200,
+   "tipo": "text/css",
+   "bytes": 41742,
+   "sha256": "6f276a019d01a76a",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "margem",
+     "contexto": "color: var(--copper-dark); margin-bottom: 4px; } .margem-abaixo, .valor-alerta { color: #a2452a; fon",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "lor-alerta { color: #a2452a; font-weight: 700; } .margem-ok, .valor-ok { color: #2f6b45; font-weight",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "or-ok { color: #2f6b45; font-weight: 700; } input.margem-abaixo, input.valor-alerta { color: #a2452a",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": " font-weight: 700; border-color: #e0bcb0; } input.margem-ok { color: #2f6b45; font-weight: 700; } .d",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "{ font-weight: 700; white-space: nowrap; } .bloco-memoria { margin: 14px 0 6px; } .bloco-memoria h3 ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "; } .bloco-memoria { margin: 14px 0 6px; } .bloco-memoria h3 { font-size: 10.5px; letter-spacing: .1",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "--------------------------------------    Drawer (memória do preço) — mantido    -------------------",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "HTML",
+   "url": "/cotacoes/28 data-* e hidden",
+   "status": 200,
+   "tipo": "atributos",
+   "bytes": 20539,
+   "sha256": "9352111279a1a214",
+   "data_attrs": [
+    "data-autonomia",
+    "data-comissao-item",
+    "data-condicao-texto",
+    "data-contribuinte",
+    "data-cotacao",
+    "data-desconto-input",
+    "data-economia",
+    "data-editavel",
+    "data-filtro",
+    "data-item-id",
+    "data-material",
+    "data-politica",
+    "data-popover",
+    "data-preco",
+    "data-preco-input",
+    "data-qtd",
+    "data-qtd-input",
+    "data-rec",
+    "data-res",
+    "data-res-rotulo",
+    "data-tabela",
+    "data-tabela-cel",
+    "data-total",
+    "data-travado"
+   ],
+   "hidden_inputs": [
+    "contribuinte_icms"
+   ],
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "HTML",
+   "url": "/cotacoes/29 data-* e hidden",
+   "status": 200,
+   "tipo": "atributos",
+   "bytes": 17168,
+   "sha256": "cfd1b5e8ae3c8fa7",
+   "data_attrs": [
+    "data-autonomia",
+    "data-comissao-item",
+    "data-condicao-texto",
+    "data-contribuinte",
+    "data-cotacao",
+    "data-desconto",
+    "data-economia",
+    "data-editavel",
+    "data-item-id",
+    "data-material",
+    "data-politica",
+    "data-popover",
+    "data-preco",
+    "data-preco-fixo",
+    "data-qtd",
+    "data-rec",
+    "data-res",
+    "data-res-rotulo",
+    "data-somente-leitura",
+    "data-tabela",
+    "data-tabela-cel",
+    "data-total",
+    "data-travado"
+   ],
+   "hidden_inputs": [
+    "contribuinte_icms"
+   ],
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "403?",
+   "url": "/cotacoes/28/itens/63/memoria",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "403?",
+   "url": "/produtos/223/memoria",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "403?",
+   "url": "/admin/cotacao/28/premissas",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "403?",
+   "url": "/relatorios/economico",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2466,
+   "sha256": "7045dfdb0e08b509",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "403?",
+   "url": "/configuracoes",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "403?",
+   "url": "/admin/premissas",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "DEVE_VER",
+   "url": "/cotacoes/28",
+   "status": 200,
+   "tipo": "checagem",
+   "bytes": 0,
+   "sha256": "",
+   "termos": [],
+   "estruturais": [],
+   "numeros": [],
+   "deve_ver": {
+    "tabela na tela": true,
+    "B2B na tela": true,
+    "preço da proposta na tela": true,
+    "desconto % na tela": true,
+    "sua comissão (taxa e valor) na tela": true,
+    "total na tela": true,
+    "condição com sinal e saldo na tela": true,
+    "status na tela": true,
+    "JSON traz tabela/B2B/proposta/desconto/comissão/total/autonomia": true,
+    "JSON: valores batem com o banco": true
+   }
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin/cotacao/28/premissas",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin/premissas",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin/sku/223",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin/trilha",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin/usuarios",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2483,
+   "sha256": "c89dca5769eafc70",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/aprovacoes",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/aprovacoes/1",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/calculadora",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/clientes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 6624,
+   "sha256": "f72469ea4b6f4a45",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/clientes/2",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 11794,
+   "sha256": "1b6d38759d094f73",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/clientes/2/contatos.json",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 2,
+   "sha256": "4f53cda18c2baa0c",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/clientes/2/vendas.json",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 70,
+   "sha256": "69af67b5ad22cf0b",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/comercial",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 3762,
+   "sha256": "261c69f234b07e07",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/configuracoes",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 11859,
+   "sha256": "58f44027b59ca8d8",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/nova",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 11417,
+   "sha256": "3ff18b7f519d8734",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "crédito",
+     "contexto": " <option value=\"CARTAO\" >               Cartão de crédito             </option>                     ",
+     "aceito": "cartão de crédito"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/28",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 20703,
+   "sha256": "7195b333f7d6feca",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "memoria",
+     "contexto": "rMemoria()\"></div> <div class=\"drawer\" id=\"drawer-memoria\"><button class=\"fechar\" onclick=\"fecharMem",
+     "aceito": "drawer-memoria"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "ick=\"fecharMemoria()\">×</button><div id=\"conteudo-memoria\"></div></div>        </div>     </main>   ",
+     "aceito": "conteudo-memoria"
+    },
+    {
+     "termo": "crédito",
+     "contexto": "50 dias</option><option value=\"CARTAO\" >Cartão de crédito</option>           </select>           <la",
+     "aceito": "cartão de crédito"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "todas</option></select>             <select id=\"f-fornecedor\" data-filtro aria-label=\"Fornecedor\"><o",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "<select id=\"f-fornecedor\" data-filtro aria-label=\"Fornecedor\"><option value=\"\">Fornecedor: todos</op",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "a-filtro aria-label=\"Fornecedor\"><option value=\"\">Fornecedor: todos</option></select>             <s",
+     "aceito": "fornecedor: todos"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/29",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 17312,
+   "sha256": "e6acecc0b067bcb9",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "memoria",
+     "contexto": "rMemoria()\"></div> <div class=\"drawer\" id=\"drawer-memoria\"><button class=\"fechar\" onclick=\"fecharMem",
+     "aceito": "drawer-memoria"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "ick=\"fecharMemoria()\">×</button><div id=\"conteudo-memoria\"></div></div>        </div>     </main>   ",
+     "aceito": "conteudo-memoria"
+    },
+    {
+     "termo": "crédito",
+     "contexto": "50 dias</option><option value=\"CARTAO\" >Cartão de crédito</option>           </select>           <la",
+     "aceito": "cartão de crédito"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/compromisso",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 112,
+   "sha256": "a07b9cce5f58fb63",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/itens/63/memoria",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/negociacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 877,
+   "sha256": "cfd96d875394b51d",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/painel",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 729,
+   "sha256": "2f26893cf8479efc",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/pdf",
+   "status": 200,
+   "tipo": "application/pdf",
+   "bytes": 402773,
+   "sha256": "fde532c3fc82600e",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/28/situacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 251,
+   "sha256": "2681bf5892e02086",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/dashboard",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/esqueci-senha",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 1084,
+   "sha256": "05888ff7c7525ee7",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/health",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 31,
+   "sha256": "68fd26fd028c249f",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/health/detalhe",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/importar",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/login",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 1162,
+   "sha256": "7268afc21b1670ab",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/oportunidades",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/oportunidades/3",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 9405,
+   "sha256": "116aab582d56d2c4",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/pipeline",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 8185,
+   "sha256": "b95cfcd1a1d4c39b",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/primeiro-acesso",
+   "status": 303,
+   "tipo": "",
+   "bytes": 0,
+   "sha256": "e3b0c44298fc1c14",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/produtos",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 167760,
+   "sha256": "f9e583534d3ae768",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 45x80 · 500 g/m² · 90/10<span class=\"sub\">45x",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 48x80 · 600 g/m² · 90/10<span class=\"sub\">48x",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x70 · 750 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x70 · 950 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x80 · 670 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x80 · 750 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x80 · 950 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x90 · 100% algodão<span class=\"sub\">50x90 ·",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x90 · 750 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "      <tr>         <td class=\"primaria\">Toalha de piso 50x90 · 950 g/m² · 100% algodão<span class=\"s",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "ELIS (Guaratinguetá)</option><option value=\"KTC\" >Kazareen Textile Company</option>   </select>   <s",
+     "aceito": "kazareen textile company"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bat",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fac",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fac",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Fla",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Han",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Poo",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Poo",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Poo",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Bed",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "/span></td>         <td><span class=\"tag tag-ktc\">Kazareen</span></td>         <td class=\"muted\">Duv",
+     "aceito": "tag-ktc\">kazareen"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/produtos/buscar",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 22479,
+   "sha256": "ec112b0b01b92e69",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "1.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":1150,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.54,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":800,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.86,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":2050,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.83,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":2050,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.55,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":543,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.99,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":650,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.53,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":500,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "56.5,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":600,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":160,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.71,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.35,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "7.33,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.34,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": ":8.6,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":600,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": ":9.1,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":650,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "23.6,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.54,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.31,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "22.5,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.37,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.18,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":233,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.65,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "3.63,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "2.73,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":600,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "5.47,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":500,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.83,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":700,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "9.54,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":700,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "45.2,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":650,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.77,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":209.09,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":212.69,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":207.37,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":209.09,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":264.11,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":268.68,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":261.96,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":264.11,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":297.12,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":302.26,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":294.72,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":297.12,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":313.61,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":319.04,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":311.07,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "eco_base\":313.61,\"fornecedor\":\"Decor Tricot\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":233,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "2.89,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "8.29,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "4.97,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "0.56,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "00.2,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "84.4,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "1.63,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "piso",
+     "contexto": ",\"familia\":\"Bath Mat\",\"familia_rotulo\":\"Toalha de piso\",\"tamanho\":\"50x70\",\"preco_base\":41.46,\"fornec",
+     "aceito": "toalha de piso"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/produtos/facetas",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 2486,
+   "sha256": "6f69d3db54c57225",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "\",\"n\":13},{\"valor\":\"Bath Mat\",\"rotulo\":\"Toalha de piso\",\"n\":12},{\"valor\":\"Hand Towel\",\"rotulo\":\"Toal",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "\":\"ELIS (Guaratinguetá)\"},{\"codigo\":\"KTC\",\"nome\":\"Kazareen Textile Company\"}],\"tamanhos\":[\"30x30\",\"3",
+     "aceito": "kazareen textile company"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/produtos/223/memoria",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/redefinir-senha",
+   "status": 400,
+   "tipo": "text/html",
+   "bytes": 907,
+   "sha256": "ac7e9ff71082e270",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 9171,
+   "sha256": "6a50cf95b91a923b",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/aprovacoes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 4011,
+   "sha256": "5ce2ad3221548e85",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/atividades.csv",
+   "status": 200,
+   "tipo": "text/csv",
+   "bytes": 70,
+   "sha256": "890f14f4e8b9bdb0",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/cotacoes",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 4652,
+   "sha256": "acda3cbe259c485f",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/cotacoes.csv",
+   "status": 200,
+   "tipo": "text/csv",
+   "bytes": 1811,
+   "sha256": "0a8714ef6e43120e",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/economico",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/oportunidades.csv",
+   "status": 200,
+   "tipo": "text/csv",
+   "bytes": 508,
+   "sha256": "d9dcfc968d17ee55",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/qualidade",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/relatorios/qualidade.json",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/saude",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/vendas",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 13136,
+   "sha256": "12ca54572c65bf59",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/vendas/3",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 14543,
+   "sha256": "a3dada073c18e1de",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "fornecedor",
+     "contexto": "><input id=\"op-nota\" placeholder=\"ex.: fechou com fornecedor local\"></div>     <div class=\"modal-foo",
+     "aceito": "fornecedor local"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/29/pdf",
+   "status": 200,
+   "tipo": "application/pdf",
+   "bytes": 250769,
+   "sha256": "961d7bc358fb47b3",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/29/negociacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 877,
+   "sha256": "7967766fc1a655d5",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/cotacoes/29/situacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 330,
+   "sha256": "a755f72ed6aadbce",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/produtos/buscar?q=190x250",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 779,
+   "sha256": "457bdeb67bf32a29",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "24.9,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "amanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
+     "aceito": "kazareen textile company"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "manho\":\"190x250\",\"preco_base\":124.9,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
+     "aceito": "kazareen textile company"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "l de cima\",\"tamanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
+     "aceito": "\"fornecedor\":"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": " de cima\",\"tamanho\":\"190x250\",\"preco_base\":124.9,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
+     "aceito": "\"fornecedor\":"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/calc",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 251,
+   "sha256": "592400873007c1d5",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "base\":0.03923138510808647,\"preco_base\":124.9,\"sem_custo\":false,\"preco_travado\":false,\"aviso\":null,\"p",
+     "aceito": "sem_custo"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/calc(desconto)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 251,
+   "sha256": "15d339eeaf9eabdb",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "_base\":0.5588470776621297,\"preco_base\":124.9,\"sem_custo\":false,\"preco_travado\":false,\"aviso\":null,\"p",
+     "aceito": "sem_custo"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/negociacao/preview",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 878,
+   "sha256": "cb38d1dbc91af417",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/negociacao/preview(abaixo do B2B)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 870,
+   "sha256": "9b2ffcac6d8623dd",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/cotacoes/28/negociacao",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 877,
+   "sha256": "cfd96d875394b51d",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/js/calculadora.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 4473,
+   "sha256": "611c27ff992a5c5a",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "// Calculadora de custo KTC. O formulário muda conforme a família: t",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "ial.margem_liquida);   document.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "t.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl);   document.getElementById(\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "(r.aviso_preco) avisos.push(r.aviso_preco);   ((r.custo || {}).avisos || []).forEach(a => avisos.pus",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "al.preco_negociado);   document.getElementById(\"r-margem\").textContent = pctM(comercial.margem_liqui",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "mentById(\"r-margem\").textContent = pctM(comercial.margem_liquida);   document.getElementById(\"r-cust",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "sto || {}).net_brl);   document.getElementById(\"r-lucro\").textContent = brlM(comercial.lucro);    co",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ementById(\"r-lucro\").textContent = brlM(comercial.lucro);    const avisos = [];   if (r.aviso_preco)",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": " memória do preço da cotação, renderizada pelo // memoria.js.  let ultimoResultado = null;  function",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "esc).join(\"<br><br>\");   document.getElementById(\"memoria-inline\").innerHTML = renderMemoria(r);   m",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "inline\").innerHTML = renderMemoria(r);   mostrar(\"memoria-inline\", false);   document.getElementById",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "a-inline\", false);   document.getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; } ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "oria() {   const bloco = document.getElementById(\"memoria-inline\");   const aberto = bloco.style.dis",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": " \"none\" : \"block\";   document.getElementById(\"btn-memoria\").textContent =     aberto ? \"Ver memória ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "rece // registrar o pedido. O resultado é a mesma memória do preço da cotação, renderizada pelo // m",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": ".getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; }  function alternarMemoria() {",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "Id(\"btn-memoria\").textContent =     aberto ? \"Ver memória do preço\" : \"Esconder memória do preço\"; }",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "=     aberto ? \"Ver memória do preço\" : \"Esconder memória do preço\"; }  async function salvar(calcul",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/js/cotacao.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 27011,
+   "sha256": "453a2563d1c170af",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": ".forEach(el => el.textContent = txt); };     set(\"custo_total\", brl(e.custo_total)); set(\"receita\", ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "xtContent = txt); };     set(\"custo_total\", brl(e.custo_total)); set(\"receita\", brl(p.subtotal_negoc",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " i.item_id)}</td>         <td class=\"num\">${brl(i.custo_unitario)}</td>         <td class=\"num\">${pc",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "urn;       tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;       const m = $(\"[data-ma",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;       const m = $(\"[data-margem]\", tr",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "n).map(esc).join(\" · \");       const lado = p.sem_custo ? '<span class=\"tag tag-review\">sob consulta",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": ".familia].filter(Boolean).map(esc);     if (p.sem_custo) meta.push('<span class=\"tag tag-review\">sob",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "custo",
+     "contexto": "pan>`; return; }     alvo.innerHTML = r.dados.sem_custo ? `<span class=\"muted\">sem preço automático<",
+     "aceito": "sem_custo"
+    },
+    {
+     "termo": "margem",
+     "contexto": "     set(\"lucro_total\", brl(e.lucro_total)); set(\"margem_agregada_pct\", pct(e.margem_agregada_pct, 2",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "e.lucro_total)); set(\"margem_agregada_pct\", pct(e.margem_agregada_pct, 2));     set(\"base_comissiona",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": ".absorvido_por_comissao));     set(\"absorvido_por_margem\", brl(e.absorvido_por_margem));     set(\"ab",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "  set(\"absorvido_por_margem\", brl(e.absorvido_por_margem));     set(\"absorvido_por_impostos_e_frete\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "cao = (m) => ({PRECO_ABAIXO_B2B: \"abaixo do B2B\", MARGEM_ABAIXO_PISO: \"abaixo do piso\",             ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "RECO_ABAIXO_RECOMENDADO: \"abaixo do recomendado\", MARGEM_ABAIXO_ALVO: \"abaixo do alvo\"}[m] || (m || ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "o_unitario)}</td>         <td class=\"num\">${pct(i.margem_alvo_pct, 2)}${i.piso_margem_pct !== null &",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": " class=\"num\">${pct(i.margem_alvo_pct, 2)}${i.piso_margem_pct !== null && i.versao_politica !== \"2026",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "21\" ? `<div class=\"small muted\">piso ${pct(i.piso_margem_pct, 2)}</div>` : \"\"}</td>         <td clas",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "2) : \"—\"}</td>         <td class=\"num ${abaixo ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizad",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "     <td class=\"num ${abaixo ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "um ${abaixo ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem_realizada_pct, 2)}</td>         <td class=\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "t.custo = i.custo_total;       const m = $(\"[data-margem]\", tr);       if (m) m.innerHTML = `<span c",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "(m) m.innerHTML = `<span class=\"${i.viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizad",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "`<span class=\"${i.viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": ".viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "\">${i.margem_realizada_pct === null ? \"—\" : pct(i.margem_realizada_pct)}</span>`;     });   }    asy",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "quantidade: o servidor mantém a alavanca do item (margem-alvo ou preço negociado).     // Mandar `mo",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "d: produtoSelecionado.id, quantidade: qtd, modo: \"margem\", valor: produtoSelecionado.margem_padrao_p",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "e: qtd, modo: \"margem\", valor: produtoSelecionado.margem_padrao_pct || 0});     const r = await anar",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "tent = \"\"; return; }     if (r.dados.sem_regra_de_margem) { alvo.innerHTML = `<span class=\"tag tag-r",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "d: produtoSelecionado.id, quantidade: qtd, modo: \"margem\"});     const r = await anaraFetch(`/cotaco",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "t(\"receita\", brl(p.subtotal_negociado));     set(\"lucro_total\", brl(e.lucro_total)); set(\"margem_agr",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ubtotal_negociado));     set(\"lucro_total\", brl(e.lucro_total)); set(\"margem_agregada_pct\", pct(e.ma",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ada_pct, 2)}</td>         <td class=\"num\">${brl(i.lucro)}</td>         <td class=\"num\">${i.base_comi",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "i.item_id}\"]`); if (!tr) return;       tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "\"]`); if (!tr) return;       tr.dataset.lucro = i.lucro; tr.dataset.custo = i.custo_total;       con",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "encargo",
+     "contexto": "to comercial acompanha ao vivo.   // Só texto — o encargo efetivo e a fórmula ficam no servidor.   /",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "{PRECO_ABAIXO_B2B: \"abaixo do B2B\", MARGEM_ABAIXO_PISO: \"abaixo do piso\",                           ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": ": \"abaixo do B2B\", MARGEM_ABAIXO_PISO: \"abaixo do piso\",                                       PRECO",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "gociação</span>')));       const abaixo = i.viola_piso;       return `<tr>         <td>${esc(nomes[i",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "  <td class=\"num\">${pct(i.margem_alvo_pct, 2)}${i.piso_margem_pct !== null && i.versao_politica !== ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "tica !== \"2026-09-21\" ? `<div class=\"small muted\">piso ${pct(i.piso_margem_pct, 2)}</div>` : \"\"}</td",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "6-09-21\" ? `<div class=\"small muted\">piso ${pct(i.piso_margem_pct, 2)}</div>` : \"\"}</td>         <td",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "piso",
+     "contexto": "     if (m) m.innerHTML = `<span class=\"${i.viola_piso ? \"margem-abaixo\" : \"margem-ok\"}\">${i.margem_",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "icms_base",
+     "contexto": "= undefined ? brl(i.base_comissionavel) : \"—\"}${i.icms_base_comissao_pct ? `<div class=\"small muted\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "icms_base",
+     "contexto": "ssao_pct ? `<div class=\"small muted\">ICMS ${pct(i.icms_base_comissao_pct, 2)} fora</div>` : \"\"}</td>",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "comissao_item",
+     "contexto": "ML = (e.itens || []).map(i => {       const c = i.comissao_item || {};       const rotuloExcecao = (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "kazareen",
+     "contexto": "ome) return \"\";     const classe = nome.includes(\"Kazareen\") || nome.includes(\"KTC\") ? \"tag-ktc\" : (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "ainel com os filtros do cotador offline: família, fornecedor, tamanho, fios, gramatura.   // As opçõ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "alor, `${x.rotulo} (${x.n})`]));     preencher(\"f-fornecedor\", f.fornecedores.map(x => [x.codigo, x.",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "document.getElementById(\"f-familia\").value,       fornecedor: document.getElementById(\"f-fornecedor\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "lue,       fornecedor: document.getElementById(\"f-fornecedor\").value,       tamanho: document.getEle",
+     "aceito": "f-fornecedor"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "div class=\"nome\">${esc(p.nome)} ${tagFornecedor(p.fornecedor)}</div>           <div class=\"spec\">${e",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "e\").innerHTML = `${esc(p.nome)} ${tagFornecedor(p.fornecedor)}`;     const meta = [p.especificacao, ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/js/dashboard.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 4033,
+   "sha256": "644c8b2fc22ff981",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "margem",
+     "contexto": "m.lucro === null ? \"—\" : brl(m.lucro)}`,         `Margem: ${m.margem === null ? \"—\" : pct(m.margem)}",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "null ? \"—\" : brl(m.lucro)}`,         `Margem: ${m.margem === null ? \"—\" : pct(m.margem)}`,         `",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "       `Margem: ${m.margem === null ? \"—\" : pct(m.margem)}`,         `Vendas: ${m.vendas}`];       i",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "// Gráfico \"Vendas e lucro por mês\" em SVG puro — sem biblioteca, sem C",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "teca, sem CDN. // Barras = valor vendido; linha = lucro; barras claras = mesmo mês do ano anterior (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "x=\"0 0 ${W} ${H}\" role=\"img\" aria-label=\"Vendas e lucro por mês\">`;   svg += `<g class=\"grid\">`;   f",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "}\" height=\"${h}\" rx=\"2\"></rect>`;     }     if (m.lucro !== null && m.lucro !== undefined) pontos.pu",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "\"2\"></rect>`;     }     if (m.lucro !== null && m.lucro !== undefined) pontos.push([cx, y(m.lucro), ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ll && m.lucro !== undefined) pontos.push([cx, y(m.lucro), i]);     svg += `<text x=\"${cx}\" y=\"${H - ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ndido === null ? \"—\" : brl(m.vendido)}`,         `Lucro: ${m.lucro === null ? \"—\" : brl(m.lucro)}`, ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "ull ? \"—\" : brl(m.vendido)}`,         `Lucro: ${m.lucro === null ? \"—\" : brl(m.lucro)}`,         `Ma",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "lucro",
+     "contexto": "         `Lucro: ${m.lucro === null ? \"—\" : brl(m.lucro)}`,         `Margem: ${m.margem === null ? \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/js/memoria.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 9999,
+   "sha256": "89962d713b20c659",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "aterfall inteiro, da especificação técnica (ou do custo do fornecedor) // até o preço final, em um d",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "Memoria(m) {   const p = m.produto || {};   const custo = m.custo || {};   const fornecedor = (m.for",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " {   const p = m.produto || {};   const custo = m.custo || {};   const fornecedor = (m.fornecedor ||",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "so-inline\">${esc(m.revisao_motivo)}</div>`;   if (custo.caminho) html += `<div style=\"font-size:11.5",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ":11.5px; color:var(--gray); margin:10px 0;\">${esc(custo.caminho)}</div>`;    // especificação   cons",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "al\", esc(p.material)));   const pesoEstimado = (m.custo || {}).peso;   if (p.peso_kg) {     spec.pus",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "ão\", spec.join(\"\"));    // motor industrial   if (custo.industrial && custo.industrial.etapas && cus",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "    // motor industrial   if (custo.industrial && custo.industrial.etapas && custo.industrial.etapas",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "f (custo.industrial && custo.industrial.etapas && custo.industrial.etapas.length) {     html += bloc",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "     html += bloco(\"Motor industrial KTC\", etapas(custo.industrial.etapas));     html += avisos(cust",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "pas(custo.industrial.etapas));     html += avisos(custo.industrial.avisos);   }    // EXW comparado ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ";   }    // EXW comparado   const exw = [];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calcu",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "h(linha(\"EXW calculado (parâmetros atuais)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " atuais)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado p",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "o_usd) exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "do pela KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "w_cotado_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {     const dif = custo.exw_",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "do_usd && custo.exw_cotado_usd) {     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;   ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "_usd) {     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;     exw.push(linha(\"Diferenç",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "sh(linha(\"Diferença\", usdM(dif) + ` (${pctM(dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_or",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "{pctM(dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_origem) exw.push(linha(\"Origem do EXW ap",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "gem) exw.push(linha(\"Origem do EXW aplicado\", esc(custo.exw_origem)));   html += bloco(\"EXW — calcul",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "(\"EXW — calculado × cotado\", exw.join(\"\"));    // custo de referência do fornecedor nacional   if (c",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " custo de referência do fornecedor nacional   if (custo.custo_ref) {     const c = custo.custo_ref; ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " de referência do fornecedor nacional   if (custo.custo_ref) {     const c = custo.custo_ref;     ht",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "r nacional   if (custo.custo_ref) {     const c = custo.custo_ref;     html += bloco(\"Custo do forne",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "onal   if (custo.custo_ref) {     const c = custo.custo_ref;     html += bloco(\"Custo do fornecedor\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "    const c = custo.custo_ref;     html += bloco(\"Custo do fornecedor\", [       linha(\"Valor de refe",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ",     ].join(\"\"));   }    // nacionalização   if (custo.nacionalizacao && custo.nacionalizacao.etapa",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "  // nacionalização   if (custo.nacionalizacao && custo.nacionalizacao.etapas) {     let extra = \"\";",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "ionalizacao.etapas) {     let extra = \"\";     if (custo.ncm) {       extra = linha(\"NCM aplicado\", e",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "to.ncm) {       extra = linha(\"NCM aplicado\", esc(custo.ncm.ncm) + \" · I.I. \" + pctM(custo.ncm.ii, 2",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "aplicado\", esc(custo.ncm.ncm) + \" · I.I. \" + pctM(custo.ncm.ii, 2),                     custo.ncm.co",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "I. \" + pctM(custo.ncm.ii, 2),                     custo.ncm.confiavel ? \"\" : \"marcado para validação",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "   html += bloco(\"Nacionalização\", extra + etapas(custo.nacionalizacao.etapas));   }   html += aviso",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "sto.nacionalizacao.etapas));   }   html += avisos(custo.avisos);    // comercial   const com = [];  ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " // comercial   const com = [];   com.push(linha(\"Custo NET\", brlM(custo.net_brl)));   com.push(linh",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "onst com = [];   com.push(linha(\"Custo NET\", brlM(custo.net_brl)));   com.push(linha(\"ICMS da venda\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "   } else {     com.push(linha(\"Preço\", \"—\", \"sem custo cadastrado: margem e lucro não podem ser cal",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "tml += avisos(custo.industrial.avisos);   }    // EXW comparado   const exw = [];   if (custo.exw_ca",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "dustrial.avisos);   }    // EXW comparado   const exw = [];   if (custo.exw_calculado_usd) exw.push(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "   // EXW comparado   const exw = [];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calculado (",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "   const exw = [];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calculado (parâmetros atuais)\"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "];   if (custo.exw_calculado_usd) exw.push(linha(\"EXW calculado (parâmetros atuais)\", usdM(custo.exw",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "a(\"EXW calculado (parâmetros atuais)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado_usd) ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "s)\", usdM(custo.exw_calculado_usd)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado pela KT",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "exw_calculado_usd)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.e",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "d)));   if (custo.exw_cotado_usd) exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.exw_cotado_usd)))",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": " exw.push(linha(\"EXW cotado pela KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado_usd &",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "a KTC\", usdM(custo.exw_cotado_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {     c",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "do_usd)));   if (custo.exw_calculado_usd && custo.exw_cotado_usd) {     const dif = custo.exw_calcul",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": " && custo.exw_cotado_usd) {     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;     exw.",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "{     const dif = custo.exw_calculado_usd - custo.exw_cotado_usd;     exw.push(linha(\"Diferença\", us",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "sto.exw_calculado_usd - custo.exw_cotado_usd;     exw.push(linha(\"Diferença\", usdM(dif) + ` (${pctM(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "ha(\"Diferença\", usdM(dif) + ` (${pctM(dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_origem) ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "dif / custo.exw_cotado_usd)})`));   }   if (custo.exw_origem) exw.push(linha(\"Origem do EXW aplicado",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "exw_cotado_usd)})`));   }   if (custo.exw_origem) exw.push(linha(\"Origem do EXW aplicado\", esc(custo",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "  if (custo.exw_origem) exw.push(linha(\"Origem do EXW aplicado\", esc(custo.exw_origem)));   html += ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "xw.push(linha(\"Origem do EXW aplicado\", esc(custo.exw_origem)));   html += bloco(\"EXW — calculado × ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "icado\", esc(custo.exw_origem)));   html += bloco(\"EXW — calculado × cotado\", exw.join(\"\"));    // cu",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "m)));   html += bloco(\"EXW — calculado × cotado\", exw.join(\"\"));    // custo de referência do fornec",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/js/toast.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 465,
+   "sha256": "8f7944f740d8ec38",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/js/ui.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 7582,
+   "sha256": "efb22062f2e912b0",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/css/anara.css",
+   "status": 200,
+   "tipo": "text/css",
+   "bytes": 41742,
+   "sha256": "6f276a019d01a76a",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "margem",
+     "contexto": "color: var(--copper-dark); margin-bottom: 4px; } .margem-abaixo, .valor-alerta { color: #a2452a; fon",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "lor-alerta { color: #a2452a; font-weight: 700; } .margem-ok, .valor-ok { color: #2f6b45; font-weight",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": "or-ok { color: #2f6b45; font-weight: 700; } input.margem-abaixo, input.valor-alerta { color: #a2452a",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "margem",
+     "contexto": " font-weight: 700; border-color: #e0bcb0; } input.margem-ok { color: #2f6b45; font-weight: 700; } .d",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "{ font-weight: 700; white-space: nowrap; } .bloco-memoria { margin: 14px 0 6px; } .bloco-memoria h3 ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "; } .bloco-memoria { margin: 14px 0 6px; } .bloco-memoria h3 { font-size: 10.5px; letter-spacing: .1",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memória",
+     "contexto": "--------------------------------------    Drawer (memória do preço) — mantido    -------------------",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "HTML",
+   "url": "/cotacoes/28 data-* e hidden",
+   "status": 200,
+   "tipo": "atributos",
+   "bytes": 20555,
+   "sha256": "7195b333f7d6feca",
+   "data_attrs": [
+    "data-autonomia",
+    "data-comissao-item",
+    "data-condicao-texto",
+    "data-contribuinte",
+    "data-cotacao",
+    "data-desconto-input",
+    "data-economia",
+    "data-editavel",
+    "data-filtro",
+    "data-item-id",
+    "data-material",
+    "data-politica",
+    "data-popover",
+    "data-preco",
+    "data-preco-input",
+    "data-qtd",
+    "data-qtd-input",
+    "data-rec",
+    "data-res",
+    "data-res-rotulo",
+    "data-tabela",
+    "data-tabela-cel",
+    "data-total",
+    "data-travado"
+   ],
+   "hidden_inputs": [
+    "contribuinte_icms"
+   ],
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "HTML",
+   "url": "/cotacoes/29 data-* e hidden",
+   "status": 200,
+   "tipo": "atributos",
+   "bytes": 17184,
+   "sha256": "e6acecc0b067bcb9",
+   "data_attrs": [
+    "data-autonomia",
+    "data-comissao-item",
+    "data-condicao-texto",
+    "data-contribuinte",
+    "data-cotacao",
+    "data-desconto",
+    "data-economia",
+    "data-editavel",
+    "data-item-id",
+    "data-material",
+    "data-politica",
+    "data-popover",
+    "data-preco",
+    "data-preco-fixo",
+    "data-qtd",
+    "data-rec",
+    "data-res",
+    "data-res-rotulo",
+    "data-somente-leitura",
+    "data-tabela",
+    "data-tabela-cel",
+    "data-total",
+    "data-travado"
+   ],
+   "hidden_inputs": [
+    "contribuinte_icms"
+   ],
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "403?",
+   "url": "/cotacoes/28/itens/63/memoria",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "403?",
+   "url": "/produtos/223/memoria",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "403?",
+   "url": "/admin/cotacao/28/premissas",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "403?",
+   "url": "/relatorios/economico",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2482,
+   "sha256": "a7f1f01f04f9d539",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "403?",
+   "url": "/configuracoes",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "403?",
+   "url": "/admin/premissas",
+   "status": 403,
+   "tipo": "gate",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "DEVE_VER",
+   "url": "/cotacoes/28",
+   "status": 200,
+   "tipo": "checagem",
+   "bytes": 0,
+   "sha256": "",
+   "termos": [],
+   "estruturais": [],
+   "numeros": [],
+   "deve_ver": {
+    "tabela na tela": true,
+    "B2B na tela": true,
+    "preço da proposta na tela": true,
+    "desconto % na tela": true,
+    "sua comissão (taxa e valor) na tela": true,
+    "total na tela": true,
+    "condição com sinal e saldo na tela": true,
+    "status na tela": true,
+    "JSON traz tabela/B2B/proposta/desconto/comissão/total/autonomia": true,
+    "JSON: valores batem com o banco": true
+   }
+  }
+ ]
+}

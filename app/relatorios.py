@@ -156,7 +156,7 @@ def perguntas_para_ktc(session: Session) -> list:
     perguntas.append({
         "assunto": "Fórmula industrial das famílias que faltam",
         "quantos": None,
-        "pedido": "Regra de consumo/allowance para fronha (oxford e com aba), lençol com elástico "
+        "pedido": "Regra de consumo/allowance para fronha (com e sem abas), lençol com elástico "
                   "(altura e cantos), roupão, chinelo, protetor e topper de colchão, e insert de "
                   "edredom. Sem isso essas famílias continuam por preço cotado — o sistema não "
                   "inventa fórmula.",
@@ -173,8 +173,8 @@ def perguntas_para_ktc(session: Session) -> list:
         "assunto": "NCM dos roupões",
         "quantos": None,
         "pedido": "Confirmação do NCM correto do roupão. O cadastro atual (6309.00.10) é de artigos "
-                  "usados; hoje a Anara aplica 3,5% por regra de família. Se a regra cair sem NCM "
-                  "correto, a alíquota vira 35%.",
+                  "usados. Desde 22/09/2026 o I.I. econômico da KTC é 0% e os 3,5% da família são só "
+                  "proteção comercial de preço; o NCM correto continua importando para o despacho.",
         "exemplos": [],
     })
     return perguntas

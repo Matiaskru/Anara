@@ -33,6 +33,15 @@ _SEQ = iter(range(1, 100_000))
 # ---------------------------------------------------------------------------
 # Apoio
 # ---------------------------------------------------------------------------
+
+# Contexto legado (21/09/2026): este módulo prova a mecânica da política de 16/09/2026 pelos
+# routers; roda com aquela política reaberta como vigente. Ver `tests/politica_legada.py`.
+@pytest.fixture(scope="module", autouse=True)
+def _politica_legada(session):
+    from politica_legada import politica_16_09_vigente
+    with politica_16_09_vigente(session):
+        yield
+
 def chamar(funcao, request, **kwargs):
     args = {}
     for nome, p in inspect.signature(funcao).parameters.items():

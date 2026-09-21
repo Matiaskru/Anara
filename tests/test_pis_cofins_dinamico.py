@@ -183,7 +183,8 @@ def test_o_efetivo_chega_ao_denominador(session, fornecedores, rotulo, destino, 
 
     velho = TaxRuleSet(icms_pct=regras.icms_pct, pis_cofins_pct=D("0.0759"),
                        encargo_financeiro_pct=regras.encargo_financeiro_pct,
-                       comissao_tabela=regras.comissao_tabela)
+                       comissao_tabela=regras.comissao_tabela,
+                       comissao_base_icms_pct=regras.comissao_base_icms_pct)
     novo = calcular_por_margem(100.0, 1, 0.14, regras).preco_negociado
     antigo = calcular_por_margem(100.0, 1, 0.14, velho).preco_negociado
     if D(efetivo) > D("0.0759"):

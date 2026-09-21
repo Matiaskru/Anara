@@ -113,6 +113,19 @@ def condicao_pagamento(session: Session, codigo: str) -> Optional[CondicaoPagame
                         .where(CondicaoPagamento.codigo == (codigo or ""))).first()
 
 
+def condicao_textual(session: Session, cotacao) -> str:
+    """Condição de pagamento por extenso, com o sinal quando houver (21/09/2026).
+
+    "30 dias" · "30% de sinal + 70% em 30/60/90 dias" · "100% à vista (sinal)". É o texto
+    que vai ao PDF, ao snapshot e à tela — nunca o encargo nem a fórmula.
+    """
+    from app.payment_terms import rotulo_condicao
+    codigo = getattr(cotacao, "condicao_pagamento", None) or ""
+    condicao = condicao_pagamento(session, codigo)
+    label = getattr(condicao, "label", None) or codigo
+    return rotulo_condicao(getattr(cotacao, "percentual_sinal", 0) or 0, label)
+
+
 # ---------------------------------------------------------------------------
 # Motor industrial KTC — materiais, CMT, fios de toalha, parâmetros
 # ---------------------------------------------------------------------------

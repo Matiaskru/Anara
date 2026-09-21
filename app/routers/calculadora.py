@@ -52,6 +52,7 @@ def _parametros(form) -> dict:
         "abas": int(numero("abas", 0) or 0),
         "flap_cm": numero("flap_cm"),
         "festone": (form.get("festone") or "") in ("sim", "on", "1", "true"),
+        "composicao_toalha": form.get("composicao_toalha") or None,
     }
 
 
@@ -79,7 +80,8 @@ async def salvar(request: Request, session: Session = Depends(get_session)):
             gsm=dados["gsm"], plain_or_stripe=dados["plain_or_stripe"],
             acabamento=dados["acabamento"], calculavel=calculavel,
             observacao=form.get("observacao") or None, abas=dados["abas"],
-            flap_cm=dados["flap_cm"], festone=dados["festone"])
+            flap_cm=dados["flap_cm"], festone=dados["festone"],
+            composicao_toalha=dados["composicao_toalha"])
     except calc.EntradaInvalida as e:
         return JSONResponse({"erro": str(e)}, status_code=400)
 

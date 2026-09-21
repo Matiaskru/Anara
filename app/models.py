@@ -351,7 +351,7 @@ class CmtPreco(SQLModel, table=True):
     """CMT (corte/costura/acabamento) por item, em US$."""
     id: Optional[int] = Field(default=None, primary_key=True)
     familia: str                        # Flat Sheet, Fitted Sheet, Duvet Cover, ...
-    construcao: Optional[str] = None    # standard | oxford | open bag | ...
+    construcao: Optional[str] = None    # standard | 2/3/4 abas | open bag | ...
     cmt_usd: float
     valid_from: date = Field(default_factory=date.today)
     valid_to: Optional[date] = None
@@ -830,6 +830,14 @@ class Produto(SQLModel, table=True):
     peso_kg: Optional[float] = None
     peso_fonte: Optional[str] = None
     peso_tipo: Optional[str] = None              # "REAL KTC" | "ESTIMADO"
+    # --- Proteção comercial de precificação (22/09/2026, migration 0025) ---
+    # A alíquota de I.I. preferencial que formava o custo deste SKU até 22/09/2026, pinada
+    # como fator de formação de preço (fração). Desde então o I.I. econômico da KTC é 0%; o
+    # que este campo preserva é a POLÍTICA DE PREÇO, não um tributo — nunca entra no CNET,
+    # no lucro nem na margem realizada. Nulo = usar a regra da família (`ParametroKTC
+    # protecao_comercial_pct`); sem regra nenhuma, o produto fica em revisão.
+    protecao_comercial_pct: Optional[float] = None
+    protecao_comercial_fonte: Optional[str] = None
     peso_data: Optional[date] = None
     peso_documento: Optional[str] = None
     preco_ktc_usd: Optional[float] = None
@@ -912,6 +920,11 @@ class Cotacao(SQLModel, table=True):
     status: StatusCotacao = Field(default=StatusCotacao.rascunho,
                                   sa_type=SAEnum(StatusCotacao, native_enum=False, length=64))
     condicao_pagamento: str = Field(default="30")
+    # --- Sinal / entrada (21/09/2026, migration 0024) ---
+    # Fração (0–1) paga à vista, sem encargo. `condicao_pagamento` passa a ser a condição do
+    # SALDO quando há sinal; com 0 (padrão, e o valor de toda cotação anterior) nada muda. O
+    # encargo efetivo é (1 − percentual_sinal) × encargo do saldo — `payment_terms`.
+    percentual_sinal: float = Field(default=0.0)
     estado_destino: Optional[str] = None
     # `estado_origem` é LEGADO e representa origem logística/comercial. **Não é usado no
     # cálculo fiscal** desde a Onda 1 — origem logística não prova origem fiscal da NF.
@@ -944,6 +957,15 @@ class Cotacao(SQLModel, table=True):
     freight_valor: Optional[float] = None
     freight_incluso: bool = True
     freight_notas: Optional[str] = None
+    # --- Frete CIF informado MANUALMENTE e confirmado (21/09/2026, migration 0023) ---
+    # Enquanto a cotação automática de frete não existe (será integração com o sistema da
+    # Química Anastacio), o valor digitado e marcado como confirmado é fonte válida para
+    # ESTA cotação: soma ao total, fica fora do preço unitário/comissão/margem e não depende
+    # dos blockers do motor TRANSAL. Quem confirmou, quando e por quê ficam registrados.
+    freight_manual_confirmado: bool = False
+    freight_manual_por: Optional[str] = None
+    freight_manual_em: Optional[datetime] = None
+    freight_manual_obs: Optional[str] = None
     termos_texto: Optional[str] = None          # snapshot dos termos no momento da emissão
     emitida_em: Optional[datetime] = None
 
@@ -1049,6 +1071,11 @@ class CotacaoItem(SQLModel, table=True):
     status_pagamento: Optional[str] = None      # StatusPagamento
     motivo_pagamento: Optional[str] = None
     encargo_pct: Optional[float] = None         # encargo financeiro efetivamente aplicado
+    # Sinal (21/09/2026, migration 0024): o que formou `encargo_pct` quando havia sinal — a
+    # fração paga à vista e o encargo da condição do SALDO antes da proporção. Nulos no item
+    # anterior à migration; 0 / igual a `encargo_pct` no item sem sinal.
+    percentual_sinal: Optional[float] = None
+    encargo_saldo_pct: Optional[float] = None
 
     # --- pinning das premissas (Sessão 5 · correção) ---
     # O item já guardava os VALORES que formaram o preço, e isso protege o dinheiro. O que
@@ -1087,6 +1114,29 @@ class CotacaoItem(SQLModel, table=True):
     comissao_formacao_pct: Optional[float] = None
     preco_travado: bool = False
     politica_comercial: Optional[str] = None
+    # --- Política comercial de 21/09/2026 (migration 0023) ---
+    # O item congela a decomposição inteira da política nova: a tabela (2 × B2B) que valia
+    # no cenário, o desconto que a vendedora negociou (a ALAVANCA persistida — é o que se
+    # reaplica quando o cenário muda), o que ela digitou (preço ou desconto), a faixa de
+    # comissão que o desconto produziu e a base sobre a qual ela incidiu. `preco_recomendado`
+    # É o B2B. Nada disso vai ao PDF; tudo entra no fingerprint e no snapshot.
+    preco_tabela: Optional[float] = None            # dinheiro(fator × B2B) no cenário do item
+    desconto_vs_tabela_pct: Optional[float] = None  # 1 − negociado ÷ tabela (fração)
+    modo_negociacao: Optional[str] = None           # "preco" | "desconto" — o que foi digitado
+    desconto_editado_pct: Optional[float] = None    # o desconto negociado (fração)
+    base_comissionavel: Optional[float] = None      # receita − ICMS dedutível, ao centavo
+    icms_base_comissao_pct: Optional[float] = None  # a parcela deduzida (icms_pct − fcp_pct)
+    comissao_faixa_pct: Optional[float] = None      # taxa da escada aplicada ao item
+    # --- Economia real × formação comercial (22/09/2026, migration 0025) ---
+    # `custo_unitario` É o CNET econômico real (KTC: I.I. = 0%) e é o que forma lucro e
+    # margem realizada. `base_comercial_precificacao` é a referência que formou o B2B e a
+    # tabela — para KTC, EXW + frete + PROTEÇÃO COMERCIAL (a antiga alíquota preferencial do
+    # SKU, preservada só para não mudar o preço) + outras despesas, em R$. Não é custo, não é
+    # tributo, não entra no lucro. `preco_b2b_economico` é o B2B que o CNET real daria —
+    # diagnóstico interno; o piso de autonomia continua sendo `preco_recomendado` (comercial).
+    base_comercial_precificacao: Optional[float] = None
+    protecao_comercial_pct: Optional[float] = None
+    preco_b2b_economico: Optional[float] = None
 
 
 # ---------------------------------------------------------------------------

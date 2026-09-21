@@ -34,6 +34,15 @@ FORNECEDORES = [
     dict(codigo="DECOR_TRICOT", nome="Decor Tricot", tipo=TipoFornecedor.nacional, pais="Brasil",
          moeda_custo="BRL", cost_method_padrao=CostMethod.national_supplier,
          observacoes="Fornecedor nacional (peseiras/itens decorativos em tricô)."),
+    # 21/09/2026 — cobertores. Fábrica em Guaratinguetá, faturamento em São Paulo (origem
+    # fiscal SP). Preço recebido como "NET — CIF Barueri", com pagamento antecipado (condição
+    # de COMPRA do fornecedor, não do cliente). Sem crédito fiscal de entrada documentado.
+    dict(codigo=_pol.CODIGO_ELIS, nome="ELIS (Guaratinguetá)", tipo=TipoFornecedor.nacional,
+         pais="Brasil", moeda_custo="BRL", cost_method_padrao=CostMethod.national_supplier,
+         uf_origem_fiscal="SP", origem_logistica_cidade="Guaratinguetá", origem_logistica_uf="SP",
+         observacoes="Cobertores. Fábrica em Guaratinguetá/SP, faturado em São Paulo. Custo "
+                     "informado como preço NET CIF Barueri; pagamento antecipado ao fornecedor; "
+                     "produção de 30 a 40 dias úteis (sujeito a alteração); pedido mínimo 500 peças."),
 ]
 
 # ---------------------------------------------------------------------------
@@ -77,6 +86,23 @@ PREMISSAS = [
          descricao="Comissão mínima da cotação: a comissão variável nunca cai sozinha abaixo "
                    "disto. Se com ela algum item ficar abaixo do piso, é exceção a aprovar.",
          fonte=_pol.FONTE, valid_from=_pol.DATA_VIGENCIA),
+    # Política comercial de 21/09/2026: B2B com 5% de comissão sobre a receita líquida de
+    # ICMS, tabela = 2 × B2B, comissão por item pela faixa do desconto sobre a tabela.
+    dict(chave=_pol.CHAVE_COMISSAO_B2B, valor_num=float(_pol.COMISSAO_B2B_PCT), unidade="%",
+         descricao="Comissão que forma o preço B2B recomendado: 5% sobre a receita líquida do "
+                   "ICMS suportado pela Anara (próprio + DIFAL do remetente; FCP fica na base).",
+         fonte=_pol.FONTE_2026_09_21, valid_from=_pol.DATA_VIGENCIA_2026_09_21),
+    dict(chave=_pol.CHAVE_FATOR_TABELA, valor_num=float(_pol.FATOR_TABELA), unidade="×",
+         descricao="Preço de tabela = fator × B2B recomendado (2 = 100% de markup sobre o B2B). "
+                   "Derivado sempre do B2B vigente do cenário — nunca de cache.",
+         fonte=_pol.FONTE_2026_09_21, valid_from=_pol.DATA_VIGENCIA_2026_09_21),
+    dict(chave=_pol.CHAVE_FAIXAS_COMISSAO,
+         valor_txt="[[0.10,0.09],[0.20,0.08],[0.30,0.07],[0.40,0.06]]",
+         descricao="Escada de comissão por desconto sobre a tabela: [limite do desconto, taxa]. "
+                   "Desconto 0% = comissao_base_pct (10%); acima do último limite = "
+                   "comissao_min_pct (5%). 10,00% → 9%; 10,01% → 8%; 50% (= B2B) → 5%.",
+         fonte=_pol.FONTE_2026_09_21 + " · contrato cl. 6.1.1 · e-mail Jan Krueder 17/06/2026",
+         valid_from=_pol.DATA_VIGENCIA_2026_09_21),
     # A premissa `icms_fallback_pct` foi APOSENTADA na Onda 1: cenário fiscal que não se
     # resolve vira REVIEW_REQUIRED, não vira 18%. A linha some da semeadura; bases antigas que
     # já a têm continuam com ela guardada, sem efeito — nenhum código a lê mais.
@@ -146,7 +172,7 @@ CMTS = [
     ("Fitted Sheet", None, 1.00, None),
     ("Duvet Cover", None, 1.50, None),
     ("Pillow Case", "standard", 0.50, None),
-    ("Pillow Case", "oxford", 0.75, None),
+    ("Pillow Case", "com abas", 0.75, "Fronha com abas (2, 3 ou 4). Nomenclatura canônica: ABAS."),
 ]
 
 # Preço por kg das toalhas.
@@ -188,6 +214,13 @@ TOALHAS = [
     dict(subcategoria="Bath Mat", composicao=None, yarn_type=None, gsm=None,
          plain_or_stripe="plain", price_usd_kg=9.00, fonte=DERIVADO_PI,
          notas="Confere exatamente em 750g e 950g na PI e em 600g na HAMAN 25/08."),
+    dict(subcategoria="Face Towel", composicao=None, yarn_type=None, gsm=None,
+         plain_or_stripe="plain", price_usd_kg=9.00,
+         fonte="Derivado da cotação de amostras KTC 29/07/2026 (33x33 600 g: US$ 0,59 ÷ 0,06534 kg "
+               "= 9,03/kg; 650 g com barra: 0,64 ÷ 0,07079 = 9,04/kg), na mesma taxa das peças "
+               "pequenas de terry (rosto, piso, lavabo)",
+         notas="Toalha de rosto pequena (face towel). Composição não entra: 100% e 91/9 têm o "
+               "mesmo preço na cotação da KTC."),
     dict(subcategoria="Wash Cloth", composicao=None, yarn_type=None, gsm=None,
          plain_or_stripe="plain", price_usd_kg=9.00,
          fonte="Derivado da HAMAN 25/08/2026 (0,54 ÷ 0,0599 kg = 9,02/kg), na mesma taxa das "
@@ -214,6 +247,12 @@ PARAMETROS_KTC = [
     ("waste", None, 0.03, "Perda de tecido; entra como consumo / (1 - waste)"),
     ("quality_allowance", None, 0.01, "Perda de segunda qualidade ('II 1%' na planilha da KTC). "
                                       "Não confundir com Imposto de Importação."),
+    # Fronhas: a planilha "Pillow Case Costing sheet.xlsx" da KTC aplica uma etapa de 2%
+    # (rotulada '2% II' na planilha — é allowance de costing da KTC, NÃO o Imposto de
+    # Importação brasileiro, que mora em NcmRegra). Escopo por família: só a fronha.
+    ("quality_allowance", "Pillow Case", 0.02,
+     "pillowcase_allowance — etapa de 2% da planilha 'Pillow Case Costing sheet.xlsx' (KTC). "
+     "Não é Imposto de Importação; não reutiliza NcmRegra.ii_pct."),
     ("ktc_margin", None, 0.15, "Margem comercial da KTC sobre o preço final (EXW = custo / (1-0,15))"),
     ("hem_width_total_cm", "Flat Sheet", 4.0, "Bainha 2cm de cada lado, conforme exemplo validado pela KTC"),
     ("hem_length_total_cm", "Flat Sheet", 4.0, "Bainha 2cm de cada lado, conforme exemplo validado pela KTC"),
@@ -254,6 +293,15 @@ PESO_KG_M2_FAMILIA = {
 # ---------------------------------------------------------------------------
 # NCM / Imposto de Importação
 # ---------------------------------------------------------------------------
+# Desde 22/09/2026 o **I.I. ECONÔMICO da KTC/Egito é 0%** (`pricing_service.II_ECONOMICO_KTC`).
+# As alíquotas preferenciais abaixo (3,5%; 1,62%) são as que formavam o custo até então e ficam
+# aqui como DOCUMENTAÇÃO e como fonte da PROTEÇÃO COMERCIAL por família — a linha de NcmRegra
+# que o seed grava sai com `ii_preferencial = 0` (vigente) e a alíquota anterior vai para
+# `ParametroKTC protecao_comercial_pct`, que só forma preço (nunca custo, lucro ou margem).
+II_ECONOMICO_KTC_DESDE = date(2026, 9, 22)
+NOTA_II_ZERO = ("I.I. econômico KTC/Egito = 0% desde 22/09/2026 (decisão Anara). A alíquota "
+                "preferencial anterior ({pct}) só forma preço, como proteção comercial da família "
+                "(ParametroKTC protecao_comercial_pct) — não é tributo, custo nem despesa.")
 NCMS = [
     dict(familia="Cotton Bedding", descricao_ncm="Bed linen of cotton", ncm="6302.31.00",
          ii_original=0.35, reducao_preferencial=0.90, ii_preferencial=0.035, prioridade=100),
@@ -309,6 +357,34 @@ NCM_POR_FAMILIA = [
      "II de 3,5% por regra de família (configuração explícita). O NCM cadastrado é de artigos "
      "usados e parece erro de cadastro — marcado para validação, não corrigido por hipótese."),
 ]
+
+
+def _pct_texto(v) -> str:
+    return "sem alíquota confiável (0%)" if v is None else f"{float(v) * 100:g}%"
+
+
+def _ncm_vigente(regra: dict) -> dict:
+    """A linha de NcmRegra como ela É desde 22/09/2026: mesmo NCM, I.I. econômico 0%."""
+    anterior = regra.get("ii_preferencial")
+    nota = NOTA_II_ZERO.format(pct=_pct_texto(anterior))
+    return {**regra, "ii_preferencial": 0.0, "confiavel": True,
+            "valid_from": II_ECONOMICO_KTC_DESDE,
+            "notas": (nota + (" · " + regra["notas"] if regra.get("notas") else ""))}
+
+
+# Proteção comercial de precificação por família (fração): a alíquota preferencial que formava
+# o custo de cada família até 22/09/2026 — e 0 onde não havia alíquota confiável (essas
+# famílias eram precificadas com 0 e ficavam em revisão; agora ficam com preço e regra
+# explícita). Só forma preço. Não é alíquota fiscal; não entra em custo, lucro ou margem.
+PROTECAO_COMERCIAL_POR_FAMILIA = {
+    **{f: (pref or 0.0) for familias, _ncm, _o, _r, pref, _c, _n in NCM_POR_FAMILIA for f in familias},
+    **{r["familia"]: (r.get("ii_preferencial") or 0.0) for r in NCMS},
+    # famílias do catálogo KTC sem linha de NCM até 22/09/2026: eram precificadas com 0
+    "Blanket": 0.0, "Bath Rug": 0.0, "Face Towel": 0.0,
+}
+FONTE_PROTECAO_COMERCIAL = ("Alíquota de I.I. preferencial que formava o custo da família até "
+                            "22/09/2026, preservada como proteção comercial de precificação "
+                            "(decisão Anara de 22/09/2026). Não é tributo, custo nem despesa.")
 
 # ---------------------------------------------------------------------------
 # Estados (carga final do DIFAL) — nunca recalculada pelo sistema
@@ -416,6 +492,27 @@ def _regras_da_politica_2026_09_16(antigas) -> list:
 
 
 MARGENS_2026_09_16 = _regras_da_politica_2026_09_16(MARGENS)
+# As 21 regras da política de 16/09/2026 foram ENCERRADAS em 21/09/2026 pela política nova — não
+# apagadas: os itens que as pinaram continuam sendo lidos por elas. Num banco novo já nascem
+# encerradas; no banco real quem as encerra é `scripts/aplicar_politica_comercial_2026_09_21.py`.
+for _regra in MARGENS_2026_09_16:
+    _regra.setdefault("valid_to", _pol.DATA_VIGENCIA_2026_09_21)
+
+
+def _regras_da_politica_2026_09_21() -> list:
+    """As regras da política de 21/09/2026 — dados de `politica_comercial.margens_2026_09_21`."""
+    novas = []
+    for r in _pol.margens_2026_09_21():
+        dados = dict(r)
+        for chave in ("margem_pct", "piso_pct", "comissao_formacao_pct"):
+            if dados.get(chave) is not None:
+                dados[chave] = float(dados[chave])
+        dados.setdefault("notas", f"{_pol.FONTE_2026_09_21}. Margem FINAL no B2B, pós-comissão de 5%.")
+        novas.append(dados)
+    return novas
+
+
+MARGENS_2026_09_21 = _regras_da_politica_2026_09_21()
 
 # ---------------------------------------------------------------------------
 # Condições de pagamento (encargo financeiro centralizado num lugar só)
@@ -427,9 +524,9 @@ CONDICOES = [
     ("30/60/90", "30/60/90 dias", 0.048, True, 40, "1,6% por parcela."),
     ("30/60/90/120", "30/60/90/120 dias", 0.064, True, 50, "1,6% por parcela."),
     ("30/60/90/120/150", "30/60/90/120/150 dias", 0.080, True, 60, "1,6% por parcela."),
-    ("SINAL30+30/60/90", "30% de sinal + 30/60/90", None, False, 70,
-     "Condição pedida nas premissas do site. Taxa ainda não confirmada — cadastrar o encargo "
-     "no painel antes de usar."),
+    # `SINAL30+30/60/90` NÃO é mais semeada (21/09/2026): sinal é composição — percentual à
+    # vista + condição do saldo — e não uma condição opaca. Em bancos existentes a linha é
+    # desativada pelo script de dados (`dados_2026_09_21.aplicar_sinal`), nunca apagada.
     ("CARTAO", "Cartão de crédito", None, False, 80,
      "Condição pedida nas premissas do site. Taxa da operadora ainda não confirmada."),
 ]
@@ -565,22 +662,31 @@ def semear(verbose: bool = True) -> dict:
                                    fonte=FONTE_PLANILHA + " · peso técnico por família")); n += 1
         contagem["tabelas_peso"] = n
 
-        # NCM
+        # NCM — gravado já como vigente desde 22/09/2026: I.I. econômico 0%
         n = 0
         for regra in NCMS:
             if not _existe(s, NcmRegra, familia=regra["familia"]):
-                s.add(NcmRegra(fonte=FONTE_PLANILHA + " / NCM - ANARA.xlsx", **regra)); n += 1
+                s.add(NcmRegra(fonte=FONTE_PLANILHA + " / NCM - ANARA.xlsx", **_ncm_vigente(regra))); n += 1
         contagem["ncm"] = n
 
         # NCM por família estruturada
         for familias, ncm, original, reducao, preferencial, confiavel, nota in NCM_POR_FAMILIA:
             for familia in familias:
                 if not _existe(s, NcmRegra, familia=familia):
-                    s.add(NcmRegra(familia=familia, ncm=ncm, ii_original=original,
-                                   reducao_preferencial=reducao, ii_preferencial=preferencial,
-                                   confiavel=confiavel, notas=nota, prioridade=50,
-                                   fonte="Catálogo Anara + tabela preferencial Egito")); n += 1
+                    s.add(NcmRegra(**_ncm_vigente(dict(
+                        familia=familia, ncm=ncm, ii_original=original, reducao_preferencial=reducao,
+                        ii_preferencial=preferencial, confiavel=confiavel, notas=nota, prioridade=50,
+                        fonte="Catálogo Anara + tabela preferencial Egito")))); n += 1
         contagem["ncm"] = n
+
+        # proteção comercial de precificação por família (22/09/2026)
+        n = 0
+        for familia, pct in PROTECAO_COMERCIAL_POR_FAMILIA.items():
+            if not _existe(s, ParametroKTC, chave="protecao_comercial_pct", escopo=familia):
+                s.add(ParametroKTC(chave="protecao_comercial_pct", escopo=familia, valor=float(pct),
+                                   valid_from=II_ECONOMICO_KTC_DESDE, fonte=FONTE_PROTECAO_COMERCIAL,
+                                   notas=f"Alíquota preferencial anterior: {_pct_texto(pct if pct else None)}.")); n += 1
+        contagem["protecao_comercial"] = n
 
         # estados
         n = 0
@@ -602,7 +708,7 @@ def semear(verbose: bool = True) -> dict:
 
         # margens — as anteriores (encerradas em 16/09/2026) e as da política vigente
         n = 0
-        for regra in MARGENS + MARGENS_2026_09_16:
+        for regra in MARGENS + MARGENS_2026_09_16 + MARGENS_2026_09_21:
             dados = dict(regra)
             codigo = dados.pop("fornecedor_codigo", None)
             dados["fornecedor_id"] = fornecedor_por_codigo.get(codigo) if codigo else None
@@ -631,6 +737,11 @@ def semear(verbose: bool = True) -> dict:
                            regra="FECP do Rio de Janeiro — regra geral",
                            fonte="Regra canônica Anara 03/09/2026 — RJ: ICMS 20% + FECP 2%"))
         contagem["fcp"] = 1
+        # Matriz fiscal de 21/09/2026: base interna (sem FCP) das 27 UFs e FCP por UF × família
+        # para o escopo de produtos reconciliado. Idempotente; nada da tabela-benchmark
+        # (base simples/dupla, FEM, carga final) é alterado.
+        from app import fiscal_2026_09_21 as _fis
+        contagem["matriz_fiscal_2026_09_21"] = _fis.aplicar_matriz(s)
 
         # Origem LOGÍSTICA da KTC: Itajaí-SC, que é o ponto de entrada da importação e a
         # origem declarada pela própria tabela TRANSAL. Daune e Decor ficam nulas: não se sabe

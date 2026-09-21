@@ -15,7 +15,7 @@
         <div class="word">ANARA</div>
       </div>
       {% if concluido %}
-      <p class="aviso-ok aviso" role="status" style="margin:0 0 14px;">Senha redefinida. Entre com a senha nova.</p>
+      <p class="aviso-ok aviso" role="status" style="margin:0 0 14px;">{% if primeiro_acesso %}Acesso criado. Entre com o seu e-mail e a senha que você definiu.{% else %}Senha redefinida. Entre com a senha nova.{% endif %}</p>
       <a class="btn btn-copper" href="/login" style="display:flex;">Ir para o login</a>
       {% elif not valido %}
       <p class="erro" role="alert" style="margin:0 0 14px;">{{ erro or 'Este link de redefinição não é válido ou já expirou.' }}</p>
@@ -23,7 +23,22 @@
       <div class="rodape-login"><a href="/login">Voltar para o login</a></div>
       {% else %}
       <input type="hidden" name="token" value="{{ token }}">
+      {% if primeiro_acesso %}
+      <p class="muted small" style="margin:0 0 10px;">Olá, {{ nome }}. Confirme o seu perfil e crie a sua senha (pelo menos 8 caracteres).</p>
+      <div class="field">
+        <label>Perfil de acesso</label>
+        <div class="mode-toggle" role="radiogroup" aria-label="Perfil de acesso">
+          {% for codigo, rotulo in perfis %}
+          <label class="{{ 'active' if codigo == perfil_autorizado else '' }}" style="cursor:pointer;">
+            <input type="radio" name="perfil" value="{{ codigo }}" {{ 'checked' if codigo == perfil_autorizado else '' }} style="width:auto;margin:0 6px 0 0;">{{ rotulo }}
+          </label>
+          {% endfor %}
+        </div>
+        <small>O perfil foi definido por quem criou o seu acesso. Se precisar de outro, fale com o gestor.</small>
+      </div>
+      {% else %}
       <p class="muted small" style="margin:0 0 14px;">Crie uma senha nova com pelo menos 8 caracteres.</p>
+      {% endif %}
       <div class="field">
         <label for="senha">Nova senha</label>
         <input id="senha" type="password" name="senha" minlength="8" autocomplete="new-password" autofocus required>

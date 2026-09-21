@@ -121,13 +121,19 @@ def exigir_transicao(de: str, para: str):
 # ---------------------------------------------------------------------------
 #: Status de custo que impedem formar preço. Aprovação não os remove.
 CUSTO_BLOQUEIA = {"A_COTAR", "REVIEW_REQUIRED"}
+#: Política 21/09/2026: produto sem regra de margem não forma preço — bloqueio, não 15%.
+SEM_REGRA_DE_MARGEM = "SEM_REGRA_DE_MARGEM"
 #: Status de frete que impedem emitir quando o frete é CIF.
 FRETE_BLOQUEIA = {"FRETE_A_COTAR", "FRETE_REVIEW_REQUIRED", "FRETE_ICMS_REVIEW_REQUIRED"}
+#: Frete CIF informado manualmente e confirmado pelo usuário (21/09/2026): fonte válida para a
+#: cotação, fora do motor automático — nunca entra em `FRETE_BLOQUEIA`.
+FRETE_MANUAL_CONFIRMADO = "FRETE_MANUAL_CONFIRMADO"
 
 # Motivos estruturados de exceção comercial (§20). Texto livre nunca é a fonte da semântica.
 PRECO_ABAIXO = "PRECO_ABAIXO_RECOMENDADO"
 MARGEM_ABAIXO = "MARGEM_ABAIXO_ALVO"          # item anterior à política: alvo é a régua
 MARGEM_ABAIXO_PISO = "MARGEM_ABAIXO_PISO"     # política de 16/09/2026: piso é a régua
+PRECO_ABAIXO_B2B = "PRECO_ABAIXO_B2B"         # política de 21/09/2026: o B2B é o piso
 PREMISSA_VELHA = "PREMISSA_DESATUALIZADA_MANTIDA"
 OUTRA_EXCECAO = "OUTRA_EXCECAO_COMERCIAL"
 
@@ -279,6 +285,14 @@ def blockers_do_item(item) -> List[Blocker]:
             f"CUSTO_{status_custo}", rotulo,
             "A_COTAR não tem preço formado e REVIEW_REQUIRED tem premissa quebrada. "
             "Aprovação comercial não cria o número que falta."))
+    # Política 21/09: `_preencher_item` marca o item cujo produto nenhuma regra alcança.
+    # A marca é explícita (não "margem nula"), para não confundir com item legado montado
+    # antes de existir regra de margem.
+    if getattr(item, "margem_regra", None) == SEM_REGRA_DE_MARGEM:
+        achados.append(Blocker(
+            SEM_REGRA_DE_MARGEM, rotulo,
+            "Nenhuma regra de margem cadastrada alcança este produto. Sem regra o sistema "
+            "não forma preço — cadastre a regra do escopo no painel de administração."))
     if not item.preco_negociado or D0(item.preco_negociado) <= 0:
         achados.append(Blocker("SEM_PRECO", rotulo,
                                "O item não tem preço comercial formado."))
@@ -314,7 +328,14 @@ def blockers_da_cotacao(cotacao, itens: Sequence, frete: Optional[dict] = None
 def item_tem_politica(item) -> bool:
     """O item foi formado pela política de 16/09/2026 (tem piso congelado)?"""
     return (getattr(item, "politica_comercial", None) is not None
-            and getattr(item, "piso_margem_pct", None) is not None)
+            and getattr(item, "piso_margem_pct", None) is not None
+            and not item_da_politica_2026_09_21(item))
+
+
+def item_da_politica_2026_09_21(item) -> bool:
+    """O item foi formado pela política de 21/09/2026 (B2B como piso de autonomia)?"""
+    from app.politica_comercial import ROTULO_2026_09_21
+    return getattr(item, "politica_comercial", None) == ROTULO_2026_09_21
 
 
 def excecoes_do_item(item) -> List[Excecao]:
@@ -338,6 +359,28 @@ def excecoes_do_item(item) -> List[Excecao]:
     # uma venda interestadual normal pareceria desconto.
     recomendado = dinheiro(item.preco_recomendado) if item.preco_recomendado else None
     negociado = dinheiro(item.preco_negociado) if item.preco_negociado else None
+
+    if item_da_politica_2026_09_21(item):
+        # Política de 21/09/2026: o B2B recomendado É o piso de autonomia. Abaixo dele, a
+        # proposta exige aprovação — qualquer que seja a margem que ainda sobre. Acima ou
+        # igual, está dentro da autonomia; a margem-alvo já está garantida pela construção
+        # do B2B (menor centavo com margem ≥ alvo), e a comissão do item vem da faixa do
+        # desconto sobre a tabela, não de piso nenhum.
+        if recomendado and negociado and negociado < recomendado:
+            diferenca = negociado - recomendado
+            tabela = dinheiro(getattr(item, "preco_tabela", None) or 0)
+            achados.append(Excecao(
+                motivo=PRECO_ABAIXO_B2B, escopo=rotulo,
+                detalhe=(f"Proposta de R$ {negociado} abaixo do preço B2B recomendado de "
+                         f"R$ {recomendado}"
+                         + (f" (tabela R$ {tabela})" if tabela and tabela > ZERO else "")
+                         + ". O B2B é o piso de autonomia da vendedora: abaixo dele a "
+                         "proposta precisa de aprovação."),
+                preco_recomendado=str(recomendado), preco_negociado=str(negociado),
+                diferenca=str(diferenca),
+                diferenca_pct=str(divide(diferenca, recomendado))))
+        return achados
+
     politica = item_tem_politica(item)
     travado = bool(getattr(item, "preco_travado", False))
 
@@ -418,24 +461,34 @@ def resumo_comercial(itens: Sequence) -> dict:
     """
     recomendado = ZERO
     negociado = ZERO
+    tabela = ZERO
     comissao = ZERO
     receita_comissionavel = ZERO
+    base_comissionavel = ZERO
     for it in itens:
         qtd = D0(it.quantidade)
         if it.preco_recomendado:
             recomendado += dinheiro(D0(it.preco_recomendado) * qtd)
+        if getattr(it, "preco_tabela", None):
+            tabela += dinheiro(D0(it.preco_tabela) * qtd)
         negociado += D0(it.faturamento)
         if getattr(it, "comissao_valor", None) is not None and D0(it.custo_unitario) > ZERO:
             comissao += D0(it.comissao_valor)
             receita_comissionavel += D0(it.faturamento)
+            # Σ base: a base líquida gravada (política 21/09) ou a receita (anteriores).
+            base = getattr(it, "base_comissionavel", None)
+            base_comissionavel += D0(base) if base is not None else D0(it.faturamento)
     diferenca = negociado - recomendado
     return {"total_recomendado": para_float(recomendado),
             "total_negociado": para_float(negociado),
+            "total_tabela": para_float(tabela),
             "diferenca": para_float(diferenca),
             "diferenca_pct": para_float(divide(diferenca, recomendado)),
             "comissao_estimada_valor": para_float(comissao),
-            "comissao_estimada_pct_efetiva": para_float(divide(comissao, receita_comissionavel)),
-            "receita_comissionavel": para_float(receita_comissionavel)}
+            # taxa efetiva = Σ comissão ÷ Σ base comissionável — nunca reaplicada a item algum
+            "comissao_estimada_pct_efetiva": para_float(divide(comissao, base_comissionavel)),
+            "receita_comissionavel": para_float(receita_comissionavel),
+            "base_comissionavel": para_float(base_comissionavel)}
 
 
 # ---------------------------------------------------------------------------
@@ -452,6 +505,17 @@ CAMPOS_MATERIAIS_ITEM = (
     # Fase 3A: a política que formou o item é material — piso, comissão de formação, preço
     # travado e a versão da política. Mudou a política, mudou a decisão que se tomaria.
     "piso_margem_pct", "comissao_formacao_pct", "preco_travado", "politica_comercial",
+)
+#: Política 21/09/2026: tabela, desconto, faixa e base da comissão são materiais — a aprovação
+#: foi dada sobre ESTE desconto e ESTA comissão. Entram no fingerprint **só quando
+#: preenchidos**: item anterior à política tem tudo nulo, e incluir nulos mudaria o
+#: fingerprint de toda cotação já emitida/aprovada sem que nada material tivesse mudado.
+CAMPOS_MATERIAIS_ITEM_2026_09_21 = (
+    "preco_tabela", "desconto_vs_tabela_pct", "comissao_faixa_pct", "icms_base_comissao_pct",
+    "base_comissionavel",
+    # 22/09/2026: a base comercial que formou o B2B e a proteção usada são materiais — mudou a
+    # referência de preço, mudou a decisão. Só entram quando preenchidas (item antigo intacto).
+    "base_comercial_precificacao", "protecao_comercial_pct",
 )
 #: Os campos da COTAÇÃO. `observacoes` e notas internas ficam de fora de propósito: são
 #: descritivas, não mudam economia nem contexto fiscal, e invalidar aprovação por causa
@@ -485,15 +549,29 @@ def fingerprint(cotacao, itens: Sequence) -> str:
     precisa ser o mesmo quando nada de relevante mudou, senão a aprovação morreria a cada
     página aberta.
     """
+    def item_material(it):
+        base = {c: _canonico(getattr(it, c, None)) for c in CAMPOS_MATERIAIS_ITEM}
+        base["id"] = it.id
+        for c in CAMPOS_MATERIAIS_ITEM_2026_09_21:
+            v = getattr(it, c, None)
+            if v is not None:
+                base[c] = _canonico(v)
+        return base
+
     corpo = {
         "cotacao": {c: _canonico(getattr(cotacao, c, None))
                     for c in CAMPOS_MATERIAIS_COTACAO},
-        "itens": sorted(
-            [{c: _canonico(getattr(it, c, None)) for c in CAMPOS_MATERIAIS_ITEM}
-             | {"id": it.id}
-             for it in itens],
-            key=lambda x: (x.get("id") or 0)),
+        "itens": sorted([item_material(it) for it in itens], key=lambda x: (x.get("id") or 0)),
     }
+    # Frete manual confirmado é material (a aprovação inclui o total com ele) — e só entra
+    # quando verdadeiro, pelo mesmo motivo acima.
+    if getattr(cotacao, "freight_manual_confirmado", False):
+        corpo["cotacao"]["freight_manual_confirmado"] = True
+    # Sinal (21/09/2026) é material — muda o encargo efetivo e, com ele, preço, comissão e
+    # totais. Entra só quando há sinal: cotação anterior (0) mantém o hash que aprovou.
+    sinal = getattr(cotacao, "percentual_sinal", 0) or 0
+    if D0(sinal) > 0:
+        corpo["cotacao"]["percentual_sinal"] = _canonico(sinal)
     bruto = json.dumps(corpo, ensure_ascii=False, sort_keys=True, default=str)
     return hashlib.sha256(bruto.encode()).hexdigest()
 

@@ -105,14 +105,23 @@ def test_cr06_preco_ktc_historico_sem_evidencia_e_review_required(session, forne
     assert ps.status_canonico_do_custo(custo, mem) == "REVIEW_REQUIRED"
 
 
-def test_cr05_nacionalizacao_com_ii_desconhecido_nao_e_confirmado(session, fornecedores):
-    # Duvet Insert: a regra de NCM cadastrada não tem I.I. confiável (ii_preferencial nulo) e
-    # o produto não traz `ii_aplicado` — até 17/09/2026 isso virava I.I. = 0 e CONFIRMADO.
-    p = produto_ktc_cotado(session, fornecedores, familia="Duvet Insert", ncm="9404.40.00",
+def test_cr05_nacionalizacao_sem_protecao_comercial_nao_e_confirmada(session, fornecedores):
+    # 22/09/2026: o I.I. econômico da KTC é 0% por decisão — nunca é "desconhecido". O que não
+    # se inventa é a PROTEÇÃO COMERCIAL: família sem regra (nem pino no SKU) fica em revisão,
+    # com o motivo declarado, em vez de receber um preço formado sobre o custo real.
+    p = produto_ktc_cotado(session, fornecedores, familia="Família Inédita KTC", ncm="9999.00.00",
                            ii_aplicado=None, thread_count=None)
     custo, mem = ps.custo_para_precificar(session, p)
-    assert "ii" in mem.get("premissas_faltantes", []), mem.get("avisos")
+    assert mem["ii_pct"] == 0 and "ii" not in (mem.get("premissas_faltantes") or [])
+    assert ps.PROTECAO_COMERCIAL_FALTANTE in mem.get("premissas_faltantes", []), mem.get("avisos")
+    assert mem.get("base_comercial_brl") is None
     assert ps.status_canonico_do_custo(custo, mem) == "REVIEW_REQUIRED"
+    # Duvet Insert (regra sem I.I. confiável até 22/09): proteção 0% explícita → precifica, sem revisão por I.I.
+    q = produto_ktc_cotado(session, fornecedores, familia="Duvet Insert", ncm="9404.40.00",
+                           ii_aplicado=None, thread_count=None)
+    custo_q, mem_q = ps.custo_para_precificar(session, q)
+    assert mem_q["referencia_comercial"]["protecao_pct"] == 0 and mem_q["base_comercial_brl"] == mem_q["net_brl"]
+    assert "ii" not in (mem_q.get("premissas_faltantes") or [])
 
 
 def test_cr06_nacional_com_pedido_de_revisao_e_revalidar(session, fornecedores):

@@ -531,9 +531,9 @@ details.mais[open] > summary::before { content: "▾ "; }
 .passo .valor { font-weight: 700; white-space: nowrap; }
 .bloco-memoria { margin: 14px 0 6px; }
 .bloco-memoria h3 { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--copper-dark); margin-bottom: 4px; }
-.margem-abaixo { color: #a2452a; font-weight: 700; }
-.margem-ok { color: #2f6b45; font-weight: 700; }
-input.margem-abaixo { color: #a2452a; font-weight: 700; border-color: #e0bcb0; }
+.margem-abaixo, .valor-alerta { color: #a2452a; font-weight: 700; }
+.margem-ok, .valor-ok { color: #2f6b45; font-weight: 700; }
+input.margem-abaixo, input.valor-alerta { color: #a2452a; font-weight: 700; border-color: #e0bcb0; }
 input.margem-ok { color: #2f6b45; font-weight: 700; }
 .diff-novo { color: var(--success); font-weight: 700; }
 .diff-removido { color: var(--danger); font-weight: 700; }
@@ -664,3 +664,15 @@ details.card[open] > summary::before { content: "▾ "; }
 .login-card .rodape-login { text-align: center; margin-top: 14px; font-size: 12px; }
 .login-card .rodape-login a { color: var(--gray); }
 .login-card .rodape-login a:hover { color: var(--ink); text-decoration: underline; }
+
+/* Política 21/09/2026 — linha com proposta abaixo do B2B (precisa de aprovação) */
+tr.linha-aprovacao td { background: #fbf3ef; }
+
+/* Tabela de itens da cotação (política 21/09): nove colunas cabem no card sem clipping */
+#tabela-itens th, #tabela-itens td { padding-left: 6px; padding-right: 6px; }
+#tabela-itens .col-produto { min-width: 160px; }
+#tabela-itens td[data-comissao-item] { white-space: nowrap; line-height: 1.15; }
+@media (max-width: 640px) {
+  #tabela-itens .col-produto { min-width: 130px; }
+  #tabela-itens td:first-child .small { display: none; }
+}

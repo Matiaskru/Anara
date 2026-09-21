@@ -147,7 +147,11 @@ def salvar_cabecalho(session, cot, **muda):
                 freight_valor=str(cot.freight_valor) if cot.freight_valor else "",
                 validade_dias=0, vendedor=cot.vendedor or "", frete=cot.frete or "",
                 prazo_entrega="", contato_nome="", departamento_contato="", observacoes="",
-                observacao_cliente="", termos_texto="", local_entrega="", estado_origem="")
+                observacao_cliente="", termos_texto="", local_entrega="", estado_origem="",
+                # sinal (21/09/2026): como a tela, a checkbox só vai marcada quando há sinal
+                possui_sinal="sim" if (cot.percentual_sinal or 0) > 0 else "",
+                percentual_sinal=(str(round((cot.percentual_sinal or 0) * 100, 4))
+                                  if (cot.percentual_sinal or 0) > 0 else ""))
     form.update(muda)
     r = chamar(atualizar_cabecalho, RequestFalsa(_novo_usuario("ADMIN")), cotacao_id=cot.id,
                session=session, **form)
@@ -168,9 +172,14 @@ def editar_quantidade(session, cot, item, quantidade, ator=None, **extra):
 
 
 def recomendado_para(session, cot, item):
-    """O preço que o motor forma para o cenário ATUAL da cotação, na margem-alvo do item."""
+    """O preço que o motor forma para o cenário ATUAL da cotação, na margem-alvo do item.
+
+    Política de 21/09/2026: o recomendado é o B2B — menor centavo com margem ≥ alvo
+    (`preco_b2b`); nas anteriores, a forma fechada de `calcular_por_margem`.
+    """
     from app.models import Cotacao, Produto
-    from app.pricing_engine import calcular_por_margem
+    from app.politica_comercial import ROTULO_2026_09_21
+    from app.pricing_engine import calcular_por_margem, preco_b2b
     from app.routers.cotacoes import montar_regras
     session.expire_all()
     cot = session.get(Cotacao, cot.id)
@@ -178,4 +187,17 @@ def recomendado_para(session, cot, item):
     regras, _r, ctx = montar_regras(cot, session, produto, item=item)
     if regras is None:
         return None, ctx
-    return calcular_por_margem(item.custo_unitario, 1, item.margem_padrao_pct, regras).preco_negociado, ctx
+    # 22/09/2026: o preço forma-se sobre a BASE COMERCIAL pinada no item (custo real só na economia)
+    base = item.base_comercial_precificacao or item.custo_unitario
+    if item.politica_comercial == ROTULO_2026_09_21:
+        return preco_b2b(base, item.margem_padrao_pct, regras).preco_negociado, ctx
+    return calcular_por_margem(base, 1, item.margem_padrao_pct, regras).preco_negociado, ctx
+
+
+def tabela_para(session, cot, item):
+    """A tabela (fator × B2B) do cenário atual — política de 21/09/2026."""
+    from app.pricing_engine import preco_de_tabela
+    b2b, ctx = recomendado_para(session, cot, item)
+    if b2b is None:
+        return None, ctx
+    return preco_de_tabela(b2b, ctx.get("fator_tabela") or 2), ctx

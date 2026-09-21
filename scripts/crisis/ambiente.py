@@ -11,8 +11,11 @@ import shutil
 import sys
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-AUDIT = os.path.expanduser("~/Anara-Cotacao-Backups/CRISIS_AUDIT_20260917")
-ORIGEM_RO = os.path.join(AUDIT, "anara_auditoria_readonly.db")
+# `ANARA_AUDIT_DIR` / `ANARA_AUDIT_ORIGEM` permitem reexecutar a auditoria sobre outra cópia
+# (ex.: a de 21/09/2026, já migrada e com os dados novos) e gravar a saída noutra pasta —
+# sem tocar nos artefatos de 17/09 nem no banco real.
+AUDIT = os.environ.get("ANARA_AUDIT_DIR") or os.path.expanduser("~/Anara-Cotacao-Backups/CRISIS_AUDIT_20260917")
+ORIGEM_RO = os.environ.get("ANARA_AUDIT_ORIGEM") or os.path.join(AUDIT, "anara_auditoria_readonly.db")
 TRABALHO = os.path.join(AUDIT, "trabalho")
 
 

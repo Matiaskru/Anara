@@ -11,7 +11,26 @@ premissa versionada ou override autorizado; sem isso, o cálculo é bloqueado.
 
 Condições canônicas (todas cadastradas em `CondicaoPagamento`):
 
-    30 DD 1,6% · 30/60 3,2% · 30/60/90 4,8% · 30/60/90/120 6,4% · 30/60/90/120/150 8,0%
+    À vista 0% · 30 DD 1,6% · 30/60 3,2% · 30/60/90 4,8% · 30/60/90/120 6,4% ·
+    30/60/90/120/150 8,0%
+
+## Sinal / entrada (21/09/2026)
+
+Sinal **não é uma condição opaca** (a linha `SINAL30+30/60/90`, sem taxa, foi desativada): é
+uma **composição** de duas coisas que a cotação guarda separadas — o percentual pago à vista
+(`percentual_sinal`, fração 0–1) e a condição do **saldo** (`condicao_pagamento`, uma das
+canônicas acima). O sinal é recebido à vista e **não carrega encargo**; o encargo da condição do
+saldo incide só sobre a parte financiada:
+
+    encargo_efetivo = (1 − percentual_sinal) × encargo_condicao_saldo
+
+    0% + 30/60/90 → 4,8%    30% + 30/60/90 → 3,36%    50% + 30/60 → 1,60%    100% → 0%
+
+Não há desconto adicional por antecipação; o único efeito do sinal é reduzir o encargo. Com
+sinal de 100% o saldo é irrelevante (encargo zero, mesmo que a condição do saldo esteja
+bloqueada). Com sinal de 0% o resultado é **exatamente** o encargo da condição — a composição
+devolve o próprio `EncargoResolvido`, sem tocar nele. `encargo_com_sinal` é a única função que
+faz essa conta; o motor recebe o encargo efetivo no mesmo lugar em que sempre recebeu o encargo.
 """
 from dataclasses import dataclass
 from datetime import date
@@ -107,3 +126,123 @@ def resolver_encargo(condicoes: Sequence, codigo: str,
         f"Condição de pagamento '{codigo}' não está cadastrada. O encargo não é estimado "
         "por contagem de parcelas — cadastre a condição com sua taxa, ou use um override "
         "autorizado.")
+
+
+# ---------------------------------------------------------------------------
+# Sinal / entrada — composição, não condição (21/09/2026)
+# ---------------------------------------------------------------------------
+UM = Decimal("1")
+CEM = Decimal("100")
+
+
+class SinalInvalido(ValueError):
+    """Percentual de sinal fora de 0–100% (ou que não é número). Nunca é corrigido em silêncio."""
+
+
+def validar_percentual_sinal(valor) -> Decimal:
+    """Normaliza o percentual de sinal para FRAÇÃO (0–1). Aceita fração ou percentual textual.
+
+    * `None`, `""` → 0 (sem sinal);
+    * número/str em 0–1 → fração; em (1, 100] → percentual (30 → 0,30);
+    * negativo, > 100, NaN, infinito, texto → `SinalInvalido`.
+
+    O formulário manda percentual ("30"); o modelo guarda fração (0.30). A ambiguidade entre
+    "1" (= 1%) e "1" (= 100%) é resolvida a favor de FRAÇÃO: 1 = 100%. Quem digita 1% de sinal
+    digita "1" no campo em percentual e o formulário envia "1" — por isso a rota converte
+    explicitamente com `percentual=True`, e só o caminho interno usa a fração.
+    """
+    if valor is None:
+        return ZERO
+    if isinstance(valor, bool):
+        raise SinalInvalido("Percentual de sinal inválido.")
+    if isinstance(valor, str):
+        texto = valor.strip().replace("%", "").replace(",", ".")
+        if not texto:
+            return ZERO
+        valor = texto
+    try:
+        d = D(valor)                        # a ponte segura do projeto: float → repr → Decimal
+    except (TypeError, ValueError, ArithmeticError) as exc:
+        raise SinalInvalido("Percentual de sinal inválido.") from exc
+    if d is None or not d.is_finite():
+        raise SinalInvalido("Percentual de sinal inválido.")
+    if d < 0:
+        raise SinalInvalido("O sinal não pode ser negativo.")
+    if d > CEM:
+        raise SinalInvalido("O sinal não pode passar de 100%.")
+    if d > UM:
+        d = d / CEM
+    return d
+
+
+def percentual_sinal_do_formulario(texto) -> Decimal:
+    """Campo do formulário em PERCENTUAL (0–100) → fração. "30" → 0,30; "1" → 0,01; "100" → 1."""
+    if texto is None:
+        return ZERO
+    if isinstance(texto, str):
+        t = texto.strip().replace("%", "").replace(",", ".")
+        if not t:
+            return ZERO
+    else:
+        t = texto
+    try:
+        d = D(t)
+    except (TypeError, ValueError, ArithmeticError) as exc:
+        raise SinalInvalido("Percentual de sinal inválido.") from exc
+    if d is None or not d.is_finite():
+        raise SinalInvalido("Percentual de sinal inválido.")
+    if d < 0:
+        raise SinalInvalido("O sinal não pode ser negativo.")
+    if d > CEM:
+        raise SinalInvalido("O sinal não pode passar de 100%.")
+    return d / CEM
+
+
+def _pct_texto(fracao: Decimal) -> str:
+    """0,30 → "30"; 0,335 → "33,5" (sem zeros à direita, vírgula decimal)."""
+    p = (fracao * CEM).normalize()
+    texto = format(p, "f")
+    if "." in texto:
+        texto = texto.rstrip("0").rstrip(".")
+    return (texto or "0").replace(".", ",")
+
+
+def rotulo_condicao(percentual_sinal, label_saldo: str) -> str:
+    """Texto comercial da condição: "30% de sinal + 70% em 30/60/90 dias".
+
+    Sem sinal, é o rótulo da condição; com 100%, "100% à vista (sinal)". É o que vai para o
+    PDF, para o snapshot e para a tela — nunca o encargo.
+    """
+    sinal = validar_percentual_sinal(percentual_sinal)
+    if sinal == 0:
+        return label_saldo or ""
+    if sinal >= UM:
+        return "100% à vista (sinal)"
+    return f"{_pct_texto(sinal)}% de sinal + {_pct_texto(UM - sinal)}% em {label_saldo or '—'}"
+
+
+def encargo_com_sinal(encargo_saldo: EncargoResolvido, percentual_sinal) -> EncargoResolvido:
+    """Encargo efetivo da composição sinal + saldo. **A única fórmula do sinal.**
+
+        encargo_efetivo = (1 − percentual_sinal) × encargo_condicao_saldo
+
+    * sinal 0 → devolve `encargo_saldo` **tal qual** (mesmo objeto: comportamento tradicional);
+    * sinal 100% → encargo zero, confirmado, sem bloqueio — o saldo é irrelevante;
+    * 0 < sinal < 100% com saldo bloqueado → continua bloqueado (a parte financiada precisa de
+      uma condição cadastrada); com saldo resolvido → proporção, mantendo `confirmado` e o aviso.
+    """
+    sinal = validar_percentual_sinal(percentual_sinal)
+    if sinal == 0:
+        return encargo_saldo
+    if sinal >= UM:
+        return EncargoResolvido(pct=ZERO, confirmado=True, label=rotulo_condicao(UM, ""),
+                                origem="sinal", status=OK, aviso=None, motivo=None)
+    if encargo_saldo.bloqueado:
+        return EncargoResolvido(pct=ZERO, confirmado=False,
+                                label=rotulo_condicao(sinal, encargo_saldo.label),
+                                origem="bloqueado", status=REVIEW_REQUIRED,
+                                aviso=encargo_saldo.aviso, motivo=encargo_saldo.motivo)
+    return EncargoResolvido(pct=(UM - sinal) * D(encargo_saldo.pct),
+                            confirmado=encargo_saldo.confirmado,
+                            label=rotulo_condicao(sinal, encargo_saldo.label),
+                            origem="sinal", status=OK, aviso=encargo_saldo.aviso, motivo=None)

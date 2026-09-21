@@ -109,6 +109,8 @@ BLOCKER = {
     "FRETE_REVIEW_REQUIRED": "O frete precisa de revisão.",
     "FRETE_ICMS_REVIEW_REQUIRED": "O frete está pendente de validação fiscal.",
     "FRETE_GRUPO": "Há uma pendência no frete deste embarque.",
+    "SEM_REGRA_DE_MARGEM": "Nenhuma regra de margem alcança este produto — cadastre a regra do "
+                           "escopo em Administração antes de cotar.",
 }
 
 #: O mesmo bloqueio, dito para a vendedora: o que fazer, sem vocabulário econômico.
@@ -123,9 +125,11 @@ BLOCKER_COMERCIAL = {
     "FRETE_REVIEW_REQUIRED": "O frete precisa de revisão.",
     "FRETE_ICMS_REVIEW_REQUIRED": "O frete está pendente de validação fiscal.",
     "FRETE_GRUPO": "Há uma pendência no frete deste embarque.",
+    "SEM_REGRA_DE_MARGEM": "Este produto ainda não tem preço definido — avise o administrador.",
 }
 
 EXCECAO = {
+    "PRECO_ABAIXO_B2B": "Proposta abaixo do preço B2B recomendado",
     "PRECO_ABAIXO_RECOMENDADO": "Preço abaixo do recomendado",
     "MARGEM_ABAIXO_ALVO": "Margem abaixo da meta",
     "PREMISSA_DESATUALIZADA_MANTIDA": "Esta cotação mantém premissas anteriores",
@@ -199,10 +203,10 @@ EVENTO_TIMELINE = {
 # Papéis
 # ---------------------------------------------------------------------------
 PAPEL = {
-    "OWNER": "Dono",
-    "ADMIN": "Administrador",
-    "VENDEDOR_INTERNO": "Vendedor interno",
-    "VENDEDOR_COMISSIONADO": "Vendedor comissionado",
+    "OWNER": "Proprietário",
+    "ADMIN": "Administrativo",
+    "VENDEDOR_INTERNO": "Vendedora (interna)",
+    "VENDEDOR_COMISSIONADO": "Vendedora (comissionada)",
 }
 
 # ---------------------------------------------------------------------------

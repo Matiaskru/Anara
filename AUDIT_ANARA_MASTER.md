@@ -1103,3 +1103,121 @@ produto DISPONÍVEL.
 - **UX-01 (P2)** — nova cotação pré-seleciona "contribuinte = SIM".
 - P2/P3 dos relatórios `KTC_RESUMO.md`, `NACIONAIS_RESUMO.md`, `INVENTARIO_RESUMO.md`.
 
+
+## 12. Política comercial de 21/09/2026 — decisões, conflitos registrados e pendências
+
+Implementação local (HEAD `3e40a64` + árvore de trabalho), sem commit, sem push, banco real
+intocado. O que foi decidido pelo usuário em 21/09 supera o "aberto" do handoff de 20/09.
+
+### 12.1 Decisões implementadas (fonte: prompt de 21/09/2026)
+- **PC-01** B2B recomendado = piso de autonomia; tabela = 2 × B2B; margens finais por família
+  (+1 p.p. a partir de 400 fios); sem default silencioso (`SEM_REGRA_DE_MARGEM`).
+- **PC-02** Comissão **por item** pela escada do desconto sobre a tabela (0 → 10; (0,10] → 9;
+  (10,20] → 8; (20,30] → 7; (30,40] → 6; >40 → 5), base = receita − ICMS próprio − DIFAL do
+  remetente (FCP fica na base). Mista: Σ comissão ÷ Σ base. 5% no B2B.
+- **PC-03** Daune sem `preco_travado`; Decor = custo de compra (PIS/COFINS 9,25%, sem ICMS);
+  ELIS cobertor a 14%; venda por equipe/gestão (9%) **fora do escopo**, cláusula preservada.
+- **PC-04** Alavanca persistida = desconto sobre a tabela; cenário material → B2B/tabela refeitos,
+  desconto reaplicado, preço rederivado; abaixo do novo B2B → exceção (não é ajustado).
+- **FIS-01 (fechado nesta fase, com ressalvas em 12.2)** — base interna das 27 UFs e FCP por
+  família do escopo (AL 1%, RJ 2%, SE 1%; demais 0%); base única; 27/27 UFs resolvem para não
+  contribuinte nas famílias do escopo; família fora do escopo continua bloqueando.
+- **FRT-M** Frete CIF manual confirmado é fonte válida (fora do motor TRANSAL); FOB e A_COMBINAR
+  inalterados; motor TRANSAL continua bloqueando quando não confirmado.
+- **KTC-06** Fronha: allowance de costing 2% (planilha "Pillow Case Costing sheet") — não é I.I.;
+  goldens 2,0625702343 / 2,5399424203 / 2,6917555940 / 2,8435687677 reproduzidos em Decimal.
+- **KTC-07** Toalha 100/0 = 90/10 no custo; composição identifica o SKU. Face Towel a US$ 9,00/kg
+  (derivado da cotação 29/07: 0,59 ÷ 0,06534 kg).
+- **KTC-08** Cotação de amostras 29/07/2026 ingerida como benchmark/cotação direta (2 SKUs
+  atualizados, 33 criados; data da evidência 29/07 → REVALIDAR por frescor; peso/II/NCM não
+  maquiados). Motor × cotação: toalhas ±0,5%; lençóis +4 a +7,5% (conservador); 1 linha >10%
+  (300TC listra 1 cm 70/30, +11,8%) marcada para revisão.
+- **UX-02** Nomenclatura canônica ABAS; termo legado só lido; dados atuais normalizados pelo script.
+- **SEG-01** Primeiro acesso confirma perfil autorizado pelo servidor; forjar "Administrativo" → 403.
+- **PAG-01 (patch pré-deploy, 21/09/2026)** Sinal / entrada é **composição** — `Cotacao.percentual_sinal`
+  (fração, default 0) + `condicao_pagamento` como condição do **saldo** — e não uma condição opaca:
+  `encargo_efetivo = (1 − sinal) × encargo_do_saldo` (`payment_terms.encargo_com_sinal`, única
+  fórmula; 0% → tradicional, mesmo objeto; 100% → 0, saldo irrelevante mesmo bloqueado; sem
+  desconto por antecipação). Migration **0024** (aditiva, reversível: `cotacao.percentual_sinal`
+  NOT NULL default 0; `cotacaoitem.percentual_sinal`, `encargo_saldo_pct`). Material: recalcula
+  B2B/tabela/preço preservando o desconto e invalida aprovação; no fingerprint só quando > 0
+  (hash de cotação antiga intacto). Snapshot guarda sinal, saldo, texto e encargo efetivo; PDF
+  final lê o texto do snapshot. A linha `SINAL30+30/60/90` (sem taxa, nunca usada) é desativada
+  pelo script (etapa `sinal`) e não é mais semeada; CARTÃO continua bloqueado.
+- **CONF-01 (auditoria com prova, 21/09/2026)** `scripts/politica_2026_09_21/auditoria_confidencialidade.py`
+  percorre 156 superfícies (todas as rotas GET, JSON/POST da tela, estáticos, `data-*`/hidden, PDFs)
+  como vendedora interna e comissionada, procurando termos proibidos e os NÚMEROS confidenciais da
+  própria cotação em todas as formatações: **0 vazamentos**; tudo o que ela deve ver, vê. Única
+  correção decorrente: o formulário `/cotacoes/nova` listava "· encargo 1,6%" por condição para
+  qualquer perfil — agora só para quem vê economia. A contradição aparente `b2b`/`comissao_item` em
+  `CAMPOS_CONFIDENCIAIS` × B2B/comissão na tela é resolvida: esses são os DICIONÁRIOS internos
+  (memória com custo/margem; decomposição com base comissionável); a vendedora recebe os aliases
+  `preco_b2b`, `preco_tabela`, `desconto_vs_tabela_pct`, `comissao_estimada_pct/valor`.
+  Aceitos e justificados no relatório: nome do fornecedor como filtro de catálogo (o PDF não o leva),
+  flag `sem_custo`, "Toalha de piso", "Cartão de crédito", ids da gaveta de memória (o endpoint dá 403).
+
+- **CUS-01 (22/09/2026) I.I. econômico KTC/Egito = 0% · proteção comercial separada do custo.**
+  Inventário antes da mudança (banco local, 309 SKUs KTC ativos, 280 precificáveis): 285 usavam
+  3,5% (cama/banho/roupão/chinelo), 14 usavam 1,62% (Mattress Protector/Topper), 10 usavam 0
+  (Blanket, Bath Rug, Face Towel, Duvet Insert — sem linha de NCM confiável; ficavam em revisão);
+  em 68 SKUs o custo vinha do catálogo sem EXW (o I.I. nunca esteve nele). Decisão: o **custo real**
+  nacionaliza com I.I. 0 e forma lucro/margem realizada/dashboard; a alíquota que cada SKU usava
+  vira **proteção comercial de precificação** (pino por SKU + regra por família), que forma B2B,
+  tabela e preco_base **exatamente iguais** (paridade: 280 SKUs × 9 cenários, 0 diferenças de
+  B2B/tabela/preco_base/comissão; CNET caiu em 202 SKUs, igual nos 78 sem I.I. no custo). A
+  proteção **não** é tributo, custo nem despesa; não entra na base da comissão; não reduz o lucro
+  do dashboard. Margens-alvo inalteradas; margem realizada e lucro sobem onde havia I.I. (âncora
+  300TC: CNET 58,35 → 56,42; B2B 124,90 e tabela 249,80 iguais; margem realizada 22,00% → 23,55%;
+  lucro unitário 27,48 → 29,41). `NcmRegra` legada encerrada em 22/09 (histórico), sucessora com
+  I.I. 0%. Blanket: proteção 0% (o baseline da família precificava com 0; aplicar 3,5% subiria
+  BL-002/BL-003, o que a paridade proíbe) — BL-001 passa a CONFIRMADO (127,33 / 254,66). Emitidas
+  e snapshots intocados (comparação linha a linha contra o backup: 0 diferenças).
+
+### 12.2 Conflitos com fontes anteriores — registrados, não resolvidos em silêncio
+- **CF-01 Escada × "Escopo aprovado" (PDF de 17/06/2026, e-mail 12:12):** o escopo traz
+  "Até 10% → 10%; 10,01–20% → 9%…"; a decisão de 21/09 (e o e-mail do Jan às 11:37) usa
+  "0% → 10%; (0,10] → 9%; (10,20] → 8%". Implementada a decisão de 21/09. **Pendência:**
+  confirmação escrita (Jan/RH) de qual tabela rege a remuneração contratual.
+- **CF-02 Base da comissão × contrato cl. 6.3 ("tributos destacados"):** decisão de 21/09 deduz
+  só ICMS próprio + DIFAL da Anara (não FCP). Registrada como premissa versionada.
+- **CF-03 FCP BA/PE/PI — FECHADO (decisão validada, 21/09/2026):** a tabela-benchmark antiga traz
+  `fem = 2%` nessas UFs; a regra adotada para o escopo atual (cama/banho) é **0%** em BA/PE/PI
+  quando não há enquadramento específico por produto/NCM — FCP/FECP/FECEP **não** é adicional
+  universal por UF e a coluna FEM legada **não** é copiada automaticamente. AL 1%, RJ 2%, SE 1%
+  e as demais regras continuam exatamente como estão. Regra de segurança mantida: produto/NCM/
+  família futura sem cobertura fiscal comprovada → `REVIEW_REQUIRED`; nunca inventar alíquota.
+  Benchmark preservado nas colunas `fem/base_dupla/carga_final` só como histórico. **Não é
+  blocker de deploy.**
+- **CF-04 Base dupla — FECHADO (decisão validada, 21/09/2026):** a tabela-benchmark usa
+  `carga_final = base_dupla` em ~14 UFs; a regra adotada para o escopo atual é **base única** para
+  consumidor final não contribuinte, implementada como está. Base dupla **não** é reaberta no
+  motor. **Não é blocker de deploy.**
+- **CF-05 Daune travado / comissão em cotação mista / DIFAL na base (abertos no TO-BE):** fechados
+  pela decisão de 21/09 (sem trava; por item; ICMS+DIFAL sim, FCP não).
+- **CF-06 Golden 190×250 300TC:** o pacote citava ≈ R$ 124,91 (forma fechada, CNET 58,35); o B2B
+  canônico é **R$ 124,90** (primeiro centavo com margem ≥ 22%: 22,0016%; 124,89 → 21,9954%).
+
+### 12.2-bis Pendências registradas à parte (não são blockers fiscais; não bloqueiam o deploy)
+- **Regra fiscal do escopo atual — fechada:** base única para consumidor final não contribuinte;
+  FCP só onde há enquadramento (AL 1%, RJ 2%, SE 1%; BA/PE/PI 0% para cama/banho); produto/NCM/
+  família sem cobertura comprovada → `REVIEW_REQUIRED`. Os antigos itens "VAL-EXT-01" e
+  "VAL-EXT-02" foram **removidos** desta lista em 21/09/2026 — ver CF-03 e CF-04 (fechados).
+- **KTC-024 (mantido em REVISÃO, não forçado):** 300TC listra 1 cm 70/30 cotado a US$ 8,96 contra o
+  motor ≈ US$ 10,02 (+11,84%). A cotação direta vale como fonte do custo; a divergência do motor
+  fica registrada para a KTC/compras explicarem (material de listra? allowance?), não para o motor
+  ser ajustado sem evidência. Assunto de custo industrial — independente do fiscal.
+- **CF-01 (escada de comissão × "Escopo aprovado"):** divergência documental continua registrada
+  em 12.2, separadamente; a escada implementada é a da decisão de 21/09 e não muda.
+
+### 12.3 Efeitos operacionais esperados ao aplicar no banco real
+- 21 regras de 16/09 encerradas; 32 regras de 21/09; 3 premissas; 700+ linhas de FCP por família;
+  16 referências Decor (CNET × 0,9075 → preços Decor caem ≈ 9%); ELIS cadastrado; 35 cotações KTC
+  registradas; 3 registros com termo legado normalizados; `preco_base` recalculado (347) / limpo (31).
+- 6 rascunhos com itens da política 16/09 passam a mostrar "premissas mais recentes"; a conversão é
+  explícita ("Atualizar e recalcular"). A cotação emitida (ANARA-2026-0022) e seu snapshot não mudam.
+- Seeds de startup inserem as partes aditivas automaticamente; o encerramento das regras de 16/09
+  e as migrações de dados dependem do script (`scripts/aplicar_dados_2026_09_21.py --aplicar`).
+- Sinal (0024): todas as 24 cotações existentes ficam com `percentual_sinal = 0` — nenhum preço,
+  fingerprint ou snapshot muda; a condição `SINAL30+30/60/90` (id 7) sai do dropdown (desativada,
+  não apagada). Ensaio em cópia (0021 → 0024 + script, aplicado duas vezes): contagens idênticas
+  entre a 1ª e a 2ª aplicação; cotações/itens/snapshots/aprovações 24/55/1/0 antes e depois.

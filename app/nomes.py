@@ -63,7 +63,7 @@ VARIANTES = [
 # acabamentos e construções que mudam o produto e precisam aparecer
 EXTRAS = [
     ("listrado", "listrado"), ("stripe", "listrado"), ("open bag", "open bag"),
-    ("oxford", "oxford"), ("bordado", "bordado"), ("shawl", "gola xale"),
+    ("oxford", "4 abas"), ("bordado", "bordado"), ("shawl", "gola xale"),
     ("gola xale", "gola xale"), ("taupe", "taupe"), ("navy", "azul marinho"),
     ("navy blue", "azul marinho"), ("verde", "verde"), ("microfibra", "microfibra"),
     ("impermeável", "impermeável"), ("tricô", "tricô"), ("egípcio", "egípcio"),

@@ -264,15 +264,21 @@
 {% if aba == 'ncm' %}
 <div class="card">
   <h3 style="margin-bottom:10px;">NCM e Imposto de Importação</h3>
+  <p style="font-size:11.5px; color:var(--gray); margin-bottom:12px;">
+    Desde 22/09/2026 o I.I. econômico da KTC/Egito é <strong>0%</strong> e é esse que entra no custo. As linhas
+    encerradas (com "até") ficam como histórico da alíquota que formava o custo antes — hoje ela só existe como
+    proteção comercial de precificação por família (parâmetro <code>protecao_comercial_pct</code>), que não é tributo nem custo.
+  </p>
   <table class="compacta">
-    <thead><tr><th>Família</th><th>NCM</th><th class="num">I.I. original</th><th class="num">Redução</th><th class="num">I.I. preferencial</th><th class="num">Prioridade</th><th>Situação</th></tr></thead>
+    <thead><tr><th>Família</th><th>NCM</th><th class="num">I.I. original</th><th class="num">Redução</th><th class="num">I.I. preferencial</th><th class="num">Prioridade</th><th>Vigência</th><th>Situação</th></tr></thead>
     {% for n in ncms %}
-    <tr>
+    <tr {% if n.valid_to %}class="muted"{% endif %}>
       <td>{{ n.familia }}</td><td>{{ n.ncm }}</td>
       <td class="num">{{ n.ii_original|pct if n.ii_original is not none else '—' }}</td>
       <td class="num">{{ n.reducao_preferencial|pct if n.reducao_preferencial is not none else '—' }}</td>
       <td class="num"><strong>{{ n.ii_preferencial|pct(2) if n.ii_preferencial is not none else '—' }}</strong></td>
       <td class="num">{{ n.prioridade }}</td>
+      <td style="font-size:10.5px;">{% if n.valid_to %}até {{ n.valid_to|data }}{% else %}vigente{% if n.valid_from %} desde {{ n.valid_from|data }}{% endif %}{% endif %}</td>
       <td style="font-size:10.5px;">{% if not n.confiavel %}<span class="tag tag-review">validar</span> {% endif %}{{ n.notas or '' }}</td>
     </tr>
     {% endfor %}

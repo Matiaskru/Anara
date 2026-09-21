@@ -821,9 +821,9 @@ def premissas_desatualizadas(session: Session, cotacao, itens: Sequence[CotacaoI
         partes.append(f"{p['rotulo']}: esta cotação usa {p['no_item']}, "
                       f"e o valor atual é {p['vigente']}.")
     if politica_anterior:
-        partes.append(f"{len(politica_anterior)} item(ns) foram formados com a política "
-                      "comercial anterior a 16/09/2026 (margem-alvo, piso e comissão de "
-                      "formação diferentes).")
+        partes.append(f"{len(politica_anterior)} item(ns) foram formados com uma política "
+                      "comercial anterior à vigente (margem-alvo, comissão e regra de "
+                      "autonomia diferentes). Atualizar traz o item para a política de hoje.")
 
     return {"desatualizado": bool(desatualizados or premissas_novas or politica_anterior
                                   or cenario_divergente),

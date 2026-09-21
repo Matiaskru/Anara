@@ -134,7 +134,10 @@ e **a data decide** qual delas o próximo cálculo usa.
 - Lista **fechada** de premissas editáveis pela tela. Formulário genérico sobre `chave`
   deixaria alguém cadastrar "icms = banana" e achar que configurou algo
 
-## Aprovação e política comercial (Fase 3A — 16/09/2026)
+## Aprovação e política comercial (Fase 3A — 16/09/2026) — SUCEDIDA em 21/09/2026
+
+> Vale para os itens que pinaram `POLITICA_COMERCIAL_2026-09-16`. Item novo usa a política de
+> 21/09 (seção seguinte). Nada abaixo foi apagado do código: é a mecânica legada, preservada.
 
 **A autonomia de desconto deixou de ser zero em 16/09/2026.** A política comercial canônica
 (`app/politica_comercial.py`, `app/comercial_service.py`, `MargemRegra` com política) dá à
@@ -164,6 +167,110 @@ vendedora um **piso de margem** por item, congelado no item (`piso_margem_pct`):
 - Impacto e trilha: `relatorios/impacto_politica_comercial_2026-09-16.md`,
   `scripts/aplicar_politica_comercial_2026_09_16.py`, AuditLog correlação
   `politica-comercial-2026-09-16-*`. **Offline V2 está STALE** — não distribuir como preço
+
+## Política comercial de 21/09/2026 — B2B, tabela 2×, comissão por item
+
+**Sucede a política de 16/09/2026** (que continua legível para os itens que a pinaram). A mecânica
+de cada item é decidida pelo **rótulo** em `CotacaoItem.politica_comercial`
+(`politica_comercial.versao_da_politica`): `POLITICA_COMERCIAL_2026-09-21`, `…2026-09-16` ou
+nenhum. Nunca por "tem política ou não".
+
+- **Três preços por item, no cenário da cotação:** `preco_recomendado` **é o B2B**; `preco_tabela =
+  dinheiro(fator × B2B)` (premissa `fator_tabela` = 2); `preco_negociado` é a proposta.
+  `Produto.preco_base` **não** é tabela: é o "B2B de referência" do cenário padrão do catálogo
+  (recalculado pelo script), informativo.
+- **B2B = menor preço em centavos com margem ≥ alvo** (`pricing_engine.preco_b2b`): forma fechada,
+  desce até um centavo que falha, sobe até o primeiro que cumpre — não é "HALF_UP + 1 centavo".
+  Formado com **comissão 5% sobre a receita líquida do ICMS suportado pela Anara**
+  (`TaxRuleSet.comissao_base_icms_pct = icms_pct − fcp_pct`: próprio + DIFAL do remetente; nunca
+  FCP, PIS/COFINS, encargo, frete). Políticas anteriores continuam com base bruta (0).
+- **Margens FINAIS no B2B** (`MargemRegra` com `politica` 21/09, sem `piso_pct`): KTC toalhas 16 ·
+  Bathrobe 14 · lençóis <300 fios 20 · 300–399 22 · ≥400 23 · Pillow Case/Duvet Cover 19 (≥400: 20)
+  · demais KTC 19 (≥400: 20) · Daune 13 · Decor 13 · ELIS 14. **Sem regra geral e sem fallback de
+  15%**: produto sem regra entra sem preço com blocker `SEM_REGRA_DE_MARGEM`.
+- **B2B é o piso de autonomia.** `negociado < B2B` → exceção `PRECO_ABAIXO_B2B` (aprovável, presa
+  ao fingerprint). Acima é livre. Não há piso de margem separado.
+- **Comissão por ITEM** pela escada do desconto sobre a tabela do item: 0% → 10 · (0,10] → 9 ·
+  (10,20] → 8 · (20,30] → 7 · (30,40] → 6 · >40 → 5 (premissa `comissao_faixas_desconto`;
+  10,00% → 9, 10,01% → 8; o B2B cai em 5%). Nenhum item limita a taxa de outro; nada de
+  `c_max_i`, função contínua ou markup. Total = Σ; taxa efetiva = Σ comissão ÷ Σ base.
+- **Alavanca persistida = desconto sobre a tabela** (`modo_edicao = "desconto"`, `valor_editado`;
+  `modo_negociacao` guarda se digitou preço ou desconto). Mudou o cenário → B2B e tabela refeitos,
+  **mesmo desconto reaplicado, preço absoluto muda** (CR-01 continua garantido). Se cair abaixo do
+  novo B2B, vira exceção — nunca é puxado para o B2B em silêncio. Preço digitado vira desconto
+  efetivo; desconto digitado gera preço com `ROUND_UP` ao centavo (o efetivo nunca passa do pedido).
+- **Daune não é mais travado.** **Decor**: valores são CUSTO DE COMPRA → `CustoReferencia`
+  `DECOR_DIRECT` com crédito PIS/COFINS 9,25% e **sem** crédito de ICMS (fator 0,9075); o pedido de
+  revisão "custo ou venda" foi encerrado por essa migração. **ELIS** (cobertor Boa Noite Casal):
+  fornecedor nacional, origem SP, R$ 68,38 custo líquido direto, 14%.
+- **Fronhas:** allowance de costing 2% (`ParametroKTC quality_allowance` escopo `Pillow Case`,
+  planilha "Pillow Case Costing sheet" — **não é I.I.**); nomenclatura canônica **ABAS** (a
+  palavra legada de catálogo só é lida, nunca escrita/exibida — há teste que varre). Toalhas
+  100/0 e 90/10 têm o mesmo preço; a composição só identifica o SKU.
+- **Fiscal (27 UFs):** `app/fiscal_2026_09_21.py` cadastra `icms_interno_base` das 27 UFs e
+  `RegraFcp` **por família do escopo** (AL 1%, RJ 2%, SE 1%; demais 0%). Família fora do escopo
+  continua DESCONHECIDA e bloqueia. Base única para não contribuinte é a regra adotada (não
+  reabrir base dupla); FCP não é adicional universal por UF — BA/PE/PI ficam em 0% para cama/banho
+  sem enquadramento específico por produto/NCM (não copiar a coluna FEM legada);
+  `carga_final`/`base_dupla`/`fem` são só benchmark histórico.
+- **Frete:** `FRETE_MANUAL_CONFIRMADO` — CIF com valor digitado e `freight_manual_confirmado`
+  soma ao total, entra no fingerprint e **não** depende dos blockers do motor TRANSAL; fora do
+  preço unitário/comissão/margem. CIF sem confirmação continua pelo motor (e bloqueia).
+- **Vendedora vê**: tabela, B2B, proposta, desconto %, **a comissão dela por item e total**,
+  autonomia. **Não vê**: base comissionável, ICMS deduzido, faixa como mecânica, custo, margem,
+  lucro. PDF: só preço final (allowlist inalterada). Primeiro acesso confirma o perfil
+  ("Vendedora"/"Administrativo") **autorizado pelo servidor**; escolher outro é recusado (403).
+- **Sinal / entrada é COMPOSIÇÃO, não condição** (`app/payment_terms.encargo_com_sinal`,
+  migration 0024): `Cotacao.percentual_sinal` (fração 0–1, default 0) + `condicao_pagamento` (=
+  condição do **saldo**). O sinal é pago à vista **sem encargo**; `encargo_efetivo = (1 − sinal) ×
+  encargo_do_saldo` entra no `TaxRuleSet` no mesmo lugar do encargo (0% + 30/60/90 → 4,8%; 30% →
+  3,36%; 50% + 30/60 → 1,60%; 100% → 0%, saldo irrelevante mesmo bloqueado). Sinal 0 devolve o
+  **mesmo objeto** resolvido da tabela — comportamento tradicional. Nenhum desconto por
+  antecipação. Mudar sinal/saldo é MATERIAL (recalcula B2B/tabela/preço preservando o desconto,
+  invalida aprovação; `percentual_sinal` entra no fingerprint só quando > 0 — cotação antiga
+  mantém o hash). Item pina `percentual_sinal` e `encargo_saldo_pct`; snapshot guarda
+  `percentual_sinal`, `condicao_saldo`, `condicao_pagamento_texto` ("30% de sinal + 70% em 30/60/90
+  dias") e `encargo_efetivo_pct` — o PDF final lê o texto do snapshot. Validação 0 ≤ sinal ≤ 100
+  (negativo, > 100, NaN, texto → 400 sem alterar nada). Tela: checkbox "Possui sinal / entrada" →
+  percentual + saldo + texto; a vendedora **nunca** vê encargo efetivo, fórmula ou fator (o encargo
+  por condição também saiu do formulário `/cotacoes/nova` para quem não vê economia). A condição
+  opaca `SINAL30+30/60/90` não é mais semeada e é **desativada** pelo script (etapa `sinal`);
+  CARTÃO continua bloqueado (sem taxa) — exceto com sinal 100%.
+- **I.I. econômico KTC/Egito = 0% (22/09/2026, migration 0025) — ECONOMIA REAL × FORMAÇÃO
+  COMERCIAL.** Duas grandezas, nunca confundidas:
+  * **CNET real** (`custo_para_precificar` → `net_brl`; `Produto.custo_unitario`,
+    `CotacaoItem.custo_unitario`): EXW + frete (peso × US$/kg) + outras despesas, **I.I. = 0**
+    (`pricing_service.II_ECONOMICO_KTC`), × câmbio. É o único custo — forma lucro, margem
+    realizada, dashboard, relatórios, snapshots novos. Nenhuma alíquota positiva de I.I. entra
+    em custo vigente da KTC; as linhas de `NcmRegra` com 3,5%/1,62% foram **encerradas**
+    (`valid_to` 22/09) e as vigentes trazem NCM + I.I. 0%.
+  * **Referência comercial de precificação** (`nationalization.referencia_comercial`;
+    `memoria["base_comercial_brl"]`; `CotacaoItem.base_comercial_precificacao`): o mesmo
+    waterfall com a **proteção comercial** do SKU no lugar do imposto — a alíquota preferencial
+    que formava o custo até 22/09, pinada por SKU (`Produto.protecao_comercial_pct`, script) e
+    por família (`ParametroKTC protecao_comercial_pct`: 3,5% cama/banho/roupão/chinelo, 1,62%
+    travesseiro/protetor/topper, 0% Blanket/Duvet Insert/Bath Rug/Face Towel e famílias sem
+    alíquota confiável). Forma **B2B, tabela e preco_base** — exatamente onde estavam (paridade
+    provada: 280 SKUs × 9 cenários, 0 diferenças). **Não é custo, tributo nem despesa**; nunca
+    entra em lucro, margem, dashboard ou base da comissão. Família sem regra de proteção →
+    `REVIEW_REQUIRED` (não se inventa alíquota).
+  * `ps.bases_de_preco(session, produto)` → `(custo_real, base_comercial, memória)`; o router
+    forma preço com `base_comercial` (`_calcular(..., base_comercial=)`, `_base_de_preco(item)`)
+    e economia com `custo`. `preco_recomendado` = **B2B comercial** (piso de autonomia);
+    `preco_b2b_economico` = o B2B que o custo real daria (diagnóstico interno). Margens-alvo não
+    mudaram; a margem **realizada** subiu onde havia I.I. Item anterior a 22/09 (sem pino) segue
+    com o custo que congelou até ser reprecificado explicitamente. Vendedora não vê nada disso.
+- **Como aplicar no banco real** (aplicado LOCALMENTE em 21–22/09/2026): `alembic upgrade head`
+  (0023 + 0024 + 0025, aditivas) e `scripts/aplicar_dados_2026_09_21.py --aplicar` (encerra 16/09,
+  cria 21/09, fiscal, Decor, ELIS, cotação KTC 29/07, BL-001, **ii_zero** — pino da proteção por
+  SKU, regra por família, NCM versionada —, ABAS, preco_base + cache do CNET real, desativa a
+  condição opaca de sinal). Preview sem `--aplicar`. Relatórios: `scripts/relatorios_2026_09_21.py`.
+  Validação: `tests/test_politica_2026_09_21.py`, `tests/test_sinal_2026_09_21.py`,
+  `tests/test_ii_zero_2026_09_22.py`, `scripts/politica_2026_09_21/` (e2e Playwright — geral e de
+  sinal —, matriz × oracle com `--sinais`, fuzz, política vigente, `auditoria_confidencialidade.py`),
+  `scripts/ii_zero_2026_09_22/baseline_ktc.py` (baseline ANTES/DEPOIS + paridade). Atenção: os
+  seeds de startup já inserem as partes **aditivas** (regras 21/09, premissas, matriz fiscal, ELIS
+  fornecedor, NCM vigente 0%, proteção por família); encerramentos e migrações de dados são do script.
 
 ## Workflow comercial (Sessão 6)
 
@@ -498,6 +605,12 @@ autorizadas): frete nacional definitivo, cadastro fiscal pendente, offline V3, c
 
 **Auditoria de crise P0 (17/09/2026): EXECUTADA** — bug de reprecificação corrigido (CR-01/02),
 sete correções, 0 P0 aberto, 1.436 testes (SQLite e Postgres). Ver `AUDIT_ANARA_MASTER.md` §11.
+
+**Política comercial de 21/09/2026 (B2B · tabela 2× · comissão por item · fiscal 27 UFs ·
+Daune/Decor/ELIS · fronhas · frete manual · primeiro acesso · SINAL/ENTRADA como composição ·
+I.I. econômico KTC 0% com proteção comercial separada do custo): IMPLEMENTADA, COMMITADA
+LOCALMENTE (sem push), APLICADA AO BANCO LOCAL.** Alembic em `0025`. Ver seção "Política
+comercial de 21/09/2026" e `ANARA_EXECUTION_STATE.md` para os números da última validação.
 
 **Preparação para produção (17/09/2026): EXECUTADA.** Alembic em `0022` (enums como
 VARCHAR, no-op no SQLite). O repositório é Git **local**, sem remote e sem push. O

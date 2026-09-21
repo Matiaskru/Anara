@@ -27,6 +27,7 @@ import json
 from datetime import date
 
 import pytest
+import legado
 from sqlmodel import select
 
 from app import pricing_service as ps
@@ -228,7 +229,7 @@ def test_itens_historicos_continuam_legiveis():
     from sqlalchemy import create_engine
     from sqlmodel import Session as S
 
-    caminho = os.path.abspath("data/anara.db")
+    caminho = legado.caminho_banco_real()
     if not os.path.exists(caminho):
         pytest.skip("banco operacional ausente")
 

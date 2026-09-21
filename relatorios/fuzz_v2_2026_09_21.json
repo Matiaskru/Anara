@@ -1,0 +1,14 @@
+{
+ "seed": 20260922,
+ "n": 2000,
+ "stats": {
+  "casos": 2000,
+  "com_sinal": 1122,
+  "negociados": 1283,
+  "cenarios": 549,
+  "sem_sinal": 470,
+  "nao_precificados": 408,
+  "emitidas": 66
+ },
+ "falhas": []
+}

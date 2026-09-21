@@ -179,6 +179,7 @@ def primeiro_acesso_criar(request: Request, nome: str = Form(""), email: str = F
 # Esqueci minha senha / redefinir senha — por token, uso único, hash no banco
 # ---------------------------------------------------------------------------
 from app import recuperacao_senha as rs  # noqa: E402
+from app import admin_service as adm  # noqa: E402
 
 
 def _base_url(request: Request) -> str:
@@ -224,27 +225,63 @@ def esqueci_senha_submit(request: Request, email: str = Form(""),
                                       {"enviado": True, "mensagem": rs.RESPOSTA_GENERICA})
 
 
+def _contexto_perfil(session: Session, registro) -> dict:
+    """O que a tela de primeiro acesso mostra sobre o perfil — decidido pelo servidor.
+
+    A conta já nasceu com o papel que o gestor autorizou; a pessoa vê e CONFIRMA o perfil
+    ("Vendedora" ou "Administrativo"). Nada aqui concede papel: escolher outro perfil é
+    recusado no POST. Reset de senha comum não mostra perfil nenhum.
+    """
+    if registro is None or registro.finalidade != rs.PRIMEIRO_ACESSO:
+        return {"primeiro_acesso": False, "perfis": [], "perfil_autorizado": None, "nome": None}
+    usuario = session.get(Usuario, registro.usuario_id)
+    return {"primeiro_acesso": True,
+            "perfis": [(codigo, rotulo) for codigo, rotulo in rs.PERFIS.items()],
+            "perfil_autorizado": rs.perfil_autorizado(usuario),
+            "nome": usuario.nome}
+
+
 @router.get("/redefinir-senha", response_class=HTMLResponse)
 def redefinir_senha_form(request: Request, token: str = "",
                          session: Session = Depends(get_session)):
-    valido = rs.validar(session, token) is not None
+    registro = rs.validar(session, token)
+    valido = registro is not None
     return templates.TemplateResponse(request, "redefinir_senha.html",
                                       {"token": token if valido else "", "valido": valido,
-                                       "erro": None, "concluido": False}, status_code=200 if valido else 400)
+                                       "erro": None, "concluido": False,
+                                       **_contexto_perfil(session, registro)},
+                                      status_code=200 if valido else 400)
 
 
 @router.post("/redefinir-senha", response_class=HTMLResponse)
 def redefinir_senha_submit(request: Request, token: str = Form(""), senha: str = Form(""),
-                           confirmar: str = Form(""), session: Session = Depends(get_session)):
+                           confirmar: str = Form(""), perfil: str = Form(""),
+                           session: Session = Depends(get_session)):
+    registro = rs.validar(session, token)
+
     def recusar(motivo: str, valido: bool = True, status: int = 400):
         return templates.TemplateResponse(
             request, "redefinir_senha.html",
             {"token": token if valido else "", "valido": valido, "erro": motivo,
-             "concluido": False}, status_code=status)
+             "concluido": False, **_contexto_perfil(session, registro if valido else None)},
+            status_code=status)
 
-    if rs.validar(session, token) is None:
+    if registro is None:
         return recusar("Este link de redefinição não é válido ou já expirou. Peça um novo.",
                        valido=False)
+    usuario = session.get(Usuario, registro.usuario_id)
+    if registro.finalidade == rs.PRIMEIRO_ACESSO:
+        # O perfil é confirmado, não escolhido: "Administrativo" só passa se a conta foi
+        # autorizada assim pelo gestor. Sem elevação por autoatendimento; OWNER nunca por aqui.
+        try:
+            rs.conferir_perfil(usuario, perfil)
+        except rs.PerfilNaoAutorizado as erro:
+            adm.registrar(session, ator=usuario, acao="FIRST_ACCESS_PROFILE_REFUSED",
+                          entidade="Usuario", entidade_id=usuario.id, escopo=usuario.email,
+                          antes=rs.perfil_autorizado(usuario), depois=(perfil or "").strip().lower(),
+                          origem="auth", resultado="recusado")
+            session.commit()
+            return recusar(str(erro), status=403)
     if len(senha) < SENHA_MINIMA:
         return recusar(f"A senha precisa ter pelo menos {SENHA_MINIMA} caracteres.")
     if senha != confirmar:
@@ -256,4 +293,6 @@ def redefinir_senha_submit(request: Request, token: str = Form(""), senha: str =
         return recusar(str(erro), valido=False)
     session.commit()
     return templates.TemplateResponse(request, "redefinir_senha.html",
-                                      {"token": "", "valido": True, "erro": None, "concluido": True})
+                                      {"token": "", "valido": True, "erro": None, "concluido": True,
+                                       "primeiro_acesso": registro.finalidade == rs.PRIMEIRO_ACESSO,
+                                       "perfis": [], "perfil_autorizado": None, "nome": None})

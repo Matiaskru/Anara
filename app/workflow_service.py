@@ -23,8 +23,9 @@ from fastapi import HTTPException
 from sqlmodel import Session, select
 
 from app import admin_service as adm
+from app import config_service as cfg
 from app import workflow as wf
-from app.dinheiro import para_float
+from app.dinheiro import D, D0, dinheiro, para_float
 from app.models import (
     AprovacaoCotacao, Cliente, Cotacao, CotacaoItem, SnapshotEmissao, StatusCotacao, Usuario,
 )
@@ -84,6 +85,21 @@ def frete_para_avaliar(session: Session, cotacao: Cotacao) -> Optional[dict]:
     """
     if (getattr(cotacao, "freight_type", "") or "").upper() != "CIF":
         return None
+    # Frete CIF informado manualmente e CONFIRMADO (21/09/2026): fonte válida para esta
+    # cotação. Fica separado do motor automático (TRANSAL), cujos blockers — GRIS, ICMS da
+    # prestação, pedágio, origem sem tabela — não se aplicam a um valor que o usuário
+    # confirmou. O valor soma ao total e não entra no preço unitário, na comissão nem na margem.
+    valor = D(getattr(cotacao, "freight_valor", None))
+    if getattr(cotacao, "freight_manual_confirmado", False) and valor is not None and valor > 0:
+        return {"cif": True, "responsavel": "ANARA", "status": wf.FRETE_MANUAL_CONFIRMADO,
+                "manual": True, "valor": para_float(dinheiro(valor)),
+                "confirmado_por": getattr(cotacao, "freight_manual_por", None),
+                "confirmado_em": (cotacao.freight_manual_em.isoformat()
+                                  if getattr(cotacao, "freight_manual_em", None) else None),
+                "observacao": getattr(cotacao, "freight_manual_obs", None),
+                "bloqueado": False, "grupos": [], "motivos": [],
+                "memoria": "Frete informado manualmente e confirmado pelo usuário — fora do "
+                           "motor automático de frete."}
     from app import frete_service as fs
     try:
         return fs.frete_da_cotacao(session, cotacao, itens_de(session, cotacao.id))
@@ -302,6 +318,12 @@ def manter_premissas_antigas(session: Session, cotacao: Cotacao, *, ator: Usuari
 # ---------------------------------------------------------------------------
 # Emissão
 # ---------------------------------------------------------------------------
+def _encargo_efetivo(itens):
+    """Encargo efetivo congelado nos itens (um só valor quando todos coincidem; senão None)."""
+    valores = {D0(it.encargo_pct) for it in itens if it.encargo_pct is not None}
+    return valores.pop() if len(valores) == 1 else None
+
+
 def emitir(session: Session, cotacao: Cotacao, *, ator: Usuario,
            frete: Optional[dict] = None, pdf_caminho: Optional[str] = None
            ) -> SnapshotEmissao:
@@ -353,6 +375,21 @@ def emitir(session: Session, cotacao: Cotacao, *, ator: Usuario,
             "condicao_pagamento_id": it.condicao_pagamento_id,
             "aliquota_interestadual_id": it.aliquota_interestadual_id,
             "icms_pct": para_float(it.icms_pct), "encargo_pct": para_float(it.encargo_pct),
+            "percentual_sinal": para_float(it.percentual_sinal),
+            "encargo_saldo_pct": para_float(it.encargo_saldo_pct),
+            # 22/09/2026 — economia real × formação comercial, congeladas por item: custo real
+            # (KTC: I.I. 0%), lucro e margem realizada; B2B comercial (= recomendado), tabela,
+            # desconto e comissão; base comercial/proteção que formaram o preço; B2B econômico.
+            "custo_unitario": para_float(it.custo_unitario), "lucro": para_float(it.lucro),
+            "margem_liquida": para_float(it.margem_liquida),
+            "margem_padrao_pct": para_float(it.margem_padrao_pct),
+            "preco_recomendado": para_float(it.preco_recomendado),
+            "preco_tabela": para_float(it.preco_tabela),
+            "desconto_vs_tabela_pct": para_float(it.desconto_vs_tabela_pct),
+            "comissao_pct": para_float(it.comissao_pct), "comissao_valor": para_float(it.comissao_valor),
+            "base_comercial_precificacao": para_float(it.base_comercial_precificacao),
+            "protecao_comercial_pct": para_float(it.protecao_comercial_pct),
+            "preco_b2b_economico": para_float(it.preco_b2b_economico),
         } for it in itens], ensure_ascii=False),
         totais_json=json.dumps(wf.resumo_comercial(itens), ensure_ascii=False),
         fiscal_json=json.dumps({
@@ -360,7 +397,17 @@ def emitir(session: Session, cotacao: Cotacao, *, ator: Usuario,
             "estado_destino": cotacao.estado_destino,
             "contribuinte_icms": cotacao.contribuinte_icms,
             "finalidade": cotacao.finalidade,
-            "condicao_pagamento": cotacao.condicao_pagamento}, ensure_ascii=False),
+            # Condição do saldo (código), o sinal e o texto comercial congelado — o PDF final
+            # lê `condicao_pagamento_texto` daqui, não da cotação viva.
+            "condicao_pagamento": cotacao.condicao_pagamento,
+            "percentual_sinal": para_float(cotacao.percentual_sinal or 0),
+            "condicao_saldo": cotacao.condicao_pagamento,
+            "condicao_pagamento_texto": cfg.condicao_textual(session, cotacao),
+            "encargo_efetivo_pct": para_float(_encargo_efetivo(itens)),
+            # 22/09/2026: I.I. econômico KTC vigente e a versão da proteção comercial
+            "ii_economico_ktc_pct": 0.0,
+            "protecao_comercial_versao": "2026-09-22",
+            }, ensure_ascii=False),
         frete_json=json.dumps(frete or {"cif": False}, ensure_ascii=False, default=str),
         premissas_json=json.dumps(
             [json.loads(it.premissas_pinadas) for it in itens if it.premissas_pinadas],
@@ -455,6 +502,7 @@ def criar_revisao(session: Session, cotacao: Cotacao, *, ator: Usuario) -> Cotac
         estado_origem=cotacao.estado_origem, uf_origem_fiscal=cotacao.uf_origem_fiscal,
         estado_destino=cotacao.estado_destino, contribuinte_icms=cotacao.contribuinte_icms,
         finalidade=cotacao.finalidade, condicao_pagamento=cotacao.condicao_pagamento,
+        percentual_sinal=cotacao.percentual_sinal or 0.0,
         freight_type=cotacao.freight_type, freight_valor=cotacao.freight_valor,
         frete=cotacao.frete, vendedor=cotacao.vendedor,
         contato_nome=cotacao.contato_nome,

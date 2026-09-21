@@ -21,9 +21,11 @@
   if (form && EDITAVEL) {
     const aviso = document.getElementById("pendente");
     const materiais = $$("[data-material]", form);
-    const inicial = new Map(materiais.map(c => [c, c.value]));
+    // checkbox muda `checked`, não `value` — sem isto, marcar sinal/frete confirmado não contava
+    const valorDe = c => (c.type === "checkbox" ? String(c.checked) : c.value);
+    const inicial = new Map(materiais.map(c => [c, valorDe(c)]));
     const conferir = () => {
-      const mudou = materiais.some(c => c.value !== inicial.get(c));
+      const mudou = materiais.some(c => valorDe(c) !== inicial.get(c));
       if (aviso) aviso.hidden = !mudou;
       document.body.classList.toggle("cenario-pendente", mudou);
       $$(".acao-de-saida").forEach(a => a.classList.toggle("hidden-soft", mudou));
@@ -31,6 +33,35 @@
     materiais.forEach(c => { c.addEventListener("change", conferir); c.addEventListener("input", conferir); });
     $$("[data-contribuinte]", form).forEach(b => b.addEventListener("click", () => setTimeout(conferir, 0)));
     form.addEventListener("submit", () => document.body.classList.remove("cenario-pendente"));
+  }
+  // ------------------------------------------------------------------------
+  // Sinal / entrada: checkbox abre o percentual; o texto comercial acompanha ao vivo.
+  // Só texto — o encargo efetivo e a fórmula ficam no servidor.
+  // ------------------------------------------------------------------------
+  const possuiSinal = document.getElementById("c-possui-sinal");
+  if (possuiSinal) {
+    const wrap = document.getElementById("c-sinal-wrap");
+    const campo = document.getElementById("c-sinal");
+    const saldo = document.getElementById("c-pagamento");
+    const rotulo = document.getElementById("c-pagamento-label");
+    const texto = document.getElementById("c-condicao-texto");
+    const fmt = n => String(Math.round(n * 100) / 100).replace(".", ",");
+    const atualizar = () => {
+      const ligado = possuiSinal.checked;
+      if (wrap) wrap.hidden = !ligado;
+      if (rotulo) rotulo.textContent = ligado ? "Saldo" : "Pagamento";
+      if (!texto) return;
+      const label = saldo && saldo.selectedIndex >= 0 ? saldo.options[saldo.selectedIndex].text : "";
+      const s = ligado && campo ? parseFloat(String(campo.value).replace(",", ".")) : 0;
+      if (!ligado || !(s > 0)) { texto.textContent = label; texto.classList.remove("valor-alerta"); return; }
+      if (s > 100 || s < 0) { texto.textContent = "Informe um percentual de sinal entre 0 e 100."; texto.classList.add("valor-alerta"); return; }
+      texto.classList.remove("valor-alerta");
+      texto.textContent = s >= 100 ? "100% à vista (sinal)" : `${fmt(s)}% de sinal + ${fmt(100 - s)}% em ${label}`;
+    };
+    possuiSinal.addEventListener("change", () => { atualizar(); if (possuiSinal.checked && campo && !campo.value) campo.focus(); });
+    if (campo) campo.addEventListener("input", atualizar);
+    if (saldo) saldo.addEventListener("change", atualizar);
+    atualizar();
   }
   window.setContribuinte = function (btn, valor) {
     if (btn.disabled) return;
@@ -56,7 +87,16 @@
     set("subtotal_negociado", brl(p.subtotal_negociado));
     set("frete", fretePorExtenso(p.frete));
     set("total_proposta", brl(p.total_proposta));
-    set("desconto_pct", p.desconto_pct === null || p.desconto_pct === undefined ? "—" : pct(p.desconto_pct));
+    // Política 21/09: o desconto da proposta é medido sobre a TABELA; itens da política
+    // anterior (sem tabela) continuam medidos sobre o recomendado.
+    const rotuloDesc = $('[data-res-rotulo="desconto"]');
+    if (p.desconto_vs_tabela_pct !== null && p.desconto_vs_tabela_pct !== undefined) {
+      if (rotuloDesc) rotuloDesc.textContent = "Desconto sobre a tabela";
+      set("desconto_pct", pct(p.desconto_vs_tabela_pct));
+    } else {
+      if (rotuloDesc) rotuloDesc.textContent = "Desconto sobre o recomendado";
+      set("desconto_pct", p.desconto_pct === null || p.desconto_pct === undefined ? "—" : pct(p.desconto_pct));
+    }
     set("comissao_estimada_valor", p.comissao_estimada_valor === null ? "—" : brl(p.comissao_estimada_valor));
     set("comissao_estimada_pct_efetiva", p.comissao_estimada_pct_efetiva === null || p.comissao_estimada_pct_efetiva === undefined
         ? "Taxa efetiva —" : "Taxa efetiva " + pct(p.comissao_estimada_pct_efetiva, 2));
@@ -71,11 +111,32 @@
     (p.itens || []).forEach(it => {
       const tr = $(`tr[data-item-id="${it.item_id}"]`); if (!tr) return;
       const total = $("[data-total]", tr); if (total) total.textContent = brl(it.total_linha);
-      const desc = $("[data-desconto]", tr);
-      if (desc) desc.textContent = (it.desconto_linha_pct === null || it.desconto_linha_pct === undefined) ? "—"
-                                 : (it.desconto_linha_pct > 0 ? pct(it.desconto_linha_pct) : "—");
       const rec = $("[data-rec]", tr); if (rec) rec.textContent = it.preco_recomendado ? brl(it.preco_recomendado) : "—";
       const fixo = $("[data-preco-fixo]", tr); if (fixo) fixo.textContent = brl(it.preco_negociado);
+      const tab = $("[data-tabela-cel]", tr); if (tab) tab.textContent = it.preco_tabela ? brl(it.preco_tabela) : "—";
+      if (it.preco_tabela) tr.dataset.tabela = Number(it.preco_tabela).toFixed(2);
+      // desconto: campo editável (política nova) ou texto (anterior)
+      const descInput = $("[data-desconto-input]", tr);
+      const desc = $("[data-desconto]", tr);
+      if (descInput) {
+        if (tr.dataset.editando !== "desconto" && it.desconto_vs_tabela_pct !== null && it.desconto_vs_tabela_pct !== undefined)
+          descInput.value = (it.desconto_vs_tabela_pct * 100).toFixed(2);
+      } else if (desc) {
+        // política 21/09: a coluna é "desconto sobre a tabela" também na leitura (emitida);
+        // política anterior: desconto em relação ao recomendado, como sempre foi
+        if (it.politica_nova && it.desconto_vs_tabela_pct !== null && it.desconto_vs_tabela_pct !== undefined)
+          desc.textContent = pct(it.desconto_vs_tabela_pct);
+        else
+          desc.textContent = (it.desconto_linha_pct === null || it.desconto_linha_pct === undefined) ? "—"
+                           : (it.desconto_linha_pct > 0 ? pct(it.desconto_linha_pct) : "—");
+      }
+      // preço: enquanto se digita o desconto, o preço acompanha (e vice-versa)
+      const precoInput = $("[data-preco-input]", tr);
+      if (precoInput && tr.dataset.editando !== "preco") precoInput.value = Number(it.preco_negociado).toFixed(2);
+      const com = $("[data-comissao-item]", tr);
+      if (com) com.innerHTML = (it.comissao_estimada_pct === null || it.comissao_estimada_pct === undefined) ? "—"
+        : `<span class="small">${pct(it.comissao_estimada_pct)}</span><div class="small muted">${brl(it.comissao_estimada_valor)}</div>`;
+      tr.classList.toggle("linha-aprovacao", it.autonomia_item === "REQUER_APROVACAO");
     });
     if (ECONOMIA && p.economia) pintarEconomia(p);
   }
@@ -85,27 +146,37 @@
     const set = (k, txt) => { $$(`[data-eco="${k}"]`).forEach(el => el.textContent = txt); };
     set("custo_total", brl(e.custo_total)); set("receita", brl(p.subtotal_negociado));
     set("lucro_total", brl(e.lucro_total)); set("margem_agregada_pct", pct(e.margem_agregada_pct, 2));
-    set("comissao_variavel_pct", e.comissao_variavel_pct === null ? "—" : pct(e.comissao_variavel_pct, 2));
-    set("limitada", e.limitada_pelo_piso ? "limitada pelo piso" + (e.limitada_por ? " (" + e.limitada_por + ")" : "")
-                    : (e.comissao_proporcional_pct !== null && e.comissao_proporcional_pct !== undefined ? "proporcional ao desconto" : ""));
-    set("comissao_travada_valor", brl(e.comissao_travada_valor));
+    set("base_comissionavel_total", brl(e.base_comissionavel_total));
+    set("comissao_total", brl(p.comissao_estimada_valor));
+    set("taxa_efetiva", p.comissao_estimada_pct_efetiva === null || p.comissao_estimada_pct_efetiva === undefined
+        ? "—" : "taxa efetiva " + pct(p.comissao_estimada_pct_efetiva, 2) + " sobre a base");
     set("absorvido_por_comissao", brl(e.absorvido_por_comissao));
     set("absorvido_por_margem", brl(e.absorvido_por_margem));
     set("absorvido_por_impostos_e_frete", brl(e.absorvido_por_impostos_e_frete));
+    const temLegado = (e.itens || []).some(i => i.versao_politica !== "2026-09-21");
+    $$('[data-eco="nota-legado"]').forEach(el => el.hidden = !temLegado);
     const nomes = {}; (p.itens || []).forEach(i => nomes[i.item_id] = i.nome_produto);
     const tbody = $("#eco-itens tbody");
     if (tbody) tbody.innerHTML = (e.itens || []).map(i => {
+      const c = i.comissao_item || {};
+      const rotuloExcecao = (m) => ({PRECO_ABAIXO_B2B: "abaixo do B2B", MARGEM_ABAIXO_PISO: "abaixo do piso",
+                                      PRECO_ABAIXO_RECOMENDADO: "abaixo do recomendado", MARGEM_ABAIXO_ALVO: "abaixo do alvo"}[m] || (m || "").replace(/_/g, " ").toLowerCase());
       const situacao = i.excecoes && i.excecoes.length
-        ? `<span class="tag tag-review">${esc((i.excecoes[0].motivo || "").replace(/_/g, " ").toLowerCase())}</span>`
-        : (i.preco_travado ? '<span class="tag tag-daune">preço fixo</span>' : (i.elegivel_variavel ? '<span class="tag tag-calc">ok</span>' : '<span class="tag">fora da negociação</span>'));
+        ? `<span class="tag tag-review">${esc(rotuloExcecao(i.excecoes[0].motivo))}</span>`
+        : (i.preco_travado ? '<span class="tag tag-daune">preço fixo</span>'
+           : (i.versao_politica === "2026-09-21" ? '<span class="tag tag-calc">ok</span>'
+              : (i.elegivel_variavel ? '<span class="tag tag-calc">ok · política anterior</span>' : '<span class="tag">fora da negociação</span>')));
       const abaixo = i.viola_piso;
       return `<tr>
         <td>${esc(nomes[i.item_id] || i.item_id)}</td>
         <td class="num">${brl(i.custo_unitario)}</td>
-        <td class="num">${pct(i.margem_alvo_pct, 2)}</td>
-        <td class="num">${i.piso_margem_pct === null ? "—" : pct(i.piso_margem_pct, 2)}</td>
+        <td class="num">${pct(i.margem_alvo_pct, 2)}${i.piso_margem_pct !== null && i.versao_politica !== "2026-09-21" ? `<div class="small muted">piso ${pct(i.piso_margem_pct, 2)}</div>` : ""}</td>
+        <td class="num">${c.preco_tabela ? brl(c.preco_tabela) : "—"}</td>
+        <td class="num">${c.preco_b2b ? brl(c.preco_b2b) : "—"}</td>
+        <td class="num">${c.desconto_vs_tabela_pct !== undefined && c.desconto_vs_tabela_pct !== null ? pct(c.desconto_vs_tabela_pct, 2) : "—"}</td>
         <td class="num ${abaixo ? "margem-abaixo" : "margem-ok"}">${i.margem_realizada_pct === null ? "—" : pct(i.margem_realizada_pct, 2)}</td>
         <td class="num">${brl(i.lucro)}</td>
+        <td class="num">${i.base_comissionavel !== null && i.base_comissionavel !== undefined ? brl(i.base_comissionavel) : "—"}${i.icms_base_comissao_pct ? `<div class="small muted">ICMS ${pct(i.icms_base_comissao_pct, 2)} fora</div>` : ""}</td>
         <td class="num">${i.comissao_aplicada_pct === null ? "—" : pct(i.comissao_aplicada_pct, 2)} · ${brl(i.comissao_valor)}</td>
         <td>${situacao}</td></tr>`;
     }).join("");
@@ -131,11 +202,19 @@
   // ------------------------------------------------------------------------
   // Negociação reativa: preço → preview enquanto digita; grava ao confirmar
   // ------------------------------------------------------------------------
+  // Cada linha manda o que a vendedora está editando: o preço, ou o desconto sobre a tabela
+  // (política nova). O servidor converte um no outro — a conta nunca é feita aqui.
   function precosAtuais() {
     return $$("tr[data-item-id]").filter(tr => tr.dataset.travado !== "1").map(tr => {
+      const item_id = parseInt(tr.dataset.itemId, 10);
+      const descInput = $("[data-desconto-input]", tr);
+      if (descInput && tr.dataset.editando === "desconto") {
+        const d = parseFloat(descInput.value);
+        if (d >= 0 && d < 100) return {item_id, desconto_pct: (d / 100).toFixed(4)};
+      }
       const input = $("[data-preco-input]", tr);
       const preco = input ? parseFloat(input.value) : parseFloat(tr.dataset.preco);
-      return {item_id: parseInt(tr.dataset.itemId, 10), preco_negociado: (preco > 0 ? preco : parseFloat(tr.dataset.preco)).toFixed(2)};
+      return {item_id, preco_negociado: (preco > 0 ? preco : parseFloat(tr.dataset.preco)).toFixed(2)};
     });
   }
   let seqPreview = 0;
@@ -151,8 +230,8 @@
     const tr = input.closest("tr");
     const anterior = tr.dataset.preco;
     const valor = parseFloat(input.value);
-    if (!(valor > 0)) { input.value = anterior; input.classList.remove("dirty"); return; }
-    if (valor.toFixed(2) === parseFloat(anterior).toFixed(2)) { input.classList.remove("dirty"); return; }
+    if (!(valor > 0)) { input.value = anterior; input.classList.remove("dirty"); tr.dataset.editando = ""; return; }
+    if (valor.toFixed(2) === parseFloat(anterior).toFixed(2)) { input.classList.remove("dirty"); tr.dataset.editando = ""; return; }
     input.classList.add("salvando");
     const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao`, {method: "POST", json: {itens: precosAtuais()}});
     input.classList.remove("salvando");
@@ -165,8 +244,32 @@
       return;
     }
     tr.dataset.preco = valor.toFixed(2); input.value = valor.toFixed(2); input.classList.remove("dirty");
+    tr.dataset.editando = "";
     pintar(r.dados);
     anaraToast("Preço salvo.", "ok");
+    recarregarPainel();
+  }
+
+  async function aplicarDesconto(input) {
+    const tr = input.closest("tr");
+    const d = parseFloat(input.value);
+    if (!(d >= 0 && d < 100)) { input.classList.remove("dirty"); tr.dataset.editando = ""; const atual = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao`); if (atual.ok) pintar(atual.dados); return; }
+    input.classList.add("salvando");
+    const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao`, {method: "POST", json: {itens: precosAtuais()}});
+    input.classList.remove("salvando");
+    tr.dataset.editando = "";
+    if (!r.ok) {
+      anaraToast(r.erro, "erro");
+      input.classList.remove("dirty"); input.classList.add("erro");
+      setTimeout(() => input.classList.remove("erro"), 1500);
+      const atual = await anaraFetch(`/cotacoes/${COTACAO_ID}/negociacao`); if (atual.ok) pintar(atual.dados);
+      return;
+    }
+    input.classList.remove("dirty");
+    pintar(r.dados);
+    const linha = (r.dados.itens || []).find(i => i.item_id === parseInt(tr.dataset.itemId, 10));
+    if (linha) tr.dataset.preco = Number(linha.preco_negociado).toFixed(2);
+    anaraToast("Desconto salvo.", "ok");
     recarregarPainel();
   }
 
@@ -190,15 +293,17 @@
   }
 
   document.addEventListener("input", (e) => {
-    if (e.target.matches("[data-preco-input]")) { e.target.classList.add("dirty"); preview(); }
+    if (e.target.matches("[data-preco-input]")) { e.target.closest("tr").dataset.editando = "preco"; e.target.classList.add("dirty"); preview(); }
+    if (e.target.matches("[data-desconto-input]")) { e.target.closest("tr").dataset.editando = "desconto"; e.target.classList.add("dirty"); preview(); }
   });
   document.addEventListener("change", (e) => {
-    if (e.target.matches("[data-preco-input]")) aplicarPrecos(e.target);
+    if (e.target.matches("[data-preco-input]")) { aplicarPrecos(e.target); }
+    if (e.target.matches("[data-desconto-input]")) aplicarDesconto(e.target);
     if (e.target.matches("[data-qtd-input]")) aplicarQuantidade(e.target);
   });
   document.addEventListener("keydown", (e) => {
     if ((e.key === "Enter" || e.key === "Return" || e.keyCode === 13)
-        && (e.target.matches("[data-preco-input]") || e.target.matches("[data-qtd-input]"))) { e.preventDefault(); e.target.blur(); }
+        && (e.target.matches("[data-preco-input]") || e.target.matches("[data-qtd-input]") || e.target.matches("[data-desconto-input]"))) { e.preventDefault(); e.target.blur(); }
   });
 
   window.removerItem = async function (itemId) {
@@ -291,8 +396,7 @@
     resultadosDiv.innerHTML = produtos.map((p, i) => {
       const meta = [p.familia_rotulo || p.familia, p.tamanho ? p.tamanho.replace("x", " × ") : null,
                     p.thread_count ? p.thread_count + " fios" : null, p.gsm ? p.gsm + " g/m²" : null].filter(Boolean).map(esc).join(" · ");
-      const lado = p.sem_custo ? '<span class="tag tag-review">sob consulta</span>'
-                 : (p.preco_travado ? '<span class="lock">🔒 preço fixo</span>' : "");
+      const lado = p.sem_custo ? '<span class="tag tag-review">sob consulta</span>' : "";
       return `<div class="item" data-idx="${i}" role="button" tabindex="0">
         <div><div class="nome">${esc(p.nome)} ${tagFornecedor(p.fornecedor)}</div>
           <div class="spec">${esc(p.especificacao || p.categoria || "")}</div>
@@ -327,8 +431,11 @@
     const r = await anaraFetch(`/cotacoes/${COTACAO_ID}/calc`, {method: "POST", body});
     const alvo = document.getElementById("add-preview");
     if (!r.ok || !r.dados) { alvo.textContent = ""; return; }
+    if (r.dados.sem_regra_de_margem) { alvo.innerHTML = `<span class="tag tag-review">sem regra de preço — avise o administrador</span>`; return; }
     alvo.innerHTML = r.dados.sem_custo ? `<span class="muted">sem preço automático</span>`
-      : `recomendado <strong>${brl(r.dados.preco_negociado)}</strong> · total <strong>${brl(r.dados.faturamento)}</strong>`;
+      : (r.dados.preco_tabela
+         ? `tabela <strong>${brl(r.dados.preco_tabela)}</strong> · B2B <strong>${brl(r.dados.preco_b2b)}</strong> · total <strong>${brl(r.dados.faturamento)}</strong>`
+         : `recomendado <strong>${brl(r.dados.preco_negociado)}</strong> · total <strong>${brl(r.dados.faturamento)}</strong>`);
   }, 200);
   document.getElementById("add-qtd")?.addEventListener("input", atualizarPreviewAdd);
   window.adicionarItem = async function () {

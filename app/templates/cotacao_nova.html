@@ -77,7 +77,7 @@
           <select name="condicao_pagamento">
             {% for c in condicoes %}
             <option value="{{ c.codigo }}" {{ 'selected' if c.codigo == '30' else '' }}>
-              {{ c.label }}{% if c.encargo_pct is not none %} · encargo {{ c.encargo_pct|pct }}{% else %} · encargo a confirmar{% endif %}
+              {{ c.label }}{% if economia %}{% if c.encargo_pct is not none %} · encargo {{ c.encargo_pct|pct }}{% else %} · encargo a confirmar{% endif %}{% endif %}
             </option>
             {% endfor %}
           </select>

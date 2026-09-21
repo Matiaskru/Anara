@@ -175,7 +175,7 @@
         <h4>Próxima atividade</h4>
         {% if proxima %}
         <div class="resumo-linha"><span class="r">{{ proxima.tipo|rotulo_atividade }}</span>
-          <span class="v {{ 'margem-abaixo' if atrasada(proxima) else '' }}">{{ proxima.due_em|datahora if proxima.due_em else 'sem data' }}{% if atrasada(proxima) %} · atrasada{% endif %}</span></div>
+          <span class="v {{ 'valor-alerta' if atrasada(proxima) else '' }}">{{ proxima.due_em|datahora if proxima.due_em else 'sem data' }}{% if atrasada(proxima) %} · atrasada{% endif %}</span></div>
         <div style="font-size:12.5px;margin:2px 0 8px;">{{ proxima.titulo }}</div>
         <button class="btn btn-ghost btn-sm" type="button" onclick="concluir({{ proxima.id }})">Concluir</button>
         {% else %}

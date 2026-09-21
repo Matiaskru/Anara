@@ -200,9 +200,8 @@ def test_e2e_aprovacao(session, mundo):
     cliente = crm.criar_cliente(session, ator=vendedor, nome=f"Hotel desconto {next(_SEQ)}")
     cot, item = _cotacao_com_item(session, mundo, cliente)
 
-    # negocia bem abaixo do recomendado. Desde 16/09/2026 a vendedora tem autonomia até o
-    # piso de margem (aqui 20% − 3 p.p. = 17%); 25% de desconto fura o piso mesmo com a
-    # comissão no mínimo, e é isso que vira exceção.
+    # negocia bem abaixo do recomendado. Desde 21/09/2026 o B2B recomendado É o piso de
+    # autonomia: qualquer preço abaixo dele é exceção comercial (PRECO_ABAIXO_B2B).
     abaixo = round(item.preco_recomendado * 0.75, 2)
     cot, item = _cotacao_com_item(session, mundo, cliente, preco=abaixo)
     from app import comercial_service as com
@@ -211,7 +210,7 @@ def test_e2e_aprovacao(session, mundo):
     session.refresh(item)
 
     excecoes = wf.excecoes_do_item(item)
-    assert any(e.motivo == wf.MARGEM_ABAIXO_PISO for e in excecoes), "o desconto não virou exceção"
+    assert any(e.motivo == wf.PRECO_ABAIXO_B2B for e in excecoes), "o desconto não virou exceção"
 
     pedido = ws.solicitar_aprovacao(session, cot, ator=vendedor,
                                     justificativa="cliente pediu")

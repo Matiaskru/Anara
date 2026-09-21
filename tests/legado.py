@@ -50,6 +50,11 @@ COTACOES = frozenset(c["id"] for c in (_BASE or {}).get("cotacoes", []))
 #: Ids dos itens dessas cotações.
 ITENS = frozenset(i["id"] for i in (_BASE or {}).get("itens", []))
 
+def caminho_banco_real() -> str:
+    """O banco real (somente leitura) — ou a cópia apontada por `ANARA_DB_REAL_PARA_TESTES`."""
+    return os.path.abspath(os.environ.get("ANARA_DB_REAL_PARA_TESTES") or "data/anara.db")
+
+
 sem_baseline = pytest.mark.skipif(
     not COTACOES,
     reason="baseline da Fase 0 ausente — sem ele não há conjunto legado a proteger")

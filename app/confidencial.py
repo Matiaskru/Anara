@@ -55,6 +55,23 @@ CAMPOS_CONFIDENCIAIS = frozenset({
     "absorvido_por_comissao", "absorvido_por_margem", "absorvido_por_impostos_e_frete",
     "margem_realizada_pct", "margem_agregada_pct", "viola_piso", "deficit_unitario",
     "tolerancia_unitaria", "economia", "politica_comercial",
+    # política comercial de 21/09/2026 — a vendedora vê tabela, B2B, desconto e a comissão
+    # DELA (`comissao_estimada_*`); a base comissionável, a parcela de ICMS deduzida dela, a
+    # faixa como mecânica e a decomposição por item são economia interna.
+    "base_comissionavel", "base_comissionavel_total", "icms_base_comissao_pct",
+    "comissao_base_icms_pct", "comissao_faixa_pct", "comissao_item", "versao_politica",
+    "comissao_base", "fator_tabela", "b2b",
+    # sinal / entrada (21/09/2026) — a vendedora vê o percentual de sinal, a condição do saldo
+    # e o texto ("30% de sinal + 70% em 30/60/90 dias"); o encargo efetivo, o encargo do
+    # saldo e a fórmula são mecânica interna do preço.
+    "encargo_efetivo_pct", "encargo_saldo_pct", "encargo_saldo_label", "encargo_label",
+    "encargo_financeiro_pct",
+    # economia real × formação comercial (22/09/2026) — custo real, base comercial, proteção,
+    # B2B econômico e I.I. são mecânica interna; a vendedora vê só o B2B comercial e a tabela.
+    "base_comercial_precificacao", "base_comercial_brl", "protecao_comercial_pct",
+    "protecao_comercial", "protecao_comercial_fonte", "protecao_usd", "referencia_comercial",
+    "preco_b2b_economico", "b2b_economico", "custo_real_brl", "margem_realizada_no_b2b",
+    "ii_pct", "ii_regra", "ii_legado_pct", "ii_economico_pct", "ii_usd", "ncm",
 })
 
 #: Campos que um item de cotação pode mostrar a um vendedor. Tudo o mais é cortado.
@@ -65,6 +82,8 @@ CAMPOS_ITEM_COMERCIAL = (
     # Fase 3A: o recomendado é a referência que a vendedora negocia a partir de; se a linha é
     # editável (Daune não é) e por quê.
     "preco_recomendado", "editavel", "motivo_nao_editavel", "preco_travado", "total_linha",
+    # 21/09/2026: tabela, B2B (= recomendado), desconto sobre a tabela e o que ela digitou.
+    "politica_nova", "preco_tabela", "preco_b2b", "desconto_vs_tabela_pct", "modo_negociacao",
 )
 
 #: Campos que um produto pode mostrar num resultado de busca comercial.

@@ -56,7 +56,8 @@ class PdfInseguro(RuntimeError):
 
 
 ROTULO_FRETE = {"CIF": "Frete nacional", "FOB": "Por conta do cliente",
-                "A_COMBINAR": "A combinar", "OUTRO": "Conforme combinado"}
+                "A_COMBINAR": "A combinar — frete não incluído nesta proposta",
+                "OUTRO": "Conforme combinado"}
 
 
 def _texto_frete(tipo: Optional[str], valor, texto_livre: Optional[str], rascunho: bool):
@@ -141,6 +142,10 @@ def montar_documento(cotacao, cliente, itens, *, rascunho: bool = False, snapsho
         cli = json.loads(snapshot.cliente_json or "{}")
         itens_dicts = json.loads(snapshot.itens_json or "[]")
         frete_json = json.loads(snapshot.frete_json or "{}")
+        # A condição de pagamento por extenso congelada na emissão (com o sinal, quando há —
+        # 21/09/2026). Snapshot anterior não a tem: vale o rótulo que a rota passou.
+        fiscal_json = json.loads(snapshot.fiscal_json or "{}")
+        condicao_label = fiscal_json.get("condicao_pagamento_texto") or condicao_label
         numero = snapshot.numero or cotacao.numero
         revisao = snapshot.revisao or cotacao.revisao or 1
         data = _data(snapshot.emitido_em)

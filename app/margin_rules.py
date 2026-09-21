@@ -33,7 +33,7 @@ SEM_VIGENCIA = object()
 
 @dataclass
 class MargemResolvida:
-    margem_pct: Decimal
+    margem_pct: Optional[Decimal]          # None = NENHUMA regra bateu (política 21/09: bloqueia)
     regra: str
     regra_id: Optional[int] = None
     origem: str = "tabela"
@@ -48,6 +48,11 @@ class MargemResolvida:
     def tem_politica(self) -> bool:
         return self.politica is not None
 
+    @property
+    def tem_regra(self) -> bool:
+        """Existe regra cadastrada para este produto? Sem regra não se forma preço."""
+        return self.margem_pct is not None and self.origem != "sem_regra"
+
     def como_dict(self) -> dict:
         return {"margem_pct": para_float(self.margem_pct), "regra": self.regra,
                 "regra_id": self.regra_id, "origem": self.origem,
@@ -57,7 +62,15 @@ class MargemResolvida:
                 "margem_anterior_pct": para_float(self.margem_anterior_pct)}
 
 
-MARGEM_ULTIMO_RECURSO = Decimal("0.15")
+#: Até 21/09/2026 um produto sem regra recebia 15% "de último recurso". A política de
+#: 21/09/2026 proíbe default silencioso: sem regra, `resolver_margem` devolve
+#: `margem_pct=None` (`origem="sem_regra"`), e quem forma preço bloqueia o item e o expõe
+#: ao Admin. A constante fica só como registro histórico do que existia.
+MARGEM_ULTIMO_RECURSO_LEGADA = Decimal("0.15")
+SEM_REGRA = "sem_regra"
+MOTIVO_SEM_REGRA = ("Nenhuma regra de margem cadastrada alcança este produto. O sistema não "
+                    "assume margem: cadastre a regra do escopo (fornecedor, família ou SKU) "
+                    "no painel de administração.")
 
 
 def _vigente_em(regra, ref) -> bool:
@@ -136,9 +149,7 @@ def resolver_margem(regras: Sequence, fornecedor_id: Optional[int] = None,
     candidatas = [r for r in regras
                   if _bate(r, fornecedor_id, familia, thread_count, sku_key, ref)]
     if not candidatas:
-        return MargemResolvida(MARGEM_ULTIMO_RECURSO,
-                               "Nenhuma regra de margem cadastrada bateu — usando 15% como último "
-                               "recurso. Cadastrar a regra no painel.", origem="fallback")
+        return MargemResolvida(None, MOTIVO_SEM_REGRA, origem=SEM_REGRA)
 
     # Empate de prioridade e especificidade: ganha a vigência mais recente, e só então o id
     # menor. Sem isso, a regra nova de um escopo (mesma prioridade, mesma especificidade)

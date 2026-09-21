@@ -111,9 +111,11 @@ def cenario(session, cliente, daune, *, preco, recomendado=200.0, margem_real=No
         margem_padrao_pct=0.14, faturamento=preco * qtd, custo_total=100.0 * qtd,
         lucro=0.0, modo_edicao="preco", valor_editado=preco, status_fiscal="OK",
         status_pagamento="OK", status_custo_item="CONFIRMADO",
-        # a política que um item Daune de hoje congela (16/09/2026): piso 12%, 5%, travado
-        politica_comercial=_pol.ROTULO, piso_margem_pct=0.12, comissao_formacao_pct=0.05,
-        preco_travado=True)
+        # a política que um item Daune de hoje congela (21/09/2026): B2B como piso, 5%,
+        # sem preço travado; a tabela é 2 × recomendado
+        politica_comercial=_pol.ROTULO_2026_09_21, piso_margem_pct=None,
+        comissao_formacao_pct=0.05, preco_travado=False,
+        preco_tabela=(2 * recomendado) if recomendado else None)
     session.add(it)
     session.commit()
     session.refresh(it)
@@ -283,7 +285,8 @@ def test_F_preco_abaixo_do_recomendado_e_excecao_e_nao_blocker(session, cliente,
     assert prontidao.blockers == [], "há preço: não falta informação"
     assert prontidao.precisa_aprovacao is True
     assert prontidao.pode_emitir is False, "mas só depois de aprovado"
-    assert "PRECO_ABAIXO_RECOMENDADO" in [e.motivo for e in prontidao.excecoes]
+    # política 21/09: abaixo do B2B recomendado é `PRECO_ABAIXO_B2B` (mesma natureza: exceção)
+    assert "PRECO_ABAIXO_B2B" in [e.motivo for e in prontidao.excecoes]
 
 
 def test_F_desconto_aprovado_emite_normalmente(session, cliente, daune):

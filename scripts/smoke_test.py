@@ -113,8 +113,12 @@ class SemRedirect(urllib.request.HTTPRedirectHandler):
 # Preparação do ambiente
 # ---------------------------------------------------------------------------
 def preparar_banco(resultado: Resultado) -> str:
-    """Cópia do banco de produção — **somente cópia**. O original não é aberto para escrita."""
-    origem = os.path.join(RAIZ, "data", "anara.db")
+    """Cópia do banco de produção — **somente cópia**. O original não é aberto para escrita.
+
+    `ANARA_SMOKE_ORIGEM` aponta para outra origem (ex.: a cópia já migrada e com os dados de
+    21/09 aplicados, no ensaio de migração) — também copiada, nunca aberta para escrita.
+    """
+    origem = os.environ.get("ANARA_SMOKE_ORIGEM") or os.path.join(RAIZ, "data", "anara.db")
     fd, destino = tempfile.mkstemp(prefix="anara-smoke-", suffix=".db")
     os.close(fd)
     if os.path.exists(origem):

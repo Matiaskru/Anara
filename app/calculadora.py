@@ -69,12 +69,19 @@ def opcoes(session: Session) -> dict:
     }
 
 
+#: Composições de toalha oferecidas na calculadora e no catálogo. Decisão da KTC (21/09/2026):
+#: 100% algodão e 90/10 têm o MESMO preço industrial quando tamanho, GSM, subcategoria e
+#: construção são iguais — a composição identifica o SKU, não muda o custo.
+COMPOSICOES_TOALHA = {"100/0": (1.0, 0.0), "90/10": (0.9, 0.1)}
+
+
 def produto_simulado(session: Session, familia: str, largura_cm: Optional[float],
                      comprimento_cm: Optional[float], material_id: Optional[int] = None,
                      gsm: Optional[int] = None, plain_or_stripe: str = "plain",
                      outros_custos_usd: float = 0.0,
                      acabamento: Optional[str] = None, abas: Optional[int] = None,
-                     flap_cm: Optional[float] = None, festone: bool = False) -> Produto:
+                     flap_cm: Optional[float] = None, festone: bool = False,
+                     composicao_toalha: Optional[str] = None) -> Produto:
     """Monta um Produto **em memória** — não vai para o banco. Serve só para alimentar os
     mesmos motores que a cotação usa, sem duplicar regra nenhuma."""
     ktc = session.exec(select(Fornecedor).where(Fornecedor.codigo == "KTC")).first()
@@ -89,6 +96,9 @@ def produto_simulado(session: Session, familia: str, largura_cm: Optional[float]
         largura_cm=largura_cm, comprimento_cm=comprimento_cm,
         gsm=gsm, plain_or_stripe=plain_or_stripe, acabamento=acabamento,
     )
+    if TIPO_POR_FAMILIA.get(familia) == "toalha":
+        algodao, poliester = COMPOSICOES_TOALHA.get(composicao_toalha or "100/0", (1.0, 0.0))
+        produto.cotton_pct, produto.poliester_pct = algodao, poliester
     if TIPO_POR_FAMILIA.get(familia) == "fronha":
         # A construção da fronha (§18) viaja no cadastro estruturado — é de lá que o motor
         # lê abas, flap e festonê. Sem informar, vale o standard: 0 abas, flap 20 cm.
@@ -150,7 +160,8 @@ def calcular(session: Session, familia: str, largura_cm: Optional[float],
              quantidade: float = 1, outros_custos_usd: float = 0.0,
              margem_override: Optional[float] = None, acabamento: Optional[str] = None,
              cotacao: Optional[Cotacao] = None, abas: Optional[int] = None,
-             flap_cm: Optional[float] = None, festone: bool = False) -> dict:
+             flap_cm: Optional[float] = None, festone: bool = False,
+             composicao_toalha: Optional[str] = None) -> dict:
     """Devolve a memória do preço completa, no mesmo formato da tela de memória da cotação."""
     if TIPO_POR_FAMILIA.get(familia) == "sem_formula" or familia not in FAMILIAS_CALCULAVEIS:
         return {
@@ -167,7 +178,8 @@ def calcular(session: Session, familia: str, largura_cm: Optional[float],
         return {"calculavel": False, "familia": familia, "motivo": str(e), "entrada_invalida": True}
     produto = produto_simulado(session, familia, largura_cm, comprimento_cm, material_id, gsm,
                                plain_or_stripe, outros_custos_usd, acabamento,
-                               abas=abas, flap_cm=flap_cm, festone=festone)
+                               abas=abas, flap_cm=flap_cm, festone=festone,
+                               composicao_toalha=composicao_toalha)
     memoria = ps.memoria_do_preco(session, produto, cotacao, quantidade=quantidade,
                                   margem_override=margem_override)
     memoria["calculavel"] = memoria.get("comercial") is not None
@@ -184,7 +196,8 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
                        gsm: Optional[int] = None, plain_or_stripe: str = "plain",
                        acabamento: Optional[str] = None, calculavel: bool = True,
                        observacao: Optional[str] = None, abas: Optional[int] = None,
-                       flap_cm: Optional[float] = None, festone: bool = False) -> Produto:
+                       flap_cm: Optional[float] = None, festone: bool = False,
+                       composicao_toalha: Optional[str] = None) -> Produto:
     """Grava o produto simulado no catálogo, para poder ser cotado e reaproveitado.
 
     Calculável entra com o custo do motor industrial. Sem fórmula entra sem custo, marcado para
@@ -194,11 +207,15 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
         validar_entrada(familia, largura_cm, comprimento_cm, gsm, abas, flap_cm)   # levanta
     produto = produto_simulado(session, familia, largura_cm, comprimento_cm, material_id, gsm,
                                plain_or_stripe, acabamento=acabamento, abas=abas,
-                               flap_cm=flap_cm, festone=festone)
+                               flap_cm=flap_cm, festone=festone,
+                               composicao_toalha=composicao_toalha)
     medida = (f"{int(largura_cm)}x{int(comprimento_cm)}"
               if largura_cm and comprimento_cm else "sem medida")
     detalhe = produto.material_ref or (f"{gsm} GSM" if gsm else "sem tecido")
     produto.sku_key = f"CALC · {familia} · {medida} · {detalhe} · {plain_or_stripe}"
+    if TIPO_POR_FAMILIA.get(familia) == "toalha":
+        # composições diferentes são SKUs diferentes (mesmo custo, por decisão da KTC)
+        produto.sku_key += f" · {composicao_toalha or '100/0'}"
     if TIPO_POR_FAMILIA.get(familia) == "fronha":
         # construções diferentes são SKUs diferentes: 4 abas com festonê não é a standard
         produto.sku_key += f" · {produto.construcao} · {produto.fechamento}" + \
@@ -208,6 +225,7 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
     if existente:
         return existente
 
+    memoria = {}
     if calculavel and familia in FAMILIAS_CALCULAVEIS:
         memoria = ps.custo_net(session, produto)
         produto.custo_unitario = memoria.get("net_brl")
@@ -238,15 +256,22 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
     margem = ps.margem_padrao(session, produto)
     produto.margem_padrao_pct = margem.margem_pct
     if produto.custo_unitario:
-        from app.pricing_engine import calcular_por_margem
+        from app.pricing_engine import calcular_por_margem, preco_b2b
+        from app.politica_comercial import ROTULO_2026_09_21
         # O preço-base do catálogo é do PRODUTO: o cenário fiscal é resolvido com ele, não
         # em abstrato. Sem cenário resolvido, o produto fica sem preço-base — não se inventa.
+        # Forma-se sobre a BASE COMERCIAL (referência comercial; 22/09/2026), nunca sobre o
+        # custo real — exatamente como o SKU equivalente do catálogo: sem arbitragem entre
+        # "customizado" e "catalogado". Política 21/09: preco_base = B2B de referência.
         regras, ctx = ps.regras_da_cotacao(session, ps.cenario_padrao_catalogo(session), produto)
+        base = memoria.get("base_comercial_brl") or produto.custo_unitario
         if regras is not None:
             from app.dinheiro import para_float
-            produto.preco_base = para_float(
-                calcular_por_margem(produto.custo_unitario, 1,
-                                    margem.margem_pct, regras).preco_negociado)
+            if margem.politica == ROTULO_2026_09_21:
+                produto.preco_base = para_float(preco_b2b(base, margem.margem_pct, regras).preco_negociado)
+            else:
+                produto.preco_base = para_float(
+                    calcular_por_margem(base, 1, margem.margem_pct, regras).preco_negociado)
         else:
             produto.preco_base = None
             produto.precisa_revisao = True

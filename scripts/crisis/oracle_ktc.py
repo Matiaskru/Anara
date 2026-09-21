@@ -188,8 +188,10 @@ class Premissas:
         self.con.row_factory = sqlite3.Row
 
     def _vigentes(self, tabela: str, extra: str = "", params=()):
+        # vigência com fim EXCLUSIVO (`valid_to > hoje`), como o app (`_vigente_hoje`): a linha
+        # encerrada em 22/09/2026 não vale mais em 22/09/2026
         sql = (f"select * from {tabela} where ativo=1 and (valid_from is null or valid_from<=?) "
-               f"and (valid_to is null or valid_to>=?) {extra}")
+               f"and (valid_to is null or valid_to>?) {extra}")
         return self.con.execute(sql, (self.hoje, self.hoje) + tuple(params)).fetchall()
 
     def premissa_num(self, chave: str) -> Optional[Decimal]:
@@ -317,6 +319,7 @@ class ResultadoOracle:
     peso_tipo: Optional[str] = None
     ii_pct: Optional[Decimal] = None
     ii_confiavel: Optional[bool] = None
+    protecao_pct: Optional[Decimal] = None      # proteção comercial de precificação (não é I.I.)
     nac: Optional[NacOracle] = None
     avisos: List[str] = field(default_factory=list)
     params: dict = field(default_factory=dict)
@@ -352,7 +355,9 @@ def resolver_produto(prem: Premissas, p: sqlite3.Row) -> ResultadoOracle:
     fam = (p["familia"] or "").strip().lower()
     r = ResultadoOracle(p["familia"] or "", EtapasOracle())
     waste = prem.parametro("waste")
-    qa = prem.parametro("quality_allowance")
+    # 21/09/2026: o allowance é por família quando a KTC o declara (fronha 2%, planilha
+    # "Pillow Case Costing sheet"); as demais seguem o global — o oracle lê como o motor lê
+    qa = prem.parametro("quality_allowance", p["familia"])
     margem = prem.parametro("ktc_margin")
     shrink = prem.parametro("shrinkage", shrinkage_escopo(p["cotton_pct"]))
     r.params = {"waste": waste, "quality_allowance": qa, "ktc_margin": margem, "shrinkage": shrink}
@@ -411,11 +416,15 @@ def resolver_produto(prem: Premissas, p: sqlite3.Row) -> ResultadoOracle:
         return r
 
     r.peso_kg, r.peso_tipo = peso_oracle(prem, p)
-    r.ii_pct, r.ii_confiavel, _ = prem.ii_por_familia(p["familia"], p["categoria"], p["ncm"])
-    if r.ii_pct is None:
-        r.ii_pct = dec(p["ii_aplicado"])
-        if r.ii_pct is None:
-            r.avisos.append("II desconhecido — §23 proíbe II=0 silencioso")
+    # 22/09/2026: I.I. ECONÔMICO KTC/Egito = 0% por decisão. A regra de NCM vigente tem de
+    # dizer o mesmo — alíquota positiva vigente é divergência, não custo.
+    ii_regra, r.ii_confiavel, _ = prem.ii_por_familia(p["familia"], p["categoria"], p["ncm"])
+    r.ii_pct = Decimal(0)
+    if ii_regra is not None and ii_regra != 0:
+        r.avisos.append(f"NcmRegra vigente com I.I. {ii_regra} ≠ 0 — I.I. econômico KTC é 0% desde 22/09/2026")
+    # proteção comercial de precificação (não é imposto): pino do SKU, senão regra da família
+    r.protecao_pct = dec(p["protecao_comercial_pct"]) if p["protecao_comercial_pct"] is not None \
+        else prem.parametro("protecao_comercial_pct", p["familia"])
     return r
 
 
@@ -483,6 +492,13 @@ def main():
             cnet_of_motor = dec(nac_of["net_brl"])
         dif_cnet_fim_a_fim = (cnet_of_motor - nac_or.cnet_brl) if (cnet_of_motor is not None and nac_or) else None
         dif_peso = (peso_of - orc.peso_kg) if (peso_of is not None and orc.peso_kg is not None) else None
+        # referência comercial (o antigo waterfall com a proteção no lugar do I.I.) — forma o
+        # preço, não o custo; tem de bater com `base_comercial_brl` do motor
+        # só onde o motor nacionalizou (custo lido do catálogo não se decompõe: base = custo)
+        base_of = dec(memoria.get("base_comercial_brl")) if memoria.get("referencia_comercial") else None
+        ref_or = (nacionalizar_com_premissas(prem, exw_usado_of, peso_of, orc.protecao_pct)
+                  if (base_of is not None and exw_usado_of is not None and orc.protecao_pct is not None) else None)
+        dif_ref = (base_of - ref_or.cnet_brl) if (base_of is not None and ref_or is not None) else None
 
         status = "OK"
         notas = list(orc.avisos)
@@ -500,6 +516,10 @@ def main():
                 status = "DIVERGENCIA_PESO"
         if ii_of is not None and orc.ii_pct is not None and ii_of != orc.ii_pct:
             status = "DIVERGENCIA_II"
+        if any("≠ 0" in a for a in orc.avisos):
+            status = "DIVERGENCIA_II"
+        if (base_of is None) != (ref_or is None) or (dif_ref is not None and abs(dif_ref) >= TOL_CNET):
+            status = "DIVERGENCIA_REFERENCIA_COMERCIAL"
         if any(a.startswith("§15") for a in orc.avisos) and status == "OK":
             status = "REGRA_TC_NAO_CALCULAVEL"
 
@@ -528,6 +548,9 @@ def main():
             "of_net_usd": _f(nac_of.get("net_usd")), "or_net_usd": _f(nac_or_mesmo_exw.net_usd if nac_or_mesmo_exw else None),
             "of_cnet_brl": _f(nac_of.get("net_brl")), "or_cnet_brl_mesmo_exw": _f(nac_or_mesmo_exw.cnet_brl if nac_or_mesmo_exw else None),
             "dif_cnet_mesmo_exw": _f(dif_cnet_mesmo_exw),
+            "protecao_comercial_pct": _f(orc.protecao_pct, 4),
+            "of_base_comercial_brl": _f(base_of), "or_base_comercial_brl": _f(ref_or.cnet_brl if ref_or else None),
+            "dif_base_comercial": _f(dif_ref),
             "or_cnet_brl_fim_a_fim": _f(nac_or.cnet_brl if nac_or else None),
             "dif_cnet_fim_a_fim(so_KTC_CALCULATED)": _f(dif_cnet_fim_a_fim),
             "status": status, "notas": " | ".join(notas),

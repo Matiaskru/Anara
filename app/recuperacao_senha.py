@@ -113,6 +113,45 @@ def consumir(session: Session, token: str, nova_senha: str, *,
     return usuario
 
 
+#: Perfis de acesso como a pessoa os vê no primeiro acesso. O papel técnico (OWNER, ADMIN,
+#: VENDEDOR_*) é decidido pelo gestor ao criar a conta; a tela só CONFIRMA o perfil — quem
+#: escolher "Administrativo" sem ter sido autorizado é recusado, e ninguém vira OWNER por
+#: autoatendimento.
+PERFIL_VENDEDORA = "vendedora"
+PERFIL_ADMINISTRATIVO = "administrativo"
+PERFIS = {PERFIL_VENDEDORA: "Vendedora", PERFIL_ADMINISTRATIVO: "Administrativo"}
+
+
+def perfil_autorizado(usuario: Usuario) -> str:
+    """O perfil que o gestor autorizou para esta conta — derivado do papel, nunca digitado."""
+    if usuario.papel in ("OWNER", "ADMIN"):
+        return PERFIL_ADMINISTRATIVO
+    return PERFIL_VENDEDORA
+
+
+class PerfilNaoAutorizado(ValueError):
+    """A pessoa escolheu um perfil diferente do que o gestor autorizou para a conta."""
+
+
+def conferir_perfil(usuario: Usuario, perfil_escolhido: Optional[str]) -> str:
+    """Aceita o perfil escolhido só se for o autorizado. Não altera papel nenhum.
+
+    `None`/vazio significa "confirmo o que foi autorizado" e passa. Qualquer outro valor é
+    recusado com mensagem amigável — o caminho para mudar de perfil é o gestor, em
+    Administração › Usuários.
+    """
+    autorizado = perfil_autorizado(usuario)
+    escolhido = (perfil_escolhido or "").strip().lower()
+    if not escolhido or escolhido == autorizado:
+        return autorizado
+    if escolhido not in PERFIS:
+        raise PerfilNaoAutorizado("Perfil desconhecido. Confirme o perfil indicado na tela.")
+    raise PerfilNaoAutorizado(
+        f"Este acesso foi autorizado como {PERFIS[autorizado]}. Para ter acesso "
+        f"{PERFIS[escolhido].lower()}, peça ao gestor da sua conta — a mudança é feita por "
+        "quem administra os usuários, não no primeiro acesso.")
+
+
 def link(base_url: str, token: str) -> str:
     return f"{base_url.rstrip('/')}/redefinir-senha?token={token}"
 

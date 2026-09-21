@@ -22,10 +22,13 @@ from app.models import (
     Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Oportunidade,
     Produto, SnapshotEmissao, StatusCotacao, TipoFrete,
 )
+from app.payment_terms import SinalInvalido, percentual_sinal_do_formulario
 from app.pdf_bridge import gerar_pdf_para_cotacao
+from app.politica_comercial import MODO_DESCONTO, ROTULO_2026_09_21
 from app.pricing_engine import (
     TaxRuleSet, calcular_por_margem, calcular_por_markup, calcular_por_preco,
-    icms_excluido_da_base, pis_cofins_efetivo,
+    desconto_vs_tabela, icms_excluido_da_base, pis_cofins_efetivo, preco_b2b, preco_de_tabela,
+    preco_por_desconto,
 )
 from app.templating import pagina_de_erro, templates
 from app import rotulos
@@ -104,7 +107,8 @@ def montar_regras(cotacao: Cotacao, session: Session, produto=None, item=None):
     if item is not None:
         regras, contexto = ps.regras_da_cotacao(
             session, cotacao, produto,
-            comissao_formacao_pct=com.comissao_de_formacao_do_item(item))
+            comissao_formacao_pct=com.comissao_de_formacao_do_item(item),
+            politica=com.politica_do_item(item))
     else:
         regras, contexto = ps.regras_da_cotacao(session, cotacao, produto)
     return regras, contexto["icms_regra"], contexto
@@ -130,19 +134,81 @@ def _resultado_bloqueado(qtd: float, custo: float):
         lucro=ZERO, margem_liquida=ZERO, markup_implicito=ZERO, diferenca_pct_vs_base=None)
 
 
+def _e_politica_nova(contexto: dict) -> bool:
+    return bool(contexto) and contexto.get("politica_comercial") == ROTULO_2026_09_21
+
+
+def _b2b_e_tabela(custo, margem_alvo, regras: TaxRuleSet, contexto: dict, preco_base=None):
+    """(B2B unitário, tabela) da política de 21/09 para este custo neste cenário.
+
+    O B2B é o menor centavo com margem ≥ alvo (`pricing_engine.preco_b2b`); a tabela é
+    `fator × B2B`, com o fator lido da premissa pinada no contexto — nunca de cache.
+    """
+    b2b = preco_b2b(custo, margem_alvo, regras, preco_base)
+    fator = contexto.get("fator_tabela") if contexto else None
+    if fator is None:
+        raise HTTPException(status_code=409,
+                            detail="Premissa fator_tabela não cadastrada — a política de "
+                                   "21/09/2026 não forma tabela sem ela.")
+    return b2b, preco_de_tabela(b2b.preco_negociado, fator)
+
+
 def _calcular(modo: str, custo: float, qtd: float, valor: float,
-              regras: TaxRuleSet, preco_base=None):
-    """Despacha para o modo escolhido: margem (padrão), preço ou markup.
+              regras: TaxRuleSet, preco_base=None, *, contexto: dict = None,
+              margem_alvo=None, base_comercial=None):
+    """Despacha para o modo escolhido: margem (padrão), preço, markup ou desconto.
 
     `regras is None` significa cenário irresolvido: devolve resultado zerado em vez de um preço
-    que pareceria confiável.
+    que pareceria confiável. Margem-alvo ausente (produto sem regra) idem — não se inventa.
+
+    Política de 21/09/2026 (`contexto["politica_comercial"]`):
+
+    * `margem`   → o preço é o **B2B** (menor centavo com margem ≥ alvo), não a forma fechada;
+    * `desconto` → `valor` é o desconto sobre a TABELA (fração): B2B e tabela são refeitos
+      para o cenário atual e o preço é derivado deles. É a alavanca que sobrevive a uma
+      mudança de cenário — o preço absoluto muda, o desconto negociado não (CR-01).
+
+    Economia real × formação comercial (22/09/2026): `custo` é o CUSTO REAL (KTC: I.I. 0%) e
+    forma lucro/margem realizada; `base_comercial` (referência comercial do SKU) forma o preço
+    — B2B, tabela, recomendado. Sem base (fornecedor nacional, item anterior) as duas coincidem.
     """
     if regras is None:
         return _resultado_bloqueado(qtd, custo)
+    base = base_comercial if base_comercial else custo
+
+    def economia_real(r):
+        # preço formado sobre a base comercial; economia (lucro, margem) sobre o custo real
+        if base == custo:
+            return r
+        real = calcular_por_preco(custo, qtd, r.preco_negociado, regras, preco_base)
+        real.preco_preciso = getattr(r, "preco_preciso", None)
+        return real
+
+    if modo in ("margem", MODO_DESCONTO) and _e_politica_nova(contexto):
+        # margem: `valor` é a alavanca (margem-alvo da regra, ou um override explícito de
+        # quem pode editar margem); desconto: a margem-alvo do item forma o B2B e a tabela.
+        alvo = (valor if valor is not None else margem_alvo) if modo == "margem" else margem_alvo
+        if alvo is None or not custo or D0(custo) <= 0:
+            return _resultado_bloqueado(qtd, custo)
+        b2b, tabela = _b2b_e_tabela(base, alvo, regras, contexto, preco_base)
+        preco = b2b.preco_negociado if modo == "margem" else preco_por_desconto(tabela, valor)
+        r = calcular_por_preco(custo, qtd, preco, regras, preco_base)
+        r.preco_preciso = b2b.preco_preciso
+        r.margem_alvo = D0(alvo)
+        return r
     if modo == "margem":
-        return calcular_por_margem(custo, qtd, valor, regras, preco_base)
+        if valor is None:
+            return _resultado_bloqueado(qtd, custo)
+        return economia_real(calcular_por_margem(base, qtd, valor, regras, preco_base))
     if modo == "markup":
-        return calcular_por_markup(custo, qtd, valor, regras, preco_base)
+        return economia_real(calcular_por_markup(base, qtd, valor, regras, preco_base))
+    if modo == MODO_DESCONTO:
+        # Desconto sobre tabela só existe na política de 21/09. Fora dela (item que mudou de
+        # política antes de ser reprecificado) a alavanca volta à margem-alvo — nunca a um
+        # preço inventado.
+        if margem_alvo is None:
+            return _resultado_bloqueado(qtd, custo)
+        return economia_real(calcular_por_margem(base, qtd, margem_alvo, regras, preco_base))
     return calcular_por_preco(custo, qtd, valor, regras, preco_base)
 
 
@@ -160,6 +226,9 @@ def _item_para_json(it: CotacaoItem, pode_ver_economia: bool = True) -> dict:
         "nome_produto": it.nome_produto, "especificacao": it.especificacao,
         "categoria": it.categoria, "quantidade": it.quantidade,
         "custo_unitario": it.custo_unitario, "preco_base": it.preco_base,
+        "base_comercial_precificacao": it.base_comercial_precificacao,
+        "protecao_comercial_pct": it.protecao_comercial_pct,
+        "preco_b2b_economico": it.preco_b2b_economico,
         "preco_negociado": it.preco_negociado, "margem_liquida": it.margem_liquida,
         "faturamento": it.faturamento, "custo_total": it.custo_total, "lucro": it.lucro,
         "diferenca_pct_vs_base": it.diferenca_pct_vs_base,
@@ -177,6 +246,15 @@ def _item_para_json(it: CotacaoItem, pode_ver_economia: bool = True) -> dict:
         "piso_margem_pct": it.piso_margem_pct,
         "comissao_formacao_pct": it.comissao_formacao_pct,
         "politica_comercial": it.politica_comercial,
+        # política 21/09/2026 — comercial: tabela, B2B, desconto; econômico: base e faixa
+        "politica_nova": it.politica_comercial == ROTULO_2026_09_21,
+        "preco_tabela": it.preco_tabela,
+        "preco_b2b": it.preco_recomendado if it.politica_comercial == ROTULO_2026_09_21 else None,
+        "desconto_vs_tabela_pct": it.desconto_vs_tabela_pct,
+        "modo_negociacao": it.modo_negociacao,
+        "comissao_faixa_pct": it.comissao_faixa_pct,
+        "base_comissionavel": it.base_comissionavel,
+        "icms_base_comissao_pct": it.icms_base_comissao_pct,
     }
     return completo if pode_ver_economia else item_comercial(completo)
 
@@ -295,6 +373,9 @@ def nova_form(request: Request, cliente_id: int = 0, oportunidade_id: int = 0,
         "estados_difal": estados(session),
         "condicoes": cfg.condicoes_pagamento(session),
         "tipos_frete": [t.value for t in TipoFrete],
+        # O encargo de cada condição é mecânica do preço: só quem vê economia o enxerga
+        # ao lado do rótulo (auditoria de confidencialidade de 21/09/2026).
+        "economia": ve_economia(request),
     })
 
 
@@ -402,6 +483,7 @@ def criar_cotacao_da_venda(session: Session, request: Request, op, *, ator, **ca
         criado_em=agora, numero=proximo_numero(session), cliente_id=op.cliente_id,
         vendedor=herdado["vendedor"], oportunidade_id=op.id,
         condicao_pagamento=campos.get("condicao_pagamento") or "30",
+        percentual_sinal=para_float(campos.get("percentual_sinal") or 0) or 0.0,
         estado_destino=campos.get("estado_destino") or getattr(cliente, "cidade_uf", None),
         contribuinte_icms=campos.get("contribuinte_icms", True),
         finalidade=getattr(cliente, "finalidade", None),
@@ -553,6 +635,15 @@ def acoes_do_workflow(cotacao, prontidao) -> list:
     return acoes
 
 
+def _sinal_para_campo(cotacao) -> str:
+    """Fração guardada → percentual do formulário, sem zeros inúteis ("30", "33,5" → "33.5")."""
+    fracao = D0(getattr(cotacao, "percentual_sinal", 0) or 0)
+    if fracao <= 0:
+        return ""
+    texto = format((fracao * 100).normalize(), "f")
+    return texto.rstrip("0").rstrip(".") if "." in texto else texto
+
+
 @router.get("/cotacoes/{cotacao_id}", response_class=HTMLResponse)
 def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
@@ -581,6 +672,10 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
         "economia": economia,
         "estados_difal": estados(session), "regra_icms_atual": regra_icms,
         "contexto_fiscal": contexto, "condicoes": cfg.condicoes_pagamento(session),
+        # Sinal / entrada (21/09/2026): percentual para o campo e o texto comercial da
+        # condição composta — só isso vai à tela; encargo efetivo e fórmula ficam no motor.
+        "sinal_pct": _sinal_para_campo(cotacao),
+        "condicao_texto": cfg.condicao_textual(session, cotacao),
         "tipos_frete": [t.value for t in TipoFrete],
         # Premissa mais nova que a desta cotação. Só detecta; a tela oferece a escolha.
         "premissas_novas": (adm.premissas_desatualizadas(session, cotacao, itens)
@@ -620,6 +715,11 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
                         validade_dias: int = Form(0), vendedor: str = Form(""),
                         observacoes: str = Form(""), observacao_cliente: str = Form(""),
                         termos_texto: str = Form(""), local_entrega: str = Form(""),
+                        freight_manual_confirmado: str = Form(""),
+                        freight_manual_obs: str = Form(""),
+                        possui_sinal: str = Form(""),
+                        percentual_sinal: str = Form(""),
+                        request: Request = None,
                         session: Session = Depends(get_session)):
     cotacao = session.get(Cotacao, cotacao_id)
     if cotacao is not None:
@@ -627,16 +727,34 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
     if not cotacao:
         return RedirectResponse(url="/cotacoes", status_code=303)
 
+    # Sinal / entrada (21/09/2026): o formulário manda percentual (0–100); o modelo guarda
+    # fração. Checkbox desmarcada = sem sinal, seja o que for que o campo numérico contenha.
+    # Valor inválido (negativo, > 100, texto) é RECUSADO inteiro — nada do cabeçalho muda.
+    try:
+        sinal_novo = (para_float(percentual_sinal_do_formulario(percentual_sinal))
+                      if possui_sinal in ("sim", "on", "1", "true") else 0.0)
+    except SinalInvalido as exc:
+        if request is None:
+            raise HTTPException(status_code=400, detail=str(exc))
+        return pagina_de_erro(
+            request, titulo="Sinal inválido", status_code=400,
+            motivos=[str(exc), "Informe um percentual entre 0 e 100."],
+            voltar=f"/cotacoes/{cotacao_id}", rotulo_voltar="Voltar para a cotação")
+
     novo_contribuinte = (contribuinte_icms == "sim")
     # `estado_origem` saiu da comparação junto com o campo: ele é origem **logística**, o
     # motor fiscal não o consulta, e mantê-lo aqui fazia todo salvamento parecer mudança de
     # cenário — o formulário não o envia, então a comparação era sempre contra vazio.
+    # Sinal e condição do saldo são MATERIAIS: mudam o encargo efetivo, logo B2B, tabela,
+    # preço, comissão, margem e totais — o recálculo abaixo preserva o desconto negociado.
     mudou_precificacao = (cotacao.condicao_pagamento != condicao_pagamento
+                          or D0(cotacao.percentual_sinal or 0) != D0(sinal_novo)
                           or cotacao.estado_destino != (estado_destino or None)
                           or cotacao.contribuinte_icms != novo_contribuinte
                           or (cotacao.freight_type or "") != (freight_type or ""))
 
     cotacao.condicao_pagamento = condicao_pagamento or "30"
+    cotacao.percentual_sinal = sinal_novo
     cotacao.estado_destino = estado_destino or None
     # O formulário não envia mais `estado_origem` — ele era um campo genérico ("Origem da
     # venda") que ninguém sabia responder, e cujo default aqui era "São Paulo" enquanto o
@@ -647,7 +765,25 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
     cotacao.contribuinte_icms = novo_contribuinte
     cotacao.frete = frete or None
     cotacao.freight_type = freight_type or TipoFrete.cif.value
-    cotacao.freight_valor = float(freight_valor) if freight_valor else None
+    valor_frete_novo = float(freight_valor) if freight_valor else None
+    # Frete CIF manual confirmado (21/09/2026): só vale com tipo CIF e valor positivo. Mudar
+    # o valor ou a confirmação é mudança material (entra no total e no fingerprint).
+    confirmado_novo = (cotacao.freight_type == TipoFrete.cif.value
+                       and freight_manual_confirmado in ("sim", "on", "1", "true")
+                       and (valor_frete_novo or 0) > 0)
+    mudou_frete = ((cotacao.freight_valor or 0) != (valor_frete_novo or 0)
+                   or bool(cotacao.freight_manual_confirmado) != confirmado_novo)
+    if confirmado_novo and (not cotacao.freight_manual_confirmado
+                            or (cotacao.freight_valor or 0) != (valor_frete_novo or 0)):
+        ator = usuario_da_request(request) if request is not None else None
+        cotacao.freight_manual_por = getattr(ator, "email", None) or "sistema"
+        cotacao.freight_manual_em = datetime.utcnow()
+    if not confirmado_novo:
+        cotacao.freight_manual_por = None
+        cotacao.freight_manual_em = None
+    cotacao.freight_manual_confirmado = confirmado_novo
+    cotacao.freight_manual_obs = (freight_manual_obs or None) if confirmado_novo else None
+    cotacao.freight_valor = valor_frete_novo
     cotacao.prazo_entrega = prazo_entrega or None
     cotacao.contato_nome = contato_nome or None
     cotacao.departamento_contato = departamento_contato or None
@@ -673,6 +809,11 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
         _recalcular_todos_itens(cotacao, session)
         return RedirectResponse(url=f"/cotacoes/{cotacao_id}?cenario=atualizado",
                                 status_code=303)
+    if mudou_frete:
+        # O frete não muda o preço unitário, mas muda o total aprovado: a decisão anterior cai.
+        ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="frete alterado")
+        session.commit()
+        return RedirectResponse(url=f"/cotacoes/{cotacao_id}?frete=atualizado", status_code=303)
 
     return RedirectResponse(url=f"/cotacoes/{cotacao_id}?salvo=1", status_code=303)
 
@@ -716,20 +857,32 @@ def atualizar_premissas(request: Request, cotacao_id: int,
         it.custo_unitario = custo or 0.0
         margem = ps.margem_padrao(session, produto)
         regras, _regra, ctx = montar_regras(cotacao, session, produto)
-        if it.modo_edicao == "margem" and it.custo_unitario > 0:
-            # A alavanca de um item em modo margem é a margem-alvo. Trazer o rascunho para
-            # as premissas de hoje inclui a política de hoje: manter o alvo antigo (18%)
-            # enquanto o recomendado passa a 20% fabricava um "desconto" que ninguém deu e
-            # cortava a comissão da vendedora (cotação 0021 na auditoria de 17/09/2026).
+        mudou_de_politica = (it.politica_comercial != margem.politica)
+        if it.modo_edicao == MODO_DESCONTO and not mudou_de_politica and _e_politica_nova(ctx):
+            # Política nova → política nova: o desconto negociado é a intenção comercial e
+            # é reaplicado sobre a tabela refeita. O preço absoluto muda com as premissas.
+            pass
+        elif it.custo_unitario > 0:
+            # Trazer o rascunho para as premissas de hoje inclui a política de hoje: a
+            # alavanca volta ao alvo vigente — B2B na política nova, margem-alvo nas outras.
+            # Manter o alvo antigo (18%) enquanto o recomendado passa a 20% fabricava um
+            # "desconto" que ninguém deu (cotação 0021 na auditoria de 17/09/2026); e um
+            # preço negociado sob a política antiga não é um desconto sobre uma tabela que
+            # não existia — a conversão de política é explícita e começa do B2B.
+            it.modo_edicao = "margem"
             it.valor_editado = para_float(margem.margem_pct)
-        res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
-                        regras, it.preco_base)
+            it.modo_negociacao = None
+            it.desconto_editado_pct = None
         _preencher_item(session, it, produto, margem, memoria_custo)
+        res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
+                        regras, it.preco_base, contexto=ctx, margem_alvo=margem.margem_pct,
+                        base_comercial=_base_de_preco(it))
         _aplicar_resultado(it, res, regras, ctx)
         it.memoria_json = ps.memoria_json(ps.memoria_do_preco(
             session, produto, cotacao, preco_negociado=res.preco_negociado,
             quantidade=it.quantidade,
-            comissao_formacao_pct=com.comissao_de_formacao_do_item(it)))
+            comissao_formacao_pct=com.comissao_de_formacao_do_item(it),
+            politica=com.politica_do_item(it)))
         session.add(it)
 
     session.flush()
@@ -765,17 +918,27 @@ def _recalcular_todos_itens(cotacao: Cotacao, session: Session):
     for it in itens:
         produto = session.get(Produto, it.produto_id) if it.produto_id else None
         if it.custo_unitario and it.custo_unitario > 0 and it.margem_padrao_pct is not None:
-            it.modo_edicao = "margem"
-            it.valor_editado = it.margem_padrao_pct
+            if it.politica_comercial == ROTULO_2026_09_21 and it.modo_edicao == MODO_DESCONTO:
+                # Política de 21/09: a alavanca persistida é o DESCONTO sobre a tabela. B2B e
+                # tabela são refeitos para o cenário novo e o mesmo desconto é reaplicado —
+                # o preço absoluto muda automaticamente, a intenção comercial fica. Se o
+                # desconto levar abaixo do novo B2B, vira exceção (REQUER_APROVACAO), não é
+                # ajustado em silêncio.
+                pass
+            else:
+                it.modo_edicao = "margem"
+                it.valor_editado = it.margem_padrao_pct
         regras, _regra, ctx = montar_regras(cotacao, session, produto, item=it)
         res = _calcular(it.modo_edicao, it.custo_unitario, it.quantidade, it.valor_editado,
-                        regras, it.preco_base)
+                        regras, it.preco_base, contexto=ctx, margem_alvo=it.margem_padrao_pct,
+                        base_comercial=_base_de_preco(it))
         _aplicar_resultado(it, res, regras, ctx)
         if produto is not None and regras is not None:
             it.memoria_json = ps.memoria_json(ps.memoria_do_preco(
                 session, produto, cotacao, preco_negociado=res.preco_negociado,
                 quantidade=it.quantidade,
-                comissao_formacao_pct=com.comissao_de_formacao_do_item(it)))
+                comissao_formacao_pct=com.comissao_de_formacao_do_item(it),
+                politica=com.politica_do_item(it)))
         session.add(it)
     session.flush()
     # A comissão é da cotação: reaplicada a todos os itens da política de uma vez.
@@ -797,9 +960,23 @@ def _aplicar_resultado(it: CotacaoItem, res, regras: TaxRuleSet = None, contexto
     # Confundir os dois faria toda venda interestadual parecer desconto, e o aprovador seria
     # chamado para autorizar uma exceção inexistente.
     if regras is not None and it.custo_unitario and it.margem_padrao_pct is not None:
-        it.preco_recomendado = para_float(
-            calcular_por_margem(it.custo_unitario, 1, it.margem_padrao_pct,
-                                regras).preco_negociado)
+        base = _base_de_preco(it)          # referência comercial; custo real quando não há pino
+        if it.politica_comercial == ROTULO_2026_09_21:
+            # Política 21/09: o recomendado É o B2B (menor centavo com margem ≥ alvo) e a
+            # tabela é derivada dele — ambos do cenário desta cotação, nunca de cache.
+            b2b, tabela = _b2b_e_tabela(base, it.margem_padrao_pct, regras,
+                                        contexto or {}, it.preco_base)
+            it.preco_recomendado = para_float(b2b.preco_negociado)
+            it.preco_tabela = para_float(tabela)
+            it.desconto_vs_tabela_pct = para_float(
+                desconto_vs_tabela(res.preco_negociado, tabela))
+            # B2B que o custo REAL daria — diagnóstico interno; o piso de autonomia é o comercial
+            it.preco_b2b_economico = (para_float(preco_b2b(it.custo_unitario, it.margem_padrao_pct,
+                                                           regras, it.preco_base).preco_negociado)
+                                      if base != it.custo_unitario else it.preco_recomendado)
+        else:
+            it.preco_recomendado = para_float(
+                calcular_por_margem(base, 1, it.margem_padrao_pct, regras).preco_negociado)
     it.preco_negociado = para_float(res.preco_negociado)
     it.margem_liquida = para_float(res.margem_liquida)
     it.faturamento = para_float(res.faturamento)
@@ -846,6 +1023,9 @@ def _gravar_fiscal_no_item(it: CotacaoItem, contexto: dict, res=None):
     it.status_pagamento = contexto.get("status_pagamento")
     it.motivo_pagamento = contexto.get("motivo_pagamento")
     it.encargo_pct = contexto.get("encargo_pct")
+    # Sinal (21/09/2026): o que formou o encargo efetivo — fração à vista e encargo do saldo.
+    it.percentual_sinal = contexto.get("percentual_sinal")
+    it.encargo_saldo_pct = contexto.get("encargo_saldo_pct")
     # --- pinning: a IDENTIDADE das premissas, não só o valor delas ---
     # Sem isto, "qual versão formou este preço" seria uma pergunta ao resolvedor de hoje, e
     # uma versão cadastrada depois com vigência retroativa mudaria a resposta.
@@ -872,7 +1052,7 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
     margem = ps.margem_padrao(session, produto)
     # Mesmo custo que `adicionar_item` vai gravar: a prévia da tela e o item salvo não podem
     # divergir, senão o preço muda ao clicar em "adicionar".
-    custo_vivo = ps.custo_para_precificar(session, produto)[0]
+    custo_vivo, base_vivo, _memoria_vivo = ps.bases_de_preco(session, produto)
     if not custo_vivo:
         # Sem custo não há margem, mas o preço exibido continua sendo quantia comercial —
         # e só existe se alguém o digitou (o preço-base do catálogo não é referência).
@@ -890,11 +1070,20 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
         return JSONResponse(sem_custo if ve_economia(request)
                             else sem_confidenciais(sem_custo))
 
+    if not margem.tem_regra:
+        bloqueado = {"sem_custo": False, "sem_regra_de_margem": True, "preco_negociado": 0,
+                     "faturamento": 0, "aviso": margem.regra, "preco_base": None}
+        return JSONResponse(bloqueado if ve_economia(request) else sem_confidenciais(bloqueado))
     if margem.preco_travado:
         # Preço travado (Daune): a prévia mostra o único preço possível, qualquer que seja a
         # alavanca pedida — e diz que é travado. Tentar gravar outro é recusado ao adicionar.
         modo, valor = "margem", para_float(margem.margem_pct)
-    res = _calcular(modo, custo_vivo, quantidade, valor, regras, produto.preco_base)
+    if modo == "margem" and not (valor and valor > 0):
+        # A tela da vendedora não recebe a margem (é confidencial) e manda 0: a prévia é
+        # sempre no alvo da regra — nunca um preço a 0% de margem.
+        valor = para_float(margem.margem_pct)
+    res = _calcular(modo, custo_vivo, quantidade, valor, regras, produto.preco_base,
+                    contexto=ctx, margem_alvo=margem.margem_pct, base_comercial=base_vivo)
     # Fronteira da API: `como_dict()` já entrega tudo em float, com o dinheiro em centavos.
     # Serializar Decimal aqui quebraria o JSON (ou, com `default=str`, mandaria dinheiro como
     # string para o JavaScript da tela).
@@ -914,6 +1103,13 @@ def calc(request: Request, cotacao_id: int, produto_id: int = Form(...),
         "preco_travado": bool(margem.preco_travado),
         "aviso": (com.MOTIVO_TRAVADO if margem.preco_travado else None),
     }
+    if _e_politica_nova(ctx) and regras is not None and custo_vivo:
+        # B2B/tabela da prévia sobre a BASE COMERCIAL — o mesmo número que o item salvo terá
+        b2b, tabela = _b2b_e_tabela(base_vivo or custo_vivo, margem.margem_pct, regras, ctx, produto.preco_base)
+        payload.update({"politica_nova": True, "preco_b2b": para_float(b2b.preco_negociado),
+                        "preco_tabela": para_float(tabela),
+                        "desconto_vs_tabela_pct": para_float(
+                            desconto_vs_tabela(res.preco_negociado, tabela))})
     # O vendedor precisa do preço e do total para negociar; o resto do payload é o motor.
     # `sem_confidenciais` corta por nome de campo, então um campo novo que alguém adicione
     # aqui já nasce cortado se o nome estiver na política.
@@ -931,8 +1127,10 @@ def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, marge
     item.fornecedor_id = produto.fornecedor_id
     item.fornecedor_nome = fornecedor.nome if fornecedor else None
     item.cost_method = produto.cost_method
-    item.margem_padrao_pct = margem.margem_pct
-    item.margem_regra = margem.regra
+    item.margem_padrao_pct = para_float(margem.margem_pct) if margem.tem_regra else None
+    # Sem regra: a marca `SEM_REGRA_DE_MARGEM` é o que o workflow lê para bloquear o item
+    # (o motivo humano vai no blocker). Nunca um 15% escondido.
+    item.margem_regra = margem.regra if margem.tem_regra else wf.SEM_REGRA_DE_MARGEM
     item.margem_regra_id = margem.regra_id
     # A política comercial que formou este item fica congelada nele (Fase 3A): piso, comissão
     # de formação, preço travado e qual política era. Regra sem política deixa tudo nulo, e o
@@ -960,6 +1158,19 @@ def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, marge
         item.status_custo_item = ps.status_canonico_do_custo(
             item.custo_unitario, memoria_custo)
         item.confirmation_pending = False
+    # Economia real × formação comercial (22/09/2026): o item pina a base que forma o B2B
+    # (referência comercial, em R$) e a proteção usada; `custo_unitario` é o custo real.
+    memoria_custo = memoria_custo or {}
+    base = memoria_custo.get("base_comercial_brl")
+    item.base_comercial_precificacao = para_float(base) if base else None
+    item.protecao_comercial_pct = (memoria_custo.get("referencia_comercial") or {}).get("protecao_pct")
+
+
+def _base_de_preco(it: CotacaoItem):
+    """A base que forma B2B/tabela/recomendado do item: a referência comercial pinada; item
+    anterior a 22/09 (sem pino) usa o próprio custo, como sempre fez."""
+    base = getattr(it, "base_comercial_precificacao", None)
+    return base if base else it.custo_unitario
 
 
 @router.post("/cotacoes/{cotacao_id}/itens")
@@ -981,7 +1192,7 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
     # O custo do item novo é resolvido AGORA, pelas premissas vigentes — não lido da coluna
     # `Produto.custo_unitario`, que é gravada quando o custo foi calculado pela última vez e
     # não acompanha uma troca de câmbio.
-    custo, memoria_custo = ps.custo_para_precificar(session, produto)
+    custo, base_comercial, memoria_custo = ps.bases_de_preco(session, produto)
     custo = custo or 0.0
     if custo <= 0:
         # sem custo: cota pelo preço que a pessoa DIGITAR, margem fica em branco (não se
@@ -991,12 +1202,21 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
         preco = valor if modo == "preco" else 0.0
         res = _calcular("preco", 0.0, quantidade, preco, regras, produto.preco_base)
         modo, valor = "preco", preco
+    elif not margem.tem_regra:
+        # Política 21/09: sem regra de margem não se forma preço. O item entra sem preço,
+        # bloqueado (`SEM_REGRA_DE_MARGEM`), e o Admin vê o motivo — nada de 15% escondido.
+        res = _resultado_bloqueado(quantidade, custo)
+        modo, valor = "margem", None
     else:
-        res = _calcular(modo, custo, quantidade, valor, regras, produto.preco_base)
+        # Política 21/09: o item nasce no B2B da margem pedida (a da regra, salvo override
+        # explícito de quem pode editar margem) — desconto de 50% sobre a tabela, de
+        # propósito; a alavanca fica em "margem" até a vendedora negociar.
+        res = _calcular(modo, custo, quantidade, valor, regras, produto.preco_base,
+                        contexto=ctx, margem_alvo=margem.margem_pct, base_comercial=base_comercial)
         if margem.preco_travado and regras is not None:
             # Daune: o único unitário aceito é o recomendado da política. Qualquer alavanca
             # que produza outro preço é recusada — explicitamente, para todos os papéis.
-            recomendado = dinheiro(calcular_por_margem(custo, 1, margem.margem_pct,
+            recomendado = dinheiro(calcular_por_margem(base_comercial or custo, 1, margem.margem_pct,
                                                        regras).preco_negociado)
             if dinheiro(res.preco_negociado) != recomendado:
                 raise HTTPException(
@@ -1017,10 +1237,11 @@ def adicionar_item(request: Request, cotacao_id: int, produto_id: int = Form(...
     _aplicar_resultado(item, res, regras, ctx)
     item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
         session, produto, cotacao, preco_negociado=res.preco_negociado, quantidade=quantidade,
-        comissao_formacao_pct=com.comissao_de_formacao_do_item(item)))
+        comissao_formacao_pct=com.comissao_de_formacao_do_item(item),
+        politica=com.politica_do_item(item)))
     session.add(item)
     session.flush()
-    # A comissão é da cotação: um item novo muda a comissão aplicada aos outros.
+    # A comissão é recalculada: da cotação (política 16/09) ou item a item (21/09).
     com.recalcular_comissao(session, cotacao)
     ws.invalidar_aprovacoes_obsoletas(session, cotacao, motivo="item adicionado")
     session.commit()
@@ -1069,11 +1290,20 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
 
     produto = session.get(Produto, item.produto_id) if item.produto_id else None
     regras, _regra, ctx = montar_regras(cotacao, session, produto, item=item)
-    res = _calcular(modo, item.custo_unitario, quantidade, valor, regras, item.preco_base)
+    if modo == "preco" and item.politica_comercial == ROTULO_2026_09_21 and item.preco_tabela \
+            and item.custo_unitario and regras is not None:
+        # Política 21/09: um preço digitado vira DESCONTO sobre a tabela — é a alavanca que
+        # se persiste, para que uma mudança de cenário rederive o preço em vez de congelá-lo.
+        modo, valor = MODO_DESCONTO, para_float(desconto_vs_tabela(dinheiro(valor), item.preco_tabela))
+        item.modo_negociacao = "preco"
+        item.desconto_editado_pct = valor
+    res = _calcular(modo, item.custo_unitario, quantidade, valor, regras, item.preco_base,
+                    contexto=ctx, margem_alvo=item.margem_padrao_pct,
+                    base_comercial=_base_de_preco(item))
     if item.preco_travado and regras is not None and item.custo_unitario \
             and item.margem_padrao_pct is not None:
         # Daune: quantidade muda; o unitário, não. Vendedora e admin recebem a mesma recusa.
-        recomendado = dinheiro(calcular_por_margem(item.custo_unitario, 1,
+        recomendado = dinheiro(calcular_por_margem(_base_de_preco(item), 1,
                                                    item.margem_padrao_pct,
                                                    regras).preco_negociado)
         if dinheiro(res.preco_negociado) != recomendado:
@@ -1087,7 +1317,8 @@ async def editar_item(cotacao_id: int, item_id: int, request: Request,
         item.memoria_json = ps.memoria_json(ps.memoria_do_preco(
             session, produto, cotacao, preco_negociado=res.preco_negociado,
             quantidade=quantidade,
-            comissao_formacao_pct=com.comissao_de_formacao_do_item(item)))
+            comissao_formacao_pct=com.comissao_de_formacao_do_item(item),
+            politica=com.politica_do_item(item)))
     session.add(item)
     session.flush()
     com.recalcular_comissao(session, cotacao)
@@ -1257,6 +1488,7 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
         criado_em=agora,
         numero=proximo_numero(session), cliente_id=original.cliente_id,
         vendedor=original.vendedor, condicao_pagamento=original.condicao_pagamento,
+        percentual_sinal=original.percentual_sinal or 0.0,
         frete=original.frete, freight_type=original.freight_type,
         prazo_entrega=original.prazo_entrega, contato_nome=original.contato_nome,
         departamento_contato=original.departamento_contato,
@@ -1281,22 +1513,40 @@ def duplicar(cotacao_id: int, session: Session = Depends(get_session)):
         preco_base_atual = produto_atual.preco_base if produto_atual else it.preco_base
         # Duplicar é criar item novo: o custo é reconferido contra as premissas de hoje,
         # como em qualquer precificação nova. O preço negociado é que se mantém.
-        custo_atual, memoria_custo = (ps.custo_para_precificar(session, produto_atual)
-                                      if produto_atual else (it.custo_unitario, None))
+        custo_atual, base_atual, memoria_custo = (ps.bases_de_preco(session, produto_atual)
+                                                  if produto_atual
+                                                  else (it.custo_unitario, _base_de_preco(it), None))
         custo_atual = custo_atual or 0.0
+        base_atual = base_atual or custo_atual
 
-        res = calcular_por_preco(custo_atual, it.quantidade, it.preco_negociado, regras,
-                                 preco_base_atual)
+        margem_atual = ps.margem_padrao(session, produto_atual) if produto_atual else None
+        modo, valor = "preco", it.preco_negociado
+        if (margem_atual is not None and margem_atual.tem_regra and custo_atual > 0
+                and _e_politica_nova(ctx) and regras is not None and it.preco_negociado):
+            # Política 21/09: a cópia não carrega um preço absoluto de outro cenário como
+            # alavanca — carrega o desconto equivalente sobre a tabela de HOJE (mesmo preço
+            # inicial, alavanca coerente). Nada de híbrido preço-fixo dentro da política nova.
+            _b2b, tabela = _b2b_e_tabela(base_atual, margem_atual.margem_pct, regras, ctx,
+                                         preco_base_atual)
+            modo, valor = MODO_DESCONTO, para_float(desconto_vs_tabela(it.preco_negociado, tabela))
+        res = _calcular(modo, custo_atual, it.quantidade, valor, regras, preco_base_atual,
+                        contexto=ctx,
+                        margem_alvo=(margem_atual.margem_pct if margem_atual else None),
+                        base_comercial=base_atual)
         novo_item = CotacaoItem(
             cotacao_id=nova.id, produto_id=it.produto_id, ordem=it.ordem,
             nome_produto=it.nome_produto, especificacao=it.especificacao,
             categoria=it.categoria, quantidade=it.quantidade, custo_unitario=custo_atual,
-            preco_base=preco_base_atual or 0.0, modo_edicao="preco",
-            valor_editado=it.preco_negociado,
+            preco_base=preco_base_atual or 0.0, modo_edicao=modo,
+            valor_editado=valor,
+            modo_negociacao=("preco" if modo == MODO_DESCONTO else None),
+            desconto_editado_pct=(valor if modo == MODO_DESCONTO else None),
         )
         if produto_atual:
-            _preencher_item(session, novo_item, produto_atual,
-                            ps.margem_padrao(session, produto_atual), memoria_custo)
+            _preencher_item(session, novo_item, produto_atual, margem_atual, memoria_custo)
+        else:
+            novo_item.base_comercial_precificacao = it.base_comercial_precificacao
+            novo_item.protecao_comercial_pct = it.protecao_comercial_pct
         _aplicar_resultado(novo_item, res, regras, ctx)
         session.add(novo_item)
     session.flush()
@@ -1377,11 +1627,12 @@ def gerar_pdf(request: Request, cotacao_id: int, session: Session = Depends(get_
 
     # Fase 3C: o final nasce do snapshot congelado na emissão; o rascunho, da cotação viva.
     # A condição de pagamento vai por extenso ("30 dias"), nunca pelo código ("30").
-    condicao = cfg.condicao_pagamento(session, cotacao.condicao_pagamento)
+    # Com sinal, o texto é a composição ("30% de sinal + 70% em 30/60/90 dias"); o PDF final
+    # prefere o texto congelado no snapshot, quando ele existe (`pdf_bridge`).
     out_path = gerar_pdf_para_cotacao(
         cotacao, cliente, itens, rascunho=rascunho,
         snapshot=None if rascunho else emissao,
-        condicao_label=getattr(condicao, "label", None) or cotacao.condicao_pagamento)
+        condicao_label=cfg.condicao_textual(session, cotacao))
     cotacao.pdf_gerado_em = datetime.utcnow()
     session.add(cotacao)
     session.commit()

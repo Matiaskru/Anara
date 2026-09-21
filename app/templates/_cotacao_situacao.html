@@ -26,10 +26,10 @@
 {% if acoes_workflow %}
 <div class="flex flex-wrap" id="acoes-workflow">
   {% for a in acoes_workflow %}
-  <form method="post" action="{{ a.rota }}" title="{{ a.ajuda }}" class="flex" style="gap:6px;">
+  <form method="post" action="{{ a.rota }}" title="{{ a.ajuda }}" class="flex flex-wrap" style="gap:6px;max-width:100%;">
     {% if a.estado %}<input type="hidden" name="status" value="{{ a.estado }}">{% endif %}
-    {% if a.motivo %}<input name="motivo" placeholder="motivo (opcional)" class="input-sm" style="width:150px;">{% endif %}
-    {% if a.justificativa %}<input name="justificativa" required placeholder="por que a exceção?" class="input-sm" style="width:190px;">{% endif %}
+    {% if a.motivo %}<input name="motivo" placeholder="motivo (opcional)" class="input-sm" style="width:150px;max-width:100%;">{% endif %}
+    {% if a.justificativa %}<input name="justificativa" required placeholder="por que a exceção?" class="input-sm" style="width:170px;max-width:100%;">{% endif %}
     <button class="btn btn-sm {{ 'btn-copper' if a.estilo == 'btn-primary' else ('btn-danger-ghost' if a.estilo == 'btn-danger' else 'btn-ghost') }}" type="submit">{{ a.rotulo }}</button>
   </form>
   {% endfor %}

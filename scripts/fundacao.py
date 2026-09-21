@@ -20,7 +20,11 @@ import os
 import sqlite3
 from datetime import datetime, timezone
 
-DB_PATH = os.path.expanduser("~/Anara-Cotacao/data/anara.db")
+# `ANARA_DB_REAL_PARA_TESTES` aponta os testes que leem o banco REAL (somente leitura) para
+# uma cópia — é como a suíte roda enquanto uma migration ainda não foi aplicada ao banco real
+# (o banco real nunca é alterado pela suíte). Sem a variável, é o banco de verdade.
+DB_PATH = (os.environ.get("ANARA_DB_REAL_PARA_TESTES")
+           or os.path.expanduser("~/Anara-Cotacao/data/anara.db"))
 
 # Tabela de controle do Alembic: não é dado de negócio, e muda por desenho a cada
 # migration. Fica fora do digest, mas é reportada à parte.

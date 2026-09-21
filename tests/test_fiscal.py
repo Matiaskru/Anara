@@ -333,13 +333,25 @@ def test_MG_com_nao_aplica_comprovado_resolve_em_18(tabelas, session):
 
 
 def test_BA_nao_assume_2_por_cento_generico(tabelas, session):
-    """A BA tem `fem = 2%` na tabela legada. Isso não vira FCP automático."""
+    """A BA tem `fem = 2%` na tabela-benchmark. Isso não vira FCP automático.
+
+    Desde 21/09/2026 a base interna da BA (20,5%) e a NÃO incidência de FCP para as famílias
+    do escopo estão cadastradas pela matriz fiscal — decisão explícita, não herança da coluna
+    `fem`. A coluna de benchmark fica intocada, e uma família FORA do escopo continua
+    DESCONHECIDA (bloqueia), porque a linha de FCP é por família.
+    """
     ba = _estado(session, "BA")
-    assert ba.fem == aprox(0.02)
-    assert ba.icms_interno_base is None, "a composição da BA não foi determinada"
-    r = resolver(tabelas, "BA", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO")
-    assert r.status == REVIEW_REQUIRED
-    assert r.icms_pct is None
+    assert ba.fem == aprox(0.02), "benchmark preservado"
+    assert ba.icms_interno_base == aprox(0.205)
+    dentro = resolver(tabelas, "BA", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO",
+                      familia="Flat Sheet")
+    assert dentro.status == OK
+    assert dentro.fcp_pct == 0.0, "a coluna fem (2%) NÃO virou FCP"
+    assert dentro.icms_pct == aprox(0.205)
+    fora = resolver(tabelas, "BA", False, origem_fiscal="NACIONAL", finalidade="USO_CONSUMO",
+                    familia="Família Inexistente")
+    assert fora.status == REVIEW_REQUIRED, "fora do escopo reconciliado não herda 0%"
+    assert fora.icms_pct is None
 
 
 def test_fcp_desconhecido_explicito_bloqueia(tabelas, session):
@@ -358,11 +370,14 @@ def test_base_interna_sem_semantica_bloqueia(tabelas, session):
     """Não saber se a coluna inclui FCP é motivo suficiente para não formar preço."""
     regras, estados, aliquotas, _fcp_cadastrado = tabelas
     mg = _estado(session, "MG")
-    assert mg.icms_interno_base is None and mg.interna_inclui_fcp is None
+    original = (mg.icms_interno_base, mg.interna_inclui_fcp)
+    # simula uma UF cuja composição ainda não foi cadastrada (como todas eram antes de 21/09)
+    mg.icms_interno_base, mg.interna_inclui_fcp = None, None
     r = resolver_fiscal_item(regras, estados, aliquotas, uf_origem="SP", uf_destino="MG",
                              origem_fiscal="NACIONAL", contribuinte=False,
                              finalidade="USO_CONSUMO",
                              regras_fcp=[_fcp("MG", "NAO_APLICA", fonte="x")])
+    mg.icms_interno_base, mg.interna_inclui_fcp = original
     assert r.status == REVIEW_REQUIRED and "semântica determinada" in r.motivo
 
 

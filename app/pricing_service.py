@@ -32,9 +32,9 @@ from app.models import (
     Finalidade, Fornecedor, MargemRegra, NcmRegra, OrigemFiscal, Produto, RegraFcp,
     RegraFiscalVenda, StatusCusto, TipoFornecedor,
 )
-from app.dinheiro import D, D0, para_float
-from app.nationalization import PremissasNacionalizacao, nacionalizar
-from app.payment_terms import resolver_encargo
+from app.dinheiro import ZERO, D, D0, para_float
+from app.nationalization import PremissasNacionalizacao, nacionalizar, referencia_comercial
+from app.payment_terms import encargo_com_sinal, resolver_encargo, validar_percentual_sinal
 from app.peso import PesoResolvido, resolver_peso
 from app.pricing_engine import TaxRuleSet, icms_excluido_da_base, pis_cofins_efetivo
 
@@ -175,7 +175,8 @@ PELA_POLITICA_DO_PRODUTO = object()
 
 def regras_da_cotacao(session: Session, cotacao: Cotacao,
                       produto: Optional[Produto] = None, *,
-                      comissao_formacao_pct=PELA_POLITICA_DO_PRODUTO
+                      comissao_formacao_pct=PELA_POLITICA_DO_PRODUTO,
+                      politica=PELA_POLITICA_DO_PRODUTO
                       ) -> Tuple[Optional[TaxRuleSet], dict]:
     """TaxRuleSet efetivo **do item** + contexto, para exibir e para snapshot.
 
@@ -193,10 +194,25 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     * um percentual: o que o **item** congelou (`CotacaoItem.comissao_formacao_pct`) — é o
       que o recálculo de um rascunho usa, para não migrar item antigo de política em silêncio;
     * `None`: item anterior à política — tabela de faixas.
+
+    ## Política de 21/09/2026
+
+    `politica` diz **qual** política forma este preço (rótulo da regra, ou o que o item
+    congelou). Para a de 21/09 a comissão de formação é 5% **sobre a receita líquida do
+    ICMS suportado pela Anara**: o `TaxRuleSet` sai com `comissao_base_icms_pct =
+    icms_pct − fcp_pct` — a mesma parcela que o motor fiscal já separa para a base de
+    PIS/COFINS (ICMS próprio + DIFAL do remetente; nunca FCP; nunca DIFAL do destinatário,
+    que não está em `icms_pct`). Para as políticas anteriores a base continua bruta (0).
     """
+    from app.politica_comercial import ROTULO_2026_09_21
     fiscal = fiscal_do_item(session, cotacao, produto)
     condicoes = session.exec(select(CondicaoPagamento)).all()
-    encargo = resolver_encargo(condicoes, getattr(cotacao, "condicao_pagamento", None))
+    # Condição de pagamento = condição do SALDO; o sinal (fração à vista, sem encargo) entra
+    # como composição: encargo_efetivo = (1 − sinal) × encargo do saldo (`payment_terms`).
+    # Sem sinal, `encargo` é o próprio objeto resolvido da tabela — comportamento de sempre.
+    encargo_saldo = resolver_encargo(condicoes, getattr(cotacao, "condicao_pagamento", None))
+    percentual_sinal = validar_percentual_sinal(getattr(cotacao, "percentual_sinal", 0) or 0)
+    encargo = encargo_com_sinal(encargo_saldo, percentual_sinal)
     condicao_usada = _condicao_vigente(condicoes, getattr(cotacao, "condicao_pagamento", None))
     # PIS/COFINS: a premissa cadastrada é a NOMINAL. O que entra no denominador é a EFETIVA,
     # derivada por item pela exclusão do ICMS da base. A premissa legada `pis_cofins_pct`
@@ -211,18 +227,30 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     pis_cofins = (pis_cofins_efetivo(pis_nominal, icms_excluido)
                   if icms_excluido is not None else None)
     comissao = cfg.tabela_comissao(session)
-    politica = None
+    regra_politica = None
+    rotulo_politica = None
     if comissao_formacao_pct is PELA_POLITICA_DO_PRODUTO:
+        # Item NOVO: comissão de formação E política vêm da regra vigente do produto.
         if produto is not None:
-            politica = margem_padrao(session, produto)
-            comissao_formacao_pct = (para_float(politica.comissao_formacao_pct)
-                                     if politica.tem_politica else None)
-        else:
-            comissao_formacao_pct = None
+            regra_politica = margem_padrao(session, produto)
+        comissao_formacao_pct = (para_float(regra_politica.comissao_formacao_pct)
+                                 if regra_politica is not None and regra_politica.tem_politica
+                                 else None)
+        rotulo_politica = (politica if politica is not PELA_POLITICA_DO_PRODUTO
+                           else (regra_politica.politica if regra_politica is not None else None))
+    else:
+        # Item EXISTENTE (comissão explícita = o que ele congelou): a política é a que o
+        # chamador declara. Sem declaração, é item de política anterior — base bruta. Nunca se
+        # aplica a base líquida de 21/09 a um item só porque o produto resolve para ela hoje.
+        rotulo_politica = politica if politica is not PELA_POLITICA_DO_PRODUTO else None
     if comissao_formacao_pct is not None:
         # Faixa única: `comissao_para_markup` devolve este percentual para qualquer markup, e o
         # gross-up segue idêntico — a comissão fixa entra sem uma segunda fórmula.
         comissao = [(0.0, para_float(D(comissao_formacao_pct)))]
+    # Política 21/09: a base da comissão é a receita menos o ICMS que a Anara suporta.
+    politica_2026_09_21 = (rotulo_politica == ROTULO_2026_09_21)
+    icms_base_comissao = (icms_excluido if (politica_2026_09_21 and icms_excluido is not None)
+                          else ZERO)
 
     contexto = {
         "fiscal": fiscal,
@@ -249,10 +277,22 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
         "encargo_pct": encargo.pct, "encargo_label": encargo.label,
         "encargo_confirmado": encargo.confirmado, "encargo_aviso": encargo.aviso,
         "status_pagamento": encargo.status, "motivo_pagamento": encargo.motivo,
+        # Sinal: o que formou `encargo_pct` (fração à vista e encargo do saldo). Memória e
+        # pino do item — nunca a fórmula para a vendedora.
+        "percentual_sinal": para_float(percentual_sinal),
+        "encargo_saldo_pct": None if encargo_saldo.bloqueado else encargo_saldo.pct,
+        "encargo_saldo_label": encargo_saldo.label,
+        "condicao_pagamento_texto": encargo.label,
         "comissao_tabela": comissao,
         "comissao_formacao_pct": (para_float(D(comissao_formacao_pct))
                                   if comissao_formacao_pct is not None else None),
-        "politica_comercial": politica.politica if politica is not None else None,
+        "politica_comercial": rotulo_politica,
+        # Política 21/09: a parcela do ICMS que sai da base da comissão (memória auditável).
+        "icms_base_comissao_pct": para_float(icms_base_comissao),
+        "comissao_base": ("receita − ICMS próprio − DIFAL do remetente (FCP fica na base)"
+                          if politica_2026_09_21 else "receita bruta"),
+        # tabela = fator × B2B — o fator é premissa versionada, pinada no item
+        "fator_tabela": cfg.num(session, "fator_tabela", None) if politica_2026_09_21 else None,
         # --- identidades para pinar no item ---
         "condicao_pagamento_id": condicao_usada.id if condicao_usada else None,
         "aliquota_interestadual_id": _id_da_fonte(fiscal.fonte),
@@ -265,7 +305,8 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
 
     regras = TaxRuleSet(icms_pct=fiscal.icms_pct, pis_cofins_pct=pis_cofins,
                         encargo_financeiro_pct=encargo.pct, comissao_tabela=comissao,
-                        origem_uf=fiscal.uf_origem or "")
+                        origem_uf=fiscal.uf_origem or "",
+                        comissao_base_icms_pct=icms_base_comissao)
     return regras, contexto
 
 
@@ -308,29 +349,87 @@ def margem_padrao(session: Session, produto: Produto,
 
 @dataclass
 class PoliticaComercialVigente:
-    """As premissas globais da política de comissão, lidas do banco — nunca inventadas."""
+    """As premissas globais da política de comissão, lidas do banco — nunca inventadas.
+
+    `comissao_base_pct`/`comissao_min_pct` servem às duas políticas (10% e 5% são os
+    extremos da escada de 21/09 e da função contínua de 16/09). `comissao_b2b_pct`,
+    `fator_tabela` e `faixas` são da política de 21/09 e ficam `None` enquanto ela não
+    estiver semeada — e nesse caso a mecânica nova não é aplicada a item nenhum.
+    """
     comissao_base_pct: Decimal
     comissao_min_pct: Decimal
     base_id: Optional[int]
     min_id: Optional[int]
+    comissao_b2b_pct: Optional[Decimal] = None
+    fator_tabela: Optional[Decimal] = None
+    faixas: Optional[tuple] = None
+    b2b_id: Optional[int] = None
+    fator_id: Optional[int] = None
+    faixas_id: Optional[int] = None
+
+    @property
+    def tem_politica_2026_09_21(self) -> bool:
+        return (self.comissao_b2b_pct is not None and self.fator_tabela is not None
+                and bool(self.faixas))
 
 
 def politica_comercial_vigente(session: Session, ref: Optional[date] = None
                                ) -> Optional[PoliticaComercialVigente]:
     """`None` enquanto a política não foi semeada/aplicada: o sistema não assume 10%/5%."""
-    from app.politica_comercial import CHAVE_COMISSAO_BASE, CHAVE_COMISSAO_MINIMA
+    from app.politica_comercial import (
+        CHAVE_COMISSAO_B2B, CHAVE_COMISSAO_BASE, CHAVE_COMISSAO_MINIMA, CHAVE_FAIXAS_COMISSAO,
+        CHAVE_FATOR_TABELA, faixas_de_json,
+    )
     base = cfg.premissa(session, CHAVE_COMISSAO_BASE, ref)
     minimo = cfg.premissa(session, CHAVE_COMISSAO_MINIMA, ref)
     if base is None or minimo is None or base.valor_num is None or minimo.valor_num is None:
         return None
-    return PoliticaComercialVigente(D(base.valor_num), D(minimo.valor_num), base.id, minimo.id)
+    vigente = PoliticaComercialVigente(D(base.valor_num), D(minimo.valor_num), base.id, minimo.id)
+    b2b = cfg.premissa(session, CHAVE_COMISSAO_B2B, ref)
+    fator = cfg.premissa(session, CHAVE_FATOR_TABELA, ref)
+    faixas = cfg.premissa(session, CHAVE_FAIXAS_COMISSAO, ref)
+    if b2b is not None and b2b.valor_num is not None:
+        vigente.comissao_b2b_pct, vigente.b2b_id = D(b2b.valor_num), b2b.id
+    if fator is not None and fator.valor_num is not None:
+        vigente.fator_tabela, vigente.fator_id = D(fator.valor_num), fator.id
+    if faixas is not None and faixas.valor_txt:
+        vigente.faixas, vigente.faixas_id = faixas_de_json(faixas.valor_txt), faixas.id
+    return vigente
 
 
 # ---------------------------------------------------------------------------
 # Imposto de importação por família/NCM
 # ---------------------------------------------------------------------------
+#: I.I. ECONÔMICO da KTC/Egito desde 22/09/2026: **zero**. É o único I.I. que entra no CUSTO
+#: NET real — e, por ele, no lucro, na margem realizada, no dashboard e nos relatórios. A
+#: alíquota preferencial que formava o custo até então (3,5%; 1,62% em travesseiros/
+#: protetores) deixou de ser custo: ficou preservada, por SKU e por família, apenas como
+#: PROTEÇÃO COMERCIAL DE PRECIFICAÇÃO (`protecao_comercial_do_produto`), para que B2B, tabela
+#: e preco_base continuem exatamente onde estavam. Proteção não é tributo, custo nem despesa.
+II_ECONOMICO_KTC = ZERO
+II_ECONOMICO_KTC_REGRA = "I.I. econômico KTC/Egito = 0% (decisão Anara de 22/09/2026)"
+CHAVE_PROTECAO_COMERCIAL = "protecao_comercial_pct"
+PROTECAO_COMERCIAL_FALTANTE = "protecao_comercial"
+
+
+def _vigente_hoje(regra, ref: Optional[date] = None) -> bool:
+    ref = ref or date.today()
+    inicio, fim = getattr(regra, "valid_from", None), getattr(regra, "valid_to", None)
+    if inicio is not None and inicio > ref:
+        return False
+    if fim is not None and fim <= ref:
+        return False
+    return True
+
+
 def regra_ncm(session: Session, produto: Produto) -> Optional[NcmRegra]:
-    regras = [r for r in session.exec(select(NcmRegra)).all() if r.ativo]
+    """A regra de NCM vigente hoje para o produto (família vence NCM genérico).
+
+    Desde 22/09/2026 a vigência (`valid_from`/`valid_to`) é respeitada: as linhas que traziam
+    a alíquota preferencial antiga foram encerradas e continuam no banco como histórico; as
+    vigentes trazem NCM e I.I. econômico 0%. O I.I. do custo KTC não vem daqui de qualquer
+    forma (`II_ECONOMICO_KTC`) — a regra serve ao NCM e à memória."""
+    regras = [r for r in session.exec(select(NcmRegra)).all() if r.ativo and _vigente_hoje(r)]
     familia = (produto.familia or "").strip().lower()
     categoria = (produto.categoria or "").strip().lower()
     por_familia = [r for r in regras
@@ -361,16 +460,24 @@ def _num_do_texto(texto, padrao: float) -> float:
 def _abas_do_produto(produto: Produto) -> int:
     """Número de abas da fronha, a partir do cadastro estruturado.
 
-    Construções aprovadas no §18: 0, 2, 3 e 4 abas. Oxford é a de 4. Qualquer outra coisa
-    devolve 0 (standard) — e se o cadastro disser um número fora da lista, o motor bloqueia
-    em vez de arredondar para o vizinho.
+    Construções aprovadas no §18: 0, 2, 3 e 4 abas. A nomenclatura canônica do sistema é
+    ABAS; a palavra legada de catálogo para a construção de 4 abas ainda é lida por
+    compatibilidade (dado antigo), nunca escrita nem exibida. Qualquer outra coisa devolve 0
+    (standard) — e se o cadastro disser um número fora da lista, o motor bloqueia em vez de
+    arredondar para o vizinho.
     """
     import re
     texto = f"{produto.construcao or ''} {produto.acabamento or ''}".lower()
-    if "oxford" in texto:
-        return 4
     m = re.search(r"(\d)\s*abas?", texto)
-    return int(m.group(1)) if m else 0
+    if m:
+        return int(m.group(1))
+    if _TERMO_LEGADO_4_ABAS in texto:
+        return 4
+    return 0
+
+
+#: Termo legado de catálogo para a fronha de 4 abas — só leitura de dado antigo.
+_TERMO_LEGADO_4_ABAS = "ox" + "ford"
 
 
 def parametros_ktc_do_produto(session: Session, produto: Produto) -> Tuple[ParametrosKTC, list]:
@@ -382,7 +489,11 @@ def parametros_ktc_do_produto(session: Session, produto: Produto) -> Tuple[Param
     p = ParametrosKTC(
         shrinkage=cfg.parametro_ktc(session, "shrinkage", escopo_shrink),
         waste=cfg.parametro_ktc(session, "waste"),
-        quality_allowance=cfg.parametro_ktc(session, "quality_allowance"),
+        # A etapa de 2ª qualidade/allowance é por família quando a KTC a declara diferente:
+        # a planilha de fronhas ("Pillow Case Costing sheet") usa 2% (rotulado "2% II" lá —
+        # allowance de costing, NÃO o Imposto de Importação); as demais famílias seguem o 1%
+        # global do Pricing Master. Escopo por família cai no global quando não há linha.
+        quality_allowance=cfg.parametro_ktc(session, "quality_allowance", familia),
         ktc_margin=cfg.parametro_ktc(session, "ktc_margin"),
         hem_width_total_cm=cfg.parametro_ktc(session, "hem_width_total_cm", familia),
         hem_length_total_cm=cfg.parametro_ktc(session, "hem_length_total_cm", familia),
@@ -401,7 +512,12 @@ def parametros_ktc_do_produto(session: Session, produto: Produto) -> Tuple[Param
     elif _familia_normalizada(produto) in FAMILIAS_TECIDO_PLANO:
         faltando.append("material_ref não cadastrado no produto")
 
-    cmt = cfg.cmt_preco(session, familia, produto.construcao)
+    # Fronha: o CMT vem da construção (0,50 sem abas / 0,75 com abas) dentro de
+    # `calcular_fronha`; a linha de cadastro procurada aqui é "standard" ou "com abas".
+    construcao_cmt = produto.construcao
+    if _familia_normalizada(produto) in FAMILIAS_FRONHA:
+        construcao_cmt = "com abas" if _abas_do_produto(produto) else "standard"
+    cmt = cfg.cmt_preco(session, familia, construcao_cmt)
     if cmt:
         p.cmt_usd = cmt.cmt_usd
         p.cmt_ref = f"{cmt.familia}{' · ' + cmt.construcao if cmt.construcao else ''}"
@@ -481,8 +597,11 @@ def calcular_exw(session: Session, produto: Produto):
 #: `comissao_base_pct` e `comissao_min_pct` entraram em 16/09/2026 (Fase 3A): são as premissas
 #: da comissão variável da cotação. Item anterior à política não as tem pinadas — e é por
 #: isso mesmo que `admin_service.premissas_desatualizadas` o reconhece como anterior.
+#: `comissao_b2b_pct`, `fator_tabela` e `comissao_faixas_desconto` entraram em 21/09/2026: são
+#: as premissas da política nova (B2B com 5%, tabela = 2 × B2B, escada por desconto).
 CHAVES_PINADAS = ("fx_usd_brl", "frete_int_usd_kg", "outras_desp_usd_un",
-                  "pis_cofins_nominal_pct", "comissao_base_pct", "comissao_min_pct")
+                  "pis_cofins_nominal_pct", "comissao_base_pct", "comissao_min_pct",
+                  "comissao_b2b_pct", "fator_tabela", "comissao_faixas_desconto")
 
 
 def pinar_premissas(session: Session, ref_data=None) -> dict:
@@ -649,6 +768,7 @@ def custo_net(session: Session, produto: Produto) -> dict:
                 "pelo preço, mas a margem não pode ser calculada até o custo entrar.")
         memoria["net_brl"] = produto.custo_unitario
         memoria["net_fonte"] = CUSTO_DO_FORNECEDOR_NACIONAL
+        memoria["base_comercial_brl"] = produto.custo_unitario   # nacional: sem proteção comercial
         # Pedido de revisão só pesa quando não há referência versionada: a versão registrada
         # pelo caminho canônico (Sessão 5) é evidência mais nova que um flag de importação.
         if produto.precisa_revisao and vigente is None:
@@ -660,20 +780,16 @@ def custo_net(session: Session, produto: Produto) -> dict:
         return memoria
 
     # --- KTC ---
+    # I.I. ECONÔMICO = 0% (22/09/2026). A regra de NCM vigente entra na memória pelo NCM; a
+    # alíquota que formava o custo até então virou proteção comercial (mais abaixo), nunca custo.
     ncm = regra_ncm(session, produto)
-    ii = None
+    ii = II_ECONOMICO_KTC
+    memoria["ii_pct"] = para_float(ii)
+    memoria["ii_regra"] = II_ECONOMICO_KTC_REGRA
     if ncm:
-        ii = ncm.ii_preferencial
         memoria["ncm"] = {"ncm": ncm.ncm, "familia": ncm.familia, "ii": para_float(D(ii)),
+                          "ii_regra_vigente": para_float(D(ncm.ii_preferencial)) if ncm.ii_preferencial is not None else None,
                           "confiavel": ncm.confiavel, "notas": ncm.notas}
-        if not ncm.confiavel:
-            memoria["avisos"].append(f"NCM/II da família '{ncm.familia}' marcado para validação: "
-                                     f"{ncm.notas or 'sem detalhe'}")
-    if ii is None:
-        ii = produto.ii_aplicado
-        if ii is not None:
-            memoria["avisos"].append("Usando o I.I. que já estava gravado no produto — "
-                                     "sem linha confiável na tabela de NCM.")
 
     exw = None
     origem_exw = None
@@ -718,6 +834,8 @@ def custo_net(session: Session, produto: Produto) -> dict:
                                  "mantido o custo que já estava no catálogo.")
         memoria["net_brl"] = produto.custo_unitario
         memoria["net_fonte"] = CUSTO_DO_CATALOGO
+        # custo de catálogo antigo não se decompõe: a base comercial é ele mesmo
+        memoria["base_comercial_brl"] = produto.custo_unitario
         return memoria
 
     # produto sem peso gravado (o caso da calculadora, e de SKU novo) tem o peso estimado aqui.
@@ -730,16 +848,30 @@ def custo_net(session: Session, produto: Produto) -> dict:
             memoria["peso"] = {"peso_kg": para_float(peso_kg), "tipo": estimado.tipo,
                                "fonte": estimado.fonte}
 
-    nac = nacionalizar(exw, peso_kg, ii, premissas_nacionalizacao(session))
+    premissas = premissas_nacionalizacao(session)
+    nac = nacionalizar(exw, peso_kg, ii, premissas)
     memoria["nacionalizacao"] = nac.como_dict()
     memoria["avisos"].extend(nac.avisos)
     memoria["net_brl"] = para_float(nac.net_brl)
     memoria["net_usd"] = para_float(nac.net_usd)
     memoria["net_fonte"] = CUSTO_HISTORICO_SEM_EVIDENCIA if historico else CUSTO_DERIVADO_AGORA
-    # O que a nacionalização precisou assumir como zero fica declarado — e decide o status.
+    # Referência comercial de precificação: o mesmo waterfall com a PROTEÇÃO COMERCIAL do SKU
+    # no lugar do imposto. Forma B2B/tabela/preco_base; nunca custo, lucro ou margem realizada.
+    protecao, protecao_fonte = protecao_comercial_do_produto(session, produto)
     faltantes = []
-    if ii is None:
-        faltantes.append("ii")
+    if protecao is None:
+        memoria["referencia_comercial"] = None
+        memoria["base_comercial_brl"] = None
+        memoria["avisos"].append(
+            f"Família '{produto.familia or '—'}' sem regra de proteção comercial de precificação "
+            "(ParametroKTC protecao_comercial_pct) — o preço comercial não se forma sem ela; "
+            "cadastrar a regra da família (não é alíquota fiscal).")
+        faltantes.append(PROTECAO_COMERCIAL_FALTANTE)
+    else:
+        ref = referencia_comercial(exw, peso_kg, protecao, premissas)
+        memoria["referencia_comercial"] = {**ref.como_dict(), "fonte": protecao_fonte}
+        memoria["base_comercial_brl"] = para_float(ref.brl)
+    # O que a nacionalização precisou assumir como zero fica declarado — e decide o status.
     if peso_kg is None:
         faltantes.append("peso")
     if faltantes:
@@ -758,6 +890,39 @@ def _tabela_parametro(session: Session, chave: str) -> dict:
     linhas = [p for p in session.exec(select(ParametroKTC).where(ParametroKTC.chave == chave)).all()
               if p.ativo and p.escopo]
     return {p.escopo: p.valor for p in linhas}
+
+
+def protecao_comercial_do_produto(session: Session, produto: Produto):
+    """(fração, fonte) da PROTEÇÃO COMERCIAL de precificação do SKU importado; (None, None) se
+    não há regra — e aí o produto fica em revisão em vez de receber um número inventado.
+
+    Ordem: o que o SKU pinou (`Produto.protecao_comercial_pct`, gravado pelo script de dados a
+    partir da alíquota que ele efetivamente usava até 22/09/2026) → regra da família
+    (`ParametroKTC protecao_comercial_pct`, escopo = família, semeada com as mesmas alíquotas
+    legadas: 3,5% cama/banho, 1,62% travesseiros/protetores, 0% onde não havia I.I. confiável).
+    """
+    pct = getattr(produto, "protecao_comercial_pct", None)
+    if pct is not None:
+        return D(pct), (produto.protecao_comercial_fonte
+                        or "Proteção comercial pinada no SKU (alíquota preferencial que formava o custo até 22/09/2026)")
+    familia = (produto.familia or "").strip()
+    tabela = _tabela_parametro(session, CHAVE_PROTECAO_COMERCIAL)
+    if familia and familia in tabela:
+        return D(tabela[familia]), f"Proteção comercial da família {familia} (ParametroKTC {CHAVE_PROTECAO_COMERCIAL})"
+    return None, None
+
+
+def bases_de_preco(session: Session, produto: Produto):
+    """(custo econômico real, base comercial de precificação, memória) do produto.
+
+    O custo real forma lucro e margem realizada; a base comercial forma B2B, tabela e
+    preco_base. Para fornecedor nacional as duas são o mesmo número. Para KTC a base é a
+    referência comercial (`memoria["base_comercial_brl"]`); quando ela não existe (sem regra
+    de proteção), cai para o custo real — e o status do custo já está em revisão.
+    """
+    custo, memoria = custo_para_precificar(session, produto)
+    base = memoria.get("base_comercial_brl")
+    return custo, (base if base else custo), memoria
 
 
 def peso_do_produto(session: Session, produto: Produto) -> PesoResolvido:
@@ -802,32 +967,71 @@ def frescor(session: Session, data_ref: Optional[date]) -> dict:
 def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotacao] = None,
                      preco_negociado: Optional[float] = None, quantidade: float = 1,
                      margem_override: Optional[float] = None,
-                     comissao_formacao_pct=PELA_POLITICA_DO_PRODUTO) -> dict:
+                     comissao_formacao_pct=PELA_POLITICA_DO_PRODUTO,
+                     politica=PELA_POLITICA_DO_PRODUTO) -> dict:
     """Waterfall completo: da especificação (ou do custo do fornecedor) ao preço final.
 
     `comissao_formacao_pct` segue a convenção de `regras_da_cotacao`: o recálculo de um item
     existente passa a comissão que o item congelou, para a memória descrever o preço dele —
     não o que um item novo teria.
     """
-    from app.pricing_engine import calcular_por_margem, calcular_por_preco
+    from app.pricing_engine import (
+        calcular_por_margem, calcular_por_preco, preco_b2b, preco_de_tabela,
+    )
+    from app.politica_comercial import ROTULO_2026_09_21
 
     cot = cotacao or cenario_padrao_catalogo(session)
-    regras, contexto = regras_da_cotacao(session, cot, produto,
-                                         comissao_formacao_pct=comissao_formacao_pct)
-    custo = custo_net(session, produto)
     margem = margem_padrao(session, produto, margem_override)
+    regras, contexto = regras_da_cotacao(session, cot, produto,
+                                         comissao_formacao_pct=comissao_formacao_pct,
+                                         politica=(politica if politica is not PELA_POLITICA_DO_PRODUTO
+                                                   else PELA_POLITICA_DO_PRODUTO))
+    custo = custo_net(session, produto)
 
     net = custo.get("net_brl") or produto.custo_unitario
+    # base comercial: forma B2B/recomendado; `net` (custo real) forma lucro e margem realizada
+    base = custo.get("base_comercial_brl") or net
     resultado = None
+    b2b = None
     # `regras` é None quando o fiscal ou a condição de pagamento não se resolveram: nesse caso
     # não se forma preço nenhum. A memória continua sendo devolvida, com o motivo do bloqueio.
+    # Sem regra de margem (política 21/09) também não: margem não se inventa.
     if net and regras is not None:
+        e_2026_09_21 = (contexto.get("politica_comercial") == ROTULO_2026_09_21)
+        if e_2026_09_21 and margem.tem_regra:
+            vigente = politica_comercial_vigente(session)
+            fator = vigente.fator_tabela if vigente and vigente.fator_tabela else D("2")
+            ref = preco_b2b(base, margem.margem_pct, regras, produto.preco_base)
+            eco = preco_b2b(net, margem.margem_pct, regras, produto.preco_base) if base != net else ref
+            real_no_b2b = calcular_por_preco(net, 1, ref.preco_negociado, regras, produto.preco_base)
+            b2b = {"preco_b2b": para_float(ref.preco_negociado),
+                   "preco_tabela": para_float(preco_de_tabela(ref.preco_negociado, fator)),
+                   "fator_tabela": para_float(fator),
+                   # margem sobre a BASE COMERCIAL (≥ alvo por construção) e a realizada no
+                   # mesmo preço com o custo real — que é a que vale economicamente
+                   "margem_no_b2b": para_float(ref.margem_liquida),
+                   "margem_realizada_no_b2b": para_float(real_no_b2b.margem_liquida),
+                   "preco_preciso": para_float(ref.preco_preciso),
+                   "comissao_no_b2b_pct": para_float(ref.comissao_pct),
+                   "base_comissionavel_unitaria": para_float(ref.base_comissionavel),
+                   "icms_base_comissao_pct": para_float(ref.icms_base_comissao_pct),
+                   "base_comercial_brl": para_float(base),
+                   "protecao_comercial_pct": (custo.get("referencia_comercial") or {}).get("protecao_pct"),
+                   "preco_b2b_economico": para_float(eco.preco_negociado),
+                   "custo_real_brl": para_float(net)}
         if preco_negociado:
             resultado = calcular_por_preco(net, quantidade, preco_negociado, regras,
                                            produto.preco_base)
-        else:
-            resultado = calcular_por_margem(net, quantidade, margem.margem_pct, regras,
-                                            produto.preco_base)
+        elif e_2026_09_21 and margem.tem_regra:
+            resultado = calcular_por_preco(net, quantidade, ref.preco_negociado, regras,
+                                           produto.preco_base)
+            resultado.preco_preciso = ref.preco_preciso
+            resultado.margem_alvo = margem.margem_pct
+        elif margem.tem_regra:
+            # políticas anteriores: recomendado formado sobre a base comercial; economia real
+            rec = calcular_por_margem(base, quantidade, margem.margem_pct, regras, produto.preco_base)
+            resultado = (calcular_por_preco(net, quantidade, rec.preco_negociado, regras, produto.preco_base)
+                         if base != net else rec)
 
     fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
     return {
@@ -861,6 +1065,8 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
         "fiscal": {**{k: _para_json(v) for k, v in contexto.items() if k != "fiscal"},
                    "memoria_fiscal": contexto["fiscal"].como_dict()},
         "margem": margem.como_dict(),
+        # Política 21/09: B2B (piso de autonomia) e tabela, quando a política do produto é a nova.
+        "b2b": b2b,
         # `como_dict()`, não `asdict()`: a memória é JSON, e o núcleo é Decimal. A conversão
         # para float é explícita e acontece uma vez, na fronteira — nunca por `default=str`,
         # que transformaria dinheiro em string e mudaria o formato do snapshot.
@@ -872,7 +1078,9 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
                     "contribuinte": cot.contribuinte_icms,
                     "finalidade": contexto.get("finalidade"),
                     "consumidor_final": contexto.get("consumidor_final"),
-                    "condicao_pagamento": cot.condicao_pagamento},
+                    "condicao_pagamento": cot.condicao_pagamento,
+                    "percentual_sinal": para_float(getattr(cot, "percentual_sinal", 0) or 0),
+                    "condicao_pagamento_texto": contexto.get("condicao_pagamento_texto")},
         "bloqueado": contexto.get("bloqueado", False),
         "motivo_bloqueio": contexto.get("motivo_bloqueio"),
         "gerado_em": datetime.utcnow().isoformat(),

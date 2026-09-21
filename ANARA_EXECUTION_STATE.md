@@ -2,7 +2,123 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **17/09/2026 — hardening de acesso por perfil, login e recuperação de senha**
+Última atualização: **22/09/2026 — I.I. econômico KTC = 0% com proteção comercial separada do custo (migration 0025); banco local em 0025 com dados aplicados; commit local sem push**
+
+---
+
+# 22/09/2026 — I.I. KTC/Egito = 0% · PREÇOS COMERCIAIS INALTERADOS · LUCRO REAL MAIOR (local; commit sem push; sem deploy)
+
+Alembic **`0025`** (`0025_ii_zero_protecao_comercial`, aditiva/reversível): `produto.protecao_comercial_pct/_fonte`,
+`cotacaoitem.base_comercial_precificacao`, `protecao_comercial_pct`, `preco_b2b_economico`. Banco local real
+migrado 0024 → 0025 e dados aplicados (etapa `ii_zero`: 309 SKUs pinados — 285 × 3,5%, 14 × 1,62%, 10 × 0 —,
+32 regras de família, 29 linhas de NCM encerradas + 29 sucessoras a 0%; catálogo: `preco_base` recalculado
+sobre a base comercial (0 alterados) e cache `custo_unitario` = CNET real em 209 SKUs). 2ª/3ª aplicação: 0 escritas.
+
+| O quê | Onde |
+|---|---|
+| `referencia_comercial()` (mesmo waterfall, proteção no lugar do I.I.; `natureza` declarada) | `app/nationalization.py` |
+| `II_ECONOMICO_KTC = 0`; `protecao_comercial_do_produto` (pino → família); `bases_de_preco` → (custo real, base comercial, memória); memória com `ii_pct`, `referencia_comercial`, `base_comercial_brl`, `b2b.preco_b2b_economico`; `regra_ncm` respeita vigência | `app/pricing_service.py` |
+| `_calcular(..., base_comercial=)`: preço sobre a base, economia sobre o custo real; `_base_de_preco(item)`; pinos no item; `preco_b2b_economico`; prévia/adicionar/editar/duplicar/premissas/cenário | `app/routers/cotacoes.py` |
+| Fingerprint (base/proteção só quando preenchidas); snapshot: custo real, lucro, margem, B2B comercial, tabela, desconto, comissão, base, proteção, B2B econômico, `ii_economico_ktc_pct`, `protecao_comercial_versao` | `app/workflow.py`, `app/workflow_service.py` |
+| Calculadora: custo real no catálogo, preco_base = B2B comercial sobre a base (sem arbitragem customizado × SKU) | `app/calculadora.py` |
+| Seeds: NCM vigente a 0% + `PROTECAO_COMERCIAL_POR_FAMILIA`; script: etapa `ii_zero` (inventário → pino → família → NCM versionada), cache do CNET real | `app/seeds.py`, `app/dados_2026_09_21.py`, `scripts/aplicar_dados_2026_09_21.py` |
+| Confidenciais novos (base comercial, proteção, B2B econômico, I.I., NCM); payload admin com os três campos | `app/confidencial.py`, `app/comercial_service.py` |
+| Baseline ANTES/DEPOIS + paridade (`gerar` / `comparar`), relatório `relatorios/paridade_ii_zero_2026_09_22.md` | `scripts/ii_zero_2026_09_22/baseline_ktc.py` |
+| Oracle KTC (II 0 + referência comercial), matriz/fuzz (base comercial × custo real), sanity com CNET real / base / B2B econômico | `scripts/crisis/oracle_ktc.py`, `scripts/politica_2026_09_21/`, `scripts/relatorios_2026_09_21.py` |
+| Testes: `tests/test_ii_zero_2026_09_22.py` (101) + semântica atualizada em calculadora/custo_familias/crisis/BL-001 | `tests/` |
+
+Resultados (22/09/2026): pytest SQLite **1.761/0**, PostgreSQL 17.9 **1.761/0**; Playwright geral **42/42**, sinal
+**120/120** (4 perfis), dashboard OWNER/ADMIN **9/9** (mesma venda: vendido 1.249,00 / ticket / comissão 51,21 iguais;
+lucro 274,77 → 294,06; margem 22,0% → 23,5%); smoke production-like **79 ok / 0 falhas**; oracle KTC **124/124** (114
+referências comerciais conferidas, dif. 0); **paridade 280 SKUs × 9 cenários = 2.520, 0 diferenças** de B2B/tabela/
+preco_base/comissão (CNET caiu em 202, igual em 78 sem I.I. no custo); fuzz **2.000/0**; matriz × oracle com sinais
+0/30/100% **272.160 cenários, 0 violações** (25.920 bloqueados = CARTÃO com sinal < 100%); auditoria de confidencialidade
+**156 superfícies, 0 vazamentos** (achou e fechou: prévia `/calc` formava o B2B sobre o custo real — corrigido para a
+base comercial, com teste). Âncora 300TC: CNET 58,35 → 56,42 · B2B 124,90 / tabela 249,80 iguais · margem realizada
+22,00% → 23,55% · lucro unitário 27,48 → 29,41. Banco local: 0025, `integrity_check` ok, cotações 27 / itens 60 /
+snapshots 2 / clientes 1 / oportunidades 2 / usuários 1 preservados linha a linha; backups `data/backups/anara.db.pre-ii-zero-0024-para-0025-*`
+e `~/Anara-Cotacao-Backups/anara_pre_ii_zero_0024_*.db`.
+
+---
+
+# Patch pré-deploy de 21/09/2026 — SINAL/ENTRADA + auditoria de confidencialidade (local; sem commit, push, deploy; banco real intocado)
+
+Parte do working tree da política de 21/09 (HEAD `3e40a64`, main). Alembic **`0024`**
+(`0024_sinal_entrada`, aditiva e reversível): `cotacao.percentual_sinal` (NOT NULL, default 0),
+`cotacaoitem.percentual_sinal`, `cotacaoitem.encargo_saldo_pct`. Migration 0023 **inalterada**.
+Banco real continua em `0021` (sha256 `4ddd98ae…` antes e depois de tudo).
+
+| O quê | Onde |
+|---|---|
+| Composição: `validar_percentual_sinal`, `percentual_sinal_do_formulario`, `rotulo_condicao`, `encargo_com_sinal` — `encargo_efetivo = (1 − sinal) × encargo_do_saldo`; sinal 0 devolve o mesmo objeto; 100% → 0 sem bloqueio | `app/payment_terms.py` |
+| `regras_da_cotacao`: encargo efetivo no `TaxRuleSet`; contexto com `percentual_sinal`, `encargo_saldo_pct`, `condicao_pagamento_texto`; memória (`cenario`) | `app/pricing_service.py` |
+| Cabeçalho: `possui_sinal` + `percentual_sinal` (validação 0–100, 400 sem alterar nada), material → recálculo preservando desconto; pinos do item; `criar`/`duplicar`; PDF com texto composto; `/cotacoes/nova` sem encargo para quem não vê economia | `app/routers/cotacoes.py` |
+| Fingerprint: `percentual_sinal` só quando > 0 (hash antigo intacto); divergência de cenário considera o sinal pinado | `app/workflow.py`, `app/comercial_service.py` |
+| Snapshot: `fiscal_json` + `percentual_sinal`, `condicao_saldo`, `condicao_pagamento_texto`, `encargo_efetivo_pct`; itens + `percentual_sinal`, `encargo_saldo_pct`; revisão herda o sinal; PDF final lê o texto do snapshot | `app/workflow_service.py`, `app/pdf_bridge.py` |
+| `condicao_textual(session, cotacao)` (tela, PDF, aprovação) | `app/config_service.py`, `app/routers/workflow.py`, `aprovacao_detalhe.html` |
+| UI: checkbox "Possui sinal / entrada" → percentual + rótulo "Saldo" + texto ao vivo ("30% de sinal + 70% em 30/60/90 dias"); checkbox conta como alteração material; desconto sobre a tabela também na leitura (emitida) | `cotacao_detail.html`, `cotacao.js`, `templating.py` (`p21-2`) |
+| Confidenciais novos: `encargo_efetivo_pct`, `encargo_saldo_pct`, `encargo_saldo_label`, `encargo_label`, `encargo_financeiro_pct` | `app/confidencial.py` |
+| Dados: etapa `sinal` desativa `SINAL30+30/60/90` (não semeada mais); `esquema_pronto` exige 0024 | `app/dados_2026_09_21.py`, `app/seeds.py`, `scripts/aplicar_dados_2026_09_21.py` |
+| Testes: `tests/test_sinal_2026_09_21.py` (85: fórmula 6 sinais × 6 condições, validação, cotação, aprovação, snapshot, PDF, revisão/duplicata, rota 400, memória, vendedora, legado) | `tests/` |
+| Validação: e2e de sinal (OWNER/ADMIN/vendedora interna/comissionada), matriz `--sinais`, fuzz com sinal, auditoria de confidencialidade com prova, sanity §11 | `scripts/politica_2026_09_21/`, `scripts/relatorios_2026_09_21.py`, `relatorios/confidencialidade_2026_09_21.md` |
+
+Resultados (21/09/2026, patch): pytest SQLite **1.657/0**, PostgreSQL 17.9 **1.657/0**; Playwright
+geral **42/42**, Playwright sinal **120/120** (4 perfis); matriz × oracle com sinais 0/30/50/100%:
+**362.880 cenários, 0 divergências/violações** (38.880 bloqueados = exatamente CARTÃO com sinal < 100%; CARTÃO com sinal 100% resolve com encargo 0); fuzz **2.000 casos, 0 falhas** (1.137 com sinal, 529 trocas de cenário, 59 emitidas);
+smoke production-like SQLite **78 ok / 0 falhas** (cópia real 0021→0024 e cópia ensaiada) e
+PostgreSQL **80 ok / 0 falhas**; política vigente **378/378**; oracle KTC **122/122**; backtest KTC
+**0 MOTOR ABAIXO** (REVISAR 2 — KTC-024 mantido em revisão); auditoria de confidencialidade
+**156 superfícies × 2 vendedoras, 0 vazamentos, 0 itens obrigatórios ausentes**.
+
+Ensaio de migração em cópia (`anara_ensaio24.db`): 0021 → 0024 (3 upgrades) → preview → aplicar →
+aplicar de novo (0 escritas; contagens idênticas: cotações 24 · itens 55 · snapshots 1 · aprovações 0 ·
+auditlog 160 · produtos 386 · regras 74 · referências 192 · FCP 676 · condições ativas 7) → smoke.
+
+---
+
+# Política comercial de 21/09/2026 — IMPLEMENTADA LOCALMENTE (sem commit, sem push, sem deploy, banco real intocado)
+
+Baseline: HEAD `3e40a64` (main). Fontes: pacote `~/Downloads/ANARA_HANDOFF_FINAL_2026-09-20/`
+(AS-IS 20/09, TO-BE, DIFF, contrato, escopo aprovado) e o prompt consolidado de 21/09, que
+superou os pontos abertos (Daune sem trava, comissão por item, DIFAL/FCP na base, equipe fora).
+
+Alembic **`0023`** (`0023_politica_2026_09_21`, aditiva): `cotacaoitem` + `preco_tabela`,
+`desconto_vs_tabela_pct`, `modo_negociacao`, `desconto_editado_pct`, `base_comissionavel`,
+`icms_base_comissao_pct`, `comissao_faixa_pct`; `cotacao` + `freight_manual_confirmado/por/em/obs`.
+**Não aplicada ao banco real** (`alembic current` = 0021). A suíte que lê o banco real (somente
+leitura) rodou contra uma cópia migrada via `ANARA_DB_REAL_PARA_TESTES` (`scripts/fundacao.py`,
+`tests/legado.caminho_banco_real`).
+
+| O quê | Onde |
+|---|---|
+| Base da comissão líquida de ICMS (`comissao_base_icms_pct`), B2B = primeiro centavo válido (`preco_b2b`), tabela, desconto, `preco_por_desconto` (ROUND_UP) | `app/pricing_engine.py` |
+| Política 21/09: rótulo, premissas (`comissao_b2b_pct`, `fator_tabela`, `comissao_faixas_desconto`), escada, `comissao_do_item`, `versao_da_politica`, margens como dados | `app/politica_comercial.py` |
+| Sem fallback de 15%: `MargemResolvida.tem_regra`, `SEM_REGRA` | `app/margin_rules.py` |
+| `regras_da_cotacao(..., politica=)`; `politica_comercial_vigente` lê as premissas novas; `CHAVES_PINADAS`; memória com `b2b`; allowance por família; CMT "standard"/"com abas" | `app/pricing_service.py` |
+| Avaliação por item (v2) mantendo v1 e pré-política; propostas por preço OU desconto; payloads | `app/comercial_service.py`, `app/routers/negociacao.py` |
+| `PRECO_ABAIXO_B2B`, `SEM_REGRA_DE_MARGEM`, `FRETE_MANUAL_CONFIRMADO`, fingerprint (campos novos só quando preenchidos), Σ base | `app/workflow.py`, `app/workflow_service.py` |
+| `_calcular` (margem = B2B; desconto), `_aplicar_resultado` (B2B + tabela), repricing preservando desconto, `editar_item` (preço→desconto), `duplicar`, frete manual no cabeçalho, `calc` | `app/routers/cotacoes.py` |
+| Matriz fiscal 27 UFs + FCP por família (AL/RJ/SE); seeds/idempotente | `app/fiscal_2026_09_21.py`, `app/seeds.py` |
+| Dados 21/09 (política, fiscal, Decor, ELIS, KTC 29/07, ABAS, preco_base) — preview/aplicar | `app/dados_2026_09_21.py`, `scripts/aplicar_dados_2026_09_21.py` |
+| Decor: `registrar_decor`, `cnet_nacional` com memória parametrizada | `app/custo_service.py` |
+| Fronhas 2% (`quality_allowance` escopo Pillow Case), ABAS em `nomes`/`spec_parser`/calculadora, toalha 90/10 | `app/calculadora.py`, `app/nomes.py`, `app/spec_parser.py`, `app/templates/calculadora.html` |
+| Primeiro acesso com perfil autorizado pelo servidor (`conferir_perfil`, 403 ao forjar) | `app/recuperacao_senha.py`, `app/routers/login.py`, `redefinir_senha.html` |
+| UI: Tabela · B2B · Preço da proposta · Desconto % (editável) · Sua comissão; frete manual; economia por item; "B2B de referência" no catálogo; `valor-alerta` (sem "margem" na tela comercial) | `cotacao_detail.html`, `cotacao.js`, `anara.css`, `produtos_list.html`, `_cotacao_situacao.html` |
+| Confidencialidade: allowlist do item + confidenciais novos | `app/confidencial.py` |
+| Testes: `tests/test_politica_2026_09_21.py` (67), legado sob contexto 16/09 (`tests/politica_legada.py`), crisis/e2e/fase3c/margens atualizados | `tests/` |
+| Validação: e2e Playwright, matriz × oracle, fuzz, política vigente, relatórios A–E | `scripts/politica_2026_09_21/`, `scripts/relatorios_2026_09_21.py`, `relatorios/*2026_09_21*` |
+
+Resultados (21/09/2026): pytest SQLite **1.572/0**, PostgreSQL 17.9 efêmero **1.572/0**; Playwright
+e2e **42/42**; matriz fiscal × oracle **103.680 cenários, 0 divergências/violações**; fuzz **2.000
+casos, 0 falhas**; smoke production-like SQLite **78 ok** / Postgres **80 ok**; política vigente
+**378/378 produtos ativos com regra**; oracle KTC **122/122**; backtest KTC **0 P0_SUBCUSTO**.
+
+**Pendências para aplicar (manuais):** backup → `alembic upgrade head` → `scripts/aplicar_dados_2026_09_21.py`
+(preview, depois `--aplicar`) → `scripts/relatorios_2026_09_21.py` → conferir. Ver "Conflitos e
+decisões" em `AUDIT_ANARA_MASTER.md` §12. **Regra fiscal do escopo atual está fechada** (base única
+para não contribuinte; FCP 0% em BA/PE/PI para cama/banho sem enquadramento específico; AL/RJ/SE
+como estão; sem cobertura comprovada → `REVIEW_REQUIRED`) — não há blocker fiscal externo para o
+deploy. Registrados à parte e sem bloquear: KTC-024 em revisão; divergência documental da escada (CF-01).
 
 ---
 

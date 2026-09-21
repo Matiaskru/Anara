@@ -6,6 +6,7 @@ precedência do I.I. de roupão contra a troca de NCM, e as travas do casamento 
 import os
 
 import pytest
+from decimal import Decimal
 from sqlmodel import select
 
 from app.ktc_engine import (
@@ -34,6 +35,34 @@ def test_corte_da_fronha_segue_o_paragrafo_18(abas, corte):
     assert corte_fronha(50, 70, 20, abas) == corte
 
 
+# Goldens da planilha "Pillow Case Costing sheet.xlsx" (KTC): 50×70, flap 20, 250TC Sateen
+# CVC 70/30 a US$ 1,25/m², shrink 3%, waste 3%, CMT 0,50/0,75, allowance de costing 2%
+# (rotulado "2% II" na planilha — NÃO é Imposto de Importação), margem KTC 15%.
+GOLDENS_PILLOW_CASE_COSTING_SHEET = [
+    ("Standard / 0 abas", 0, False, Decimal("2.0625702343")),
+    ("2 abas", 2, False, Decimal("2.5399424203")),
+    ("3 abas", 3, False, Decimal("2.6917555940")),
+    ("4 abas", 4, False, Decimal("2.8435687677")),
+]
+
+
+@pytest.mark.parametrize("nome,abas,festone,alvo", GOLDENS_PILLOW_CASE_COSTING_SHEET)
+def test_os_goldens_da_planilha_de_fronhas_da_ktc(nome, abas, festone, alvo):
+    """Decimal, tolerância estrita: o motor reproduz a planilha até a 10ª casa."""
+    r = calcular_fronha(50, 70, parametros(quality_allowance=0.02), flap_cm=20, abas=abas,
+                        festone=festone)
+    assert r.status == CALCULATED
+    assert abs(r.exw_usd - alvo) < Decimal("5e-11"), f"{nome}: {r.exw_usd} ≠ {alvo}"
+
+
+def test_festone_soma_dez_centavos_antes_do_allowance_e_da_margem():
+    """+US$ 0,10 antes do allowance (2%) e da margem KTC (15%): +0,10 ÷ 0,98 ÷ 0,85 no EXW."""
+    sem = calcular_fronha(50, 70, parametros(quality_allowance=0.02), flap_cm=20, abas=4)
+    com = calcular_fronha(50, 70, parametros(quality_allowance=0.02), flap_cm=20, abas=4, festone=True)
+    esperado = sem.exw_usd + Decimal("0.10") / Decimal("0.98") / Decimal("0.85")
+    assert abs(com.exw_usd - esperado) < Decimal("1e-20")
+
+
 @pytest.mark.parametrize("nome,abas,festone,alvo", [
     ("Standard / 0 abas", 0, False, 2.0417),
     ("2 abas", 2, False, 2.5143),
@@ -41,8 +70,10 @@ def test_corte_da_fronha_segue_o_paragrafo_18(abas, corte):
     ("4 abas", 4, False, 2.8148),
     ("4 abas + festonê", 4, True, 2.9337),
 ])
-def test_os_cinco_backtests_da_fronha(nome, abas, festone, alvo):
-    """50×70, flap 20, 250TC CVC a US$ 1,25/m². Desvio máximo aceito: 0,01%."""
+def test_os_cinco_backtests_da_fronha_com_allowance_de_1_por_cento(nome, abas, festone, alvo):
+    """Backtests do §18 com o allowance global de 1% (Pricing Master). A geometria é a mesma;
+    só a etapa de allowance mudou para 2% com a planilha de fronhas de 2026 — este teste guarda
+    que a fórmula continua reproduzindo o histórico quando alimentada com o parâmetro antigo."""
     r = calcular_fronha(50, 70, parametros(), flap_cm=20, abas=abas, festone=festone)
     assert r.status == CALCULATED
     assert r.exw_usd == aprox(alvo, rel=1e-4), f"{nome} fora do alvo do §18"
@@ -121,8 +152,13 @@ def test_ii_de_roupao_sobrevive_a_troca_de_ncm(session):
     from app import pricing_service as ps
 
     roupao = session.exec(select(NcmRegra).where(NcmRegra.familia == "Roupão")).first()
-    assert roupao.ii_preferencial == aprox(0.035)
+    # 22/09/2026: I.I. econômico 0% na regra vigente; os 3,5% sobrevivem como PROTEÇÃO COMERCIAL
+    assert roupao.ii_preferencial == 0.0
     assert roupao.prioridade == 10
+    from app.models import ParametroKTC
+    prot = session.exec(select(ParametroKTC).where(ParametroKTC.chave == "protecao_comercial_pct")
+                        .where(ParametroKTC.escopo == "Roupão")).first()
+    assert prot is not None and prot.valor == aprox(0.035)
 
     p = Produto(sku_key="ROUPAO-II", nome="Roupão de teste", familia="Roupão",
                 ncm="9999.99.99")     # NCM deliberadamente errado
@@ -131,9 +167,10 @@ def test_ii_de_roupao_sobrevive_a_troca_de_ncm(session):
 
     regra = ps.regra_ncm(session, p)
     assert regra is not None
-    assert regra.ii_preferencial == aprox(0.035), \
-        "a regra de família tem de vencer o lookup por NCM"
-    assert regra.familia == "Roupão"
+    assert regra.familia == "Roupão", "a regra de família tem de vencer o lookup por NCM"
+    assert regra.ii_preferencial == 0.0
+    assert ps.protecao_comercial_do_produto(session, p)[0] == aprox(0.035), \
+        "a proteção comercial da família também vence o NCM errado"
 
 
 # ---------------------------------------------------------------------------

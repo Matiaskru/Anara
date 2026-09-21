@@ -36,7 +36,9 @@
 {% if request.query_params.get('premissas') == 'atualizadas' %}
 <div class="banner banner-ok"><div>Premissas atualizadas e preços recalculados.</div></div>
 {% elif request.query_params.get('cenario') == 'atualizado' %}
-<div class="banner banner-ok"><div><strong>Cenário atualizado: todos os preços foram reformados para o cenário novo.</strong> Preços negociados antes valiam para o cenário anterior e voltaram ao recomendado — renegocie sobre estes.</div></div>
+<div class="banner banner-ok"><div><strong>Cenário atualizado: todos os preços foram refeitos para o cenário novo.</strong> O preço B2B e a tabela de cada produto mudaram; os descontos que você negociou foram mantidos sobre a nova tabela, e os produtos sem negociação voltaram ao B2B. Confira a situação ao lado.</div></div>
+{% elif request.query_params.get('frete') == 'atualizado' %}
+<div class="banner banner-ok"><div>Frete atualizado. O total da proposta mudou; se havia aprovação, ela precisa ser refeita.</div></div>
 {% elif request.query_params.get('salvo') %}
 <div class="banner banner-ok"><div>Dados salvos. Nada que mudasse o cálculo foi alterado.</div></div>
 {% endif %}
@@ -81,10 +83,21 @@
             <button type="button" class="{{ '' if cotacao.contribuinte_icms else 'active' }}" data-contribuinte="nao" onclick="setContribuinte(this,'nao')" {% if not editavel %}disabled{% endif %}>Não</button>
           </div>
           <input type="hidden" name="contribuinte_icms" id="contribuinte_icms_input" data-material value="{{ 'sim' if cotacao.contribuinte_icms else 'nao' }}"></div>
-        <div class="field"><label for="c-pagamento">Pagamento</label>
+        <div class="field"><label for="c-pagamento" id="c-pagamento-label">{{ 'Saldo' if cotacao.percentual_sinal else 'Pagamento' }}</label>
           <select id="c-pagamento" name="condicao_pagamento" data-material {% if not editavel %}disabled{% endif %}>
             {% for c in condicoes %}<option value="{{ c.codigo }}" {{ 'selected' if c.codigo == cotacao.condicao_pagamento else '' }}>{{ c.label }}</option>{% endfor %}
-          </select></div>
+          </select>
+          <label class="small" style="display:flex;gap:6px;align-items:center;margin-top:6px;text-transform:none;letter-spacing:0;font-weight:500;">
+            <input type="checkbox" name="possui_sinal" id="c-possui-sinal" value="sim" data-material {% if cotacao.percentual_sinal %}checked{% endif %} {% if not editavel %}disabled{% endif %} style="width:auto;margin:0;">
+            Possui sinal / entrada
+          </label>
+          <div id="c-sinal-wrap" {% if not cotacao.percentual_sinal %}hidden{% endif %}>
+            <div class="flex mt-8" style="gap:4px;align-items:center;">
+              <input type="number" id="c-sinal" name="percentual_sinal" min="0" max="100" step="0.01" value="{{ sinal_pct }}" placeholder="30" class="input-sm" style="width:72px;" data-material {% if not editavel %}disabled{% endif %} aria-label="Percentual de sinal">
+              <span class="muted small nowrap">% de sinal · saldo na condição acima</span>
+            </div>
+          </div>
+          <small id="c-condicao-texto" data-condicao-texto>{{ condicao_texto }}</small></div>
         <div class="field"><label for="c-validade">Validade</label>
           <div class="flex" style="gap:4px;"><input id="c-validade" type="number" name="validade_dias" min="1" value="{{ cotacao.validade_dias or 5 }}" style="width:64px;" {% if not editavel %}disabled{% endif %}><span class="muted small nowrap">dias · {{ cotacao.validade_em|data }}</span></div></div>
         <div class="field"><label for="c-frete">Frete</label>
@@ -93,10 +106,18 @@
             <option value="FOB" {{ 'selected' if cotacao.freight_type == 'FOB' else '' }}>Por conta do cliente</option>
             <option value="A_COMBINAR" {{ 'selected' if cotacao.freight_type == 'A_COMBINAR' else '' }}>A combinar</option>
           </select>
-          <div id="c-frete-valor-wrap" class="flex mt-8" style="gap:4px;" {% if cotacao.freight_type != 'CIF' %}hidden{% endif %}>
-            <input type="number" step="0.01" min="0" name="freight_valor" value="{{ cotacao.freight_valor if cotacao.freight_valor else '' }}" placeholder="valor R$" class="input-sm" {% if not editavel %}disabled{% endif %} aria-label="Valor do frete">
+          <div id="c-frete-valor-wrap" {% if cotacao.freight_type != 'CIF' %}hidden{% endif %}>
+            <div class="flex mt-8" style="gap:4px;">
+              <input type="number" step="0.01" min="0" name="freight_valor" value="{{ cotacao.freight_valor if cotacao.freight_valor else '' }}" placeholder="valor R$" class="input-sm" {% if not editavel %}disabled{% endif %} aria-label="Valor do frete">
+            </div>
+            <label class="small" style="display:flex;gap:6px;align-items:center;margin-top:6px;text-transform:none;letter-spacing:0;font-weight:500;">
+              <input type="checkbox" name="freight_manual_confirmado" value="sim" data-material {% if cotacao.freight_manual_confirmado %}checked{% endif %} {% if not editavel %}disabled{% endif %} style="width:auto;margin:0;">
+              Valor confirmado com a transportadora
+            </label>
+            <input name="freight_manual_obs" value="{{ cotacao.freight_manual_obs or '' }}" placeholder="ex.: cotação Transal 21/09" class="input-sm mt-8" {% if not editavel %}disabled{% endif %} aria-label="Observação do frete">
+            {% if cotacao.freight_manual_confirmado %}<small>Confirmado por {{ cotacao.freight_manual_por or '—' }}{% if cotacao.freight_manual_em %} em {{ cotacao.freight_manual_em|data }}{% endif %}.</small>{% endif %}
           </div>
-          <small>{% if cotacao.freight_type == 'CIF' and not cotacao.freight_valor %}Sem valor informado, o frete é calculado pela tabela da rota quando houver.{% endif %}</small></div>
+          <small>{% if cotacao.freight_type == 'CIF' and not cotacao.freight_valor %}Informe o valor de frete combinado e marque como confirmado para incluí-lo na proposta.{% endif %}</small></div>
       </div>
       <details class="mais" id="mais-opcoes" {% if cotacao.observacoes or cotacao.observacao_cliente %}open{% endif %}>
         <summary>Mais opções</summary>
@@ -179,30 +200,44 @@
       <div class="tw">
       <table id="tabela-itens">
         <thead><tr>
-          <th style="min-width:200px;">Produto</th><th class="num">Qtd.</th><th class="num">Recomendado</th>
-          <th class="num">Seu preço</th><th class="num oculta-mobile">Desconto</th><th class="num">Total</th>
+          <th class="col-produto">Produto</th><th class="num">Qtd.</th>
+          <th class="num oculta-mobile" title="Preço de tabela: referência cheia do produto">Tabela</th>
+          <th class="num" title="Preço recomendado para venda B2B — o menor preço dentro da sua autonomia">B2B</th>
+          <th class="num">Preço da proposta</th><th class="num">Desconto</th>
+          <th class="num oculta-mobile" title="Sua comissão estimada neste produto">Sua comissão</th>
+          <th class="num">Total</th>
           {% if economia %}<th class="num">Margem</th>{% endif %}
           <th></th>
         </tr></thead>
         <tbody id="corpo-itens">
         {% for it in itens %}
           {% set travado = it.preco_travado %}
-          <tr data-item-id="{{ it.id }}" data-travado="{{ '1' if travado else '0' }}" data-preco="{{ '%.2f'|format(it.preco_negociado or 0) }}" data-qtd="{{ it.quantidade }}"
+          {% set nova = it.politica_comercial == 'POLITICA_COMERCIAL_2026-09-21' %}
+          <tr data-item-id="{{ it.id }}" data-travado="{{ '1' if travado else '0' }}" data-politica="{{ 'nova' if nova else 'anterior' }}" data-preco="{{ '%.2f'|format(it.preco_negociado or 0) }}" data-qtd="{{ it.quantidade }}" data-tabela="{{ '%.2f'|format(it.preco_tabela or 0) }}"
               {% if economia %}data-lucro="{{ it.lucro }}" data-custo="{{ it.custo_total }}"{% endif %}>
             <td><div style="font-weight:700;">{{ it.nome_produto }}</div>
               <div class="small muted">{{ it.especificacao or '' }}</div>
               {% if custo_pendente(it.status_custo_item) %}<span class="tag tag-review">{{ it.status_custo_item|rotulo_custo }}</span>{% endif %}
+              {% if not nova and it.politica_comercial %}<span class="tag" title="Produto adicionado com a política comercial anterior. Use “Atualizar e recalcular” para trazê-lo para a vigente.">política anterior</span>{% endif %}
             </td>
-            <td class="num">{% if editavel %}<input type="number" min="1" step="1" class="input-cell input-num" style="width:64px;" value="{{ it.quantidade|int }}" data-qtd-input aria-label="Quantidade">{% else %}{{ it.quantidade|num }}{% endif %}</td>
+            <td class="num">{% if editavel %}<input type="number" min="1" step="1" class="input-cell input-num" style="width:56px;" value="{{ it.quantidade|int }}" data-qtd-input aria-label="Quantidade">{% else %}{{ it.quantidade|num }}{% endif %}</td>
+            <td class="num muted oculta-mobile" data-tabela-cel>{{ it.preco_tabela|brl if it.preco_tabela else '—' }}</td>
             <td class="num muted" data-rec>{{ it.preco_recomendado|brl if it.preco_recomendado else '—' }}</td>
             <td class="num">
               {% if editavel and not travado %}
-              <input type="number" min="0.01" step="0.01" class="input-cell input-num" style="width:96px;" value="{{ '%.2f'|format(it.preco_negociado or 0) }}" data-preco-input aria-label="Seu preço">
+              <input type="number" min="0.01" step="0.01" class="input-cell input-num" style="width:86px;" value="{{ '%.2f'|format(it.preco_negociado or 0) }}" data-preco-input aria-label="Preço da proposta">
               {% else %}
-              <span data-preco-fixo>{{ it.preco_negociado|brl }}</span>{% if travado %} <span class="lock" title="Preço fixo por política comercial">🔒 fixo</span>{% endif %}
+              <span data-preco-fixo>{{ it.preco_negociado|brl }}</span>
               {% endif %}
             </td>
-            <td class="num muted oculta-mobile" data-desconto>—</td>
+            <td class="num">
+              {% if editavel and nova and it.preco_tabela %}
+              <div class="flex" style="gap:2px;justify-content:flex-end;flex-wrap:nowrap;"><input type="number" min="0" max="99.99" step="0.01" class="input-cell input-num" style="width:66px;" value="{{ '%.2f'|format((it.desconto_vs_tabela_pct or 0) * 100) }}" data-desconto-input aria-label="Desconto sobre a tabela (%)"><span class="muted small">%</span></div>
+              {% else %}
+              <span class="muted" data-desconto>{% if nova and it.desconto_vs_tabela_pct is not none %}{{ it.desconto_vs_tabela_pct|pct }}{% else %}—{% endif %}</span>
+              {% endif %}
+            </td>
+            <td class="num oculta-mobile" data-comissao-item>{% if nova and it.comissao_faixa_pct %}<span class="small">{{ it.comissao_faixa_pct|pct }}</span>{% else %}—{% endif %}</td>
             <td class="num" data-total style="font-weight:700;">{{ it.faturamento|brl }}</td>
             {% if economia %}<td class="num" data-margem><span class="{{ 'margem-abaixo' if it.piso_margem_pct and it.margem_liquida < it.piso_margem_pct - 0.0005 else 'margem-ok' }}">{{ it.margem_liquida|pct }}</span></td>{% endif %}
             <td class="right nowrap">
@@ -214,7 +249,7 @@
         </tbody>
       </table>
       </div>
-      {% if not itens %}<div class="empty-state" id="itens-vazio"><h3>Nenhum produto ainda</h3><p>Busque um produto acima — KTC, Daune ou Decor Tricot na mesma proposta.</p></div>{% endif %}
+      {% if not itens %}<div class="empty-state" id="itens-vazio"><h3>Nenhum produto ainda</h3><p>Busque um produto acima. Cada produto entra no preço B2B recomendado; ajuste o preço ou o desconto na linha.</p></div>{% endif %}
     </div>
 
     {# ---- economia (só OWNER/ADMIN), fechada por padrão ---- #}
@@ -226,16 +261,16 @@
         <div class="kpi"><div class="label">Receita</div><div class="value small" data-eco="receita">{{ totais.faturamento|brl }}</div></div>
         <div class="kpi"><div class="label">Lucro</div><div class="value small copper" data-eco="lucro_total">{{ totais.lucro|brl }}</div></div>
         <div class="kpi"><div class="label">Margem agregada</div><div class="value small" data-eco="margem_agregada_pct">{{ totais.margem_liquida|pct }}</div></div>
-        <div class="kpi"><div class="label">Comissão variável</div><div class="value small" data-eco="comissao_variavel_pct">—</div><div class="nota" data-eco="limitada">—</div></div>
-        <div class="kpi"><div class="label">Comissão fixa (Daune)</div><div class="value small" data-eco="comissao_travada_valor">—</div></div>
+        <div class="kpi"><div class="label">Base comissionável</div><div class="value small" data-eco="base_comissionavel_total">—</div><div class="nota">receita − ICMS suportado pela Anara</div></div>
+        <div class="kpi"><div class="label">Comissão total</div><div class="value small" data-eco="comissao_total">—</div><div class="nota" data-eco="taxa_efetiva">—</div></div>
       </div>
       <div class="tw">
       <table class="compacta" id="eco-itens">
-        <thead><tr><th>Produto</th><th class="num">Custo un.</th><th class="num">Margem alvo</th><th class="num">Piso</th><th class="num">Margem realizada</th><th class="num">Lucro</th><th class="num">Comissão</th><th>Situação</th></tr></thead>
+        <thead><tr><th>Produto</th><th class="num">Custo un.</th><th class="num">Margem alvo</th><th class="num">Tabela</th><th class="num">B2B</th><th class="num">Desconto</th><th class="num">Margem realizada</th><th class="num">Lucro</th><th class="num">Base</th><th class="num">Comissão</th><th>Situação</th></tr></thead>
         <tbody></tbody>
       </table>
       </div>
-      <p class="nota">Desconto absorvido: <span data-eco="absorvido_por_comissao">—</span> pela comissão · <span data-eco="absorvido_por_margem">—</span> pela margem · <span data-eco="absorvido_por_impostos_e_frete">—</span> por impostos e frete.</p>
+      <p class="nota" data-eco="nota-legado" hidden>Itens da política anterior: desconto absorvido <span data-eco="absorvido_por_comissao">—</span> pela comissão · <span data-eco="absorvido_por_margem">—</span> pela margem · <span data-eco="absorvido_por_impostos_e_frete">—</span> por impostos e frete.</p>
     </details>
     {% endif %}
   </div>
@@ -248,16 +283,16 @@
         <div class="resumo-linha"><span class="r">Produtos</span><span class="v" data-res="subtotal_negociado">{{ totais.faturamento|brl }}</span></div>
         <div class="resumo-linha"><span class="r">Frete</span><span class="v" data-res="frete">—</span></div>
         <div class="resumo-linha total"><span class="r">Total</span><span class="v" data-res="total_proposta">{{ totais.faturamento|brl }}</span></div>
-        <div class="resumo-linha"><span class="r">Desconto sobre o recomendado</span><span class="v" data-res="desconto_pct">—</span></div>
+        <div class="resumo-linha"><span class="r" data-res-rotulo="desconto">Desconto sobre a tabela</span><span class="v" data-res="desconto_pct">—</span></div>
       </div>
       <div class="panel-sec">
         <h4>Sua comissão estimada</h4>
         <div class="resumo-linha destaque"><span class="r"><span data-res="comissao_estimada_pct_efetiva">—</span></span><span class="v" data-res="comissao_estimada_valor">{{ totais.comissao_estimada_valor|brl if totais.comissao_estimada_valor else '—' }}</span></div>
-        <p class="nota">Estimativa comercial sobre esta proposta. Frete não entra.</p>
+        <p class="nota">Estimativa sobre esta proposta, calculada produto a produto. Frete não entra.</p>
       </div>
       <div class="panel-sec" id="autonomia">
         <div class="banner banner-ok" data-autonomia="ok" style="margin:0;" hidden><div>✓ Dentro da autonomia</div></div>
-        <div class="banner banner-warn" data-autonomia="aprovacao" style="margin:0;" hidden><div>⚠ Este preço precisa de aprovação</div></div>
+        <div class="banner banner-warn" data-autonomia="aprovacao" style="margin:0;" hidden><div>⚠ Precisa de aprovação — há produto abaixo do preço B2B</div></div>
         <div class="muted small" data-autonomia="vazio">Adicione produtos para avaliar a proposta.</div>
       </div>
       <div class="panel-sec" id="situacao">

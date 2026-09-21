@@ -11,6 +11,15 @@ versionada) e o caminho fica registrado etapa por etapa.
     NET BRL          = NET USD × câmbio
 
 Só vale para fornecedor importado (KTC/Egito). Fornecedor nacional não passa por aqui.
+
+## Economia real × formação comercial (22/09/2026)
+
+Desde 22/09/2026 o **I.I. econômico da KTC/Egito é 0%**: `nacionalizar(..., ii_pct=0)` é o
+CUSTO NET REAL, o único que entra em lucro, margem realizada, dashboard e relatórios. A antiga
+alíquota preferencial (3,5%; 1,62% em travesseiros/protetores) deixou de ser custo e passou a
+existir apenas como **proteção comercial de precificação** — `referencia_comercial()` — que
+reproduz o mesmo waterfall com a proteção no lugar do imposto, para que B2B, tabela e preco_base
+fiquem exatamente onde estavam. A proteção NÃO é tributo, custo nem despesa; é política de preço.
 """
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -103,3 +112,62 @@ def nacionalizar(exw_usd, peso_kg, ii_pct,
                     net_usd * premissas.fx_usd_brl, "BRL")
 
     return ResultadoNacionalizacao(net_brl, net_usd, frete, ii, etapas, avisos)
+
+
+# ---------------------------------------------------------------------------
+# Referência comercial de precificação — NÃO é custo (22/09/2026)
+# ---------------------------------------------------------------------------
+@dataclass
+class ReferenciaComercial:
+    """Base sobre a qual a política comercial forma o B2B de um SKU importado.
+
+    Mesma aritmética da nacionalização, com a PROTEÇÃO COMERCIAL onde antes entrava o I.I.
+    Por isso o B2B formado sobre ela é idêntico ao que se formava até 22/09/2026 — e por isso
+    ela nunca entra em lucro, margem realizada ou custo: é referência de preço, não economia.
+    """
+    brl: Optional[Decimal]
+    usd: Optional[Decimal] = None
+    frete_usd: Optional[Decimal] = None
+    protecao_pct: Optional[Decimal] = None
+    protecao_usd: Optional[Decimal] = None
+    etapas: List[Etapa] = field(default_factory=list)
+
+    def como_dict(self) -> dict:
+        return {"brl": para_float(self.brl), "usd": para_float(self.usd),
+                "frete_usd": para_float(self.frete_usd),
+                "protecao_pct": para_float(self.protecao_pct),
+                "protecao_usd": para_float(self.protecao_usd),
+                "natureza": "formação comercial de preço — não é custo, tributo nem despesa",
+                "etapas": [e.como_dict() for e in self.etapas]}
+
+
+def referencia_comercial(exw_usd, peso_kg, protecao_pct,
+                         premissas: PremissasNacionalizacao) -> ReferenciaComercial:
+    """(EXW + frete) × (1 + proteção) + outras despesas, em US$ e R$.
+
+    `protecao_pct` é a alíquota preferencial que o SKU usava como I.I. até 22/09/2026, pinada
+    no produto ou lida da regra da família — só como fator de preço. Peso ausente = frete zero
+    (o aviso fica na nacionalização, que é quem decide o status do custo).
+    """
+    exw_usd, peso_kg, protecao_pct = D(exw_usd), D(peso_kg), D(protecao_pct)
+    if exw_usd is None or not exw_usd.is_finite() or exw_usd <= 0 or protecao_pct is None:
+        return ReferenciaComercial(None)
+    peso_kg = peso_kg if (peso_kg is not None and peso_kg.is_finite() and peso_kg >= 0) else ZERO
+    etapas: List[Etapa] = []
+
+    def passo(n, nome, formula, valor, unidade=""):
+        etapas.append(Etapa(n, nome, formula, valor, unidade))
+        return valor
+
+    passo(1, "EXW KTC", "preço de fábrica", exw_usd, "USD")
+    frete = passo(2, "Frete internacional", f"{peso_kg:g} kg × US$ {premissas.frete_usd_kg:g}/kg",
+                  peso_kg * premissas.frete_usd_kg, "USD")
+    base = passo(3, "Base da proteção comercial", f"{exw_usd:.4f} + {frete:.4f}", exw_usd + frete, "USD")
+    protecao = passo(4, "Proteção comercial de precificação (não é imposto)",
+                     f"{base:.4f} × {protecao_pct:g}", base * protecao_pct, "USD")
+    usd = passo(5, "Referência comercial",
+                f"{exw_usd:.4f} + {frete:.4f} + {protecao:.4f} + {premissas.outras_desp_usd_un:g}",
+                exw_usd + frete + protecao + premissas.outras_desp_usd_un, "USD")
+    brl = passo(6, "Referência comercial em reais", f"{usd:.6f} × câmbio {premissas.fx_usd_brl:g}",
+                usd * premissas.fx_usd_brl, "BRL")
+    return ReferenciaComercial(brl, usd, frete, protecao_pct, protecao, etapas)

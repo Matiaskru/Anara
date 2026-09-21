@@ -72,7 +72,11 @@ def recompor(resultado, regras: TaxRuleSet, custo_unitario, quantidade):
     icms_e_pis = dinheiro(receita * (regras.icms_pct + regras.pis_cofins_pct))
     financeiro = dinheiro(receita * regras.encargo_financeiro_pct)
     comissao_pct = regras.comissao_para_markup(resultado.markup_implicito)
-    comissao = dinheiro(receita * comissao_pct)
+    # Base da comissão conforme a política do TaxRuleSet: bruta (políticas anteriores,
+    # `comissao_base_icms_pct = 0`) ou líquida do ICMS suportado pela Anara (21/09/2026).
+    # Recomposta aqui do zero, a partir das regras — não copiada do resultado.
+    base_comissionavel = receita * (D("1") - regras.comissao_base_icms_pct)
+    comissao = dinheiro(base_comissionavel * comissao_pct)
     frete_cf = dinheiro(regras.frete_cf_unitario * D0(quantidade))
     frete_rv = dinheiro(receita * regras.frete_rv_pct)
 

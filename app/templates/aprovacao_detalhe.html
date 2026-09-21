@@ -6,7 +6,7 @@
     <div class="sub"><code>{{ cotacao.numero or cotacao.id }}</code>
       {% if cotacao.revisao > 1 %}· revisão {{ cotacao.revisao }}{% endif %}
       · {{ cliente.nome if cliente else 'sem cliente' }}
-      · {{ cotacao.estado_destino }} · {{ cotacao.condicao_pagamento }}</div></div>
+      · {{ cotacao.estado_destino }} · {{ condicao_texto or cotacao.condicao_pagamento }}</div></div>
   <a href="/aprovacoes" class="btn btn-ghost">Voltar à fila</a>
 </div>
 

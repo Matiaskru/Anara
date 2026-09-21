@@ -44,18 +44,30 @@ def test_calcula_lencol_que_nao_esta_no_catalogo(s):
     r = calcular(s, "Flat Sheet", 240, 260, material_id=m.id)
     assert r["calculavel"] is True
     assert r["custo"]["industrial"]["exw_usd"] == aprox(13.07, abs=0.01)
-    assert r["custo"]["net_brl"] == aprox(73.09, abs=0.05)
-    # Política comercial de 16/09/2026: lençol ≥ 300TC 18% → 20%, comissão de formação 10%.
-    assert r["margem"]["margem_pct"] == aprox(0.20)
-    assert r["margem"]["comissao_formacao_pct"] == aprox(0.10)
-    # preço = NET ÷ (1 − ICMS − PIS/COFINS − encargo − comissão − margem): a identidade do
-    # gross-up com comissão fixa, sobre os componentes que a própria memória declara
+    # 22/09/2026: o CUSTO real nacionaliza com I.I. econômico 0% (R$ 70,66); a REFERÊNCIA
+    # COMERCIAL — que forma o B2B — mantém a proteção de 3,5% da família (R$ 73,09, o antigo CNET)
+    assert r["custo"]["ii_pct"] == 0 and r["custo"]["nacionalizacao"]["ii_usd"] == 0
+    assert r["custo"]["net_brl"] == aprox(70.66, abs=0.05)
+    assert r["custo"]["base_comercial_brl"] == aprox(73.09, abs=0.05)
+    assert r["custo"]["referencia_comercial"]["protecao_pct"] == aprox(0.035)
+    # Política comercial de 21/09/2026: lençol 300–399 fios → margem FINAL 22% no B2B,
+    # comissão de formação 5% sobre a receita líquida de ICMS.
+    assert r["margem"]["margem_pct"] == aprox(0.22)
+    assert r["margem"]["comissao_formacao_pct"] == aprox(0.05)
+    # preço = BASE COMERCIAL ÷ (1 − ICMS − PIS/COFINS − encargo − 5%×(1 − ICMS dedutível) −
+    # margem): a identidade do gross-up sobre os componentes que a própria memória declara; o
+    # B2B é o primeiro centavo válido ao redor dessa solução (≤ 1 centavo de distância)
     from app.dinheiro import D, dinheiro
     f = r["fiscal"]
     denominador = (1 - D(f["icms_pct"]) - D(f["pis_cofins_pct"]) - D(f["encargo_pct"])
-                   - D("0.10") - D("0.20"))
+                   - D("0.05") * (1 - D(f["icms_base_comissao_pct"])) - D("0.22"))
     assert r["comercial"]["preco_negociado"] == aprox(
-        dinheiro(D(r["custo"]["net_brl"]) / denominador), abs=0.01)
+        dinheiro(D(r["custo"]["base_comercial_brl"]) / denominador), abs=0.011)
+    assert r["b2b"]["preco_b2b"] == r["comercial"]["preco_negociado"]
+    assert r["b2b"]["preco_tabela"] == aprox(2 * r["b2b"]["preco_b2b"], abs=0.011)
+    # o B2B que o custo real daria é menor; a margem REALIZADA no B2B comercial passa do alvo
+    assert r["b2b"]["preco_b2b_economico"] < r["b2b"]["preco_b2b"]
+    assert r["comercial"]["margem_liquida"] > 0.22 and r["b2b"]["margem_realizada_no_b2b"] > 0.22
 
 
 def test_o_preco_da_calculadora_e_o_mesmo_da_cotacao(s):
@@ -75,7 +87,7 @@ def test_calcula_toalha_pela_taxa_por_kg(s):
     r = calcular(s, "Bath Towel", 70, 140, gsm=500)
     assert r["calculavel"] is True
     assert r["custo"]["industrial"]["exw_usd"] == aprox(4.165, abs=0.01)  # 0,49 kg × 8,50
-    assert r["margem"]["margem_pct"] == aprox(0.14)      # toalha: 12% → 14% em 16/09/2026
+    assert r["margem"]["margem_pct"] == aprox(0.16)      # toalha: B2B 16% desde 21/09/2026
 
 
 def test_toalha_listrada_usa_a_taxa_de_piscina(s):
@@ -97,7 +109,10 @@ def test_margem_pode_ser_forcada(s):
     from app.calculadora import calcular
     m = material(s, "300TC Sateen 100% Cotton")
     r = calcular(s, "Flat Sheet", 240, 260, material_id=m.id, margem_override=0.25)
-    assert r["comercial"]["margem_liquida"] == aprox(0.25, abs=MARGEM_DO_CENTAVO)
+    # a margem forçada forma o preço sobre a BASE COMERCIAL (margem no B2B = 25%); a margem
+    # REALIZADA, com o custo real (I.I. 0%), fica acima — é o efeito desejado de 22/09/2026
+    assert r["b2b"]["margem_no_b2b"] == aprox(0.25, abs=MARGEM_DO_CENTAVO)
+    assert r["comercial"]["margem_liquida"] > 0.25
 
 
 def test_quantidade_multiplica_o_faturamento(s):
@@ -200,12 +215,12 @@ def test_fronha_calcula_pelo_paragrafo_18_com_abas_flap_e_festone(s):
     standard = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=0, flap_cm=20)
     assert standard["calculavel"] is True
     industrial = standard["custo"]["industrial"]
-    assert industrial["exw_usd"] == aprox(2.0417, abs=0.002)          # backtest §18, 0 abas
+    assert industrial["exw_usd"] == aprox(2.06257, abs=0.0001)        # planilha KTC de fronhas (allowance 2%)
     assert industrial["detalhes"]["corte_cm"].startswith("54x165")
     quatro = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=4, flap_cm=20)
-    assert quatro["custo"]["industrial"]["exw_usd"] == aprox(2.8148, abs=0.002)
+    assert quatro["custo"]["industrial"]["exw_usd"] == aprox(2.84357, abs=0.0001)   # golden 4 abas
     festone = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=4, flap_cm=20, festone=True)
-    assert festone["custo"]["industrial"]["exw_usd"] == aprox(2.9337, abs=0.002)
+    assert festone["custo"]["industrial"]["exw_usd"] == aprox(2.84357 + 0.10 / 0.98 / 0.85, abs=0.0002)
     # construção fora do §18 não é arredondada: o motor recusa
     uma = calcular(s, "Pillow Case", 50, 70, material_id=m.id, abas=1, flap_cm=20)
     assert uma["calculavel"] is False
