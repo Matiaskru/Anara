@@ -304,6 +304,35 @@ nenhum. Nunca por "tem política ou não".
   para lençol/capa duvet/fronha, mas ele é enviado mesmo escondido — era assim que o 200TC do
   primeiro tecido da lista virava "200 fios" numa toalha de 650 g/m² (a recusa é do servidor; o
   JS também desabilita o que está escondido).
+- **Peso é entrada de NACIONALIZAÇÃO, nunca formação de EXW (22/09/2026).** Roupão e as demais
+  famílias **Direct Quote** (Fitted Sheet, Bathrobe, Mattress Protector/Topper, Pillow
+  Protector/Pillow, Duvet Insert, Slipper, Bed Runner) não têm fórmula industrial:
+  `calcular_exw` devolve "familia não calculável" e o EXW vem da cotação direta. O que o peso
+  faz é ratear o frete internacional (US$/kg × kg) — e sem ele o frete entraria como zero, por
+  isso `peso` em `premissas_faltantes` manda o SKU para `REVIEW_REQUIRED`. Sete roupões com EXW
+  cotado, datado e documentado ficaram inutilizáveis esperando alguém digitar um peso que a
+  própria base da ANARA já tinha, no SKU de catálogo do mesmo modelo.
+  * `app/peso_historico.py` **recupera** esse peso (não calcula): mesma família, mesmo tamanho,
+    mesma gramatura (ou ausente nos dois) e composição compatível, exigindo **convergência**
+    entre candidatos (≤ 1%). Tamanho diferente não herda — extrapolar `L`→`M` ou `XL`→`2XL`
+    seria inventar premissa logística. O tamanho vem de campo estruturado (`subcategoria`,
+    senão o início da especificação), **nunca do nome**.
+  * O peso herdado é sempre **ESTIMADO**, mesmo vindo de um `REAL KTC`: real é o peso daquela
+    peça medida, não o desta. `memoria["peso_por_analogia"]` é o que faz
+    `status_canonico_do_custo` devolver `ESTIMADO` — que **cota, forma B2B/tabela e emite PDF**
+    (`CUSTO_BLOQUEIA` não o inclui) e não sustenta compromisso firme. Peso próprio do SKU (real
+    ou informado pelo OWNER na tela) tem precedência absoluta e nunca é substituído.
+  * Resultado no catálogo real: 3 SKUs saíram de `REVIEW_REQUIRED` para `ESTIMADO` (BR-001
+    0,660 kg ← Microfiber Fleece Robe L; BR-002 L 1,450 ← Plain Bathrobe L 420; BR-008 L 0,528
+    ← Light Waffle L 240) e 4 continuam em `REVIEW_REQUIRED` por não terem análogo de mesmo
+    tamanho/gramatura/composição (BR-002 **M**, BR-019 **2XL**, BR-003 L jacquard, BR-028
+    **Unisize**). Nos 306 SKUs restantes do baseline, **nada mudou**.
+  * Magnitude do peso, medida: BR-001 a 0,66 kg × US$ 0,516/kg = US$ 0,34056 → R$ 1,7675 de
+    CNET → R$ 1,8294 de base comercial → **+R$ 3,24 no B2B (+1,40%)**. Peso mexe pouco no preço;
+    quem move preço é o cenário fiscal/pagamento (o mesmo SKU varia de R$ 193 a R$ 286 entre
+    cenários). Auditoria: `scripts/peso_2026_09_22/auditoria_peso.py`. Regressão:
+    `tests/test_peso_direct_quote_2026_09_22.py` — inclusive um teste por família Direct Quote
+    que falha se alguma delas passar a ter EXW calculado pelo motor industrial.
 - **Pool de conexões: o problema é conexão OCUPADA, não conexão vazada (22/09/2026).**
   Produção estourou com `QueuePool limit of size 5 overflow 5 reached, connection timed out,
   timeout 30.00`. Não havia vazamento: `get_session` devolve a conexão sempre (o `with` fecha até

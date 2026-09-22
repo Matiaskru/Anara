@@ -35,6 +35,30 @@ def _blankets(session):
     return out
 
 
+#: Os campos que a etapa `bl001` escreve. Zerá-los devolve o SKU ao estado que `aplicar_ktc`
+#: deixa — o único estado em que `plano_bl001` tem trabalho a fazer.
+CAMPOS_DE_PESO = ("peso_kg", "peso_tipo", "peso_fonte", "peso_data", "peso_documento")
+
+
+def _reverter_etapa_bl001(session, produto):
+    """Devolve o BL-001 ao estado pré-etapa — a pré-condição deste teste, explicitamente.
+
+    A fixture `session` é de **escopo de sessão**: todos os arquivos de teste compartilham o
+    mesmo banco. `aplicar_bl001` é uma etapa de migração de dados e é **idempotente**, então
+    qualquer teste que a rode antes deste (é o caso de
+    `test_ii_zero_2026_09_22.py::test_snapshot_novo_registra_economia_real_e_formacao_comercial`)
+    deixa `plano_bl001` vazio — e a asserção "o plano tem trabalho" passava a depender da
+    **ordem alfabética de coleta** do pytest (`bl001` antes de `ii_zero`), não da regra.
+
+    Este teste é sobre "a etapa aplica uma vez e depois não mexe mais". Quem afirma isso
+    precisa ser dono da pré-condição, em vez de torcer para ninguém ter passado antes.
+    """
+    for campo in CAMPOS_DE_PESO:
+        setattr(produto, campo, None)
+    session.add(produto)
+    session.commit()
+
+
 def _cenario():
     return Cotacao(cliente_id=1, uf_origem_fiscal="SP", estado_destino="São Paulo", contribuinte_icms=False,
                    finalidade="USO_CONSUMO", condicao_pagamento="30", freight_type="FOB")
@@ -45,6 +69,7 @@ def test_bl001_peso_estimado_preco_confirmado_e_idempotente(session, owner):
     session.commit()
     antes = _blankets(session)
     assert set(antes) == {"BL-001", "BL-002", "BL-003"}
+    _reverter_etapa_bl001(session, antes["BL-001"])
     outros_antes = {c: (p.peso_kg, p.peso_tipo, p.exw_cotado_usd) for c, p in antes.items() if c != "BL-001"}
 
     assert dados.plano_bl001(session) and dados.aplicar_bl001(session, owner)["atualizados"] == 1

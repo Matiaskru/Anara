@@ -37,6 +37,7 @@ from app.models import (
 from app.dinheiro import ZERO, D, D0, para_float
 from app.nationalization import PremissasNacionalizacao, nacionalizar, referencia_comercial
 from app.payment_terms import encargo_com_sinal, resolver_encargo, validar_percentual_sinal
+from app import peso_historico as ph
 from app.peso import PesoResolvido, resolver_peso
 from app.pricing_engine import TaxRuleSet, icms_excluido_da_base, pis_cofins_efetivo
 
@@ -754,6 +755,12 @@ def status_canonico_do_custo(cnet, memoria: dict) -> str:
     # envelhecimento: REVIEW_REQUIRED — nunca CONFIRMADO com aviso escondido na memória.
     if memoria.get("premissas_faltantes"):
         return StatusCusto.review_required.value
+    # Peso logístico emprestado de um SKU análogo (Direct Quote sem peso próprio): o EXW é
+    # cotado e documentado, o custo se forma e a proposta sai — mas o peso é premissa
+    # operacional, não medição desta peça. É a definição de ESTIMADO: cota, emite PDF e
+    # **não** sustenta compromisso firme antes de a KTC confirmar (`validar_compromisso_firme`).
+    if memoria.get("peso_por_analogia"):
+        return StatusCusto.estimado.value
     if fonte in (CUSTO_DERIVADO_AGORA, CUSTO_DO_FORNECEDOR_NACIONAL):
         # Referência direta que envelheceu (cotação KTC além do limite de frescor) ou
         # cadastrada com pedido de revisão aberto: tem número próprio e utilizável, mas não
@@ -931,11 +938,19 @@ def custo_net(session: Session, produto: Produto) -> dict:
     # Peso real da KTC nunca é tocado — `peso_do_produto` só estima quando não existe.
     peso_kg = produto.peso_kg
     if peso_kg is None:
-        estimado = peso_do_produto(session, produto)
-        peso_kg = estimado.peso_kg
-        if peso_kg:
-            memoria["peso"] = {"peso_kg": para_float(peso_kg), "tipo": estimado.tipo,
-                               "fonte": estimado.fonte}
+        herdado = peso_herdado_do_historico(session, produto)
+        if herdado is not None:
+            # Peso emprestado do mesmo modelo: nacionaliza, mas não é evidência desta peça.
+            # A marca é o que faz o status sair ESTIMADO em vez de CONFIRMADO.
+            peso_kg = D(herdado.peso_kg)
+            memoria["peso"] = herdado.como_dict()
+            memoria["peso_por_analogia"] = True
+        else:
+            estimado = peso_do_produto(session, produto)
+            peso_kg = estimado.peso_kg
+            if peso_kg:
+                memoria["peso"] = {"peso_kg": para_float(peso_kg), "tipo": estimado.tipo,
+                                   "fonte": estimado.fonte}
 
     premissas = premissas_nacionalizacao(session)
     nac = nacionalizar(exw, peso_kg, ii, premissas)
@@ -1018,11 +1033,46 @@ def bases_de_preco(session: Session, produto: Produto):
     return custo, (base if base else custo), memoria
 
 
+def _candidatos_de_peso(session: Session, produto: Produto) -> list:
+    """Os SKUs ativos da mesma família que já têm peso — a base de onde se herda.
+
+    Uma consulta por família e por bloco de leitura: varrer o catálogo não pode voltar a
+    perguntar isso SKU a SKU (ver `cache_de_leitura`).
+    """
+    familia = (produto.familia or "").strip()
+    if not familia:
+        return []
+
+    def carregar():
+        return [x for x in session.exec(
+            select(Produto).where(Produto.ativo == True)          # noqa: E712
+            .where(Produto.familia == familia)).all() if x.peso_kg]
+
+    return _memo(("peso_candidatos", familia), carregar)
+
+
+def peso_herdado_do_historico(session: Session, produto: Produto):
+    """Peso logístico do mesmo modelo, recuperado da base da ANARA — ou `None`.
+
+    Só é consultado quando o SKU **não tem peso próprio**: peso do próprio produto, real ou
+    informado pelo OWNER, sempre manda. Ver `app/peso_historico.py` para a regra do casamento.
+    """
+    if produto.peso_kg:
+        return None
+    return ph.herdar(produto, _candidatos_de_peso(session, produto))
+
+
 def peso_do_produto(session: Session, produto: Produto) -> PesoResolvido:
     """Peso real da KTC quando existe; senão estima pela régua da planilha."""
     peso_real = produto.peso_kg if (produto.peso_tipo == "REAL KTC") else None
     if peso_real is None and produto.peso_kg and produto.peso_tipo is None:
         peso_real = produto.peso_kg
+    if peso_real is None and not produto.peso_kg:
+        # Direct Quote (roupão e afins) não tem medida nem fórmula: a régua de área × GSM não
+        # se aplica. O que existe é o peso que a ANARA já usava para o mesmo modelo.
+        herdado = peso_herdado_do_historico(session, produto)
+        if herdado is not None:
+            return PesoResolvido(D(herdado.peso_kg), "ESTIMADO", herdado.fonte)
     return resolver_peso(
         peso_real, produto.largura_cm, produto.comprimento_cm, produto.gsm,
         produto.thread_count, produto.familia,

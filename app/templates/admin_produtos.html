@@ -42,7 +42,8 @@
   <table class="compacta" id="tabela-governanca">
     <thead><tr>
       <th>SKU</th><th>Fornecedor</th><th>Família</th><th>Situação</th>
-      <th class="num">CNET</th><th class="num">EXW</th><th class="num">Peso</th>
+      <th class="num" title="Custo NET interno — não é preço de venda">CNET / custo interno</th>
+      <th class="num">EXW</th><th class="num">Peso logístico</th>
       <th>Fonte vigente</th><th>Por que está assim</th><th></th>
     </tr></thead>
     <tbody>
@@ -52,10 +53,17 @@
         <td class="primaria">{{ d.nome }}<span class="sub"><code>{{ d.sku }}</code></span></td>
         <td>{{ d.fornecedor or '—' }}</td>
         <td class="muted">{{ d.familia or '—' }}</td>
-        <td><span class="tag {{ 'tag-calc' if d.status == 'CONFIRMADO' else ('tag-review' if d.status in ('REVIEW_REQUIRED','A_COTAR') else '') }}">{{ d.status|rotulo_custo }}</span></td>
+        <td><span class="tag {{ 'tag-calc' if d.status == 'CONFIRMADO' else ('tag-review' if d.status in ('REVIEW_REQUIRED','A_COTAR') else '') }}">{{ d.status|rotulo_custo }}</span>
+          {%- if d.peso_origem == 'ANALOGIA_HISTORICA' %}<span class="sub">peso estimado — confirmar antes do pedido</span>{% endif %}</td>
         <td class="num">{{ d.custo|brl if d.custo else '—' }}</td>
         <td class="num">{{ ('US$ %.2f'|format(d.exw_usd)) if d.exw_usd else '—' }}<span class="sub">{{ d.exw_data or '' }}</span></td>
-        <td class="num">{{ ('%.3f kg'|format(d.peso_kg)) if d.peso_kg else '—' }}<span class="sub">{{ d.peso_tipo or '' }}</span></td>
+        <td class="num">
+          {%- if d.peso_kg %}{{ '%.3f kg'|format(d.peso_kg) }}
+            <span class="sub">{{ 'REAL' if d.peso_situacao == 'REAL' else 'ESTIMADO' }}
+              {%- if d.peso_origem == 'ANALOGIA_HISTORICA' %} · herdado{% endif %}</span>
+            {%- if d.peso_fonte %}<span class="sub" title="{{ d.peso_fonte }}">{{ d.peso_fonte[:44] }}…</span>{% endif %}
+          {%- else %}—<span class="sub">AUSENTE</span>{% endif %}
+        </td>
         <td style="font-size:11px;">
           {% if d.referencia %}V{{ d.referencia.versao }} · {{ d.referencia.status|rotulo_custo }}<span class="sub">{{ d.referencia.documento or d.referencia.tipo }} · {{ d.referencia.data }}</span>
           {% else %}<span class="muted">sem referência versionada</span>{% if d.exw_fonte %}<span class="sub">{{ d.exw_fonte[:48] }}</span>{% endif %}{% endif %}

@@ -57,16 +57,24 @@ def main():
             page.goto(f"{base}/admin/produtos?q=BR-001"); page.wait_for_selector("#tabela-governanca")
             linha = page.query_selector(f'tr[data-produto="{produto_id}"]')
             texto = re.sub(r"\s+", " ", linha.inner_text())
-            registrar("[OWNER] a tela mostra SKU, situação, fonte, EXW e o motivo do bloqueio",
-                      "Revisão necessária" in texto and "US$ 24" in texto and "peso" in texto.lower()
-                      and "29/07/2026" in texto.replace("2026-07-29", "29/07/2026"), texto[:180])
-            page.screenshot(path=os.path.join(a.saida, "governanca_01_br001_travado.png"), full_page=True)
+            # 22/09/2026: o BR-001 deixou de ficar travado por falta de peso — ele HERDA o peso
+            # logístico do Microfiber Fleece Robe L (mesmo modelo, tamanho e composição) e sai
+            # como ESTIMADO, com o aviso de confirmar antes do pedido. A tela precisa mostrar
+            # a estimativa e a sua procedência, não um bloqueio.
+            registrar("[OWNER] a tela mostra SKU, situação ESTIMADO, peso herdado, EXW e o porquê",
+                      "Custo estimado" in texto and "US$ 24" in texto
+                      and "0.660 kg" in texto and "ESTIMADO" in texto
+                      and "confirmar antes do ped" in texto.lower()
+                      and "29/07/2026" in texto.replace("2026-07-29", "29/07/2026"), texto[:200])
+            page.screenshot(path=os.path.join(a.saida, "governanca_01_br001_estimado.png"), full_page=True)
 
-            # confirmar antes de resolver a premissa: recusado, com motivo
+            # promover a CONFIRMADO com peso emprestado é recusado: peso de outro SKU não é
+            # evidência deste. A recusa é administrativa — cotar e emitir continuam liberados.
             r = ctx.request.post(f"{base}/admin/produtos/{produto_id}/confirmar",
                                  form={"fonte": "conferi", "motivo": "tentativa"}, max_redirects=0)
-            registrar("[OWNER] confirmar referência é RECUSADO enquanto falta o peso",
-                      r.status == 400 and "peso" in r.text().lower(), r.text()[:120])
+            registrar("[OWNER] confirmar referência é RECUSADO com peso estimado por analogia",
+                      r.status == 400 and "analogia" in r.text().lower()
+                      and "peso próprio" in r.text(), r.text()[:160])
 
             # registrar o peso pela gaveta da tela
             linha.query_selector("button").click()
@@ -84,9 +92,16 @@ def main():
                 timeout=20000)
             page.wait_for_selector("#tabela-governanca")
             texto = re.sub(r"\s+", " ", page.query_selector(f'tr[data-produto="{produto_id}"]').inner_text())
-            registrar("[OWNER] depois do peso, o SKU fica pronto para cotar",
-                      "Custo confirmado" in texto and "1.850 kg" in texto, texto[:160])
+            registrar("[OWNER] depois do peso próprio, o SKU fica pronto para cotar",
+                      "1.850 kg" in texto and "analogia" not in texto.lower(), texto[:160])
             page.screenshot(path=os.path.join(a.saida, "governanca_02_br001_liberado.png"), full_page=True)
+
+            # e agora a confirmação passa: o peso é do próprio SKU, documentado
+            r = ctx.request.post(f"{base}/admin/produtos/{produto_id}/confirmar",
+                                 form={"fonte": "cotação KTC conferida em 22/09/2026",
+                                       "motivo": "peso próprio registrado"}, max_redirects=0)
+            registrar("[OWNER] com peso próprio, confirmar referência é PERMITIDO",
+                      r.status in (200, 303), f"status={r.status} · {r.text()[:120]}")
 
             # cotação NOVA com o mesmo produto: sem revisão, com PDF
             r = ctx.request.post(f"{base}/clientes", form={"nome": "Hotel Governança", "cnpj_cpf": "99.888.777/0001-66", "cidade_uf": "São Paulo"}, max_redirects=0)

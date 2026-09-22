@@ -66,11 +66,20 @@ class LinhaGovernanca:
     exw_frescor: Optional[str]
     peso_kg: Optional[float]
     peso_tipo: Optional[str]
+    peso_fonte: Optional[str]           # de onde veio o peso, quando não é do próprio SKU
+    peso_origem: Optional[str]          # "ANALOGIA_HISTORICA" quando herdado de outro SKU
     premissas_faltantes: List[str]
     referencia: Optional[object]
     pendencias: List[str]
     pode_confirmar: bool
     importado: bool
+
+    @property
+    def peso_situacao(self) -> str:
+        """REAL · ESTIMADO · AUSENTE — o que a tela mostra sem o operador ter de interpretar."""
+        if not self.peso_kg:
+            return "AUSENTE"
+        return "REAL" if (self.peso_tipo or "").upper().startswith("REAL") else "ESTIMADO"
 
     def como_dict(self) -> dict:
         ref = self.referencia
@@ -82,6 +91,8 @@ class LinhaGovernanca:
             "exw_usd": self.exw_usd, "exw_data": str(self.exw_data) if self.exw_data else None,
             "exw_fonte": self.exw_fonte, "exw_frescor": self.exw_frescor,
             "peso_kg": self.peso_kg, "peso_tipo": self.peso_tipo,
+            "peso_fonte": self.peso_fonte, "peso_origem": self.peso_origem,
+            "peso_situacao": self.peso_situacao,
             "premissas_faltantes": self.premissas_faltantes, "pendencias": self.pendencias,
             "pode_confirmar": self.pode_confirmar, "importado": self.importado,
             "preco_base": self.produto.preco_base,
@@ -104,6 +115,13 @@ def diagnosticar(session: Session, produto: Produto) -> LinhaGovernanca:
         motivo = MOTIVO_FONTE.get(memoria.get("net_fonte"))
         if motivo:
             pendencias.append(motivo)
+    if status == StatusCusto.estimado.value and (memoria.get("peso") or {}).get("origem") == "ANALOGIA_HISTORICA":
+        origem = (memoria.get("peso") or {}).get("sku_origem") or "outro SKU da mesma família"
+        pendencias.append(
+            "Peso logístico estimado para nacionalização — recuperado de «" + origem + "», "
+            "mesmo modelo, tamanho, gramatura e composição. O EXW é cotado e documentado, "
+            "então o produto forma preço e sai em proposta; confirme o peso com a KTC antes "
+            "do pedido/importação.")
     if status == StatusCusto.a_cotar.value:
         pendencias.append("Não há custo nem EXW para este SKU. Registre a cotação do fornecedor "
                           "(EXW em US$ para a KTC, custo em R$ para fornecedor nacional).")
@@ -119,6 +137,9 @@ def diagnosticar(session: Session, produto: Produto) -> LinhaGovernanca:
         exw_frescor=memoria.get("exw_frescor"),
         peso_kg=produto.peso_kg or (memoria.get("peso") or {}).get("peso_kg"),
         peso_tipo=produto.peso_tipo or (memoria.get("peso") or {}).get("tipo"),
+        peso_fonte=(produto.peso_fonte if produto.peso_kg
+                    else (memoria.get("peso") or {}).get("fonte")),
+        peso_origem=(None if produto.peso_kg else (memoria.get("peso") or {}).get("origem")),
         premissas_faltantes=faltantes,
         referencia=cs.referencia_vigente(session, produto.id),
         pendencias=pendencias,
@@ -351,6 +372,18 @@ def confirmar_referencia(session: Session, produto: Produto, *, fonte: str, moti
     linha = diagnosticar(session, produto)
     _exigir(not linha.premissas_faltantes,
             "Não dá para confirmar: " + " ".join(linha.pendencias))
+    # Peso herdado de um SKU análogo não é evidência DESTE SKU. Confirmar aqui gravaria
+    # CONFIRMADO por cima de um custo que depende de premissa emprestada — e, como a
+    # referência vigente tem precedência em `status_do_produto`, o aviso "peso estimado"
+    # sumiria da tela. É o "ESTIMADO promovido a CONFIRMADO em silêncio" que o CLAUDE.md
+    # proíbe. Restrição **administrativa** apenas: o SKU continua cotável, entra em proposta
+    # e gera PDF normalmente — só não vira evidência confirmada sem peso próprio.
+    _exigir(linha.peso_origem != "ANALOGIA_HISTORICA",
+            "Este produto usa peso logístico estimado por analogia"
+            + (f" (de «{(linha.peso_fonte or '').split('«')[-1].split('»')[0]}»)"
+               if "«" in (linha.peso_fonte or "") else "")
+            + ". Registre o peso próprio/documentado do SKU antes de confirmar a referência — "
+              "o produto segue cotável e pode gerar proposta enquanto isso.")
     _exigir(linha.custo, "Não há custo para confirmar — registre a cotação ou o custo primeiro.")
     _exigir(linha.net_fonte not in (ps.CUSTO_DO_CATALOGO, ps.CUSTO_HISTORICO_SEM_EVIDENCIA),
             "O custo atual não tem evidência (veio do catálogo/planilha). Registre a cotação.")
