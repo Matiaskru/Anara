@@ -6,7 +6,7 @@
     python3 scripts/aplicar_dados_2026_09_21.py --etapas politica,fiscal                              # só algumas
 
 Etapas (todas idempotentes — ver `app/dados_2026_09_21.py`):
-politica · fiscal · decor · elis · ktc · bl001 · ii_zero · fronhas · catalogo · sinal
+politica · fiscal · decor · elis · ktc · bl001 · peso_ktc · ii_zero · fronhas · catalogo · sinal
 
 Pré-condições conferidas antes de gravar: esquema em 0025 (`alembic upgrade head`), porta 8420
 livre (servidor parado), um OWNER para assinar a trilha. O backup é feito antes de gravar
@@ -76,6 +76,11 @@ def preview(session: Session, etapas) -> dict:
         saida["bl001"] = [{"tipo": a["tipo"], "id": getattr(a["objeto"], "id", None), "sku": a["objeto"].sku_key,
                            "campos": {k: [str(v[0]), str(v[1])[:80]] for k, v in a["campos"].items()}}
                           for a in dados.plano_bl001(session)]
+    if "peso_ktc" in etapas:
+        saida["peso_ktc"] = [{"id": a["produto"].id, "sku": a["produto"].sku_key[:60],
+                              "codigo": a["codigo"], "peso_kg": str(a["peso_kg"]),
+                              "antes": [str(x) for x in a["antes"]]}
+                             for a in dados.plano_peso_ktc(session)]
     if "ii_zero" in etapas:
         pz = dados.plano_ii_zero(session)
         from collections import Counter

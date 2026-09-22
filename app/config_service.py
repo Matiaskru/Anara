@@ -38,11 +38,31 @@ def _vigente(query, ref: Optional[date] = None):
             and (r.valid_to is None or r.valid_to >= ref)]
 
 
+def _linhas(session: Session, modelo, chave: Optional[str] = None) -> list:
+    """As linhas de uma tabelinha de configuração — uma vez por bloco de leitura.
+
+    Todas as funções daqui seguem o mesmo desenho: carregam a tabela inteira (ou o recorte de
+    uma `chave`) e escolhem em Python por vigência e especificidade. É barato uma vez e caro
+    380 vezes — foi o que segurou a conexão e estourou o pool em 22/09/2026. O memo vale só
+    dentro de `pricing_service.cache_de_leitura`; fora dele, cada chamada vai ao banco como
+    sempre foi. A escolha por vigência continua fora do memo, porque depende da data pedida.
+    """
+    from app.pricing_service import _memo
+
+    def ler():
+        consulta = select(modelo)
+        if chave is not None:
+            consulta = consulta.where(modelo.chave == chave)
+        return list(session.exec(consulta).all())
+
+    return _memo(("config", modelo.__name__, chave), ler)
+
+
 # ---------------------------------------------------------------------------
 # Premissas simples (chave → número/texto)
 # ---------------------------------------------------------------------------
 def premissa(session: Session, chave: str, ref: Optional[date] = None):
-    linhas = _vigente(session.exec(select(Premissa).where(Premissa.chave == chave)).all(), ref)
+    linhas = _vigente(_linhas(session, Premissa, chave), ref)
     if not linhas:
         return None
     linhas.sort(key=lambda p: (p.valid_from or date.min, p.id or 0))
@@ -131,7 +151,7 @@ def condicao_textual(session: Session, cotacao) -> str:
 # ---------------------------------------------------------------------------
 def material_preco(session: Session, material: str, plain_or_stripe: str = "plain",
                    ref: Optional[date] = None) -> Optional[MaterialPreco]:
-    linhas = _vigente(session.exec(select(MaterialPreco)).all(), ref)
+    linhas = _vigente(_linhas(session, MaterialPreco), ref)
     alvo = (material or "").strip().lower()
     listra = (plain_or_stripe or "plain").strip().lower()
     exatos = [m for m in linhas if m.material.strip().lower() == alvo
@@ -142,13 +162,13 @@ def material_preco(session: Session, material: str, plain_or_stripe: str = "plai
 
 
 def materiais(session: Session, ref: Optional[date] = None) -> List[MaterialPreco]:
-    return sorted(_vigente(session.exec(select(MaterialPreco)).all(), ref),
+    return sorted(_vigente(_linhas(session, MaterialPreco), ref),
                   key=lambda m: (m.material, m.plain_or_stripe))
 
 
 def cmt_preco(session: Session, familia: str, construcao: Optional[str] = None,
               ref: Optional[date] = None) -> Optional[CmtPreco]:
-    linhas = _vigente(session.exec(select(CmtPreco)).all(), ref)
+    linhas = _vigente(_linhas(session, CmtPreco), ref)
     alvo = (familia or "").strip().lower()
     candidatos = [c for c in linhas if c.familia.strip().lower() == alvo]
     if construcao:
@@ -169,7 +189,7 @@ def toalha_preco(session: Session, subcategoria: Optional[str] = None,
     Sem cadastro não se inventa preço — o produto vai para REVIEW_REQUIRED ou continua
     pelo último preço KTC cotado.
     """
-    linhas = _vigente(session.exec(select(ToalhaPreco)).all(), ref)
+    linhas = _vigente(_linhas(session, ToalhaPreco), ref)
 
     def bate(t):
         if subcategoria and (t.subcategoria or "").strip().lower() != subcategoria.strip().lower():
@@ -195,7 +215,7 @@ def toalha_preco(session: Session, subcategoria: Optional[str] = None,
 def parametro_ktc(session: Session, chave: str, escopo: Optional[str] = None,
                   padrao: Optional[float] = None, ref: Optional[date] = None) -> Optional[float]:
     """Parâmetro do motor industrial. Escopo mais específico ganha; cai pro global se não houver."""
-    linhas = _vigente(session.exec(select(ParametroKTC).where(ParametroKTC.chave == chave)).all(), ref)
+    linhas = _vigente(_linhas(session, ParametroKTC, chave), ref)
     if escopo:
         especificos = [p for p in linhas if (p.escopo or "").strip().lower() == escopo.strip().lower()]
         if especificos:

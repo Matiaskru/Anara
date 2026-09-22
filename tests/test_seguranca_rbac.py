@@ -285,8 +285,8 @@ ROTAS_ADMIN = [
     ("app.routers.configuracoes", "salvar_premissa"),
     ("app.routers.configuracoes", "salvar_margem"),
     ("app.routers.configuracoes", "salvar_fiscal"),
-    ("app.routers.calculadora", "pagina"),
-    ("app.routers.calculadora", "calcular"),
+    # `calculadora.pagina`/`calcular` saíram daqui em 22/09/2026: são rotas de OPERAÇÃO
+    # (a vendedora cota com produto personalizado), filtradas por conteúdo, não negadas.
     ("app.routers.importar", "form"),
     ("app.routers.importar", "preview"),
     ("app.routers.relatorios", "qualidade"),
@@ -483,7 +483,7 @@ def test_menu_nao_oferece_o_que_daria_403(session, cenario, papel):
     """Link que levaria a 403 não aparece — a UI acompanha o backend, não o contradiz."""
     from app.routers.produtos import listar
     pagina = html(chamar(listar, RequestFalsa(_novo_usuario(papel)), session=session))
-    for rota in ("/configuracoes", "/importar", "/calculadora", "/relatorios/qualidade"):
+    for rota in ("/configuracoes", "/importar", "/relatorios/qualidade"):
         assert f'href="{rota}"' not in pagina
 
 

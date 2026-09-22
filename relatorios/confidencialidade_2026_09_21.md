@@ -1,10 +1,10 @@
 # Auditoria de confidencialidade da vendedora — 21/09/2026 (com prova)
 
-Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb-a945-a11a0c33f049/scratchpad/anara_audit25.db` · cotação 28 (rascunho, 30% de sinal + 30/60/90, desconto 20%) · cotação 29 (emitida) · produto `Single Top Sheet 190x250 300TC  ·  190x250 · 300 fios · 100% algodão`
+Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb-a945-a11a0c33f049/scratchpad/e2e_final/anara_confid.db` · cotação 28 (rascunho, 30% de sinal + 30/60/90, desconto 20%) · cotação 29 (emitida) · produto `Single Top Sheet 190x250 300TC  ·  190x250 · 300 fios · 100% algodão`
 
 ## Veredito
 
-* Superfícies auditadas: **156** (rotas GET, endpoints JSON/POST da tela, estáticos, atributos `data-*`/hidden, PDFs) × 2 perfis de vendedora.
+* Superfícies auditadas: **170** (rotas GET, endpoints JSON/POST da tela, estáticos, atributos `data-*`/hidden, PDFs) × 2 perfis de vendedora.
 * Vazamentos (termo proibido ou número confidencial da própria cotação em resposta 200 para vendedora): **0**.
 * Itens que a vendedora TEM de ver e não viu: **0** .
 
@@ -43,27 +43,29 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 | VENDEDOR_INTERNO | GET | `/admin` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/admin/cotacao/28/premissas` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/admin/premissas` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/admin/produtos` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/admin/produtos/223.json` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/admin/sku/223` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/admin/trilha` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/admin/usuarios` | 403 | text/html | 2467 | 7d10e718dde8cc91 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/aprovacoes` | 403 | text/html | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/aprovacoes/1` | 403 | text/html | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/calculadora` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/clientes` | 200 | text/html | 6608 | 56f676cba97345eb | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/clientes/2` | 200 | text/html | 11778 | d04ba2f930219043 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/calculadora` | 200 | text/html | 15127 | 5bd9070b82e517e7 | 0 | 2 | 0 |
+| VENDEDOR_INTERNO | GET | `/clientes` | 200 | text/html | 7403 | 3686c03224871006 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/clientes/2` | 200 | text/html | 11778 | bc5550af19eb2d2c | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/clientes/2/contatos.json` | 200 | application/json | 2 | 4f53cda18c2baa0c | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/clientes/2/vendas.json` | 200 | application/json | 70 | 69af67b5ad22cf0b | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/comercial` | 200 | text/html | 3746 | f4b5c95f7ba359b6 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/configuracoes` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/cotacoes` | 200 | text/html | 11843 | 9e92a1804b0b6bd1 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/cotacoes/nova` | 200 | text/html | 11401 | 6aa4691108ae44a4 | 0 | 1 | 0 |
-| VENDEDOR_INTERNO | GET | `/cotacoes/28` | 200 | text/html | 20687 | 9352111279a1a214 | 0 | 6 | 0 |
+| VENDEDOR_INTERNO | GET | `/cotacoes` | 200 | text/html | 12513 | efcccec00119b9be | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/cotacoes/nova` | 200 | text/html | 11478 | 2e1f3f2588230ebb | 0 | 1 | 0 |
+| VENDEDOR_INTERNO | GET | `/cotacoes/28` | 200 | text/html | 20796 | 6f9fa5af0a3c8640 | 0 | 6 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/29` | 200 | text/html | 17296 | cfd1b5e8ae3c8fa7 | 0 | 3 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/28/compromisso` | 200 | application/json | 112 | a07b9cce5f58fb63 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/28/itens/63/memoria` | 403 | text/html | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/28/negociacao` | 200 | application/json | 877 | cfd96d875394b51d | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/28/painel` | 200 | text/html | 729 | 2f26893cf8479efc | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/cotacoes/28/pdf` | 200 | application/pdf | 402773 | 1c3cd7d43457aabc | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/cotacoes/28/pdf` | 200 | application/pdf | 402773 | ebec69938c40608d | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/28/situacao` | 200 | application/json | 251 | 2681bf5892e02086 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/dashboard` | 303 |  | 0 | e3b0c44298fc1c14 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/esqueci-senha` | 200 | text/html | 1084 | 05888ff7c7525ee7 | 0 | 0 | 0 |
@@ -72,44 +74,49 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 | VENDEDOR_INTERNO | GET | `/importar` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/login` | 200 | text/html | 1162 | 7268afc21b1670ab | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/oportunidades` | 303 |  | 0 | e3b0c44298fc1c14 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/oportunidades/3` | 200 | text/html | 9389 | 58e7d728a5046c51 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/pipeline` | 200 | text/html | 8169 | 284960021a7cb151 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/oportunidades/3` | 200 | text/html | 9389 | 24e4b2506213f5b5 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/pipeline` | 200 | text/html | 9207 | 8c63ce67414e1dac | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/primeiro-acesso` | 303 |  | 0 | e3b0c44298fc1c14 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/produtos` | 200 | text/html | 167744 | 92985a3d0bba4a9f | 0 | 61 | 0 |
-| VENDEDOR_INTERNO | GET | `/produtos/buscar` | 200 | application/json | 22479 | ec112b0b01b92e69 | 0 | 61 | 0 |
+| VENDEDOR_INTERNO | GET | `/produtos` | 200 | text/html | 167682 | 0a8e09cdd66f9ae1 | 0 | 61 | 0 |
+| VENDEDOR_INTERNO | GET | `/produtos/buscar` | 200 | application/json | 22461 | 1345e7f8fcfe3122 | 0 | 61 | 0 |
 | VENDEDOR_INTERNO | GET | `/produtos/facetas` | 200 | application/json | 2486 | 6f69d3db54c57225 | 0 | 2 | 0 |
 | VENDEDOR_INTERNO | GET | `/produtos/223/memoria` | 403 | text/html | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/redefinir-senha` | 400 | text/html | 907 | ac7e9ff71082e270 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/relatorios` | 200 | text/html | 9155 | 67284420284ba523 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/relatorios` | 200 | text/html | 9156 | 1140d485a470f9fa | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/relatorios/aprovacoes` | 200 | text/html | 3995 | c193386706e74873 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/relatorios/atividades.csv` | 200 | text/csv | 70 | 890f14f4e8b9bdb0 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/relatorios/cotacoes` | 200 | text/html | 4636 | e90ffec1ebd23294 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/relatorios/cotacoes.csv` | 200 | text/csv | 1811 | 0a8714ef6e43120e | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/relatorios/cotacoes` | 200 | text/html | 4636 | a56e698416df073b | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/relatorios/cotacoes.csv` | 200 | text/csv | 1891 | a546cc9da32b0342 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/relatorios/economico` | 403 | text/html | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/relatorios/oportunidades.csv` | 200 | text/csv | 508 | d9dcfc968d17ee55 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/relatorios/oportunidades.csv` | 200 | text/csv | 624 | f635cbc510792bde | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/relatorios/qualidade` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/relatorios/qualidade.json` | 403 | text/html | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/saude` | 403 | text/html | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/vendas` | 200 | text/html | 13120 | 2fe038b157656518 | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/vendas/3` | 200 | text/html | 14527 | b3dd8419498b0e46 | 0 | 1 | 0 |
-| VENDEDOR_INTERNO | GET | `/cotacoes/29/pdf` | 200 | application/pdf | 250769 | 2ae26f485cf6554b | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/vendas` | 200 | text/html | 13965 | b64d54a202a150db | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/vendas/3` | 200 | text/html | 14527 | 86ff81b69c4aea8f | 0 | 1 | 0 |
+| VENDEDOR_INTERNO | GET | `/cotacoes/29/pdf` | 200 | application/pdf | 250769 | 3d5c0ba4a6590dc9 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/29/negociacao` | 200 | application/json | 877 | 7967766fc1a655d5 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/cotacoes/29/situacao` | 200 | application/json | 330 | a755f72ed6aadbce | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/produtos/buscar?q=190x250` | 200 | application/json | 779 | 457bdeb67bf32a29 | 0 | 6 | 0 |
+| VENDEDOR_INTERNO | GET | `/produtos/buscar?q=190x250` | 200 | application/json | 781 | d562769a39bb7708 | 0 | 6 | 0 |
 | VENDEDOR_INTERNO | POST | `/cotacoes/28/calc` | 200 | application/json | 251 | 592400873007c1d5 | 0 | 1 | 0 |
+| VENDEDOR_INTERNO | POST | `/calculadora/calcular` | 200 | application/json | 674 | aed12f3cc691baca | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | POST | `/calculadora/calcular(na cotação)` | 200 | application/json | 675 | 0c517eb6e3dc930e | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | POST | `/calculadora/salvar(na cotação)` | 200 | application/json | 125 | f247b294a5de3cf1 | 0 | 1 | 0 |
 | VENDEDOR_INTERNO | POST | `/cotacoes/28/calc(desconto)` | 200 | application/json | 251 | 15d339eeaf9eabdb | 0 | 1 | 0 |
 | VENDEDOR_INTERNO | POST | `/cotacoes/28/negociacao/preview` | 200 | application/json | 878 | cb38d1dbc91af417 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | POST | `/cotacoes/28/negociacao/preview(abaixo do B2B)` | 200 | application/json | 870 | 9b2ffcac6d8623dd | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | POST | `/cotacoes/28/negociacao` | 200 | application/json | 877 | cfd96d875394b51d | 0 | 0 | 0 |
-| VENDEDOR_INTERNO | GET | `/static/js/calculadora.js` | 200 | text/javascript | 4473 | 611c27ff992a5c5a | 0 | 18 | 0 |
+| VENDEDOR_INTERNO | GET | `/static/js/admin_produtos.js` | 200 | text/javascript | 7118 | 465b45289554f554 | 0 | 14 | 0 |
+| VENDEDOR_INTERNO | GET | `/static/js/calculadora.js` | 200 | text/javascript | 6479 | 024a2a114ecc350f | 0 | 18 | 0 |
 | VENDEDOR_INTERNO | GET | `/static/js/cotacao.js` | 200 | text/javascript | 27011 | 453a2563d1c170af | 0 | 54 | 0 |
 | VENDEDOR_INTERNO | GET | `/static/js/dashboard.js` | 200 | text/javascript | 4033 | 644c8b2fc22ff981 | 0 | 12 | 0 |
 | VENDEDOR_INTERNO | GET | `/static/js/memoria.js` | 200 | text/javascript | 9999 | 89962d713b20c659 | 0 | 61 | 0 |
 | VENDEDOR_INTERNO | GET | `/static/js/toast.js` | 200 | text/javascript | 465 | 8f7944f740d8ec38 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/static/js/ui.js` | 200 | text/javascript | 7582 | efb22062f2e912b0 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | GET | `/static/css/anara.css` | 200 | text/css | 41742 | 6f276a019d01a76a | 0 | 7 | 0 |
-| VENDEDOR_INTERNO | HTML | `/cotacoes/28 data-* e hidden` | 200 | atributos | 20539 | 9352111279a1a214 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | HTML | `/cotacoes/28 data-* e hidden` | 200 | atributos | 20648 | 6f9fa5af0a3c8640 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | HTML | `/cotacoes/29 data-* e hidden` | 200 | atributos | 17168 | cfd1b5e8ae3c8fa7 | 0 | 0 | 0 |
+| VENDEDOR_INTERNO | GET | `/calculadora?cotacao_id=30` | 200 | text/html | 15219 | 3925fbad38eb0907 | 0 | 2 | 0 |
 | VENDEDOR_INTERNO | 403? | `/cotacoes/28/itens/63/memoria` | 403 | gate | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | 403? | `/produtos/223/memoria` | 403 | gate | 2466 | 7045dfdb0e08b509 | 0 | 0 | 0 |
 | VENDEDOR_INTERNO | 403? | `/admin/cotacao/28/premissas` | 403 | gate | 2455 | ce9d5e4f1739b492 | 0 | 0 | 0 |
@@ -120,27 +127,29 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 | VENDEDOR_COMISSIONADO | GET | `/admin` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/admin/cotacao/28/premissas` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/admin/premissas` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/admin/produtos` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/admin/produtos/223.json` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/admin/sku/223` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/admin/trilha` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/admin/usuarios` | 403 | text/html | 2483 | c89dca5769eafc70 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/aprovacoes` | 403 | text/html | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/aprovacoes/1` | 403 | text/html | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/calculadora` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/clientes` | 200 | text/html | 6624 | f72469ea4b6f4a45 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/clientes/2` | 200 | text/html | 11794 | 1b6d38759d094f73 | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/calculadora` | 200 | text/html | 15143 | cf1fcb50f4c6f474 | 0 | 2 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/clientes` | 200 | text/html | 7419 | f3d26cde8b7ae3f8 | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/clientes/2` | 200 | text/html | 11794 | b01e3aa84d4b62f0 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/clientes/2/contatos.json` | 200 | application/json | 2 | 4f53cda18c2baa0c | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/clientes/2/vendas.json` | 200 | application/json | 70 | 69af67b5ad22cf0b | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/comercial` | 200 | text/html | 3762 | 261c69f234b07e07 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/configuracoes` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/cotacoes` | 200 | text/html | 11859 | 58f44027b59ca8d8 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/cotacoes/nova` | 200 | text/html | 11417 | 3ff18b7f519d8734 | 0 | 1 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/cotacoes/28` | 200 | text/html | 20703 | 7195b333f7d6feca | 0 | 6 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/cotacoes` | 200 | text/html | 12529 | ca27332582830fca | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/cotacoes/nova` | 200 | text/html | 11494 | 341f51469f014d5d | 0 | 1 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/cotacoes/28` | 200 | text/html | 20812 | 21f5c167b1bcac87 | 0 | 6 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/29` | 200 | text/html | 17312 | e6acecc0b067bcb9 | 0 | 3 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/28/compromisso` | 200 | application/json | 112 | a07b9cce5f58fb63 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/28/itens/63/memoria` | 403 | text/html | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/28/negociacao` | 200 | application/json | 877 | cfd96d875394b51d | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/28/painel` | 200 | text/html | 729 | 2f26893cf8479efc | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/cotacoes/28/pdf` | 200 | application/pdf | 402773 | fde532c3fc82600e | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/cotacoes/28/pdf` | 200 | application/pdf | 402773 | 4951a828044aa46a | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/28/situacao` | 200 | application/json | 251 | 2681bf5892e02086 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/dashboard` | 303 |  | 0 | e3b0c44298fc1c14 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/esqueci-senha` | 200 | text/html | 1084 | 05888ff7c7525ee7 | 0 | 0 | 0 |
@@ -149,44 +158,49 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 | VENDEDOR_COMISSIONADO | GET | `/importar` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/login` | 200 | text/html | 1162 | 7268afc21b1670ab | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/oportunidades` | 303 |  | 0 | e3b0c44298fc1c14 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/oportunidades/3` | 200 | text/html | 9405 | 116aab582d56d2c4 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/pipeline` | 200 | text/html | 8185 | b95cfcd1a1d4c39b | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/oportunidades/3` | 200 | text/html | 9405 | ac4d6b2285d33b6c | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/pipeline` | 200 | text/html | 9223 | 362692d9e2f59ca8 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/primeiro-acesso` | 303 |  | 0 | e3b0c44298fc1c14 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/produtos` | 200 | text/html | 167760 | f9e583534d3ae768 | 0 | 61 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/produtos/buscar` | 200 | application/json | 22479 | ec112b0b01b92e69 | 0 | 61 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/produtos/facetas` | 200 | application/json | 2486 | 6f69d3db54c57225 | 0 | 2 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/produtos` | 200 | text/html | 168090 | 479dcb71f2eb66e8 | 0 | 61 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/produtos/buscar` | 200 | application/json | 22461 | 1345e7f8fcfe3122 | 0 | 61 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/produtos/facetas` | 200 | application/json | 2500 | 2ae358d6ad26eb67 | 0 | 2 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/produtos/223/memoria` | 403 | text/html | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/redefinir-senha` | 400 | text/html | 907 | ac7e9ff71082e270 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/relatorios` | 200 | text/html | 9171 | 6a50cf95b91a923b | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/relatorios` | 200 | text/html | 9172 | bd83a422bab308ef | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/relatorios/aprovacoes` | 200 | text/html | 4011 | 5ce2ad3221548e85 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/relatorios/atividades.csv` | 200 | text/csv | 70 | 890f14f4e8b9bdb0 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/relatorios/cotacoes` | 200 | text/html | 4652 | acda3cbe259c485f | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/relatorios/cotacoes.csv` | 200 | text/csv | 1811 | 0a8714ef6e43120e | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/relatorios/cotacoes` | 200 | text/html | 4652 | 465ad33e478d06b7 | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/relatorios/cotacoes.csv` | 200 | text/csv | 1891 | 4496b7e7f8eb1d7f | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/relatorios/economico` | 403 | text/html | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/relatorios/oportunidades.csv` | 200 | text/csv | 508 | d9dcfc968d17ee55 | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/relatorios/oportunidades.csv` | 200 | text/csv | 624 | fb5c980156993b9f | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/relatorios/qualidade` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/relatorios/qualidade.json` | 403 | text/html | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/saude` | 403 | text/html | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/vendas` | 200 | text/html | 13136 | 12ca54572c65bf59 | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/vendas/3` | 200 | text/html | 14543 | a3dada073c18e1de | 0 | 1 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/cotacoes/29/pdf` | 200 | application/pdf | 250769 | 961d7bc358fb47b3 | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/vendas` | 200 | text/html | 13981 | 6b72a2e3452f7e65 | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/vendas/3` | 200 | text/html | 14543 | 4dca7b460203e229 | 0 | 1 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/cotacoes/29/pdf` | 200 | application/pdf | 250769 | 5df737fe8973fa42 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/29/negociacao` | 200 | application/json | 877 | 7967766fc1a655d5 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/cotacoes/29/situacao` | 200 | application/json | 330 | a755f72ed6aadbce | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/produtos/buscar?q=190x250` | 200 | application/json | 779 | 457bdeb67bf32a29 | 0 | 6 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/produtos/buscar?q=190x250` | 200 | application/json | 781 | d562769a39bb7708 | 0 | 6 | 0 |
 | VENDEDOR_COMISSIONADO | POST | `/cotacoes/28/calc` | 200 | application/json | 251 | 592400873007c1d5 | 0 | 1 | 0 |
+| VENDEDOR_COMISSIONADO | POST | `/calculadora/calcular` | 200 | application/json | 674 | aed12f3cc691baca | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | POST | `/calculadora/calcular(na cotação)` | 200 | application/json | 675 | 0c517eb6e3dc930e | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | POST | `/calculadora/salvar(na cotação)` | 200 | application/json | 125 | 54dfe77c0e8eb683 | 0 | 1 | 0 |
 | VENDEDOR_COMISSIONADO | POST | `/cotacoes/28/calc(desconto)` | 200 | application/json | 251 | 15d339eeaf9eabdb | 0 | 1 | 0 |
 | VENDEDOR_COMISSIONADO | POST | `/cotacoes/28/negociacao/preview` | 200 | application/json | 878 | cb38d1dbc91af417 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | POST | `/cotacoes/28/negociacao/preview(abaixo do B2B)` | 200 | application/json | 870 | 9b2ffcac6d8623dd | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | POST | `/cotacoes/28/negociacao` | 200 | application/json | 877 | cfd96d875394b51d | 0 | 0 | 0 |
-| VENDEDOR_COMISSIONADO | GET | `/static/js/calculadora.js` | 200 | text/javascript | 4473 | 611c27ff992a5c5a | 0 | 18 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/static/js/admin_produtos.js` | 200 | text/javascript | 7118 | 465b45289554f554 | 0 | 14 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/static/js/calculadora.js` | 200 | text/javascript | 6479 | 024a2a114ecc350f | 0 | 18 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/static/js/cotacao.js` | 200 | text/javascript | 27011 | 453a2563d1c170af | 0 | 54 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/static/js/dashboard.js` | 200 | text/javascript | 4033 | 644c8b2fc22ff981 | 0 | 12 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/static/js/memoria.js` | 200 | text/javascript | 9999 | 89962d713b20c659 | 0 | 61 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/static/js/toast.js` | 200 | text/javascript | 465 | 8f7944f740d8ec38 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/static/js/ui.js` | 200 | text/javascript | 7582 | efb22062f2e912b0 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | GET | `/static/css/anara.css` | 200 | text/css | 41742 | 6f276a019d01a76a | 0 | 7 | 0 |
-| VENDEDOR_COMISSIONADO | HTML | `/cotacoes/28 data-* e hidden` | 200 | atributos | 20555 | 7195b333f7d6feca | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | HTML | `/cotacoes/28 data-* e hidden` | 200 | atributos | 20664 | 21f5c167b1bcac87 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | HTML | `/cotacoes/29 data-* e hidden` | 200 | atributos | 17184 | e6acecc0b067bcb9 | 0 | 0 | 0 |
+| VENDEDOR_COMISSIONADO | GET | `/calculadora?cotacao_id=30` | 200 | text/html | 15235 | cbc1ddb962f5c135 | 0 | 2 | 0 |
 | VENDEDOR_COMISSIONADO | 403? | `/cotacoes/28/itens/63/memoria` | 403 | gate | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | 403? | `/produtos/223/memoria` | 403 | gate | 2482 | a7f1f01f04f9d539 | 0 | 0 | 0 |
 | VENDEDOR_COMISSIONADO | 403? | `/admin/cotacao/28/premissas` | 403 | gate | 2471 | c2f262daaf67b6aa | 0 | 0 | 0 |
@@ -196,29 +210,30 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 
 ## Ocorrências estruturais aceitas (sem valor confidencial) — justificativa
 
+* `piso` — toalha de piso (ex.: `/calculadora`: …ion value="Bath Mat" data-tipo="toalha">Toalha de piso</option>                 …)
 * `crédito` — cartão de crédito (ex.: `/cotacoes/nova`: … <option value="CARTAO" >               Cartão de crédito             </option> …)
 * `memoria` — drawer-memoria (ex.: `/cotacoes/28`: …rMemoria()"></div> <div class="drawer" id="drawer-memoria"><button class="fechar…)
 * `memoria` — conteudo-memoria (ex.: `/cotacoes/28`: …ick="fecharMemoria()">×</button><div id="conteudo-memoria"></div></div>        <…)
 * `fornecedor` — f-fornecedor (ex.: `/cotacoes/28`: …todas</option></select>             <select id="f-fornecedor" data-filtro aria-l…)
 * `fornecedor` — fornecedor: todos (ex.: `/cotacoes/28`: …a-filtro aria-label="Fornecedor"><option value="">Fornecedor: todos</option></se…)
-* `piso` — toalha de piso (ex.: `/produtos`: …      <tr>         <td class="primaria">Toalha de piso 45x80 · 500 g/m² · 90/10<…)
 * `kazareen` — kazareen textile company (ex.: `/produtos`: …ELIS (Guaratinguetá)</option><option value="KTC" >Kazareen Textile Company</opti…)
 * `kazareen` — tag-ktc">kazareen (ex.: `/produtos`: …/span></td>         <td><span class="tag tag-ktc">Kazareen</span></td>         <…)
 * `custo` — sem_custo (ex.: `/produtos/buscar`: …1.46,"fornecedor":"Kazareen Textile Company","sem_custo":false,"thread_count":nu…)
 * `fornecedor` — fornecedor local (ex.: `/vendas/3`: …><input id="op-nota" placeholder="ex.: fechou com fornecedor local"></div>     <…)
-* `fornecedor` — "fornecedor": (ex.: `/produtos/buscar?q=190x250`: …l de cima","tamanho":"190x250","preco_base":null,"fornecedor":"Kazareen Textile …)
-* `custo` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …// Calculadora de custo KTC. O formulário muda conforme a família: t…)
-* `margem` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …al.preco_negociado);   document.getElementById("r-margem").textContent = pctM(co…)
-* `lucro` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …sto || {}).net_brl);   document.getElementById("r-lucro").textContent = brlM(com…)
-* `memoria` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: … memória do preço da cotação, renderizada pelo // memoria.js.  let ultimoResulta…)
-* `memória` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …rece // registrar o pedido. O resultado é a mesma memória do preço da cotação, r…)
+* `fornecedor` — "fornecedor": (ex.: `/produtos/buscar?q=190x250`: …de cima","tamanho":"190x250","preco_base":108.84,"fornecedor":"Kazareen Textile …)
+* `custo` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/admin_produtos.js`: …label: "Observação", tipo: "text"},     ],   },   custo_nacional: {     rotulo: …)
+* `exw` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/admin_produtos.js`: …,   },   cotacao_ktc: {     rotulo: "Cotação KTC (EXW)",     rota: p => `/admin/…)
+* `usd` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/admin_produtos.js`: …{p}/cotacao-ktc`,     campos: [       {nome: "exw_usd", label: "EXW (US$)", tipo…)
+* `fornecedor` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/admin_produtos.js`: …elect",        opcoes: [["bruto", "Preço bruto do fornecedor (o sistema aplica o…)
+* `margem` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …", brlM(comercial.preco_negociado));     pinta("r-margem", pctM(comercial.margem…)
+* `lucro` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …to", brlM((r.custo || {}).net_brl));     pinta("r-lucro", brlM(comercial.lucro))…)
+* `memoria` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …ADMIN recebem a memória do preço e a // veem pelo memoria.js; a vendedora recebe…)
+* `memória` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/calculadora.js`: …ende do papel (22/09/2026): OWNER/ADMIN recebem a memória do preço e a // veem p…)
 * `encargo` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/cotacao.js`: …to comercial acompanha ao vivo.   // Só texto — o encargo efetivo e a fórmula fi…)
 * `piso` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/cotacao.js`: …{PRECO_ABAIXO_B2B: "abaixo do B2B", MARGEM_ABAIXO_PISO: "abaixo do piso",       …)
 * `icms_base` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/cotacao.js`: …= undefined ? brl(i.base_comissionavel) : "—"}${i.icms_base_comissao_pct ? `<div…)
 * `comissao_item` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/cotacao.js`: …ML = (e.itens || []).map(i => {       const c = i.comissao_item || {};       con…)
 * `kazareen` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/cotacao.js`: …ome) return "";     const classe = nome.includes("Kazareen") || nome.includes("K…)
-* `fornecedor` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/cotacao.js`: …ainel com os filtros do cotador offline: família, fornecedor, tamanho, fios, gra…)
-* `exw` — código estático: renderiza só o que o payload da vendedora traz (ex.: `/static/js/memoria.js`: …tml += avisos(custo.industrial.avisos);   }    // EXW comparado   const exw = []…)
 
 ## Atributos `data-*` e `input hidden` no HTML da cotação (vendedora)
 
@@ -236,6 +251,8 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 * [VENDEDOR_INTERNO] ok — condição com sinal e saldo na tela
 * [VENDEDOR_INTERNO] ok — status na tela
 * [VENDEDOR_INTERNO] ok — JSON traz tabela/B2B/proposta/desconto/comissão/total/autonomia
+* [VENDEDOR_INTERNO] ok — calculadora abre e é operável
+* [VENDEDOR_INTERNO] ok — calculadora devolve B2B, tabela, comissão e total
 * [VENDEDOR_INTERNO] ok — JSON: valores batem com o banco
 * [VENDEDOR_COMISSIONADO] ok — tabela na tela
 * [VENDEDOR_COMISSIONADO] ok — B2B na tela
@@ -246,6 +263,8 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 * [VENDEDOR_COMISSIONADO] ok — condição com sinal e saldo na tela
 * [VENDEDOR_COMISSIONADO] ok — status na tela
 * [VENDEDOR_COMISSIONADO] ok — JSON traz tabela/B2B/proposta/desconto/comissão/total/autonomia
+* [VENDEDOR_COMISSIONADO] ok — calculadora abre e é operável
+* [VENDEDOR_COMISSIONADO] ok — calculadora devolve B2B, tabela, comissão e total
 * [VENDEDOR_COMISSIONADO] ok — JSON: valores batem com o banco
 
 ## Contraste OWNER/ADMIN (veem a economia)
@@ -259,5 +278,5 @@ Banco (cópia): `/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb
 
 ## Status por perfil
 
-* VENDEDOR_INTERNO: {'303': 4, '403': 18, '200': 46, '400': 1}
-* VENDEDOR_COMISSIONADO: {'303': 4, '403': 18, '200': 46, '400': 1}
+* VENDEDOR_INTERNO: {'303': 4, '403': 19, '200': 52, '400': 1}
+* VENDEDOR_COMISSIONADO: {'303': 4, '403': 19, '200': 52, '400': 1}

@@ -44,6 +44,27 @@ EXPLICACAO_CUSTO = {
     "REVIEW_REQUIRED": "Há uma premissa deste item que precisa ser resolvida.",
 }
 
+#: O mesmo estado, na língua de quem vende (22/09/2026). A vendedora precisa saber se pode
+#: propor e o que falta — não o vocabulário do custo. "Custo confirmado" vira "Pronto para
+#: propor"; a palavra `custo` não aparece em tela comercial nenhuma.
+SITUACAO_COMERCIAL = {
+    "CONFIRMADO": "Pronto para propor",
+    "ESTIMADO": "Pode propor — confirmar antes de fechar",
+    "REVALIDAR": "Pode propor — precisa reconfirmar antes de fechar",
+    "A_COTAR": "Preço sob consulta",
+    "REVIEW_REQUIRED": "Revisão necessária",
+}
+EXPLICACAO_COMERCIAL = {
+    "CONFIRMADO": "A referência deste produto está em dia.",
+    "ESTIMADO": "A referência é aproximada: serve para propor, não para assumir compromisso.",
+    "REVALIDAR": "A referência envelheceu. Dá para propor; o administrativo reconfirma antes do "
+                 "compromisso firme.",
+    "A_COTAR": "Ainda não há base para formar preço. Registre o pedido e o administrativo cota "
+               "com a fábrica.",
+    "REVIEW_REQUIRED": "Há uma pendência de cadastro neste produto. O administrativo resolve "
+                       "antes de a proposta virar compromisso.",
+}
+
 # ---------------------------------------------------------------------------
 # Fiscal e pagamento
 # ---------------------------------------------------------------------------
@@ -239,6 +260,15 @@ def _traduz(tabela: dict, codigo: Optional[str]) -> str:
 
 def custo(codigo) -> str:
     return _traduz(STATUS_CUSTO, codigo)
+
+
+def situacao_comercial(codigo) -> str:
+    """O estado do item para quem vende. Ver `SITUACAO_COMERCIAL`."""
+    return _traduz(SITUACAO_COMERCIAL, codigo)
+
+
+def explicacao_comercial(codigo) -> str:
+    return _traduz(EXPLICACAO_COMERCIAL, codigo)
 
 
 def explicacao_custo(codigo) -> str:

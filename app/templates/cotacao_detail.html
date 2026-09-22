@@ -159,7 +159,9 @@
         <h3>Produtos <span class="muted" style="font-weight:400;">({{ itens|length }})</span></h3>
         {% if editavel %}
         <div class="flex">
-          {% if economia %}<a href="/calculadora?cotacao_id={{ cotacao.id }}" class="btn btn-ghost btn-sm nowrap">Produto personalizado</a>{% endif %}
+          {# 22/09/2026: produto personalizado é da operação, não da administração — a
+             vendedora monta a cotação e precisa dele. O que muda por papel é o resultado. #}
+          <a href="/calculadora?cotacao_id={{ cotacao.id }}" class="btn btn-ghost btn-sm nowrap">Produto personalizado</a>
           <button class="btn btn-copper btn-sm" type="button" id="btn-abrir-busca" aria-expanded="false" aria-controls="painel-busca">+ Adicionar produto</button>
         </div>
         {% endif %}

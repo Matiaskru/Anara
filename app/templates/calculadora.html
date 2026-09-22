@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Calculadora de custo KTC — Anara{% endblock %}
+{% block title %}{{ 'Calculadora de custo KTC' if economia else 'Produto personalizado' }} — Anara{% endblock %}
 {% block topbar %}
 <div class="topbar">
   <div class="titulo">
@@ -16,7 +16,7 @@
 {% block content %}
 {% set cama = ['Flat Sheet', 'Top Sheet', 'Fitted Sheet', 'Duvet Cover', 'Duvet Insert', 'Pillow Case', 'Mattress Protector', 'Mattress Topper'] %}
 {% set banho = ['Bath Towel', 'Hand Towel', 'Wash Cloth', 'Pool Towel', 'Bath Mat', 'Bathrobe', 'Slipper'] %}
-<div class="grid-2">
+<div class="grid-2" id="calculadora" data-economia="{{ '1' if economia else '0' }}">
   <div class="card">
     <h3 style="margin-bottom:12px;">O que o cliente pediu</h3>
     <form id="form-calc" onsubmit="return false;">
@@ -65,8 +65,9 @@
           {% endfor %}
         </select>
         <div style="font-size:10.5px; color:var(--gray); margin-top:4px;">
-          Só aparecem os tecidos que a KTC cotou. Fora dessa lista o sistema não calcula — teria
-          que chutar o preço do tecido.
+          Só aparecem os tecidos que a KTC já cotou. Fora dessa lista o sistema não calcula —
+          {% if economia %}teria que chutar o preço do tecido{% else %}registre o pedido e o
+          administrativo cota com a fábrica{% endif %}.
         </div>
       </div>
 
@@ -84,7 +85,8 @@
             <select name="festone" id="festone"><option value="">Não</option><option value="sim">Sim</option></select></div>
         </div>
         <div style="font-size:10.5px; color:var(--gray);">
-          Corte do envelope com flap e abas; costura 0,50 sem abas e 0,75 com abas; festonê +0,10.
+          {% if economia %}Corte do envelope com flap e abas; costura 0,50 sem abas e 0,75 com
+          abas; festonê +0,10.{% else %}Corte do envelope com flap e abas, como a KTC produz.{% endif %}
           Bordado ou logotipo especial não é calculável: registre como pedido para a KTC.
         </div>
       </div>
@@ -108,20 +110,24 @@
             <small>Mesmo preço industrial para as duas composições (decisão da KTC): a taxa por kg vale por tamanho, gramatura e construção.</small>
           </div>
         </div>
+        {% if economia %}
         <div style="font-size:10.5px; color:var(--gray);">
           Taxas por kg em uso: banho US$ 8,50 · rosto e piso US$ 9,00 · piscina listrada US$ 14,00.
           Derivadas da PI de 23/08 e confirmadas pela cotação HAMAN de 25/08.
         </div>
+        {% endif %}
       </div>
 
       <div class="grid-2" id="bloco-comercial" style="display:none;">
         <div class="field"><label>Quantidade</label><input type="number" name="quantidade" id="quantidade" value="1" min="1"></div>
-        <div class="field"><label>Margem (%)</label><input type="number" name="margem_pct" id="margem_pct" step="0.1" placeholder="usa a regra do produto"></div>
+        {% if economia %}<div class="field"><label>Margem (%)</label><input type="number" name="margem_pct" id="margem_pct" step="0.1" placeholder="usa a regra do produto"></div>{% endif %}
       </div>
+      {% if economia %}
       <div class="field" id="bloco-extras" style="display:none;">
         <label>Outros custos por peça (US$) — bordado, botões, zíper</label>
         <input type="number" name="outros_custos_usd" id="outros_custos_usd" step="0.01" placeholder="0,00">
       </div>
+      {% endif %}
 
       <button class="btn btn-copper" onclick="calcular()" id="btn-calcular" style="display:none;">Calcular</button>
     </form>
@@ -141,38 +147,56 @@
       que sairia se o produto já estivesse cadastrado.</p>
     </div>
     <div id="resultado" style="display:none;">
+      {% if economia %}
       <div class="kpi-grid" style="grid-template-columns: repeat(2,1fr); margin-bottom:14px;">
         <div class="kpi"><div class="label">Preço sugerido</div><div class="value copper" id="r-preco">—</div></div>
         <div class="kpi"><div class="label">Margem</div><div class="value" id="r-margem">—</div></div>
         <div class="kpi"><div class="label">Custo NET</div><div class="value" id="r-custo">—</div></div>
         <div class="kpi"><div class="label">Lucro no total</div><div class="value" id="r-lucro">—</div></div>
       </div>
+      {% else %}
+      {# Vendedora: o mesmo cálculo, na linguagem da proposta. Tabela, B2B (o piso da sua
+         autonomia), preço proposto, desconto, a comissão dela e o total. #}
+      <div class="kpi-grid" style="grid-template-columns: repeat(2,1fr); margin-bottom:14px;">
+        <div class="kpi"><div class="label">Preço da proposta</div><div class="value copper" id="r-preco">—</div></div>
+        <div class="kpi"><div class="label">Preço de tabela</div><div class="value" id="r-tabela">—</div></div>
+        <div class="kpi"><div class="label">B2B (menor preço sem aprovação)</div><div class="value" id="r-b2b">—</div></div>
+        <div class="kpi"><div class="label">Sua comissão</div><div class="value" id="r-comissao">—</div></div>
+      </div>
+      <div class="kpi-grid" style="grid-template-columns: repeat(2,1fr); margin-bottom:14px;">
+        <div class="kpi"><div class="label">Desconto sobre a tabela</div><div class="value small" id="r-desconto">—</div></div>
+        <div class="kpi"><div class="label">Total da linha</div><div class="value small" id="r-total">—</div></div>
+      </div>
+      <div class="small muted" id="r-situacao" style="margin-bottom:10px;"></div>
+      {% endif %}
       <div id="r-aviso" class="aviso-inline"></div>
       <div style="display:flex; gap:8px; margin:14px 0;">
         <button class="btn btn-copper btn-sm" onclick="salvar('sim')" id="btn-salvar">
           {% if cotacao %}Adicionar à cotação{% else %}Salvar no catálogo{% endif %}
         </button>
-        <button class="btn btn-ghost btn-sm" onclick="alternarMemoria()" id="btn-memoria">Ver memória do preço</button>
+        {% if economia %}<button class="btn btn-ghost btn-sm" onclick="alternarMemoria()" id="btn-memoria">Ver memória do preço</button>{% endif %}
       </div>
-      <div id="memoria-inline" style="display:none;"></div>
+      {% if economia %}<div id="memoria-inline" style="display:none;"></div>{% endif %}
     </div>
     <div style="font-size:10.5px; color:var(--gray); margin-top:14px; border-top:1px solid var(--row-alt); padding-top:10px;">
       Cenário: {{ cenario.estado_origem }} → {{ cenario.estado_destino or '—' }} ·
       {{ 'contribuinte' if cenario.contribuinte_icms else 'não contribuinte' }} ·
-      {{ cenario.condicao_pagamento }} · ICMS {{ contexto_fiscal.icms_pct|pct }}
+      {{ cenario.condicao_pagamento }}{% if economia %} · ICMS {{ contexto_fiscal.icms_pct|pct }}{% endif %}
       {% if not cotacao %}<br>Cenário padrão do catálogo. Dentro de uma cotação, usa o cenário dela.{% endif %}
     </div>
   </div>
 </div>
 
+{% if economia %}
 <div class="drawer-fundo" id="drawer-fundo" onclick="fecharMemoria()"></div>
 <div class="drawer" id="drawer-memoria">
   <button class="fechar" onclick="fecharMemoria()">×</button>
   <div id="conteudo-memoria"></div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="/static/js/memoria.js?v={{ versao_estatica }}"></script>
+{% if economia %}<script src="/static/js/memoria.js?v={{ versao_estatica }}"></script>{% endif %}
 <script src="/static/js/calculadora.js?v={{ versao_estatica }}"></script>
 {% endblock %}

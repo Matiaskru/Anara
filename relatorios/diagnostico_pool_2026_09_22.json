@@ -1,0 +1,209 @@
+{
+ "banco": "postgresql+psycopg://anara@127.0.0.1:55432/anara_pool",
+ "sequencial": [
+  {
+   "volta": 1,
+   "rota": "/dashboard",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 68,
+   "queries": 20,
+   "checkouts": 2,
+   "ms_fora_do_pool": 64
+  },
+  {
+   "volta": 1,
+   "rota": "/produtos",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 65,
+   "queries": 25,
+   "checkouts": 2,
+   "ms_fora_do_pool": 57
+  },
+  {
+   "volta": 1,
+   "rota": "/cotacoes",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 34,
+   "queries": 8,
+   "checkouts": 2,
+   "ms_fora_do_pool": 17
+  },
+  {
+   "volta": 1,
+   "rota": "/vendas",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 60,
+   "queries": 18,
+   "checkouts": 2,
+   "ms_fora_do_pool": 23
+  },
+  {
+   "volta": 1,
+   "rota": "/clientes",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 10,
+   "queries": 3,
+   "checkouts": 2,
+   "ms_fora_do_pool": 7
+  },
+  {
+   "volta": 1,
+   "rota": "/admin/produtos",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 133,
+   "queries": 29,
+   "checkouts": 2,
+   "ms_fora_do_pool": 130
+  },
+  {
+   "volta": 1,
+   "rota": "/relatorios/economico",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 43,
+   "queries": 13,
+   "checkouts": 2,
+   "ms_fora_do_pool": 29
+  },
+  {
+   "volta": 1,
+   "rota": "/health",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 7,
+   "queries": 1,
+   "checkouts": 1,
+   "ms_fora_do_pool": 1
+  },
+  {
+   "volta": 1,
+   "rota": "/calculadora",
+   "status": 200,
+   "pool": {
+    "checkedout": 0,
+    "checkedin": 1,
+    "overflow": -4,
+    "size": 5
+   },
+   "ms": 23,
+   "queries": 25,
+   "checkouts": 2,
+   "ms_fora_do_pool": 20
+  }
+ ],
+ "concorrente": [
+  {
+   "rota": "/produtos",
+   "n": 3,
+   "erros": 0,
+   "ms_total": 304,
+   "amostra_erro": [],
+   "pool_depois": {
+    "checkedout": 0,
+    "checkedin": 3,
+    "overflow": -2,
+    "size": 5
+   },
+   "queries": 84,
+   "checkouts": 12
+  },
+  {
+   "rota": "/dashboard",
+   "n": 3,
+   "erros": 0,
+   "ms_total": 278,
+   "amostra_erro": [],
+   "pool_depois": {
+    "checkedout": 0,
+    "checkedin": 3,
+    "overflow": -2,
+    "size": 5
+   },
+   "queries": 69,
+   "checkouts": 12
+  },
+  {
+   "rota": "/admin/produtos",
+   "n": 3,
+   "erros": 0,
+   "ms_total": 375,
+   "amostra_erro": [],
+   "pool_depois": {
+    "checkedout": 0,
+    "checkedin": 3,
+    "overflow": -2,
+    "size": 5
+   },
+   "queries": 96,
+   "checkouts": 12
+  },
+  {
+   "rota": "/cotacoes",
+   "n": 3,
+   "erros": 0,
+   "ms_total": 180,
+   "amostra_erro": [],
+   "pool_depois": {
+    "checkedout": 0,
+    "checkedin": 3,
+    "overflow": -2,
+    "size": 5
+   },
+   "queries": 33,
+   "checkouts": 12
+  }
+ ],
+ "falhas": [],
+ "pool_final": {
+  "checkedout": 0,
+  "checkedin": 3,
+  "overflow": -2,
+  "size": 5
+ }
+}

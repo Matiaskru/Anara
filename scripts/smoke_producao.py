@@ -11,7 +11,8 @@ processo sobe com **a configuração de produção** e o roteiro cobre o que só
   descartaria um cookie Secure recebido por http, e é isso que se quer provar);
 * **OWNER**: login → `/dashboard`, economia visível, fluxo comercial completo, PDF rascunho
   e final com o texto extraído e varrido;
-* **SELLER**: login → `/vendas`; acesso DIRETO às URLs proibidas responde 403; HTML e JSON
+* **SELLER**: login → `/vendas`; a calculadora abre (produto personalizado é da operação) sem
+  economia no HTML; acesso DIRETO às URLs proibidas responde 403; HTML e JSON
   sem margem/lucro/custo/CNET/piso; a própria comissão aparece;
 * "Esqueci minha senha" responde a mesma frase para e-mail existente e inexistente;
 * `/static` público, `/static/fonts` só autenticado;
@@ -54,7 +55,7 @@ PDF_PROIBIDO = ("margem", "custo", "lucro", "markup", "comiss", "a_cotar", "revi
                 "cnet", "exw", "piso", "fornecedor")
 URLS_PROIBIDAS_SELLER = [
     "/admin", "/admin/usuarios", "/admin/trilha", "/configuracoes",
-    "/calculadora", "/importar", "/relatorios/economico", "/saude", "/health/detalhe",
+    "/importar", "/relatorios/economico", "/saude", "/health/detalhe",
     "/aprovacoes", "/produtos/1/memoria",
 ]
 
@@ -350,6 +351,15 @@ def conferir_seller(cliente: ClienteProducao, contexto: dict, r: base.Resultado)
             r.passou(f"SELLER {caminho} → 403")
         else:
             r.falhou(f"SELLER {caminho}", f"esperava 403, veio {status}")
+    # 22/09/2026: a calculadora é da operação. A vendedora abre (200) e o HTML dela não leva
+    # custo, CNET, EXW, margem, lucro nem markup — o corte é do servidor, não do template.
+    status, corpo, _h = cliente.pedir("/calculadora")
+    if status == 200:
+        achados = [t for t in ECONOMIA_HTML if t in visivel(corpo)]
+        r.falhou("SELLER calculadora HTML expõe economia", str(achados)) if achados \
+            else r.passou("SELLER /calculadora abre (200) sem economia no HTML")
+    else:
+        r.falhou("SELLER /calculadora", f"esperava 200, veio {status}")
     if not cot_id:
         r.aviso("SELLER cotação", "sem cotação do fluxo para conferir")
         return

@@ -9,8 +9,10 @@ monta os parâmetros e devolve:
 * o **custo NET** de um produto por qualquer um dos caminhos de fornecedor;
 * a **memória do preço**: o waterfall inteiro, da especificação técnica ao preço final.
 """
+import contextvars
 import json
 from dataclasses import asdict, dataclass
+from contextlib import contextmanager
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional, Tuple
@@ -62,7 +64,7 @@ def origem_fiscal_do_produto(session: Session, produto: Optional[Produto]) -> Tu
         return None, "produto não informado"
     if produto.origem_fiscal:
         return produto.origem_fiscal.strip().upper(), f"override do SKU {produto.sku_key}"
-    fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
+    fornecedor = fornecedor_do_produto(session, produto)
     if fornecedor is None:
         return None, "produto sem fornecedor — natureza fiscal indeterminada"
     if fornecedor.tipo == TipoFornecedor.importado_ktc:
@@ -340,7 +342,7 @@ def margem_padrao(session: Session, produto: Produto,
     ausência como "sem filtro de vigência": regra encerrada continuava formando preço
     (C-NEW-13). Uma política versionada por data só funciona se a data for consultada.
     """
-    regras = session.exec(select(MargemRegra)).all()
+    regras = _memo("margem_regras", lambda: session.exec(select(MargemRegra)).all())
     return resolver_margem(regras, fornecedor_id=produto.fornecedor_id,
                            familia=produto.familia, thread_count=produto.thread_count,
                            sku_key=produto.sku_key, override_pct=override_pct,
@@ -398,6 +400,72 @@ def politica_comercial_vigente(session: Session, ref: Optional[date] = None
 
 
 # ---------------------------------------------------------------------------
+# Cache de LEITURA por requisição — tabelas de configuração, não resultados
+# ---------------------------------------------------------------------------
+#: Listar o catálogo resolve o custo de cada SKU, e resolver o custo de um SKU lê as MESMAS
+#: tabelinhas de configuração — premissas, ParametroKTC, NcmRegra, MargemRegra. Em 380 SKUs
+#: isso virava **6.174 consultas numa requisição** (medido em 22/09/2026), com a conexão fora
+#: do pool por segundos. Com 5+5 conexões no Postgres, dois ou três acessos simultâneos à tela
+#: de catálogo bastavam para a décima primeira requisição esperar 30 s e estourar em
+#: `QueuePool limit of size 5 overflow 5 reached`. O pool não vazava: ficava ocupado.
+#:
+#: A correção é ler cada tabela **uma vez por requisição**, e só onde o caminho é de leitura:
+#: quem escreve (registrar custo, aplicar premissa, precificar item) continua fora do cache e
+#: enxerga o banco como sempre. Por isso o cache é um `contextvars` de escopo explícito, e não
+#: um memo global: fora do `with`, o comportamento é exatamente o de antes.
+_CACHE_LEITURA: contextvars.ContextVar = contextvars.ContextVar("anara_cache_leitura", default=None)
+
+
+@contextmanager
+def cache_de_leitura(session: Session = None):
+    """Memoiza, **dentro deste bloco**, as tabelas de configuração que o custo consulta.
+
+    Use em varredura de catálogo (listagem, busca, relatório, recálculo em lote). Não use em
+    caminho que grava: o bloco não observa escrita feita dentro dele.
+    """
+    token = _CACHE_LEITURA.set({})
+    try:
+        yield
+    finally:
+        _CACHE_LEITURA.reset(token)
+
+
+def fornecedor_do_produto(session: Session, produto: Produto):
+    """O fornecedor do SKU, uma consulta por fornecedor na varredura — não uma por SKU.
+
+    `session.get` consulta o identity map, mas ele guarda **referência fraca**: numa varredura
+    que não segura o objeto, o coletor o descarta e o SKU seguinte reconsulta. Eram duas
+    consultas por SKU só para descobrir o mesmo punhado de fornecedores.
+    """
+    if not produto.fornecedor_id:
+        return None
+    return _memo(("fornecedor", produto.fornecedor_id),
+                 lambda: session.get(Fornecedor, produto.fornecedor_id))
+
+
+def invalidar_cache_de_leitura():
+    """Esquece o memoizado — para quem grava enquanto um bloco de leitura está aberto.
+
+    O caminho normal não precisa disso (leitura e escrita não se misturam no mesmo bloco), mas
+    gravar com cache aberto e seguir lendo o valor antigo seria um erro silencioso, do tipo que
+    aparece só em produção. Então quem grava avisa.
+    """
+    cache = _CACHE_LEITURA.get()
+    if cache is not None:
+        cache.clear()
+
+
+def _memo(chave, calcular):
+    """Valor memoizado se houver bloco de cache ativo; senão, calcula e devolve, como antes."""
+    cache = _CACHE_LEITURA.get()
+    if cache is None:
+        return calcular()
+    if chave not in cache:
+        cache[chave] = calcular()
+    return cache[chave]
+
+
+# ---------------------------------------------------------------------------
 # Imposto de importação por família/NCM
 # ---------------------------------------------------------------------------
 #: I.I. ECONÔMICO da KTC/Egito desde 22/09/2026: **zero**. É o único I.I. que entra no CUSTO
@@ -429,7 +497,8 @@ def regra_ncm(session: Session, produto: Produto) -> Optional[NcmRegra]:
     a alíquota preferencial antiga foram encerradas e continuam no banco como histórico; as
     vigentes trazem NCM e I.I. econômico 0%. O I.I. do custo KTC não vem daqui de qualquer
     forma (`II_ECONOMICO_KTC`) — a regra serve ao NCM e à memória."""
-    regras = [r for r in session.exec(select(NcmRegra)).all() if r.ativo and _vigente_hoje(r)]
+    regras = _memo("ncm_vigentes", lambda: [r for r in session.exec(select(NcmRegra)).all()
+                                            if r.ativo and _vigente_hoje(r)])
     familia = (produto.familia or "").strip().lower()
     categoria = (produto.categoria or "").strip().lower()
     por_familia = [r for r in regras
@@ -623,11 +692,11 @@ def pinar_premissas(session: Session, ref_data=None) -> dict:
 
 
 def premissas_nacionalizacao(session: Session) -> PremissasNacionalizacao:
-    return PremissasNacionalizacao(
+    return _memo("premissas_nacionalizacao", lambda: PremissasNacionalizacao(
         frete_usd_kg=cfg.num(session, "frete_int_usd_kg", 0.516),
         outras_desp_usd_un=cfg.num(session, "outras_desp_usd_un", 0.2487532709),
         fx_usd_brl=cfg.num(session, "fx_usd_brl", 5.11),
-        fonte="Premissas versionadas (painel de configurações)")
+        fonte="Premissas versionadas (painel de configurações)"))
 
 
 #: De onde saiu o CNET que `custo_net` devolve. Existe porque "o número" não basta: um CNET
@@ -698,6 +767,26 @@ def status_canonico_do_custo(cnet, memoria: dict) -> str:
     return StatusCusto.review_required.value
 
 
+def status_do_produto(session: Session, produto: Produto, custo=None, memoria=None) -> str:
+    """O status do SKU **como a cotação o congela** — uma regra, um lugar (22/09/2026).
+
+    Precedência, a mesma de `_preencher_item`: a versão vigente de `CustoReferencia` manda,
+    porque ela é a decisão registrada (inclusive um rebaixamento explícito para `A_COTAR` ou
+    `REVALIDAR`); sem versão, vale o status canônico que o motor deriva da evidência de agora.
+
+    Existia porque a resposta estava em três lugares com três respostas: a coluna-cache
+    `Produto.status_custo` (a tela de catálogo), a referência vigente (o item) e o motor (o
+    preço). O BR-001 aparecia "Disponível" no catálogo e "Revisão necessária" na cotação.
+    """
+    from app import custo_service as cs
+    vigente = cs.referencia_vigente(session, produto.id) if produto.id else None
+    if vigente is not None and vigente.status_custo:
+        return vigente.status_custo
+    if custo is None and memoria is None:
+        custo, memoria = custo_para_precificar(session, produto)
+    return status_canonico_do_custo(custo, memoria)
+
+
 def custo_para_precificar(session: Session, produto: Produto):
     """O CNET que deve formar o preço de um item **novo**, com a memória de como se chegou nele.
 
@@ -742,7 +831,7 @@ def custo_net(session: Session, produto: Produto) -> dict:
     formato dos snapshots já emitidos. Os motores calculam em Decimal; a conversão acontece
     uma vez, na saída desta função.
     """
-    fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
+    fornecedor = fornecedor_do_produto(session, produto)
     metodo = produto.cost_method or (fornecedor.cost_method_padrao.value if fornecedor else None)
     memoria = {"fornecedor": fornecedor.nome if fornecedor else None,
                "cost_method": metodo, "avisos": [], "etapas": []}
@@ -887,9 +976,13 @@ def custo_net(session: Session, produto: Produto) -> dict:
 # ---------------------------------------------------------------------------
 def _tabela_parametro(session: Session, chave: str) -> dict:
     from app.models import ParametroKTC
-    linhas = [p for p in session.exec(select(ParametroKTC).where(ParametroKTC.chave == chave)).all()
-              if p.ativo and p.escopo]
-    return {p.escopo: p.valor for p in linhas}
+
+    def ler():
+        linhas = [p for p in session.exec(select(ParametroKTC).where(ParametroKTC.chave == chave)).all()
+                  if p.ativo and p.escopo]
+        return {p.escopo: p.valor for p in linhas}
+
+    return _memo(("parametro_ktc", chave), ler)
 
 
 def protecao_comercial_do_produto(session: Session, produto: Produto):
@@ -949,8 +1042,8 @@ def frescor(session: Session, data_ref: Optional[date]) -> dict:
     if isinstance(data_ref, datetime):
         data_ref = data_ref.date()
     dias = (date.today() - data_ref).days
-    limite_fresh = int(cfg.num(session, "freshness_fresh_dias", 30))
-    limite_aging = int(cfg.num(session, "freshness_aging_dias", 60))
+    limite_fresh = int(_memo("freshness_fresh_dias", lambda: cfg.num(session, "freshness_fresh_dias", 30)))
+    limite_aging = int(_memo("freshness_aging_dias", lambda: cfg.num(session, "freshness_aging_dias", 60)))
     if dias <= limite_fresh:
         status = "FRESH"
     elif dias <= limite_aging:
@@ -1033,7 +1126,7 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
             resultado = (calcular_por_preco(net, quantidade, rec.preco_negociado, regras, produto.preco_base)
                          if base != net else rec)
 
-    fornecedor = session.get(Fornecedor, produto.fornecedor_id) if produto.fornecedor_id else None
+    fornecedor = fornecedor_do_produto(session, produto)
     return {
         "produto": {"id": produto.id, "nome": produto.nome, "sku_key": produto.sku_key,
                     "especificacao": produto.especificacao, "categoria": produto.categoria,

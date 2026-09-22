@@ -26,11 +26,12 @@ from sqlmodel import Session, select
 from app import admin_service as adm
 from app import config_service as cfg
 from app import custo_service as cs
+from app import governanca_produtos as gov
 from app.db import get_session
 from app.models import (
     CondicaoPagamento, Fornecedor, MargemRegra, Premissa, Produto,
 )
-from app.permissoes import exigir_admin, exigir_economia_gerenciavel
+from app.permissoes import exigir_admin, exigir_economia_gerenciavel, usuario_da_request
 from app.templating import templates
 
 router = APIRouter()
@@ -106,8 +107,11 @@ AREAS_ADMIN = [
      "Pipeline, conversão, documentos, aprovações e o relatório econômico (Fase 3C: saiu do menu)."),
     ("Premissas e preços", "/admin/premissas",
      "Câmbio, frete internacional, despesas de importação e PIS/COFINS nominal."),
-    ("Catálogo e custos", "/produtos",
-     "Os SKUs, o custo de cada um e de onde esse custo veio."),
+    ("Produtos e custos", "/admin/produtos",
+     "Governança do catálogo: o que está pronto para cotar, o que falta em cada SKU e a ação "
+     "para resolver — cotação da KTC, custo nacional, peso, confirmar ou rebaixar."),
+    ("Catálogo comercial", "/produtos",
+     "Os SKUs como a equipe comercial os vê, com busca e filtros."),
     ("Motor industrial KTC", "/configuracoes?aba=ktc",
      "Preço do tecido por m², CMT e parâmetros de produção."),
     ("Margens", "/configuracoes?aba=margens",
@@ -187,6 +191,114 @@ def painel(request: Request, session: Session = Depends(get_session)):
 # ---------------------------------------------------------------------------
 # Custo por SKU — o caso central
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Produtos e custos — governança do catálogo (22/09/2026)
+# ---------------------------------------------------------------------------
+FILTROS_SITUACAO = [
+    ("CONFIRMADO", "Confirmado"), ("REVALIDAR", "A revalidar"),
+    ("REVIEW_REQUIRED", "Revisão necessária"), ("A_COTAR", "Sem custo (a cotar)"),
+    ("SEM_CUSTO", "Sem custo formado"), ("PRECO_DISPONIVEL", "Preço disponível"),
+]
+
+
+@router.get("/admin/produtos", response_class=HTMLResponse)
+def produtos_governanca(request: Request, q: str = "", fornecedor: str = "", familia: str = "",
+                        status: str = "", session: Session = Depends(get_session)):
+    """O catálogo com o diagnóstico do MOTOR por SKU — e a ação para resolver cada pendência."""
+    exigir_admin(request)
+    # uma varredura só: os contadores olham o catálogo inteiro, a tabela mostra o filtrado
+    todas = gov.listar(session)
+    contagem = {}
+    for l in todas:
+        contagem[l.status] = contagem.get(l.status, 0) + 1
+    linhas = gov.filtrar(todas, q=q, fornecedor=fornecedor, familia=familia, status=status)
+    todos = session.exec(select(Produto).where(Produto.ativo == True)).all()   # noqa: E712
+    return templates.TemplateResponse(request, "admin_produtos.html", {
+        "active": "admin", "linhas": linhas, "q": q, "fornecedor_filtro": fornecedor,
+        "familia_filtro": familia, "status_filtro": status, "contagem": contagem,
+        "fornecedores": sorted(session.exec(select(Fornecedor)).all(), key=lambda f: f.nome),
+        "familias": sorted({p.familia for p in todos if p.familia}),
+        "situacoes": FILTROS_SITUACAO, "hoje": date.today(),
+        "pode_editar": bool(getattr(usuario_da_request(request), "gerencia_economia", False)),
+    })
+
+
+@router.get("/admin/produtos/{produto_id}.json")
+def produto_governanca(request: Request, produto_id: int, session: Session = Depends(get_session)):
+    """O diagnóstico de um SKU, para a tela abrir a ação já sabendo o que falta."""
+    exigir_admin(request)
+    produto = session.get(Produto, produto_id)
+    if produto is None:
+        return _erro("SKU não encontrado.", 404)
+    return JSONResponse(gov.diagnosticar(session, produto).como_dict())
+
+
+def _acao_governanca(request, produto_id, session, fazer):
+    """Barreira + tratamento comum das ações: só quem gerencia economia, e erro vira 400/409."""
+    ator = exigir_economia_gerenciavel(request)
+    produto = session.get(Produto, produto_id)
+    if produto is None:
+        return _erro("SKU não encontrado.", 404)
+    try:
+        resultado = fazer(produto, ator)
+        session.commit()
+    except gov.AcaoInvalida as e:
+        session.rollback()
+        return _erro(str(e))
+    except ValueError as e:
+        session.rollback()
+        return _erro(str(e))
+    session.refresh(produto)
+    return JSONResponse({**resultado, "diagnostico": gov.diagnosticar(session, produto).como_dict()})
+
+
+@router.post("/admin/produtos/{produto_id}/peso")
+def gov_peso(request: Request, produto_id: int, peso_kg: str = Form(...), tipo: str = Form("REAL KTC"),
+             fonte: str = Form(...), documento: str = Form(""), data_ref: str = Form(""),
+             motivo: str = Form(...), session: Session = Depends(get_session)):
+    return _acao_governanca(request, produto_id, session, lambda p, ator: gov.registrar_peso(
+        session, p, peso_kg=peso_kg, tipo=tipo, fonte=fonte, documento=documento or None,
+        data_ref=_data(data_ref), motivo=motivo, ator=ator))
+
+
+@router.post("/admin/produtos/{produto_id}/cotacao-ktc")
+def gov_cotacao_ktc(request: Request, produto_id: int, exw_usd: str = Form(...),
+                    data_ref: str = Form(...), documento: str = Form(...), fonte: str = Form(...),
+                    motivo: str = Form(...), peso_kg: str = Form(""),
+                    peso_tipo: str = Form("REAL KTC"), status: str = Form("CONFIRMADO"),
+                    observacao: str = Form(""), session: Session = Depends(get_session)):
+    return _acao_governanca(request, produto_id, session, lambda p, ator: gov.registrar_exw_ktc(
+        session, p, exw_usd=exw_usd, data_ref=_data(data_ref), documento=documento, fonte=fonte,
+        motivo=motivo, ator=ator, peso_kg=peso_kg or None, peso_tipo=peso_tipo, status=status,
+        observacao=observacao or None))
+
+
+@router.post("/admin/produtos/{produto_id}/custo-nacional")
+def gov_custo_nacional(request: Request, produto_id: int, valor: str = Form(...),
+                       base: str = Form("bruto"), data_ref: str = Form(...),
+                       documento: str = Form(""), fonte: str = Form(...), motivo: str = Form(...),
+                       status: str = Form("CONFIRMADO"), observacao: str = Form(""),
+                       session: Session = Depends(get_session)):
+    return _acao_governanca(request, produto_id, session, lambda p, ator: gov.registrar_custo_nacional(
+        session, p, valor=valor, base=base, data_ref=_data(data_ref), documento=documento or None,
+        fonte=fonte, motivo=motivo, ator=ator, status=status, observacao=observacao or None))
+
+
+@router.post("/admin/produtos/{produto_id}/confirmar")
+def gov_confirmar(request: Request, produto_id: int, fonte: str = Form(...),
+                  motivo: str = Form(...), documento: str = Form(""),
+                  session: Session = Depends(get_session)):
+    return _acao_governanca(request, produto_id, session, lambda p, ator: gov.confirmar_referencia(
+        session, p, fonte=fonte, motivo=motivo, documento=documento or None, ator=ator))
+
+
+@router.post("/admin/produtos/{produto_id}/status")
+def gov_status(request: Request, produto_id: int, status: str = Form(...), motivo: str = Form(...),
+               fonte: str = Form(""), session: Session = Depends(get_session)):
+    return _acao_governanca(request, produto_id, session, lambda p, ator: gov.marcar_status(
+        session, p, status=status, motivo=motivo, fonte=fonte, ator=ator))
+
+
 @router.get("/admin/sku/{produto_id}", response_class=HTMLResponse)
 def sku(request: Request, produto_id: int, session: Session = Depends(get_session)):
     """Histórico de versões de um SKU. V1 continua consultável para sempre."""

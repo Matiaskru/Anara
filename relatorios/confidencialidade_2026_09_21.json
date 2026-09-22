@@ -1,6 +1,6 @@
 {
  "resumo": {
-  "banco": "/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb-a945-a11a0c33f049/scratchpad/anara_audit25.db",
+  "banco": "/private/tmp/claude-501/-Users-matiaskrueder/969ec3b9-0e7d-41bb-a945-a11a0c33f049/scratchpad/e2e_final/anara_confid.db",
   "cotacao": 28,
   "cotacao_emitida": 29,
   "item": 63,
@@ -85,7 +85,7 @@
     "18.00%"
    ]
   },
-  "superficies": 156,
+  "superficies": 170,
   "vazamentos": 0,
   "deve_ver_falhas": [],
   "contraste_owner_admin": {
@@ -111,14 +111,14 @@
   "status_por_perfil": {
    "VENDEDOR_INTERNO": {
     "303": 4,
-    "403": 18,
-    "200": 46,
+    "403": 19,
+    "200": 52,
     "400": 1
    },
    "VENDEDOR_COMISSIONADO": {
     "303": 4,
-    "403": 18,
-    "200": 46,
+    "403": 19,
+    "200": 52,
     "400": 1
    }
   }
@@ -164,6 +164,30 @@
    "perfil": "VENDEDOR_INTERNO",
    "metodo": "GET",
    "url": "/admin/premissas",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin/produtos",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2455,
+   "sha256": "ce9d5e4f1739b492",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/admin/produtos/223.json",
    "status": 403,
    "tipo": "text/html",
    "bytes": 2455,
@@ -236,12 +260,23 @@
    "perfil": "VENDEDOR_INTERNO",
    "metodo": "GET",
    "url": "/calculadora",
-   "status": 403,
+   "status": 200,
    "tipo": "text/html",
-   "bytes": 2455,
-   "sha256": "ce9d5e4f1739b492",
+   "bytes": 15127,
+   "sha256": "5bd9070b82e517e7",
    "termos": [],
-   "estruturais": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "ion value=\"Bath Mat\" data-tipo=\"toalha\">Toalha de piso</option>                  <option value=\"Pool",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "a(this)\">           <div class=\"t-nome\">Toalha de piso</div>           <div class=\"t-sub\">medidas li",
+     "aceito": "toalha de piso"
+    }
+   ],
    "numeros": []
   },
   {
@@ -250,8 +285,8 @@
    "url": "/clientes",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 6608,
-   "sha256": "56f676cba97345eb",
+   "bytes": 7403,
+   "sha256": "3686c03224871006",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -263,7 +298,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 11778,
-   "sha256": "d04ba2f930219043",
+   "sha256": "bc5550af19eb2d2c",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -322,8 +357,8 @@
    "url": "/cotacoes",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 11843,
-   "sha256": "9e92a1804b0b6bd1",
+   "bytes": 12513,
+   "sha256": "efcccec00119b9be",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -334,8 +369,8 @@
    "url": "/cotacoes/nova",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 11401,
-   "sha256": "6aa4691108ae44a4",
+   "bytes": 11478,
+   "sha256": "2e1f3f2588230ebb",
    "termos": [],
    "estruturais": [
     {
@@ -352,8 +387,8 @@
    "url": "/cotacoes/28",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 20687,
-   "sha256": "9352111279a1a214",
+   "bytes": 20796,
+   "sha256": "6f9fa5af0a3c8640",
    "termos": [],
    "estruturais": [
     {
@@ -472,7 +507,7 @@
    "status": 200,
    "tipo": "application/pdf",
    "bytes": 402773,
-   "sha256": "1c3cd7d43457aabc",
+   "sha256": "ebec69938c40608d",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -580,7 +615,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 9389,
-   "sha256": "58e7d728a5046c51",
+   "sha256": "24e4b2506213f5b5",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -591,8 +626,8 @@
    "url": "/pipeline",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 8169,
-   "sha256": "284960021a7cb151",
+   "bytes": 9207,
+   "sha256": "8c63ce67414e1dac",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -615,8 +650,8 @@
    "url": "/produtos",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 167744,
-   "sha256": "92985a3d0bba4a9f",
+   "bytes": 167682,
+   "sha256": "0a8e09cdd66f9ae1",
    "termos": [],
    "estruturais": [
     {
@@ -933,8 +968,8 @@
    "url": "/produtos/buscar",
    "status": 200,
    "tipo": "application/json",
-   "bytes": 22479,
-   "sha256": "ec112b0b01b92e69",
+   "bytes": 22461,
+   "sha256": "1345e7f8fcfe3122",
    "termos": [],
    "estruturais": [
     {
@@ -979,42 +1014,42 @@
     },
     {
      "termo": "custo",
-     "contexto": "7.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":160,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":160,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "9.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "8.71,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "0.35,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "contexto": "5.41,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
      "aceito": "sem_custo"
     },
     {
@@ -1104,7 +1139,7 @@
     },
     {
      "termo": "custo",
-     "contexto": "0.77,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
      "aceito": "sem_custo"
     },
     {
@@ -1229,12 +1264,12 @@
     },
     {
      "termo": "custo",
-     "contexto": "84.4,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "1.63,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
      "aceito": "sem_custo"
     },
     {
@@ -1298,8 +1333,8 @@
    "url": "/relatorios",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 9155,
-   "sha256": "67284420284ba523",
+   "bytes": 9156,
+   "sha256": "1140d485a470f9fa",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -1335,7 +1370,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 4636,
-   "sha256": "e90ffec1ebd23294",
+   "sha256": "a56e698416df073b",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -1346,8 +1381,8 @@
    "url": "/relatorios/cotacoes.csv",
    "status": 200,
    "tipo": "text/csv",
-   "bytes": 1811,
-   "sha256": "0a8714ef6e43120e",
+   "bytes": 1891,
+   "sha256": "a546cc9da32b0342",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -1370,8 +1405,8 @@
    "url": "/relatorios/oportunidades.csv",
    "status": 200,
    "tipo": "text/csv",
-   "bytes": 508,
-   "sha256": "d9dcfc968d17ee55",
+   "bytes": 624,
+   "sha256": "f635cbc510792bde",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -1418,8 +1453,8 @@
    "url": "/vendas",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 13120,
-   "sha256": "2fe038b157656518",
+   "bytes": 13965,
+   "sha256": "b64d54a202a150db",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -1431,7 +1466,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 14527,
-   "sha256": "b3dd8419498b0e46",
+   "sha256": "86ff81b69c4aea8f",
    "termos": [],
    "estruturais": [
     {
@@ -1449,7 +1484,7 @@
    "status": 200,
    "tipo": "application/pdf",
    "bytes": 250769,
-   "sha256": "2ae26f485cf6554b",
+   "sha256": "3d5c0ba4a6590dc9",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -1484,13 +1519,13 @@
    "url": "/produtos/buscar?q=190x250",
    "status": 200,
    "tipo": "application/json",
-   "bytes": 779,
-   "sha256": "457bdeb67bf32a29",
+   "bytes": 781,
+   "sha256": "d562769a39bb7708",
    "termos": [],
    "estruturais": [
     {
      "termo": "custo",
-     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "contexto": "8.84,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
      "aceito": "sem_custo"
     },
     {
@@ -1500,7 +1535,7 @@
     },
     {
      "termo": "kazareen",
-     "contexto": "amanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
+     "contexto": "anho\":\"190x250\",\"preco_base\":108.84,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
      "aceito": "kazareen textile company"
     },
     {
@@ -1510,7 +1545,7 @@
     },
     {
      "termo": "fornecedor",
-     "contexto": "l de cima\",\"tamanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
+     "contexto": "de cima\",\"tamanho\":\"190x250\",\"preco_base\":108.84,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
      "aceito": "\"fornecedor\":"
     },
     {
@@ -1534,6 +1569,48 @@
     {
      "termo": "custo",
      "contexto": "base\":0.03923138510808647,\"preco_base\":124.9,\"sem_custo\":false,\"preco_travado\":false,\"aviso\":null,\"p",
+     "aceito": "sem_custo"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/calculadora/calcular",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 674,
+   "sha256": "aed12f3cc691baca",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/calculadora/calcular(na cotação)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 675,
+   "sha256": "0c517eb6e3dc930e",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "POST",
+   "url": "/calculadora/salvar(na cotação)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 125,
+   "sha256": "f247b294a5de3cf1",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "· 100% algodão\",\"item_id\":66,\"cotacao_id\":30,\"sem_custo\":false}",
      "aceito": "sem_custo"
     }
    ],
@@ -1596,71 +1673,154 @@
   {
    "perfil": "VENDEDOR_INTERNO",
    "metodo": "GET",
-   "url": "/static/js/calculadora.js",
+   "url": "/static/js/admin_produtos.js",
    "status": 200,
    "tipo": "text/javascript",
-   "bytes": 4473,
-   "sha256": "611c27ff992a5c5a",
+   "bytes": 7118,
+   "sha256": "465b45289554f554",
    "termos": [],
    "estruturais": [
     {
      "termo": "custo",
-     "contexto": "// Calculadora de custo KTC. O formulário muda conforme a família: t",
+     "contexto": "label: \"Observação\", tipo: \"text\"},     ],   },   custo_nacional: {     rotulo: \"Custo nacional (R$)",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "custo",
-     "contexto": "ial.margem_liquida);   document.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl",
+     "contexto": "t\"},     ],   },   custo_nacional: {     rotulo: \"Custo nacional (R$)\",     rota: p => `/admin/produ",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "custo",
-     "contexto": "t.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl);   document.getElementById(\"",
+     "contexto": "ional (R$)\",     rota: p => `/admin/produtos/${p}/custo-nacional`,     campos: [       {nome: \"valor",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "custo",
-     "contexto": "(r.aviso_preco) avisos.push(r.aviso_preco);   ((r.custo || {}).avisos || []).forEach(a => avisos.pus",
+     "contexto": "a aplica os créditos)\"],                 [\"net\", \"Custo NET já apurado\"]]},       {nome: \"data_ref\",",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "nciona \" +           \"quando o motor já resolve o custo; com premissa faltando, o pedido é recusado.",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ", não fecha)\"], [\"A_COTAR\", \"A cotar (sem base de custo)\"]]},       {nome: \"fonte\", label: \"Fonte / ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " d.importado)     .filter(([chave]) => chave !== \"custo_nacional\" || !d.importado)     .filter(([cha",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": ",   },   cotacao_ktc: {     rotulo: \"Cotação KTC (EXW)\",     rota: p => `/admin/produtos/${p}/cotaca",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "os/${p}/cotacao-ktc`,     campos: [       {nome: \"exw_usd\", label: \"EXW (US$)\", tipo: \"number\", pass",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "c`,     campos: [       {nome: \"exw_usd\", label: \"EXW (US$)\", tipo: \"number\", passo: \"0.01\", obrigat",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "usd",
+     "contexto": "{p}/cotacao-ktc`,     campos: [       {nome: \"exw_usd\", label: \"EXW (US$)\", tipo: \"number\", passo: \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "elect\",        opcoes: [[\"bruto\", \"Preço bruto do fornecedor (o sistema aplica os créditos)\"],      ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "ById(\"gov-sub\").textContent =     `${d.sku} · ${d.fornecedor || \"sem fornecedor\"} · ${d.familia || \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "tContent =     `${d.sku} · ${d.fornecedor || \"sem fornecedor\"} · ${d.familia || \"sem família\"} · sit",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/static/js/calculadora.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 6479,
+   "sha256": "024a2a114ecc350f",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "m\", pctM(comercial.margem_liquida));     pinta(\"r-custo\", brlM((r.custo || {}).net_brl));     pinta(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "al.margem_liquida));     pinta(\"r-custo\", brlM((r.custo || {}).net_brl));     pinta(\"r-lucro\", brlM(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ".aviso_preco) avisos.push(r.aviso_preco);     ((r.custo || {}).avisos || []).forEach(a => avisos.pus",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "margem",
-     "contexto": "al.preco_negociado);   document.getElementById(\"r-margem\").textContent = pctM(comercial.margem_liqui",
+     "contexto": "\", brlM(comercial.preco_negociado));     pinta(\"r-margem\", pctM(comercial.margem_liquida));     pint",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "margem",
-     "contexto": "mentById(\"r-margem\").textContent = pctM(comercial.margem_liquida);   document.getElementById(\"r-cust",
+     "contexto": "negociado));     pinta(\"r-margem\", pctM(comercial.margem_liquida));     pinta(\"r-custo\", brlM((r.cus",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "lucro",
-     "contexto": "sto || {}).net_brl);   document.getElementById(\"r-lucro\").textContent = brlM(comercial.lucro);    co",
+     "contexto": "to\", brlM((r.custo || {}).net_brl));     pinta(\"r-lucro\", brlM(comercial.lucro));     if (r.aviso_pr",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "lucro",
-     "contexto": "ementById(\"r-lucro\").textContent = brlM(comercial.lucro);    const avisos = [];   if (r.aviso_preco)",
+     "contexto": "}).net_brl));     pinta(\"r-lucro\", brlM(comercial.lucro));     if (r.aviso_preco) avisos.push(r.avis",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": " memória do preço da cotação, renderizada pelo // memoria.js.  let ultimoResultado = null;  function",
+     "contexto": "ADMIN recebem a memória do preço e a // veem pelo memoria.js; a vendedora recebe o resultado COMERCI",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": "esc).join(\"<br><br>\");   document.getElementById(\"memoria-inline\").innerHTML = renderMemoria(r);   m",
+     "contexto": " => avisos.push(a));     document.getElementById(\"memoria-inline\").innerHTML = renderMemoria(r);    ",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": "inline\").innerHTML = renderMemoria(r);   mostrar(\"memoria-inline\", false);   document.getElementById",
+     "contexto": "line\").innerHTML = renderMemoria(r);     mostrar(\"memoria-inline\", false);     document.getElementBy",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": "a-inline\", false);   document.getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; } ",
+     "contexto": "inline\", false);     document.getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\";   ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "    // `brl`/`pct`/`esc` são do ui.js, global — o memoria.js (e os formatadores dele) só     // carr",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
@@ -1675,12 +1835,12 @@
     },
     {
      "termo": "memória",
-     "contexto": "rece // registrar o pedido. O resultado é a mesma memória do preço da cotação, renderizada pelo // m",
+     "contexto": "ende do papel (22/09/2026): OWNER/ADMIN recebem a memória do preço e a // veem pelo memoria.js; a ve",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memória",
-     "contexto": ".getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; }  function alternarMemoria() {",
+     "contexto": ".getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\";   } else {     // `brl`/`pct`/`",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
@@ -2448,8 +2608,8 @@
    "url": "/cotacoes/28 data-* e hidden",
    "status": 200,
    "tipo": "atributos",
-   "bytes": 20539,
-   "sha256": "9352111279a1a214",
+   "bytes": 20648,
+   "sha256": "6f9fa5af0a3c8640",
    "data_attrs": [
     "data-autonomia",
     "data-comissao-item",
@@ -2521,6 +2681,29 @@
    ],
    "termos": [],
    "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_INTERNO",
+   "metodo": "GET",
+   "url": "/calculadora?cotacao_id=30",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 15219,
+   "sha256": "3925fbad38eb0907",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "ion value=\"Bath Mat\" data-tipo=\"toalha\">Toalha de piso</option>                  <option value=\"Pool",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "a(this)\">           <div class=\"t-nome\">Toalha de piso</div>           <div class=\"t-sub\">medidas li",
+     "aceito": "toalha de piso"
+    }
+   ],
    "numeros": []
   },
   {
@@ -2616,6 +2799,8 @@
     "condição com sinal e saldo na tela": true,
     "status na tela": true,
     "JSON traz tabela/B2B/proposta/desconto/comissão/total/autonomia": true,
+    "calculadora abre e é operável": true,
+    "calculadora devolve B2B, tabela, comissão e total": true,
     "JSON: valores batem com o banco": true
    }
   },
@@ -2659,6 +2844,30 @@
    "perfil": "VENDEDOR_COMISSIONADO",
    "metodo": "GET",
    "url": "/admin/premissas",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin/produtos",
+   "status": 403,
+   "tipo": "text/html",
+   "bytes": 2471,
+   "sha256": "c2f262daaf67b6aa",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/admin/produtos/223.json",
    "status": 403,
    "tipo": "text/html",
    "bytes": 2471,
@@ -2731,12 +2940,23 @@
    "perfil": "VENDEDOR_COMISSIONADO",
    "metodo": "GET",
    "url": "/calculadora",
-   "status": 403,
+   "status": 200,
    "tipo": "text/html",
-   "bytes": 2471,
-   "sha256": "c2f262daaf67b6aa",
+   "bytes": 15143,
+   "sha256": "cf1fcb50f4c6f474",
    "termos": [],
-   "estruturais": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "ion value=\"Bath Mat\" data-tipo=\"toalha\">Toalha de piso</option>                  <option value=\"Pool",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "a(this)\">           <div class=\"t-nome\">Toalha de piso</div>           <div class=\"t-sub\">medidas li",
+     "aceito": "toalha de piso"
+    }
+   ],
    "numeros": []
   },
   {
@@ -2745,8 +2965,8 @@
    "url": "/clientes",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 6624,
-   "sha256": "f72469ea4b6f4a45",
+   "bytes": 7419,
+   "sha256": "f3d26cde8b7ae3f8",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -2758,7 +2978,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 11794,
-   "sha256": "1b6d38759d094f73",
+   "sha256": "b01e3aa84d4b62f0",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -2817,8 +3037,8 @@
    "url": "/cotacoes",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 11859,
-   "sha256": "58f44027b59ca8d8",
+   "bytes": 12529,
+   "sha256": "ca27332582830fca",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -2829,8 +3049,8 @@
    "url": "/cotacoes/nova",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 11417,
-   "sha256": "3ff18b7f519d8734",
+   "bytes": 11494,
+   "sha256": "341f51469f014d5d",
    "termos": [],
    "estruturais": [
     {
@@ -2847,8 +3067,8 @@
    "url": "/cotacoes/28",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 20703,
-   "sha256": "7195b333f7d6feca",
+   "bytes": 20812,
+   "sha256": "21f5c167b1bcac87",
    "termos": [],
    "estruturais": [
     {
@@ -2967,7 +3187,7 @@
    "status": 200,
    "tipo": "application/pdf",
    "bytes": 402773,
-   "sha256": "fde532c3fc82600e",
+   "sha256": "4951a828044aa46a",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3075,7 +3295,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 9405,
-   "sha256": "116aab582d56d2c4",
+   "sha256": "ac4d6b2285d33b6c",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3086,8 +3306,8 @@
    "url": "/pipeline",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 8185,
-   "sha256": "b95cfcd1a1d4c39b",
+   "bytes": 9223,
+   "sha256": "362692d9e2f59ca8",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3110,8 +3330,8 @@
    "url": "/produtos",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 167760,
-   "sha256": "f9e583534d3ae768",
+   "bytes": 168090,
+   "sha256": "479dcb71f2eb66e8",
    "termos": [],
    "estruturais": [
     {
@@ -3428,8 +3648,8 @@
    "url": "/produtos/buscar",
    "status": 200,
    "tipo": "application/json",
-   "bytes": 22479,
-   "sha256": "ec112b0b01b92e69",
+   "bytes": 22461,
+   "sha256": "1345e7f8fcfe3122",
    "termos": [],
    "estruturais": [
     {
@@ -3474,42 +3694,42 @@
     },
     {
      "termo": "custo",
-     "contexto": "7.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":160,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":160,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "9.46,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "8.71,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":240,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "7.98,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":420,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "0.35,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
+     "contexto": "5.41,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":null,\"preci",
      "aceito": "sem_custo"
     },
     {
@@ -3599,7 +3819,7 @@
     },
     {
      "termo": "custo",
-     "contexto": "0.77,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":null,\"gsm\":400,\"precis",
      "aceito": "sem_custo"
     },
     {
@@ -3724,12 +3944,12 @@
     },
     {
      "termo": "custo",
-     "contexto": "84.4,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":300,\"gsm\":null,\"precis",
      "aceito": "sem_custo"
     },
     {
      "termo": "custo",
-     "contexto": "1.63,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
+     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":400,\"gsm\":null,\"precis",
      "aceito": "sem_custo"
     },
     {
@@ -3746,8 +3966,8 @@
    "url": "/produtos/facetas",
    "status": 200,
    "tipo": "application/json",
-   "bytes": 2486,
-   "sha256": "6f69d3db54c57225",
+   "bytes": 2500,
+   "sha256": "2ae358d6ad26eb67",
    "termos": [],
    "estruturais": [
     {
@@ -3793,8 +4013,8 @@
    "url": "/relatorios",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 9171,
-   "sha256": "6a50cf95b91a923b",
+   "bytes": 9172,
+   "sha256": "bd83a422bab308ef",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3830,7 +4050,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 4652,
-   "sha256": "acda3cbe259c485f",
+   "sha256": "465ad33e478d06b7",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3841,8 +4061,8 @@
    "url": "/relatorios/cotacoes.csv",
    "status": 200,
    "tipo": "text/csv",
-   "bytes": 1811,
-   "sha256": "0a8714ef6e43120e",
+   "bytes": 1891,
+   "sha256": "4496b7e7f8eb1d7f",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3865,8 +4085,8 @@
    "url": "/relatorios/oportunidades.csv",
    "status": 200,
    "tipo": "text/csv",
-   "bytes": 508,
-   "sha256": "d9dcfc968d17ee55",
+   "bytes": 624,
+   "sha256": "fb5c980156993b9f",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3913,8 +4133,8 @@
    "url": "/vendas",
    "status": 200,
    "tipo": "text/html",
-   "bytes": 13136,
-   "sha256": "12ca54572c65bf59",
+   "bytes": 13981,
+   "sha256": "6b72a2e3452f7e65",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3926,7 +4146,7 @@
    "status": 200,
    "tipo": "text/html",
    "bytes": 14543,
-   "sha256": "a3dada073c18e1de",
+   "sha256": "4dca7b460203e229",
    "termos": [],
    "estruturais": [
     {
@@ -3944,7 +4164,7 @@
    "status": 200,
    "tipo": "application/pdf",
    "bytes": 250769,
-   "sha256": "961d7bc358fb47b3",
+   "sha256": "5df737fe8973fa42",
    "termos": [],
    "estruturais": [],
    "numeros": []
@@ -3979,13 +4199,13 @@
    "url": "/produtos/buscar?q=190x250",
    "status": 200,
    "tipo": "application/json",
-   "bytes": 779,
-   "sha256": "457bdeb67bf32a29",
+   "bytes": 781,
+   "sha256": "d562769a39bb7708",
    "termos": [],
    "estruturais": [
     {
      "termo": "custo",
-     "contexto": "null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
+     "contexto": "8.84,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"thread_count\":250,\"gsm\":null,\"precis",
      "aceito": "sem_custo"
     },
     {
@@ -3995,7 +4215,7 @@
     },
     {
      "termo": "kazareen",
-     "contexto": "amanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
+     "contexto": "anho\":\"190x250\",\"preco_base\":108.84,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\":false,\"threa",
      "aceito": "kazareen textile company"
     },
     {
@@ -4005,7 +4225,7 @@
     },
     {
      "termo": "fornecedor",
-     "contexto": "l de cima\",\"tamanho\":\"190x250\",\"preco_base\":null,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
+     "contexto": "de cima\",\"tamanho\":\"190x250\",\"preco_base\":108.84,\"fornecedor\":\"Kazareen Textile Company\",\"sem_custo\"",
      "aceito": "\"fornecedor\":"
     },
     {
@@ -4029,6 +4249,48 @@
     {
      "termo": "custo",
      "contexto": "base\":0.03923138510808647,\"preco_base\":124.9,\"sem_custo\":false,\"preco_travado\":false,\"aviso\":null,\"p",
+     "aceito": "sem_custo"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/calculadora/calcular",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 674,
+   "sha256": "aed12f3cc691baca",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/calculadora/calcular(na cotação)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 675,
+   "sha256": "0c517eb6e3dc930e",
+   "termos": [],
+   "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "POST",
+   "url": "/calculadora/salvar(na cotação)",
+   "status": 200,
+   "tipo": "application/json",
+   "bytes": 125,
+   "sha256": "54dfe77c0e8eb683",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "· 100% algodão\",\"item_id\":67,\"cotacao_id\":30,\"sem_custo\":false}",
      "aceito": "sem_custo"
     }
    ],
@@ -4091,71 +4353,154 @@
   {
    "perfil": "VENDEDOR_COMISSIONADO",
    "metodo": "GET",
-   "url": "/static/js/calculadora.js",
+   "url": "/static/js/admin_produtos.js",
    "status": 200,
    "tipo": "text/javascript",
-   "bytes": 4473,
-   "sha256": "611c27ff992a5c5a",
+   "bytes": 7118,
+   "sha256": "465b45289554f554",
    "termos": [],
    "estruturais": [
     {
      "termo": "custo",
-     "contexto": "// Calculadora de custo KTC. O formulário muda conforme a família: t",
+     "contexto": "label: \"Observação\", tipo: \"text\"},     ],   },   custo_nacional: {     rotulo: \"Custo nacional (R$)",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "custo",
-     "contexto": "ial.margem_liquida);   document.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl",
+     "contexto": "t\"},     ],   },   custo_nacional: {     rotulo: \"Custo nacional (R$)\",     rota: p => `/admin/produ",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "custo",
-     "contexto": "t.getElementById(\"r-custo\").textContent = brlM((r.custo || {}).net_brl);   document.getElementById(\"",
+     "contexto": "ional (R$)\",     rota: p => `/admin/produtos/${p}/custo-nacional`,     campos: [       {nome: \"valor",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "custo",
-     "contexto": "(r.aviso_preco) avisos.push(r.aviso_preco);   ((r.custo || {}).avisos || []).forEach(a => avisos.pus",
+     "contexto": "a aplica os créditos)\"],                 [\"net\", \"Custo NET já apurado\"]]},       {nome: \"data_ref\",",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "nciona \" +           \"quando o motor já resolve o custo; com premissa faltando, o pedido é recusado.",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ", não fecha)\"], [\"A_COTAR\", \"A cotar (sem base de custo)\"]]},       {nome: \"fonte\", label: \"Fonte / ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": " d.importado)     .filter(([chave]) => chave !== \"custo_nacional\" || !d.importado)     .filter(([cha",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": ",   },   cotacao_ktc: {     rotulo: \"Cotação KTC (EXW)\",     rota: p => `/admin/produtos/${p}/cotaca",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "os/${p}/cotacao-ktc`,     campos: [       {nome: \"exw_usd\", label: \"EXW (US$)\", tipo: \"number\", pass",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "exw",
+     "contexto": "c`,     campos: [       {nome: \"exw_usd\", label: \"EXW (US$)\", tipo: \"number\", passo: \"0.01\", obrigat",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "usd",
+     "contexto": "{p}/cotacao-ktc`,     campos: [       {nome: \"exw_usd\", label: \"EXW (US$)\", tipo: \"number\", passo: \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "elect\",        opcoes: [[\"bruto\", \"Preço bruto do fornecedor (o sistema aplica os créditos)\"],      ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "ById(\"gov-sub\").textContent =     `${d.sku} · ${d.fornecedor || \"sem fornecedor\"} · ${d.familia || \"",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "fornecedor",
+     "contexto": "tContent =     `${d.sku} · ${d.fornecedor || \"sem fornecedor\"} · ${d.familia || \"sem família\"} · sit",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    }
+   ],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/static/js/calculadora.js",
+   "status": 200,
+   "tipo": "text/javascript",
+   "bytes": 6479,
+   "sha256": "024a2a114ecc350f",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "custo",
+     "contexto": "m\", pctM(comercial.margem_liquida));     pinta(\"r-custo\", brlM((r.custo || {}).net_brl));     pinta(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": "al.margem_liquida));     pinta(\"r-custo\", brlM((r.custo || {}).net_brl));     pinta(\"r-lucro\", brlM(",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "custo",
+     "contexto": ".aviso_preco) avisos.push(r.aviso_preco);     ((r.custo || {}).avisos || []).forEach(a => avisos.pus",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "margem",
-     "contexto": "al.preco_negociado);   document.getElementById(\"r-margem\").textContent = pctM(comercial.margem_liqui",
+     "contexto": "\", brlM(comercial.preco_negociado));     pinta(\"r-margem\", pctM(comercial.margem_liquida));     pint",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "margem",
-     "contexto": "mentById(\"r-margem\").textContent = pctM(comercial.margem_liquida);   document.getElementById(\"r-cust",
+     "contexto": "negociado));     pinta(\"r-margem\", pctM(comercial.margem_liquida));     pinta(\"r-custo\", brlM((r.cus",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "lucro",
-     "contexto": "sto || {}).net_brl);   document.getElementById(\"r-lucro\").textContent = brlM(comercial.lucro);    co",
+     "contexto": "to\", brlM((r.custo || {}).net_brl));     pinta(\"r-lucro\", brlM(comercial.lucro));     if (r.aviso_pr",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "lucro",
-     "contexto": "ementById(\"r-lucro\").textContent = brlM(comercial.lucro);    const avisos = [];   if (r.aviso_preco)",
+     "contexto": "}).net_brl));     pinta(\"r-lucro\", brlM(comercial.lucro));     if (r.aviso_preco) avisos.push(r.avis",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": " memória do preço da cotação, renderizada pelo // memoria.js.  let ultimoResultado = null;  function",
+     "contexto": "ADMIN recebem a memória do preço e a // veem pelo memoria.js; a vendedora recebe o resultado COMERCI",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": "esc).join(\"<br><br>\");   document.getElementById(\"memoria-inline\").innerHTML = renderMemoria(r);   m",
+     "contexto": " => avisos.push(a));     document.getElementById(\"memoria-inline\").innerHTML = renderMemoria(r);    ",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": "inline\").innerHTML = renderMemoria(r);   mostrar(\"memoria-inline\", false);   document.getElementById",
+     "contexto": "line\").innerHTML = renderMemoria(r);     mostrar(\"memoria-inline\", false);     document.getElementBy",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memoria",
-     "contexto": "a-inline\", false);   document.getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; } ",
+     "contexto": "inline\", false);     document.getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\";   ",
+     "aceito": "código estático: renderiza só o que o payload da vendedora traz"
+    },
+    {
+     "termo": "memoria",
+     "contexto": "    // `brl`/`pct`/`esc` são do ui.js, global — o memoria.js (e os formatadores dele) só     // carr",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
@@ -4170,12 +4515,12 @@
     },
     {
      "termo": "memória",
-     "contexto": "rece // registrar o pedido. O resultado é a mesma memória do preço da cotação, renderizada pelo // m",
+     "contexto": "ende do papel (22/09/2026): OWNER/ADMIN recebem a memória do preço e a // veem pelo memoria.js; a ve",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
      "termo": "memória",
-     "contexto": ".getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\"; }  function alternarMemoria() {",
+     "contexto": ".getElementById(\"btn-memoria\").textContent = \"Ver memória do preço\";   } else {     // `brl`/`pct`/`",
      "aceito": "código estático: renderiza só o que o payload da vendedora traz"
     },
     {
@@ -4943,8 +5288,8 @@
    "url": "/cotacoes/28 data-* e hidden",
    "status": 200,
    "tipo": "atributos",
-   "bytes": 20555,
-   "sha256": "7195b333f7d6feca",
+   "bytes": 20664,
+   "sha256": "21f5c167b1bcac87",
    "data_attrs": [
     "data-autonomia",
     "data-comissao-item",
@@ -5016,6 +5361,29 @@
    ],
    "termos": [],
    "estruturais": [],
+   "numeros": []
+  },
+  {
+   "perfil": "VENDEDOR_COMISSIONADO",
+   "metodo": "GET",
+   "url": "/calculadora?cotacao_id=30",
+   "status": 200,
+   "tipo": "text/html",
+   "bytes": 15235,
+   "sha256": "cbc1ddb962f5c135",
+   "termos": [],
+   "estruturais": [
+    {
+     "termo": "piso",
+     "contexto": "ion value=\"Bath Mat\" data-tipo=\"toalha\">Toalha de piso</option>                  <option value=\"Pool",
+     "aceito": "toalha de piso"
+    },
+    {
+     "termo": "piso",
+     "contexto": "a(this)\">           <div class=\"t-nome\">Toalha de piso</div>           <div class=\"t-sub\">medidas li",
+     "aceito": "toalha de piso"
+    }
+   ],
    "numeros": []
   },
   {
@@ -5111,6 +5479,8 @@
     "condição com sinal e saldo na tela": true,
     "status na tela": true,
     "JSON traz tabela/B2B/proposta/desconto/comissão/total/autonomia": true,
+    "calculadora abre e é operável": true,
+    "calculadora devolve B2B, tabela, comissão e total": true,
     "JSON: valores batem com o banco": true
    }
   }

@@ -47,7 +47,7 @@ TELAS_TECNICAS = ["saude.html", "admin_sku.html", "admin_trilha.html",
                   "aprovacao_detalhe.html", "relatorio_economico.html",
                   "admin_hub.html", "admin_usuarios.html", "importar.html",
                   "importar_preview.html", "calculadora.html", "aprovacoes_fila.html",
-                  "403.html"]
+                  "admin_produtos.html", "403.html"]
 
 
 def _texto_visivel(html: str) -> str:

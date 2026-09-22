@@ -267,6 +267,9 @@ def _auditar(a, db, base, Session, select, hash_senha, engine, app, CotacaoItem,
     dona = cliente(DONA)
     cliente_id, venda_id, cot_id, item_id = montar(adm, "Rascunho", "11.222.333/0001-44")
     _c2, venda2, cot_emitida, item2 = montar(adm, "Emitida", "22.333.444/0001-55")
+    # cotação separada para os POSTs da calculadora: adicionar item mudaria os totais da
+    # cotação de referência e a checagem "o que a vendedora TEM de ver" compararia outra coisa
+    _c3, venda3, cot_calc, item3 = montar(adm, "Calculadora", "33.444.555/0001-66")
     r = dona.post(f"/cotacoes/{cot_emitida}/emitir")
     assert r.status_code in (200, 303), (r.status_code, r.text[:300])
 
@@ -345,6 +348,22 @@ def _auditar(a, db, base, Session, select, hash_senha, engine, app, CotacaoItem,
         registrar(perfil, "GET", "/produtos/buscar?q=190x250", c.get("/produtos/buscar", params={"q": "190x250"}))
         # 2. endpoints JSON/POST que a tela usa
         registrar(perfil, "POST", f"/cotacoes/{cot_id}/calc", c.post(f"/cotacoes/{cot_id}/calc", data={"produto_id": ktc.id, "quantidade": 10, "modo": "margem", "valor": 0}))
+        # calculadora (22/09/2026): a vendedora calcula produto personalizado — a resposta é a
+        # comercial. Vai o formulário completo, inclusive as alavancas econômicas, para provar
+        # que o servidor as ignora e nada de custo volta.
+        material = None
+        with Session(engine) as s2:
+            from app.models import MaterialPreco
+            material = s2.exec(select(MaterialPreco).where(MaterialPreco.plain_or_stripe == "plain")).first()
+        form_calc = {"familia": "Flat Sheet", "largura_cm": "240", "comprimento_cm": "260",
+                     "material_id": str(material.id), "quantidade": "10", "plain_or_stripe": "plain",
+                     "margem_pct": "5", "outros_custos_usd": "10"}
+        registrar(perfil, "POST", "/calculadora/calcular", c.post("/calculadora/calcular", data=form_calc))
+        registrar(perfil, "POST", "/calculadora/calcular(na cotação)",
+                  c.post("/calculadora/calcular", data={**form_calc, "cotacao_id": str(cot_calc)}))
+        registrar(perfil, "POST", "/calculadora/salvar(na cotação)",
+                  c.post("/calculadora/salvar", data={**form_calc, "cotacao_id": str(cot_calc),
+                                                      "largura_cm": "241", "comprimento_cm": "261"}))
         registrar(perfil, "POST", f"/cotacoes/{cot_id}/calc(desconto)", c.post(f"/cotacoes/{cot_id}/calc", data={"produto_id": ktc.id, "quantidade": 10, "modo": "desconto", "valor": 0.25}))
         registrar(perfil, "POST", f"/cotacoes/{cot_id}/negociacao/preview", c.post(f"/cotacoes/{cot_id}/negociacao/preview", json={"itens": [{"item_id": item_id, "desconto_pct": "0.35"}]}))
         registrar(perfil, "POST", f"/cotacoes/{cot_id}/negociacao/preview(abaixo do B2B)", c.post(f"/cotacoes/{cot_id}/negociacao/preview", json={"itens": [{"item_id": item_id, "desconto_pct": "0.60"}]}))
@@ -365,6 +384,8 @@ def _auditar(a, db, base, Session, select, hash_senha, engine, app, CotacaoItem,
                                 "data_attrs": nomes, "hidden_inputs": sorted({k for k, _ in p.hidden}),
                                 "termos": vaz, "estruturais": estr, "numeros": achados_numeros(texto_attrs, numeros)})
         # 4b. memória do preço e memória do produto: 403 para a vendedora, sempre
+        # a calculadora com cotação também é varrida como página
+        registrar(perfil, "GET", f"/calculadora?cotacao_id={cot_calc}", c.get(f"/calculadora?cotacao_id={cot_calc}"))
         for u in (f"/cotacoes/{cot_id}/itens/{item_id}/memoria", f"/produtos/{ktc.id}/memoria",
                   f"/admin/cotacao/{cot_id}/premissas", "/relatorios/economico", "/configuracoes", "/admin/premissas"):
             r = c.get(u)
@@ -385,6 +406,11 @@ def _auditar(a, db, base, Session, select, hash_senha, engine, app, CotacaoItem,
             "condição com sinal e saldo na tela": "30% de sinal + 70% em 30/60/90 dias" in html and 'id="c-sinal"' in html and 'id="c-pagamento"' in html,
             "status na tela": "Rascunho" in html,
             "JSON traz tabela/B2B/proposta/desconto/comissão/total/autonomia": all(k in it_j or k in pj for k in OBRIGATORIO_JSON),
+            "calculadora abre e é operável": ("form-calc" in c.get("/calculadora").text
+                                              and "Adicionar à cotação" in c.get(f"/calculadora?cotacao_id={cot_calc}").text),
+            "calculadora devolve B2B, tabela, comissão e total": (lambda r: all(
+                k in r for k in ("preco_b2b", "preco_tabela", "comissao_estimada_valor", "total", "situacao_rotulo")))(
+                    c.post("/calculadora/calcular", data=form_calc).json()),
             "JSON: valores batem com o banco": (abs(it_j["preco_tabela"] - valores_item["preco_tabela"]) < 1e-9
                                                 and abs(it_j["preco_b2b"] - valores_item["preco_b2b"]) < 1e-9
                                                 and abs(it_j["comissao_estimada_valor"] - valores_item["comissao_valor"]) < 1e-9),

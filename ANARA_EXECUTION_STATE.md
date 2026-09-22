@@ -2,7 +2,75 @@
 
 Handoff entre sessões do Claude Code. Atualize este arquivo ao fim de cada etapa.
 
-Última atualização: **22/09/2026 — I.I. econômico KTC = 0% com proteção comercial separada do custo (migration 0025); banco local em 0025 com dados aplicados; commit local sem push**
+Última atualização: **22/09/2026 — governança de produtos e custos no Admin, coerência catálogo × motor (BR-001) e toalha por gramatura; antes: calculadora para as vendedoras e I.I. KTC = 0%**
+
+---
+
+# 22/09/2026 — TRÊS CORREÇÕES OPERACIONAIS DE GO-LIVE (local; sem migration; sem commit novo, sem push)
+
+**1. Catálogo × cotação diziam coisas diferentes.** O status de um SKU vinha de três fontes; o
+BR-001 (roupão com EXW cotado, datado e documentado) aparecia "Disponível" no catálogo e
+"Revisão necessária" na cotação. Causa raiz do REVIEW: **não é vínculo de custo perdido** — a
+evidência é encontrada (`DERIVADO_DAS_PREMISSAS_VIGENTES`, US$ 24,00, 29/07/2026); falta o
+**peso**, e sem peso a nacionalização assumiria frete internacional zero. Agora
+`pricing_service.status_do_produto` é a única regra (referência vigente → senão motor) e o
+catálogo pergunta a ela. Auditoria dos 380 SKUs ativos: **24 incoerentes → 0**; 86 rótulos de
+cache corrigidos; 0 referências vigentes ignoradas pelo motor.
+
+**2. Faltava o caminho de volta.** `Admin → Produtos e custos` (`/admin/produtos`) lista o
+catálogo com o diagnóstico do motor e resolve na própria tela: peso, cotação KTC (EXW),
+custo nacional, confirmar referência, rebaixar para REVALIDAR/A_COTAR — com fonte e motivo
+obrigatórios, versionado e auditado. Confirmar é **recusado** enquanto houver premissa faltando.
+
+**3. Toalha personalizada saía "200 fios".** O `<select>` de tecido, escondido para toalha,
+continuava sendo enviado pelo `FormData`; `produto_simulado` copiava o `thread_count` do tecido.
+Toalha agora ignora `material_id` no servidor: `gsm` persiste, `thread_count` fica NULO.
+
+| O quê | Onde |
+|---|---|
+| `status_do_produto` (referência vigente → motor), usado por catálogo, item e governança | `app/pricing_service.py`, `app/routers/produtos.py` |
+| Serviço de governança: diagnóstico + ações versionadas e auditadas | `app/governanca_produtos.py` |
+| Tela e endpoints `/admin/produtos*` | `app/routers/admin.py`, `admin_produtos.html`, `admin_produtos.js` |
+| Peso declarado no documento da cotação de 29/07 (etapa `peso_ktc`) | `app/dados_2026_09_21.py`, `scripts/aplicar_dados_2026_09_21.py` |
+| Toalha sem fios (semântica no servidor) + campo escondido desabilitado | `app/calculadora.py`, `app/static/js/calculadora.js` |
+| Auditoria catálogo × motor, antes/depois | `scripts/governanca_2026_09_22/auditoria_status_custo.py`, `relatorios/governanca_status_custo_2026_09_22.md` |
+| Testes: governança (13), toalha (12) | `tests/test_governanca_produtos_2026_09_22.py`, `tests/test_toalha_gsm_2026_09_22.py` |
+
+Resultados: pytest SQLite **1.798/0** e PostgreSQL **1.798/0**; Playwright governança **9/9**,
+calculadora **19/19**, geral **42/42**, sinal **120/120**; smoke production-like **79 ok / 0
+falhas**; auditoria de confidencialidade **170 superfícies, 0 vazamentos**. Paridade de preço
+contra o baseline pós-I.I.-zero: **279 dos 280 SKUs idênticos**; só o **BL-003** mudou
+(220,35 → 245,41), porque o peso declarado no documento passou a contar o frete internacional
+que antes entrava como zero. Banco local em 0025, `integrity_check` ok, 1 produto alterado pela
+etapa `peso_ktc` (#364) e nada mais; backups `data/backups/anara.db.antes-governanca-*` e
+`~/Anara-Cotacao-Backups/anara_pre_governanca_20260922-140014.db`.
+
+---
+
+# 22/09/2026 — CALCULADORA / PRODUTO PERSONALIZADO PARA A VENDEDORA (local; sem commit novo, sem push)
+
+**Causa raiz:** `app/routers/calculadora.py` chamava `exigir_admin` nas três rotas. Não era
+filtro de conteúdo — era negação de acesso: a vendedora, que é quem monta a cotação, não
+conseguia sequer abrir a tela para calcular uma fronha com aba diferente. **Sem migration** (nada
+de esquema mudou) e **sem tocar em fórmula, margem, política, fiscal, comissão, sinal ou frete**.
+
+| O quê | Onde |
+|---|---|
+| Rotas de operação (`exigir_autenticado` + `ve_economia`), contexto fiscal só para economia, opções sem preço de material, inputs econômicos ignorados para a vendedora | `app/routers/calculadora.py` |
+| `resultado_comercial()` — lista de permissão `CAMPOS_RESULTADO_COMERCIAL`, comissão pela `comissao_do_item` canônica, pendências operacionais (`PENDENCIA_COMERCIAL`), `opcoes(session, economia=)` | `app/calculadora.py` |
+| Situação em linguagem comercial, sem a palavra "custo" (`SITUACAO_COMERCIAL`, `EXPLICACAO_COMERCIAL`) | `app/rotulos.py` |
+| Tela por papel: KPIs comerciais × econômicos, memória e `memoria.js` só com economia, ajudas com US$/CMT só com economia, título por papel | `app/templates/calculadora.html`, `app/static/js/calculadora.js` |
+| Botão "Produto personalizado" na cotação para todo papel que edita | `app/templates/cotacao_detail.html` |
+| RBAC: calculadora sai das listas de "rota administrativa" | `tests/test_auth_perfis.py`, `tests/test_seguranca_rbac.py`, `scripts/smoke_producao.py` |
+| Testes A–L + Playwright dos três papéis + auditoria com as superfícies da calculadora | `tests/test_calculadora_vendedora_2026_09_22.py`, `scripts/ii_zero_2026_09_22/e2e_calculadora_playwright.py`, `scripts/politica_2026_09_21/auditoria_confidencialidade.py` |
+
+Resultados: pytest SQLite **1.773/0** e PostgreSQL **1.773/0**; dirigidos da calculadora **18/18**;
+Playwright calculadora (OWNER + as duas vendedoras + fluxo completo até pedir aprovação) **19/19**;
+Playwright geral **42/42** e de sinal **120/120**; smoke production-like **79 ok / 0 falhas**
+(OWNER abre a calculadora; SELLER abre e o HTML não leva economia); auditoria de confidencialidade
+**164 superfícies, 0 vazamentos, 0 itens obrigatórios ausentes**; paridade de preço contra o
+baseline pós-I.I.-zero **280 SKUs × 9 cenários, 0 diferenças** (CNET idêntico nos 280). Banco real
+local **intocado** nesta etapa (sha `fde8289c…`, 388 produtos / 27 cotações / 60 itens / 2 snapshots).
 
 ---
 

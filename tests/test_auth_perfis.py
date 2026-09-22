@@ -142,12 +142,15 @@ def test_03_seller_nao_acessa_dashboard(session, vendedora):
 
 
 def test_04_seller_nao_acessa_admin_nem_endpoints_economicos(session, vendedora):
-    from app.routers import admin, calculadora, configuracoes, importar, relatorios_comerciais, usuarios, workflow
+    from app.routers import admin, configuracoes, importar, relatorios_comerciais, usuarios, workflow
     from app.routers.cotacoes import memoria_item
     from app.routers.produtos import memoria
+    # A calculadora saiu desta lista em 22/09/2026: a vendedora monta a cotação e precisa de
+    # produto personalizado. O corte dela é o CONTEÚDO da resposta (resultado comercial), e
+    # está em `tests/test_calculadora_vendedora_2026_09_22.py`.
     negados = [
         (admin.hub, {}), (admin.premissas if hasattr(admin, "premissas") else admin.hub, {}),
-        (configuracoes.painel, {}), (calculadora.pagina, {}),
+        (configuracoes.painel, {}),
         (relatorios_comerciais.economico, {}), (relatorios_comerciais.saude, {}),
         (relatorios_comerciais.health_detalhe, {}),
         (workflow.fila, {}), (usuarios.listar, {}),

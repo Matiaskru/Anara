@@ -526,6 +526,63 @@ def aplicar_bl001(session: Session, ator: Optional[Usuario]) -> dict:
 
 
 # ===========================================================================
+# 5b-bis. Peso declarado NO DOCUMENTO da cotação de 29/07 (22/09/2026)
+# ===========================================================================
+#: Algumas linhas da cotação de 29/07 declaram o peso da peça na própria descrição
+#: ("100% Polyester plain 4.650Gm" / obs "peso da peça 4,650 kg"). Esse peso é evidência da
+#: KTC — REAL, não estimativa — e sem ele a nacionalização assume frete internacional zero e o
+#: SKU fica em REVIEW_REQUIRED. A ingestão de 21/09 não o aproveitava; esta etapa aproveita,
+#: **sem inventar peso nenhum**: só entra o que o documento declara.
+_PESO_NO_TEXTO = re.compile(r"peso da peça\s*([\d.,]+)\s*kg", re.I)
+
+
+def _peso_declarado(linha) -> Optional[Decimal]:
+    obs = linha[13] or ""
+    m = _PESO_NO_TEXTO.search(obs)
+    return D(m.group(1).replace(".", "").replace(",", ".")) if m else None
+
+
+def plano_peso_ktc(session: Session) -> List[dict]:
+    """SKUs da cotação de 29/07 cujo peso está DECLARADO no documento e ainda não foi gravado."""
+    saida = []
+    for item in plano_ktc(session):
+        linha = item["linha"]
+        peso = _peso_declarado(linha)
+        produto = item["produto"] or casar_produto_ktc(session, linha)
+        if peso is None or produto is None:
+            continue
+        if produto.peso_kg is not None and abs(float(produto.peso_kg) - float(peso)) < 1e-9 \
+                and produto.peso_tipo == "REAL KTC":
+            continue
+        saida.append({"produto": produto, "peso_kg": peso, "codigo": linha[11],
+                      "antes": (produto.peso_kg, produto.peso_tipo)})
+    return saida
+
+
+def aplicar_peso_ktc(session: Session, ator: Optional[Usuario]) -> dict:
+    correlacao = _correlacao("peso-ktc")
+    n = 0
+    for a in plano_peso_ktc(session):
+        p, peso = a["produto"], a["peso_kg"]
+        p.peso_kg = para_float(peso)
+        p.peso_tipo = "REAL KTC"
+        p.peso_fonte = (f"Peso declarado pela KTC na {FONTE_KTC_SAMPLES} "
+                        f"({a['codigo'] or 'sem código'}): {peso} kg")
+        p.peso_data = DATA_KTC_SAMPLES
+        p.peso_documento = DOCUMENTO_KTC_SAMPLES
+        session.add(p)
+        adm.registrar(session, ator=ator, acao="REGISTRAR_PESO_REAL", entidade="Produto",
+                      entidade_id=p.id, escopo=f"SKU {p.sku_key}",
+                      antes=f"peso {a['antes'][0]} ({a['antes'][1] or 'sem tipo'})",
+                      depois=f"peso {peso} kg (REAL KTC)", motivo=DOCUMENTO_KTC_SAMPLES,
+                      origem=ORIGEM, correlacao=correlacao,
+                      detalhe={"declarado_no_documento": True, "codigo": a["codigo"]})
+        n += 1
+    session.flush()
+    return {"correlacao": correlacao, "atualizados": n}
+
+
+# ===========================================================================
 # 5c. I.I. econômico KTC = 0% · proteção comercial de precificação (22/09/2026)
 # ===========================================================================
 II_ZERO_DESDE = date(2026, 9, 22)
@@ -773,7 +830,8 @@ def aplicar_sinal(session: Session, ator: Optional[Usuario]) -> dict:
     return {"correlacao": correlacao, "desativadas": n}
 
 
-ETAPAS = ("politica", "fiscal", "decor", "elis", "ktc", "bl001", "ii_zero", "fronhas", "catalogo", "sinal")
+ETAPAS = ("politica", "fiscal", "decor", "elis", "ktc", "bl001", "peso_ktc", "ii_zero",
+          "fronhas", "catalogo", "sinal")
 
 
 def aplicar_tudo(session: Session, ator: Optional[Usuario], etapas=ETAPAS) -> Dict[str, dict]:
@@ -790,6 +848,8 @@ def aplicar_tudo(session: Session, ator: Optional[Usuario], etapas=ETAPAS) -> Di
         resultado["ktc"] = aplicar_ktc(session, ator)
     if "bl001" in etapas:
         resultado["bl001"] = aplicar_bl001(session, ator)
+    if "peso_ktc" in etapas:
+        resultado["peso_ktc"] = aplicar_peso_ktc(session, ator)
     if "ii_zero" in etapas:
         resultado["ii_zero"] = aplicar_ii_zero(session, ator)
     if "fronhas" in etapas:

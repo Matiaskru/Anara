@@ -131,9 +131,32 @@ def referencia_vigente(session: Session, produto_id: int,
     return referencia_em(session, produto_id, quando or date.today())
 
 
+def _versoes_para_leitura(session: Session, produto_id: int) -> List[CustoReferencia]:
+    """As versões do SKU, servidas de uma carga única quando há bloco de leitura aberto.
+
+    Varrer o catálogo perguntando a referência vigente de cada SKU custava uma consulta por
+    SKU. A tabela inteira é pequena (192 linhas para 388 produtos em 22/09/2026), então dentro
+    de `pricing_service.cache_de_leitura` ela vem de uma vez e é indexada por produto. Fora do
+    bloco, nada muda: a consulta continua sendo a do SKU pedido.
+    """
+    from app.pricing_service import _CACHE_LEITURA, _memo
+    if _CACHE_LEITURA.get() is None:
+        return versoes(session, produto_id)
+
+    def carregar_todas():
+        agrupadas: dict = {}
+        for r in session.exec(select(CustoReferencia)
+                              .where(CustoReferencia.versao.is_not(None))).all():
+            agrupadas.setdefault(r.produto_id, []).append(r)
+        return {pid: sorted(linhas, key=lambda r: (r.versao or 0, r.id or 0))
+                for pid, linhas in agrupadas.items()}
+
+    return _memo("versoes_por_produto", carregar_todas).get(produto_id, [])
+
+
 def referencia_em(session: Session, produto_id: int, quando: date) -> Optional[CustoReferencia]:
     """Qual versão estava valendo numa data — é o que torna o histórico auditável."""
-    for r in reversed(versoes(session, produto_id)):
+    for r in reversed(_versoes_para_leitura(session, produto_id)):
         inicio = r.valid_from or date.min
         fim = r.valid_to
         if inicio <= quando and (fim is None or quando < fim):
@@ -249,6 +272,8 @@ def registrar_referencia(session: Session, produto: Produto, *, cnet_brl: float,
         substitui_versao=(anterior.versao if anterior else None),
     )
     session.add(nova)
+    from app.pricing_service import invalidar_cache_de_leitura
+    invalidar_cache_de_leitura()   # nova versão vigente: nenhum bloco de leitura pode ignorá-la
     session.flush()
 
     # O cache do produto acompanha a versão vigente — e só ele. Status que não formam preço

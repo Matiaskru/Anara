@@ -85,8 +85,10 @@ aplicada **antes** de a resposta ser montada.
   `HttpOnly`, `SameSite=lax`, `Secure` em produção, 12 h. `sessao_versao` invalida os cookies
   abertos quando a senha muda ou a conta é desativada
 - **Endpoint que existe só para expor economia é NEGADO** (403) ao vendedor, não filtrado:
-  memória do preço do item e do produto, configurações, calculadora, importação, relatórios.
-  Endpoint **comercial** é filtrado, não negado — o vendedor precisa dele para cotar
+  memória do preço do item e do produto, configurações, importação, relatórios econômicos.
+  Endpoint **comercial** é filtrado, não negado — o vendedor precisa dele para cotar.
+  **A calculadora saiu da lista de negados em 22/09/2026** (ver "Calculadora" abaixo): é rota
+  de operação, e o corte dela é o conteúdo da resposta
 - **A lista é de permissão, não de bloqueio.** `CAMPOS_ITEM_COMERCIAL` declara o que pode
   passar; campo novo não vaza por esquecimento
 - **O PDF comercial não leva custo, CNET, margem, lucro, markup, comissão nem fornecedor** —
@@ -260,9 +262,85 @@ nenhum. Nunca por "tem política ou não".
     `preco_b2b_economico` = o B2B que o custo real daria (diagnóstico interno). Margens-alvo não
     mudaram; a margem **realizada** subiu onde havia I.I. Item anterior a 22/09 (sem pino) segue
     com o custo que congelou até ser reprecificado explicitamente. Vendedora não vê nada disso.
+- **Calculadora / produto personalizado é da OPERAÇÃO (22/09/2026).** `/calculadora`,
+  `/calculadora/calcular` e `/calculadora/salvar` exigem **autenticação**, não `exigir_admin`:
+  a vendedora monta a cotação e precisa de produto que não está no catálogo. O corte é o
+  **conteúdo**: OWNER/ADMIN recebem a memória do preço inteira (custo, EXW, nacionalização,
+  base comercial, proteção, margem, lucro, gaveta da memória, margem forçada e outros custos
+  em US$); a vendedora recebe `calculadora.resultado_comercial` — lista de permissão
+  (`CAMPOS_RESULTADO_COMERCIAL`) com nome, especificação, B2B, tabela, preço proposto,
+  desconto, **a comissão dela** (a mesma `comissao_do_item` da cotação), total, situação em
+  linguagem comercial (`rotulos.SITUACAO_COMERCIAL`, sem a palavra "custo") e pendências
+  acionáveis. Nada econômico é montado na resposta dela — nem no HTML, nem no JSON, nem nas
+  opções (o rótulo do tecido perde o US$/m² e as taxas por kg não vão). **Margem forçada e
+  outros custos são ignorados** para quem não vê economia: além de sigilo, a margem forçada
+  formaria um B2B abaixo do piso da política. Salvar usa o caminho canônico (`adicionar_item`),
+  então política, B2B, tabela, comissão, sinal, fingerprint, aprovação e blockers valem igual.
+- **Uma pergunta, uma resposta: `pricing_service.status_do_produto` (22/09/2026).** O status de
+  um SKU estava em três lugares com três respostas — a coluna-cache `Produto.status_custo` (tela
+  de catálogo), a referência vigente (o item da cotação) e o motor (o preço). O BR-001 saía
+  "Disponível" no catálogo e "Revisão necessária" na cotação. Agora a precedência é uma só e
+  vale para catálogo, item e governança: **referência vigente manda** (é a decisão registrada,
+  inclusive um rebaixamento explícito), senão o **status canônico do motor**. `situacao_comercial`
+  aceita `session` e pergunta a ele.
+- **Admin → Produtos e custos** (`/admin/produtos`, `app/governanca_produtos.py`): o catálogo com
+  o diagnóstico do motor por SKU — situação, CNET, EXW, peso, fonte vigente e **por que está
+  assim**, em frase acionável —, filtros (fornecedor, família, SKU, CONFIRMADO/REVALIDAR/
+  REVIEW_REQUIRED/A_COTAR/sem custo/preço disponível) e as ações: registrar peso, cotação KTC
+  (EXW US$ + data + documento, CNET vem do motor), custo nacional (bruto com créditos ou NET),
+  confirmar a referência atual e rebaixar para REVALIDAR/A_COTAR. Tudo com **fonte e motivo
+  obrigatórios**, versionado em `CustoReferencia` e auditado; nada sobrescreve, nada apaga
+  blocker. `confirmar_referencia` é **recusado** enquanto o motor apontar premissa faltando, e
+  uma cotação registrada com premissa faltando nasce em REVIEW_REQUIRED — liberar é fornecer a
+  evidência, nunca declarar que ela existe. Só `can_manage_economics` escreve (403 para a
+  vendedora, na tela e nos endpoints).
+- **Peso é premissa, e a falta dele bloqueia** — era a causa do BR-001: roupão com EXW cotado,
+  datado e documentado, mas sem peso e sem medida, nacionaliza com frete internacional zero. O
+  script aproveita o peso **declarado no documento** da cotação de 29/07 (etapa `peso_ktc`,
+  "peso da peça 4,650 kg" → BL-003, REAL KTC); o resto é decisão do admin na tela.
+- **Toalha é gramatura, não fios.** Famílias de toalha (`TIPO_POR_FAMILIA == "toalha"`) são
+  cotadas por área × GSM (`ToalhaPreco`, US$/kg) e **ignoram `material_id`**: `thread_count` fica
+  NULO e o nome sai "Toalha de banho 80x90 · 650 g/m²". O campo de tecido continua no formulário
+  para lençol/capa duvet/fronha, mas ele é enviado mesmo escondido — era assim que o 200TC do
+  primeiro tecido da lista virava "200 fios" numa toalha de 650 g/m² (a recusa é do servidor; o
+  JS também desabilita o que está escondido).
+- **Pool de conexões: o problema é conexão OCUPADA, não conexão vazada (22/09/2026).**
+  Produção estourou com `QueuePool limit of size 5 overflow 5 reached, connection timed out,
+  timeout 30.00`. Não havia vazamento: `get_session` devolve a conexão sempre (o `with` fecha até
+  em exceção) e a medição por evento `checkout`/`checkin` mostra `checkedout` voltando a zero
+  depois de **toda** requisição. O que havia era N+1 sobre as tabelinhas de configuração —
+  listar o catálogo resolve o custo de cada SKU, e cada SKU relia premissas, `ParametroKTC`,
+  `NcmRegra`, `MargemRegra`, `CustoReferencia` e o fornecedor: **6.174 consultas numa requisição**
+  para 380 SKUs. Com o RTT de um Postgres gerenciado, isso é meia dúzia de segundos a dezenas de
+  segundos **com a conexão fora do pool**, e três ou quatro acessos simultâneos à mesma tela
+  bastam para o seguinte esperar os 30 s do `pool_timeout`.
+  * A correção é **ler cada tabela uma vez por requisição**: `pricing_service.cache_de_leitura(session)`,
+    um `contextvars` de escopo **explícito e curto**, aberto só em caminho de leitura pura
+    (`governanca_produtos.listar`, catálogo e busca de `/produtos`). Fora do bloco nada muda —
+    `_memo` cai direto na consulta, como sempre foi. Quem grava chama
+    `invalidar_cache_de_leitura()` (`custo_service.registrar_referencia` já chama), porque ler o
+    valor velho depois de gravar seria erro silencioso.
+  * `config_service._linhas` memoiza a **carga** da tabelinha (a escolha por vigência continua
+    fora do memo, porque depende da data pedida); `custo_service._versoes_para_leitura` traz as
+    versões de custo **de uma vez** e indexa por produto; `pricing_service.fornecedor_do_produto`
+    existe porque o identity map guarda **referência fraca** — numa varredura que não segura o
+    objeto, o coletor o descarta e o SKU seguinte reconsulta o mesmo fornecedor.
+  * `/admin/produtos` varria o catálogo **duas vezes** (uma para a tabela, outra para os
+    contadores). Agora é uma varredura e `gov.filtrar` sobre as linhas já diagnosticadas.
+  * Números (banco real, 380 SKUs, 2 ms de latência por consulta emulando a rede):
+    `/admin/produtos` 13.869 → **29** consultas e 53.245 → **220 ms**; `/produtos` 2.865 → **25**;
+    a varredura de governança 6.174 → **27** consultas. Rajada de 12 simultâneas em
+    `/admin/produtos`: 2 erros 500 (o `TimeoutError` reproduzido literalmente) → **0 erros**;
+    com 40 simultâneas, 0 erros. **`pool_size` e `max_overflow` continuam 5+5** — aumentar o pool
+    só adiaria o mesmo estouro. Preço não muda: 309 SKUs × 9 cenários, snapshot idêntico.
+  * Diagnóstico reprodutível: `scripts/diagnostico_2026_09_22/reproduzir_pool.py`
+    (uvicorn no mesmo processo — o pool vive no processo do servidor, medir de fora não prova
+    nada —, sequenciais + rajadas autenticadas, `--latencia-ms` para emular o RTT). Regressão:
+    `tests/test_pool_conexoes_2026_09_22.py` (inclusive uma varredura que falha se alguém abrir
+    `Session(engine)` sem `with` ou consumir `get_session()` com `next()`).
 - **Como aplicar no banco real** (aplicado LOCALMENTE em 21–22/09/2026): `alembic upgrade head`
   (0023 + 0024 + 0025, aditivas) e `scripts/aplicar_dados_2026_09_21.py --aplicar` (encerra 16/09,
-  cria 21/09, fiscal, Decor, ELIS, cotação KTC 29/07, BL-001, **ii_zero** — pino da proteção por
+  cria 21/09, fiscal, Decor, ELIS, cotação KTC 29/07, BL-001, **peso_ktc**, **ii_zero** — pino da proteção por
   SKU, regra por família, NCM versionada —, ABAS, preco_base + cache do CNET real, desativa a
   condição opaca de sinal). Preview sem `--aplicar`. Relatórios: `scripts/relatorios_2026_09_21.py`.
   Validação: `tests/test_politica_2026_09_21.py`, `tests/test_sinal_2026_09_21.py`,
@@ -457,7 +535,8 @@ completo está em `DEPLOY_PRODUCTION.md`; o que segue é o que o código passou 
   na internet — OWNER, SELLER, URLs proibidas, PDF, log sem segredo
 - **Histórico Git sanitizado em 17/09/2026**: a senha compartilhada antiga não existe em
   commit algum; os hashes anteriores mudaram (mapa em `ANARA_EXECUTION_STATE.md`).
-  `referencia/` continua sendo o motivo para não fazer push sem decidir (ver PREPARAÇÃO)
+  `referencia/` saiu do versionamento em 17/09 (está no `.gitignore`; a cópia fica em
+  `~/Anara-Cotacao-Backups/referencia`), e foi o que destravou o push
 
 ## Auditoria de crise — reprecificação e confiança do custo (17/09/2026)
 
@@ -613,11 +692,11 @@ LOCALMENTE (sem push), APLICADA AO BANCO LOCAL.** Alembic em `0025`. Ver seção
 comercial de 21/09/2026" e `ANARA_EXECUTION_STATE.md` para os números da última validação.
 
 **Preparação para produção (17/09/2026): EXECUTADA.** Alembic em `0022` (enums como
-VARCHAR, no-op no SQLite). O repositório é Git **local**, sem remote e sem push. O
+VARCHAR, no-op no SQLite). O remote é `origin` (GitHub `Matiaskru/Anara`), branch `main`. O
 histórico foi **sanitizado** (a senha compartilhada antiga não está em nenhum commit; bundle
-anterior em `~/Anara-Cotacao-Backups/`). `referencia/` ainda versiona tabela de preço de
-fornecedor — decidir antes do push (`DEPLOY_PRODUCTION.md` → PREPARAÇÃO). Publicar é ato
-manual e autorizado à parte.
+anterior em `~/Anara-Cotacao-Backups/`). `referencia/` **não é mais versionado** — tabela de
+preço de fornecedor fica só nesta máquina (`.gitignore`; cópia em
+`~/Anara-Cotacao-Backups/referencia`). Publicar continua sendo ato manual e autorizado à parte.
 
 Antes de qualquer sessão: o procedimento de `BACKUP.md`. Depois: comparar contra
 `relatorios/baseline_fase0.json`, que continua sendo o baseline imutável.

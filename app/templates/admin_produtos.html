@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Produtos e custos — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Produtos e custos</h1>
+    <div class="sub">O que o motor resolve para cada SKU, o que falta e a ação para resolver.
+      A situação aqui é a mesma que a cotação vai usar — não um cache.</div></div>
+  <a href="/admin" class="btn btn-ghost">Administração</a>
+</div>
+
+<div class="kpi-row" style="grid-template-columns: repeat(5, 1fr); margin-bottom:14px;">
+  {% for chave, rotulo in [('CONFIRMADO','Confirmado'), ('ESTIMADO','Estimado'), ('REVALIDAR','A revalidar'),
+                           ('REVIEW_REQUIRED','Revisão necessária'), ('A_COTAR','Sem custo')] %}
+  <a class="kpi" href="/admin/produtos?status={{ chave }}" style="text-decoration:none;">
+    <div class="label">{{ rotulo }}</div><div class="value">{{ contagem.get(chave, 0) }}</div></a>
+  {% endfor %}
+</div>
+
+<form class="card" method="get" action="/admin/produtos">
+  <div class="grid-4" style="gap:10px;">
+    <div class="field"><label for="g-q">Buscar</label>
+      <input id="g-q" name="q" value="{{ q }}" placeholder="SKU, nome ou documento (ex.: BR-001)"></div>
+    <div class="field"><label for="g-forn">Fornecedor</label>
+      <select id="g-forn" name="fornecedor"><option value="">Todos</option>
+        {% for f in fornecedores %}<option value="{{ f.codigo }}" {{ 'selected' if f.codigo == fornecedor_filtro else '' }}>{{ f.nome }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="g-fam">Família</label>
+      <select id="g-fam" name="familia"><option value="">Todas</option>
+        {% for f in familias %}<option value="{{ f }}" {{ 'selected' if f == familia_filtro else '' }}>{{ f }}</option>{% endfor %}
+      </select></div>
+    <div class="field"><label for="g-status">Situação</label>
+      <select id="g-status" name="status"><option value="">Todas</option>
+        {% for chave, rotulo in situacoes %}<option value="{{ chave }}" {{ 'selected' if chave == status_filtro else '' }}>{{ rotulo }}</option>{% endfor %}
+      </select></div>
+  </div>
+  <div class="flex mt-12"><button class="btn btn-copper btn-sm" type="submit">Filtrar</button>
+    <a class="btn btn-ghost btn-sm" href="/admin/produtos">Limpar</a>
+    <span class="muted small">{{ linhas|length }} SKU(s)</span></div>
+</form>
+
+<div class="card">
+  <table class="compacta" id="tabela-governanca">
+    <thead><tr>
+      <th>SKU</th><th>Fornecedor</th><th>Família</th><th>Situação</th>
+      <th class="num">CNET</th><th class="num">EXW</th><th class="num">Peso</th>
+      <th>Fonte vigente</th><th>Por que está assim</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for l in linhas %}
+      {% set d = l.como_dict() %}
+      <tr data-produto="{{ d.produto_id }}">
+        <td class="primaria">{{ d.nome }}<span class="sub"><code>{{ d.sku }}</code></span></td>
+        <td>{{ d.fornecedor or '—' }}</td>
+        <td class="muted">{{ d.familia or '—' }}</td>
+        <td><span class="tag {{ 'tag-calc' if d.status == 'CONFIRMADO' else ('tag-review' if d.status in ('REVIEW_REQUIRED','A_COTAR') else '') }}">{{ d.status|rotulo_custo }}</span></td>
+        <td class="num">{{ d.custo|brl if d.custo else '—' }}</td>
+        <td class="num">{{ ('US$ %.2f'|format(d.exw_usd)) if d.exw_usd else '—' }}<span class="sub">{{ d.exw_data or '' }}</span></td>
+        <td class="num">{{ ('%.3f kg'|format(d.peso_kg)) if d.peso_kg else '—' }}<span class="sub">{{ d.peso_tipo or '' }}</span></td>
+        <td style="font-size:11px;">
+          {% if d.referencia %}V{{ d.referencia.versao }} · {{ d.referencia.status|rotulo_custo }}<span class="sub">{{ d.referencia.documento or d.referencia.tipo }} · {{ d.referencia.data }}</span>
+          {% else %}<span class="muted">sem referência versionada</span>{% if d.exw_fonte %}<span class="sub">{{ d.exw_fonte[:48] }}</span>{% endif %}{% endif %}
+        </td>
+        <td style="font-size:11px;">{% for p in d.pendencias %}{{ p }}{% if not loop.last %}<br>{% endif %}{% else %}<span class="muted">—</span>{% endfor %}</td>
+        <td class="nowrap">
+          {% if pode_editar %}<button class="btn btn-ghost btn-xs" type="button"
+             onclick='abrirGovernanca({{ d|tojson }})'>Revisar / atualizar</button>{% endif %}
+          <a class="btn btn-ghost btn-xs" href="/admin/sku/{{ d.produto_id }}">Histórico</a>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="10" class="muted">Nenhum SKU com esses filtros.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pode_editar %}
+<div class="drawer-fundo" id="gov-fundo" onclick="fecharGovernanca()"></div>
+<div class="drawer" id="gov-drawer" style="max-width:560px;">
+  <button class="fechar" onclick="fecharGovernanca()">×</button>
+  <h2 id="gov-nome" style="margin-top:0;">—</h2>
+  <div class="sub" id="gov-sub"></div>
+  <div class="aviso-inline" id="gov-pendencias" style="margin:12px 0;"></div>
+
+  <div class="tabs" id="gov-abas" style="margin-bottom:12px;"></div>
+
+  <form id="gov-form" onsubmit="return false;">
+    <div id="gov-campos"></div>
+    <div class="field"><label for="gov-motivo">Motivo (obrigatório — vai para a auditoria)</label>
+      <input id="gov-motivo" name="motivo" placeholder="ex.: peso confirmado por e-mail com a KTC em 22/09"></div>
+    <div class="flex mt-12">
+      <button class="btn btn-copper btn-sm" type="button" onclick="enviarGovernanca()">Aplicar</button>
+      <span class="muted small" id="gov-resultado"></span>
+    </div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="/static/js/admin_produtos.js?v={{ versao_estatica }}"></script>
+{% endblock %}

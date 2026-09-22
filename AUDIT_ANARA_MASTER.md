@@ -1173,6 +1173,40 @@ intocado. O que foi decidido pelo usuário em 21/09 supera o "aberto" do handoff
   BL-002/BL-003, o que a paridade proíbe) — BL-001 passa a CONFIRMADO (127,33 / 254,66). Emitidas
   e snapshots intocados (comparação linha a linha contra o backup: 0 diferenças).
 
+- **ACC-01 (22/09/2026) Calculadora é rota de operação, não de administração.** As vendedoras
+  montam as cotações; `exigir_admin` em `/calculadora*` impedia o trabalho delas e não protegia
+  nada que o corte de conteúdo não proteja melhor. Agora as três rotas exigem só autenticação e
+  a resposta é construída por papel: memória completa para OWNER/ADMIN, `resultado_comercial`
+  (lista de permissão) para a vendedora — B2B, tabela, preço, desconto, comissão dela, total e
+  situação em linguagem comercial. Margem forçada e outros custos em US$ são ignorados para quem
+  não vê economia (a margem forçada formaria B2B abaixo do piso). Produto personalizado entra na
+  cotação pelo caminho canônico (`adicionar_item`): mesma política, mesmo B2B/tabela/comissão,
+  mesmos blockers e mesma invalidação de aprovação. Provas: 18 testes dirigidos, Playwright dos
+  três papéis (19/19), auditoria de 164 superfícies com 0 vazamentos e paridade de preço
+  (280 SKUs × 9 cenários, 0 diferenças).
+
+- **GOV-01 (22/09/2026) Status do SKU tinha três fontes; agora tem uma.** Coluna-cache
+  `Produto.status_custo` (catálogo) × referência vigente (item) × motor (preço). BR-001:
+  "Disponível" no catálogo, "Revisão necessária" na cotação. A causa do REVIEW não era vínculo
+  de custo perdido — a evidência resolve (EXW US$ 24,00 · 29/07/2026 · documento) — era a
+  **falta de peso**, que faria o frete internacional entrar como zero. `status_do_produto`
+  unifica a precedência (referência vigente → motor) e o catálogo passa a mostrá-la. Auditoria
+  dos 380 SKUs ativos: 24 incoerentes → 0; 86 rótulos corrigidos; 0 referências ignoradas;
+  1 SKU liberado por evidência já existente no documento (BL-003, peso 4,650 kg declarado na
+  cotação de 29/07); 7 roupões seguem em REVIEW porque o documento **não** declara o peso deles
+  — decisão do admin, com fonte e motivo, nunca um número inventado; 31 seguem A_COTAR por não
+  terem custo nem EXW. Efeito de preço: só o BL-003 se moveu (220,35 → 245,41), pelo frete que
+  antes faltava.
+- **GOV-02 (22/09/2026) Admin → Produtos e custos.** A governança do catálogo passou a existir
+  na tela: diagnóstico por SKU e as ações (peso, cotação KTC, custo nacional, confirmar,
+  rebaixar), com fonte e motivo obrigatórios, versão em `CustoReferencia` e trilha. Nenhuma ação
+  apaga blocker: `confirmar_referencia` recusa com premissa faltando e uma cotação registrada
+  com premissa faltando nasce em REVIEW_REQUIRED.
+- **UX-03 (22/09/2026) Toalha é gramatura, não fios.** O `<select>` de tecido, escondido para
+  toalha, continuava indo no `FormData`; o SKU herdava o `thread_count` do tecido e a toalha de
+  650 g/m² virava "200 fios". Toalha ignora `material_id` no servidor (área × GSM é a regra
+  dela); `thread_count` fica NULO. Lençol, capa duvet e fronha seguem com fios.
+
 ### 12.2 Conflitos com fontes anteriores — registrados, não resolvidos em silêncio
 - **CF-01 Escada × "Escopo aprovado" (PDF de 17/06/2026, e-mail 12:12):** o escopo traz
   "Até 10% → 10%; 10,01–20% → 9%…"; a decisão de 21/09 (e o e-mail do Jan às 11:37) usa

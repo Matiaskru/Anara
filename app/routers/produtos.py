@@ -16,12 +16,31 @@ from app.templating import templates
 router = APIRouter()
 
 
-def situacao_comercial(produto: Produto) -> str:
+#: O status canônico do custo → o que a tela de catálogo mostra. `DISPONIVEL` forma preço e
+#: entra na cotação sem pendência; `REVISAR` forma preço mas não sustenta compromisso;
+#: `SOB_CONSULTA` não forma preço nenhum.
+SITUACAO_POR_STATUS = {
+    "CONFIRMADO": "DISPONIVEL", "ESTIMADO": "REVISAR", "REVALIDAR": "REVISAR",
+    "REVIEW_REQUIRED": "REVISAR", "A_COTAR": "SOB_CONSULTA",
+}
+
+
+def situacao_comercial(produto: Produto, session: Session = None) -> str:
     """O que a vendedora precisa saber do item, sem economia: dá para cotar agora?
 
-    `DISPONIVEL` tem custo e forma preço; `SOB_CONSULTA` não tem base de custo (o preço
-    precisa ser cotado com o fornecedor); `REVISAR` tem custo mas o cadastro pede atenção.
+    **Com `session`, a resposta é a do MOTOR** (`status_canonico_do_custo`, o mesmo que
+    `adicionar_item` congela em `status_custo_item`). Sem ela, cai no cache do produto.
+
+    Por que isso importa (22/09/2026): até aqui a tela lia `Produto.status_custo` — uma coluna
+    que na maioria dos SKUs é NULA — e o cache `custo_unitario`. O catálogo dizia "Disponível"
+    para o BR-001 enquanto a cotação, que pergunta ao motor, dizia "Revisão necessária" (o
+    roupão tem EXW cotado, mas não tem peso, e sem peso o frete internacional entraria como
+    zero). Duas telas, duas respostas, o mesmo produto. Agora é uma pergunta só, feita a quem
+    sabe responder — e o catálogo passa a apontar exatamente o que a cotação vai recusar.
     """
+    if session is not None:
+        from app import pricing_service as ps
+        return SITUACAO_POR_STATUS.get(ps.status_do_produto(session, produto), "REVISAR")
     if not produto.custo_unitario or (produto.status_custo or "").upper() == "A_COTAR":
         return "SOB_CONSULTA"
     if produto.precisa_revisao or (produto.status_custo or "").upper() == "REVIEW_REQUIRED":
@@ -53,8 +72,10 @@ def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = ""
         produtos = [p for p in produtos if (p.familia or "") == familia]
     if metodo and ve_economia(request):
         produtos = [p for p in produtos if (p.cost_method or "") == metodo]
+    with ps.cache_de_leitura(session):   # ver pricing_service.cache_de_leitura
+        situacao_de = {p.id: situacao_comercial(p, session) for p in produtos}
     if situacao:
-        produtos = [p for p in produtos if situacao_comercial(p) == situacao]
+        produtos = [p for p in produtos if situacao_de[p.id] == situacao]
     # compatibilidade com os filtros anteriores da tela
     if revisao == "sim":
         produtos = [p for p in produtos if p.precisa_revisao]
@@ -72,7 +93,8 @@ def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = ""
         "familia_filtro": familia, "situacao_filtro": situacao,
         "familias": sorted({p.familia for p in todos if p.familia}),
         "situacoes": list(ROTULO_SITUACAO.items()),
-        "situacao_de": situacao_comercial, "rotulo_situacao": ROTULO_SITUACAO,
+        "situacao_de": lambda p: situacao_de.get(p.id, "REVISAR"),
+        "rotulo_situacao": ROTULO_SITUACAO,
         "metodos": sorted({p.cost_method for p in todos if p.cost_method}),
         "ultima_importacao": ultima_importacao,
         "total_catalogo": len(todos),
@@ -151,12 +173,14 @@ def buscar(request: Request, q: str = "", fornecedor: str = "", familia: str = "
     politicas = {p.id: resolver_margem(regras, fornecedor_id=p.fornecedor_id,
                                        familia=p.familia, thread_count=p.thread_count,
                                        sku_key=p.sku_key) for p in produtos}
+    with ps.cache_de_leitura(session):   # ver pricing_service.cache_de_leitura
+        situacoes = {p.id: situacao_comercial(p, session) for p in produtos}
     completo = [{
         "id": p.id, "nome": p.nome, "especificacao": p.especificacao, "categoria": p.categoria,
         "familia": p.familia, "custo_unitario": p.custo_unitario,
         # preço-base só quando o produto forma preço: sem custo ele é cache de outro cenário
         # (na Daune, o preço de venda legado) e enganaria quem busca (NAC-05, 17/09/2026)
-        "preco_base": p.preco_base if situacao_comercial(p) == "DISPONIVEL" else None,
+        "preco_base": p.preco_base if situacoes[p.id] == "DISPONIVEL" else None,
         "fornecedor": (fornecedores[p.fornecedor_id].nome if p.fornecedor_id in fornecedores
                        else None),
         "cost_method": p.cost_method,
