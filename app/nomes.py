@@ -27,6 +27,8 @@ ROTULO_POR_CATEGORIA = {
     "lençol hospitalar": "Lençol hospitalar",
     "lençol hospitalar (maca)": "Lençol de maca",
     "lençol com elástico": "Lençol com elástico",
+    "lençol de cima": "Lençol de cima",
+    "lençol de baixo": "Lençol de baixo",
     "capa duvet": "Capa duvet",
     "fronha com aba": "Fronha com aba",
     "fronha sem aba": "Fronha sem aba",
@@ -79,7 +81,21 @@ def _normalizar(texto: str) -> str:
     return "".join(c for c in t if not unicodedata.combining(c))
 
 
+#: Famílias cujo nome NÃO se deriva da categoria, porque várias famílias dividem a mesma.
+#: `Top Sheet` e `Flat Sheet` são as duas "Lençol Plano" do catálogo — e o lençol de cima
+#: virava "Lençol plano" na tela, na cotação e no PDF (relato da operação em 23/09/2026:
+#: "estou selecionando lençol de cima e sai lençol plano"). Lençol de cima tem medida e uso
+#: próprios; chamar os dois pelo mesmo nome faz o cliente receber a peça errada.
+ROTULO_POR_FAMILIA = {
+    "top sheet": "Lençol de cima",
+    "bottom sheet": "Lençol de baixo",
+}
+
+
 def _rotulo_peca(produto) -> str:
+    familia = (produto.familia or "").strip().lower()
+    if familia in ROTULO_POR_FAMILIA:
+        return ROTULO_POR_FAMILIA[familia]
     categoria = (produto.categoria or "").strip().lower()
     if categoria in ROTULO_POR_CATEGORIA:
         return ROTULO_POR_CATEGORIA[categoria]
@@ -168,6 +184,23 @@ def _composicao(produto) -> Optional[str]:
     return f"{int(round(algodao * 100))}/{int(round((poliester or 1 - algodao) * 100))}"
 
 
+#: `construcao` da fronha vem estruturada da calculadora ("2 abas", "3 abas", "4 abas",
+#: "standard"). Ela não era lida: `EXTRAS` casa por PALAVRA-CHAVE, e a única que produzia
+#: "4 abas" era o termo legado de catálogo — que só se lê, nunca se escreve. Quem montava a
+#: fronha na calculadora escolhia 4 abas e recebia "Fronha com aba 50x70 · 300 fios", sem
+#: nenhum sinal das abas, na cotação e no PDF (relato da operação em 23/09/2026).
+_ABAS = re.compile(r"^\s*(\d+)\s*abas?\s*$", re.I)
+
+
+def _construcao_estruturada(produto) -> Optional[str]:
+    """As abas declaradas no cadastro, quando houver. `standard`/0 abas não vira texto."""
+    achado = _ABAS.match(produto.construcao or "")
+    if not achado:
+        return None
+    quantas = int(achado.group(1))
+    return f"{quantas} abas" if quantas > 0 else None
+
+
 def _extras(produto) -> list:
     texto = _normalizar(f"{produto.nome_original or produto.nome} {produto.especificacao or ''} "
                         f"{produto.acabamento or ''} {produto.construcao or ''} {produto.cor or ''}")
@@ -175,6 +208,9 @@ def _extras(produto) -> list:
     for chave, rotulo in EXTRAS:
         if _normalizar(chave) in texto and rotulo not in achados:
             achados.append(rotulo)
+    estruturada = _construcao_estruturada(produto)
+    if estruturada and estruturada not in achados:
+        achados.insert(0, estruturada)      # a construção manda mais que cor/acabamento
     if produto.plain_or_stripe == "stripe" and "listrado" not in achados:
         achados.append("listrado")
     return achados[:3]

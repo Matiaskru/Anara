@@ -28,7 +28,13 @@ FAMILIAS_TOALHA = ("Bath Towel", "Hand Towel", "Bath Mat", "Pool Towel", "Wash C
 # família → (rótulo em português, categoria do catálogo, tipo de entrada)
 FAMILIAS = [
     ("Flat Sheet", "Lençol plano", "Lençol Plano", "tecido"),
-    ("Top Sheet", "Lençol de cima", "Lençol Plano", "tecido"),
+    ("Top Sheet", "Lençol de cima", "Lençol de Cima", "tecido"),
+    # Lençol de baixo SEM elástico é o mesmo pano do plano e do de cima: mesma geometria,
+    # painel único, `calcular_bottom_sheet(com_elastico=False)` → `calcular_tecido_plano`.
+    # Mesma medida, mesmos fios e mesma composição dão o mesmo preço — por construção, não
+    # por coincidência. COM elástico é outra peça (corte, elastano, costura), não tem fórmula
+    # aprovada e continua em "Lençol com elástico · sob consulta".
+    ("Bottom Sheet", "Lençol de baixo", "Lençol de Baixo", "tecido"),
     ("Duvet Cover", "Capa duvet", "Capa Duvet", "tecido"),
     ("Bath Towel", "Toalha de banho", "Toalha Banho", "toalha"),
     ("Hand Towel", "Toalha de rosto", "Toalha Rosto", "toalha"),

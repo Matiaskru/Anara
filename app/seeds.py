@@ -169,6 +169,11 @@ CMTS = [
     ("Flat Sheet", None, 0.75, None),
     ("Top Sheet", None, 0.75, "Mesma construção do Flat Sheet na lista da KTC — a PI chama de "
                               "Top Sheet, a lista de CMT chama de Flat Sheet."),
+    # Lençol de baixo SEM elástico é o mesmo painel único do plano e do de cima — a KTC cota
+    # os três na mesma linha de CMT. COM elástico é outra peça e não tem fórmula aprovada
+    # (`calcular_bottom_sheet` recusa), então esta linha nunca forma preço de fitted.
+    ("Bottom Sheet", None, 0.75, "Mesma construção do Flat Sheet: painel único, sem elástico. "
+                                 "A lista de CMT da KTC trata os lençóis planos na mesma linha."),
     ("Fitted Sheet", None, 1.00, None),
     ("Duvet Cover", None, 1.50, None),
     ("Pillow Case", "standard", 0.50, None),
@@ -261,6 +266,11 @@ PARAMETROS_KTC = [
     ("hem_length_total_cm", "Top Sheet", 4.0, "Lençol de cima: mesma bainha do Flat Sheet validado "
                                               "pela KTC (2cm de cada lado)"),
     ("paineis", "Top Sheet", 1.0, "Painel único"),
+    ("hem_width_total_cm", "Bottom Sheet", 4.0, "Lençol de baixo sem elástico: mesma bainha do "
+                                                "Flat Sheet validado com a KTC."),
+    ("hem_length_total_cm", "Bottom Sheet", 4.0, "Lençol de baixo sem elástico: mesma bainha do "
+                                                 "Flat Sheet validado com a KTC."),
+    ("paineis", "Bottom Sheet", 1.0, "Painel único"),
     ("hem_width_total_cm", "Duvet Cover", 4.0, "Allowance inicial; configurável por construção"),
     ("hem_length_total_cm", "Duvet Cover", 4.0, "Allowance inicial; configurável por construção"),
     ("paineis", "Duvet Cover", 2.0, "Duas faces do mesmo tecido (open bag)"),

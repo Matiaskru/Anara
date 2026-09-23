@@ -205,6 +205,7 @@ TIPO_ATIVIDADE = {
 #: Famílias do catálogo em português — a vendedora filtra por "Lençol plano", não "Flat Sheet".
 FAMILIA = {
     "Flat Sheet": "Lençol plano", "Fitted Sheet": "Lençol com elástico", "Top Sheet": "Lençol de cima",
+    "Bottom Sheet": "Lençol de baixo",
     "Duvet Cover": "Capa de edredom", "Duvet Insert": "Edredom", "Pillow Case": "Fronha",
     "Pillow": "Travesseiro", "Pillow Protector": "Protetor de travesseiro",
     "Mattress Protector": "Protetor de colchão", "Mattress Topper": "Pillow top / topper",

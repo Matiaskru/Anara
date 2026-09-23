@@ -40,7 +40,11 @@ def test_nome_sai_em_portugues_com_o_diferenciador():
                      especificacao="190x250 · 250 fios · CVC 70/30 · listrado",
                      familia="Top Sheet", thread_count=250, cotton_pct=0.7, poliester_pct=0.3,
                      largura_cm=190, comprimento_cm=250, plain_or_stripe="stripe")
-    assert nome_canonico(p) == "Lençol plano 190x250 · 250 fios · 70/30 · listrado"
+    # 23/09/2026: era "Lençol plano" aqui, e estava errado. `Top Sheet` e `Flat Sheet`
+    # dividem a categoria "Lençol Plano" no catálogo, então nomear pela categoria apagava a
+    # diferença entre lençol de cima e lençol plano — duas peças, medidas e usos distintos.
+    # Agora a família desempata (ver `tests/test_nome_lencol_2026_09_23.py`).
+    assert nome_canonico(p) == "Lençol de cima 190x250 · 250 fios · 70/30 · listrado"
 
 
 def test_toalha_usa_gramatura_no_lugar_de_fios():
