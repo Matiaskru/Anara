@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel import Session
 
 from app import comercial_service as com
+from app import pricing_service as ps
 from app.db import get_session
 from app.dinheiro import D
 from app.models import Cotacao
@@ -88,7 +89,9 @@ def negociacao_atual(request: Request, cotacao_id: int,
                      session: Session = Depends(get_session)):
     exigir_autenticado(request)
     cot = _cotacao(session, cotacao_id)
-    return JSONResponse(_payload(request, com.avaliar_negociacao(session, cot)))
+    # leitura pura: avaliar a negociação repassa por todos os itens (ver `cotacoes.detalhe`)
+    with ps.cache_de_leitura(session):
+        return JSONResponse(_payload(request, com.avaliar_negociacao(session, cot)))
 
 
 @router.post("/cotacoes/{cotacao_id}/negociacao/preview")
@@ -96,8 +99,9 @@ async def preview(request: Request, cotacao_id: int, session: Session = Depends(
     exigir_autenticado(request)
     cot = _cotacao(session, cotacao_id)
     propostas = await _propostas(request)
-    return JSONResponse(_payload(request, com.avaliar_negociacao(session, cot,
-                                                                 propostas=propostas)))
+    with ps.cache_de_leitura(session):      # preview não grava: só simula o preço proposto
+        return JSONResponse(_payload(request, com.avaliar_negociacao(session, cot,
+                                                                     propostas=propostas)))
 
 
 @router.post("/cotacoes/{cotacao_id}/negociacao")

@@ -118,14 +118,22 @@ def test_menu_e_por_tarefa_e_curto():
     # dentro do Admin e do Dashboard. "Meu dia" e o quadro antigo continuam alcançáveis.
     assert destinos[:5] == ["/dashboard", "/vendas", "/clientes", "/cotacoes", "/produtos"]
     assert "/relatorios" not in destinos, "Relatórios voltou ao menu principal"
-    assert len(destinos) <= 7, f"o menu voltou a crescer: {destinos}"
+    # 25/09/2026: a Calculadora entrou DEPOIS de Produtos, deixando a ordem das cinco
+    # principais intacta. O teto sobe de 7 para 8 — e continua sendo um teto de propósito:
+    # o menu é por tarefa, e cada item novo precisa justificar por que é tarefa de alguém.
+    assert len(destinos) <= 8, f"o menu voltou a crescer: {destinos}"
 
 
 def test_menu_nao_tem_ferramenta_tecnica_solta():
-    """Calculadora, importação, saúde, trilha e configurações moram dentro do Admin."""
+    """Importação, saúde, trilha, configurações e relatórios moram dentro do Admin.
+
+    A calculadora saiu desta lista em 25/09/2026: virou rota de operação em 22/09, quando a
+    vendedora passou a montar ali o produto fora de catálogo para conseguir cotar. Continuar
+    escondendo obrigava a abrir uma cotação antes de simular um preço.
+    """
     html = open(os.path.join(TEMPLATES, "base.html"), encoding="utf-8").read()
     nav = html.split("<nav>")[1].split("</nav>")[0]
-    for destino in ("/calculadora", "/importar", "/saude", "/admin/trilha",
+    for destino in ("/importar", "/saude", "/admin/trilha",
                     "/configuracoes", "/relatorios/qualidade", "/relatorios/economico"):
         assert f'href="{destino}"' not in nav, f"'{destino}' voltou ao menu principal"
 

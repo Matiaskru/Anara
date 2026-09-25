@@ -649,6 +649,16 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
     cotacao = session.get(Cotacao, cotacao_id)
     if not cotacao:
         return RedirectResponse(url="/cotacoes", status_code=303)
+    # Renderizar a cotação resolve o custo de CADA item, e cada custo relê as mesmas
+    # tabelinhas de configuração: 1.291 consultas numa cotação de 25 itens (medido em
+    # 23/09/2026). Com o RTT de um Postgres gerenciado isso é segundo(s) com a conexão fora
+    # do pool — e foi o que esgotou as 5+5 em produção. Tela de leitura pura: nada aqui grava.
+    with ps.cache_de_leitura(session):
+        return _detalhe(request, cotacao, session)
+
+
+def _detalhe(request: Request, cotacao: Cotacao, session: Session):
+    cotacao_id = cotacao.id
     cliente = session.get(Cliente, cotacao.cliente_id)
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)
                          .order_by(CotacaoItem.ordem)).all()
@@ -697,7 +707,8 @@ def painel_situacao(request: Request, cotacao_id: int, session: Session = Depend
     cotacao = session.get(Cotacao, cotacao_id)
     if not cotacao:
         raise HTTPException(status_code=404, detail="Cotação não encontrada.")
-    prontidao = ws.avaliar(session, cotacao, frete=ws.frete_para_avaliar(session, cotacao))
+    with ps.cache_de_leitura(session):      # ver a nota em `detalhe`
+        prontidao = ws.avaliar(session, cotacao, frete=ws.frete_para_avaliar(session, cotacao))
     return templates.TemplateResponse(request, "_cotacao_situacao.html", {
         "cotacao": cotacao, "prontidao": prontidao,
         "acoes_workflow": acoes_do_workflow(cotacao, prontidao),

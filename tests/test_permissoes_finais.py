@@ -122,7 +122,13 @@ def test_menu_nunca_mostra_ferramenta_tecnica(perfil):
     html = templates.env.get_template("base.html").render(
         request=RequestFalsa(PERFIS[perfil]()), active="")
     nav = html.split("<nav>")[1].split("</nav>")[0]
-    for tecnica in ("/calculadora", "/importar", "/saude", "/configuracoes",
+    # `/calculadora` saiu desta lista em 25/09/2026. Ela era ferramenta técnica quando só o
+    # administrador a usava; desde 22/09 é rota de OPERAÇÃO — a vendedora monta ali o produto
+    # que não está no catálogo para conseguir cotar, e recebe a resposta sem economia
+    # (`CAMPOS_RESULTADO_COMERCIAL`). Esconder do menu obrigava a abrir uma cotação antes de
+    # simular. As demais continuam técnicas: importar, saúde, configurações e trilha não são
+    # tarefa de quem vende.
+    for tecnica in ("/importar", "/saude", "/configuracoes",
                     "/admin/trilha", "/admin/usuarios"):
         assert f'href="{tecnica}"' not in nav
 

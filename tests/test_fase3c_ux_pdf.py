@@ -169,14 +169,17 @@ def test_01_menu_da_vendedora_e_do_admin(session):
         request=RequestFalsa(_novo_usuario("VENDEDOR_INTERNO")), active="")
     nav = pagina.split("<nav>")[1].split("</nav>")[0]
     destinos = re.findall(r'href="(/[^"]*)"', nav)
-    assert destinos == ["/vendas", "/clientes", "/cotacoes", "/produtos"]
+    # 25/09/2026: a Calculadora entrou no menu, depois de Produtos, para os dois papéis —
+    # é ferramenta de operação desde 22/09 (a vendedora monta ali o produto fora de catálogo).
+    assert destinos == ["/vendas", "/clientes", "/cotacoes", "/produtos", "/calculadora"]
     assert "Olá" not in pagina and "Bom dia" not in pagina
 
     pagina = templates.env.get_template("base.html").render(
         request=RequestFalsa(_novo_usuario("OWNER")), active="")
     nav = pagina.split("<nav>")[1].split("</nav>")[0]
     destinos = re.findall(r'href="(/[^"]*)"', nav)
-    assert destinos == ["/dashboard", "/vendas", "/clientes", "/cotacoes", "/produtos", "/aprovacoes", "/admin"]
+    assert destinos == ["/dashboard", "/vendas", "/clientes", "/cotacoes", "/produtos",
+                        "/calculadora", "/aprovacoes", "/admin"]
 
 
 def test_02_login_limpo_sem_texto_tecnico():
