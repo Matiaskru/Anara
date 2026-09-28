@@ -239,3 +239,32 @@ def test_14_o_desconto_usa_a_alavanca_canonica_da_politica(session, produto_cata
     r = _consulta(session, p, desconto=0.18)
     esperado = preco_por_desconto(D(r["preco_tabela"]), D("0.18"))
     assert r["preco_proposto"] == pytest.approx(float(esperado), abs=0.005)
+
+
+def test_15_o_resultado_da_busca_nao_interpola_texto_dentro_do_onclick():
+    """O bug que chegou como "não dá para editar o desconto" (28/09/2026).
+
+    O nome do produto ia dentro do `onclick`, num atributo delimitado por aspas duplas. Nome
+    de produto tem aspas e acento: o atributo terminava na primeira aspa interna, o `onclick`
+    virava lixo e clicar no resultado não fazia nada. Sem produto escolhido, mexer no desconto
+    também não fazia nada — e o sintoma que chegou não mencionava a busca.
+
+    A regra que fica: identificador em `data-*`, handler recebendo `this`. Texto de produto
+    nunca é interpolado dentro de atributo de evento.
+    """
+    import os
+    js = open(os.path.join(os.path.dirname(__file__), "..", "app", "static", "js",
+                           "calculadora.js"), encoding="utf-8").read()
+    bloco = js.split("function buscarParaConsulta")[1].split("function escolherParaConsulta")[0]
+    assert 'onclick="escolherParaConsulta(this)"' in bloco
+    assert "JSON.stringify" not in bloco, "nome de produto voltou para dentro do onclick"
+    assert "data-id=" in bloco and "data-nome=" in bloco
+
+
+def test_16_o_desconto_recalcula_enquanto_digita():
+    """`onchange` só dispara ao sair do campo — numa reunião ninguém clica fora para ver."""
+    import os
+    html = open(os.path.join(os.path.dirname(__file__), "..", "app", "templates",
+                             "calculadora.html"), encoding="utf-8").read()
+    campo = html.split('id="consulta-desconto"')[1].split(">")[0]
+    assert "oninput=" in campo and "onchange=" not in campo

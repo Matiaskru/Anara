@@ -39,7 +39,7 @@
       <div class="field">
         <label>Desconto sobre a tabela (%)</label>
         <input type="number" id="consulta-desconto" value="0" min="0" max="99" step="0.5"
-               onchange="consultarPreco()">
+               oninput="mudouDesconto()">
         <small>0% é o preço de tabela. Quanto maior o desconto, menor a sua comissão.</small>
       </div>
     </div>

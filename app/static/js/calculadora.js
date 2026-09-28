@@ -173,8 +173,14 @@ async function buscarParaConsulta() {
   consultaBuscaTimer = setTimeout(async () => {
     const resp = await fetch(`/produtos/buscar?q=${encodeURIComponent(termo)}`);
     const achados = (await resp.json()).slice(0, 6);
+    // O nome vai em ATRIBUTO DE DADOS, não dentro do onclick: nome de produto tem aspas,
+    // acento e "·", e interpolá-lo num atributo delimitado por aspas duplas quebrava o
+    // atributo na primeira aspa interna — o onclick virava lixo e clicar no resultado não
+    // fazia nada. Sem produto escolhido, mexer no desconto também não fazia nada, e o
+    // sintoma que chegava era "não dá para editar o desconto" (28/09/2026).
     caixa.innerHTML = achados.map(p =>
-      `<button type="button" class="tile" onclick="escolherParaConsulta(${p.id}, ${JSON.stringify(p.nome)})">
+      `<button type="button" class="tile" data-id="${p.id}" data-nome="${esc(p.nome)}"
+               onclick="escolherParaConsulta(this)">
          <div class="t-nome">${esc(p.nome)}</div>
          <div class="t-sub">${esc(p.familia || "")}</div>
        </button>`).join("") || '<div class="small muted">Nada encontrado com esse termo.</div>';
@@ -182,15 +188,29 @@ async function buscarParaConsulta() {
   }, 250);
 }
 
-function escolherParaConsulta(id, nome) {
-  consultaProdutoId = id;
-  document.getElementById("consulta-busca").value = nome;
+function escolherParaConsulta(btn) {
+  consultaProdutoId = btn.dataset.id;
+  document.getElementById("consulta-busca").value = btn.dataset.nome;
   document.getElementById("consulta-achados").style.display = "none";
   consultarPreco();
 }
 
+let consultaDescontoTimer = null;
+
+function mudouDesconto() {
+  // `oninput` para o preço acompanhar enquanto ela digita — `onchange` só dispara ao sair do
+  // campo, e numa reunião ninguém clica fora para ver o número mudar.
+  clearTimeout(consultaDescontoTimer);
+  consultaDescontoTimer = setTimeout(consultarPreco, 300);
+}
+
 async function consultarPreco() {
-  if (!consultaProdutoId) return;
+  if (!consultaProdutoId) {
+    const saida = document.getElementById("consulta-saida");
+    saida.style.display = "";
+    saida.innerHTML = '<div class="aviso-inline">Escolha um produto acima para ver o preço.</div>';
+    return;
+  }
   const dados = cenarioAtual();
   dados.set("produto_id", consultaProdutoId);
   dados.set("desconto_pct", document.getElementById("consulta-desconto").value || "0");
