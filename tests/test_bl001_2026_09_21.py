@@ -108,7 +108,13 @@ def test_bl001_nacionaliza_com_o_peso_estimado_e_b2b_sai_do_motor(session, owner
     assert not mem.get("premissas_faltantes")
     assert mem["ii_pct"] == 0 and mem["referencia_comercial"]["protecao_pct"] == 0
     assert mem["base_comercial_brl"] == mem["net_brl"]
-    assert ps.status_canonico_do_custo(custo, mem) == "CONFIRMADO"
+    # O status depende do FRESCOR da cotação de 29/07/2026, que envelhece com o calendário:
+    # derivado das premissas vigentes é CONFIRMADO enquanto a cotação está fresca e vira
+    # REVALIDAR quando passa do limite (60 dias) — cota e emite, não sustenta compromisso
+    # firme. Fixar "CONFIRMADO" fazia o teste apodrecer sozinho (28/09/2026); o que importa
+    # aqui é a REGRA, e a economia abaixo não muda com a idade do documento.
+    esperado = "REVALIDAR" if mem.get("exw_frescor") == "STALE" else "CONFIRMADO"
+    assert ps.status_canonico_do_custo(custo, mem) == esperado
     # margem-alvo 19% (KTC — demais famílias) e B2B = primeiro centavo válido do motor
     m = ps.margem_padrao(session, p)
     assert m.tem_regra and m.margem_pct == aprox(0.19)

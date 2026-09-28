@@ -28,7 +28,9 @@ from app import calculadora as calc
 from app import pricing_service as ps
 from app.db import get_session
 from app.models import Cotacao, CotacaoItem, Fornecedor, Produto
-from app.routers.cotacoes import _aplicar_resultado, _calcular, _preencher_item, montar_regras
+from app import config_service as cfg
+from app.routers.cotacoes import (_aplicar_resultado, _calcular, _preencher_item, estados,
+                                  montar_regras)
 from app.templating import templates
 from app.permissoes import exigir_autenticado, ve_economia
 
@@ -47,7 +49,36 @@ def pagina(request: Request, cotacao_id: int = 0, session: Session = Depends(get
     return templates.TemplateResponse(request, "calculadora.html", {
         "active": "calculadora", "opcoes": calc.opcoes(session, economia=economia), "cotacao": cotacao,
         "contexto_fiscal": contexto, "cenario": cenario, "economia": economia,
+        # Aberta pela aba (sem cotação), o cenário é ESCOLHIDO na tela — ver `_cenario_do_form`.
+        "estados_difal": estados(session), "condicoes": cfg.condicoes_pagamento(session),
     })
+
+
+def _cenario_do_form(session: Session, form) -> Cotacao:
+    """O cenário da simulação, montado do formulário — **transitório, nunca gravado**.
+
+    Sem cotação, a calculadora precisa de destino, contribuinte e condição para formar preço:
+    são eles que decidem ICMS, DIFAL, FCP e encargo, e o mesmo SKU varia quase 50% entre
+    cenários. Até 25/09/2026 ela usava o padrão do catálogo em silêncio, o que era aceitável
+    enquanto se chegava nela por dentro de uma cotação — e deixou de ser quando ela ganhou
+    aba própria.
+
+    O objeto NÃO entra na sessão: é parâmetro de cálculo, não documento. Cotação de verdade
+    nasce em `/cotacoes`, dentro de uma venda, com cliente e numeração.
+    """
+    padrao = ps.cenario_padrao_catalogo(session)
+    destino = (form.get("estado_destino") or "").strip() or padrao.estado_destino
+    condicao = (form.get("condicao_pagamento") or "").strip() or padrao.condicao_pagamento
+    # `contribuinte` é o nome que a tela envia; `contribuinte_icms` é aceito para quem postar
+    # com o nome do atributo (o formulário da cotação usa esse).
+    contribuinte = form.get("contribuinte", form.get("contribuinte_icms"))
+    return Cotacao(
+        cliente_id=padrao.cliente_id, estado_origem=padrao.estado_origem,
+        uf_origem_fiscal=padrao.uf_origem_fiscal, finalidade=padrao.finalidade,
+        estado_destino=destino, condicao_pagamento=condicao,
+        contribuinte_icms=(contribuinte == "sim") if contribuinte is not None
+        else padrao.contribuinte_icms,
+        freight_type=padrao.freight_type, percentual_sinal=padrao.percentual_sinal or 0.0)
 
 
 def _parametros(form, economia: bool = True) -> dict:
@@ -91,7 +122,8 @@ async def calcular(request: Request, session: Session = Depends(get_session)):
     form = await request.form()
     dados = _parametros(form, economia=economia)
     cotacao_id = form.get("cotacao_id")
-    cotacao = session.get(Cotacao, int(cotacao_id)) if cotacao_id else None
+    cotacao = (session.get(Cotacao, int(cotacao_id)) if cotacao_id
+               else _cenario_do_form(session, form))
     # A conta é a mesma para todo mundo — o mesmo `pricing_service`/`pricing_engine`. O corte
     # é na fronteira da resposta, e é construção por lista de permissão, não remoção.
     memoria = calc.calcular(session, cotacao=cotacao, **dados)

@@ -17,7 +17,7 @@ Estes testes fixam as três coisas que não podem se perder:
 3. **ESTIMADO cota e emite, mas não compromete** (10–13) — é o estado que já existia no
    sistema, e o portão de compromisso firme continua de pé.
 """
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import pytest
@@ -62,8 +62,8 @@ def _roupao(session, fornecedores, *, tamanho, gsm, cotton=1.0, poli=0.0, peso=N
         session, fornecedores, familia=familia, thread_count=None, exw_usd=exw,
         largura_cm=None, comprimento_cm=None, gsm=gsm, subcategoria=tamanho,
         cotton_pct=cotton, poliester_pct=poli, peso_kg=peso, peso_tipo=peso_tipo,
-        peso_fonte=peso_fonte, data=date(2026, 7, 29),
-        exw_cotado_fonte="KTC Samples Quotation 29/07/2026", **kw)
+        peso_fonte=peso_fonte, data=date.today() - timedelta(days=5),
+        exw_cotado_fonte="KTC Samples Quotation (cotação recente)", **kw)
 
 
 # ===========================================================================

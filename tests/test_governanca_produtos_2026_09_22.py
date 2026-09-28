@@ -14,7 +14,7 @@ admin resolve a pendência **fornecendo evidência** (nunca apagando blocker); e
 custo continua bloqueando.
 """
 import json
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from fastapi import HTTPException
@@ -52,7 +52,8 @@ def _roupao(session, fornecedores, **kw):
     dados = dict(familia="Bathrobe", thread_count=None, exw_usd=24.0, peso_kg=None,
                  largura_cm=None, comprimento_cm=None, gsm=None,
                  exw_cotado_fonte="KTC Samples Quotation 29/07/2026 · BR-001 · amostra 34",
-                 exw_cotado_data=date(2026, 7, 29), preco_base=237.98, custo_unitario=125.85)
+                 exw_cotado_data=date.today() - timedelta(days=5),
+                 preco_base=237.98, custo_unitario=125.85)
     dados.update(kw)
     return produto_ktc_cotado(session, fornecedores, **dados)
 

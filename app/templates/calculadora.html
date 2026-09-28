@@ -14,7 +14,7 @@
 {% endblock %}
 
 {% block content %}
-{% set cama = ['Flat Sheet', 'Top Sheet', 'Fitted Sheet', 'Duvet Cover', 'Duvet Insert', 'Pillow Case', 'Mattress Protector', 'Mattress Topper'] %}
+{% set cama = ['Flat Sheet', 'Top Sheet', 'Bottom Sheet', 'Fitted Sheet', 'Duvet Cover', 'Duvet Insert', 'Pillow Case', 'Mattress Protector', 'Mattress Topper'] %}
 {% set banho = ['Bath Towel', 'Hand Towel', 'Wash Cloth', 'Pool Towel', 'Bath Mat', 'Bathrobe', 'Slipper'] %}
 <div class="grid-2" id="calculadora" data-economia="{{ '1' if economia else '0' }}">
   <div class="card">
@@ -118,6 +118,53 @@
         {% endif %}
       </div>
 
+      {% if not cotacao %}
+      {#
+        Cenário da venda. Dentro de uma cotação ele vem dela (campo oculto `cotacao_id` acima);
+        aberta pela aba, a calculadora precisava dele explícito: destino, contribuinte e
+        condição mudam ICMS, DIFAL, FCP e encargo, e o mesmo SKU varia quase 50% entre
+        cenários. Antes isto era um padrão implícito no rodapé, e quem lia o número não lia
+        o rodapé (25/09/2026).
+      #}
+      <div class="tiles-grupo">Cenário da venda</div>
+      <div class="grid-2" id="bloco-cenario">
+        <div class="field">
+          <label>UF de destino</label>
+          <select name="estado_destino" id="estado_destino">
+            {% for uf in estados_difal %}
+            <option value="{{ uf }}" {{ 'selected' if uf == cenario.estado_destino else '' }}>{{ uf }}</option>
+            {% endfor %}
+          </select>
+          {# A mecânica fiscal é economia: a vendedora escolhe o destino, não lê a decomposição. #}
+          <small>{% if economia %}Define ICMS, DIFAL e FCP do preço.{% else %}Para onde a mercadoria vai — muda o preço final.{% endif %}</small>
+        </div>
+        <div class="field">
+          <label>Condição de pagamento</label>
+          <select name="condicao_pagamento" id="condicao_pagamento">
+            {% for c in condicoes %}
+            <option value="{{ c.codigo }}" {{ 'selected' if c.codigo == cenario.condicao_pagamento else '' }}>
+              {{ c.label }}{% if economia %}{% if c.encargo_pct is not none %} · encargo {{ c.encargo_pct|pct }}{% else %} · encargo a confirmar{% endif %}{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        {#
+          O campo se chama `contribuinte` e não `contribuinte_icms` de propósito: o nome do
+          próprio atributo é vocabulário fiscal, e ele apareceria no HTML da vendedora — que
+          não pode conter a mecânica do imposto (auditoria de confidencialidade de 21/09).
+          O servidor aceita os dois nomes.
+        #}
+        <div class="field">
+          <label>Cliente é contribuinte?</label>
+          <select name="contribuinte" id="contribuinte">
+            <option value="nao" {{ 'selected' if not cenario.contribuinte_icms else '' }}>Não contribuinte</option>
+            <option value="sim" {{ 'selected' if cenario.contribuinte_icms else '' }}>Contribuinte</option>
+          </select>
+          <small>Vem do cadastro do cliente — não se deduz pelo estado.</small>
+        </div>
+      </div>
+      {% endif %}
+
       <div class="grid-2" id="bloco-comercial" style="display:none;">
         <div class="field"><label>Quantidade</label><input type="number" name="quantidade" id="quantidade" value="1" min="1"></div>
         {% if economia %}<div class="field"><label>Margem (%)</label><input type="number" name="margem_pct" id="margem_pct" step="0.1" placeholder="usa a regra do produto"></div>{% endif %}
@@ -179,10 +226,17 @@
       {% if economia %}<div id="memoria-inline" style="display:none;"></div>{% endif %}
     </div>
     <div style="font-size:10.5px; color:var(--gray); margin-top:14px; border-top:1px solid var(--row-alt); padding-top:10px;">
+      {% if cotacao %}
       Cenário: {{ cenario.estado_origem }} → {{ cenario.estado_destino or '—' }} ·
       {{ 'contribuinte' if cenario.contribuinte_icms else 'não contribuinte' }} ·
       {{ cenario.condicao_pagamento }}{% if economia %} · ICMS {{ contexto_fiscal.icms_pct|pct }}{% endif %}
-      {% if not cotacao %}<br>Cenário padrão do catálogo. Dentro de uma cotação, usa o cenário dela.{% endif %}
+      <br>Cenário desta cotação.
+      {% else %}
+      O preço acima vale para o <strong>cenário escolhido ao lado</strong>.
+      {% if economia %}Destino, condição e contribuinte mudam ICMS, DIFAL, FCP e encargo.
+      {% else %}Destino, condição de pagamento e tipo de cliente mudam o preço final.{% endif %}
+      Mudou o cenário, recalcule.
+      {% endif %}
     </div>
   </div>
 </div>

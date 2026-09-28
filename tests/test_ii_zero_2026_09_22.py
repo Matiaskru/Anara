@@ -467,7 +467,14 @@ def test_blankets_da_cotacao_de_29_07(session, fornecedores, owner):
     custo, base, mem = ps.bases_de_preco(session, bl["BL-001"])
     m = ps.margem_padrao(session, bl["BL-001"])
     b2b = preco_b2b(base, m.margem_pct, regras)
-    assert ps.status_canonico_do_custo(custo, mem) == "CONFIRMADO" and m.margem_pct == aprox(0.19)
+    # O status depende do FRESCOR da cotação de 29/07/2026, que envelhece com o calendário:
+    # derivado das premissas vigentes é CONFIRMADO enquanto a cotação está fresca e vira
+    # REVALIDAR quando passa do limite (60 dias) — cota e emite, não sustenta compromisso
+    # firme. Fixar "CONFIRMADO" fazia o teste apodrecer sozinho (28/09/2026); o que importa
+    # aqui é a REGRA, e a economia abaixo não muda com a idade do documento.
+    esperado = "REVALIDAR" if mem.get("exw_frescor") == "STALE" else "CONFIRMADO"
+    assert ps.status_canonico_do_custo(custo, mem) == esperado
+    assert m.margem_pct == aprox(0.19)
     assert mem["nacionalizacao"]["frete_usd"] == aprox(2.40 * 0.516) and mem["exw_usd"] == aprox(10.71)
     assert b2b.margem_liquida >= X("0.19") and calcular_por_preco(custo, 1, b2b.preco_negociado - X("0.01"), regras).margem_liquida < X("0.19")
 
