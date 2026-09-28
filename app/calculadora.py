@@ -17,7 +17,7 @@ from sqlmodel import Session, select
 
 from app import config_service as cfg
 from app import pricing_service as ps
-from app.dinheiro import D0, para_float
+from app.dinheiro import D, D0, para_float
 from app.models import (
     CostConfidence, CostMethod, Cotacao, Fornecedor, MaterialPreco, Produto, ToalhaPreco,
 )
@@ -210,6 +210,41 @@ def calcular(session: Session, familia: str, largura_cm: Optional[float],
     memoria["aviso_preco"] = (
         "Preço calculado com o preço de material que está cadastrado hoje. Nas últimas cotações "
         "a KTC praticou de 4% a 15% abaixo disso — é preço para cotar, não custo de compra fechado.")
+    return memoria
+
+
+def consultar_catalogo(session: Session, produto, cotacao=None, desconto_pct=None,
+                       quantidade: float = 1) -> dict:
+    """Preço de um produto **que já existe no catálogo**, no cenário pedido (28/09/2026).
+
+    Nasceu de um problema de reunião: para responder "quanto sai este lençol para o Rio, a
+    prazo?" a vendedora precisava abrir uma cotação inteira — criar venda, cliente, item — só
+    para ler um número e jogar fora. Aqui ela escolhe o produto, o cenário e, se quiser, o
+    desconto, e vê tabela, B2B, preço e a comissão dela na hora.
+
+    **Nada é gravado.** Nem produto, nem cotação, nem item: é o motor respondendo uma pergunta.
+    O cenário vem de `_cenario_do_form` (transitório) ou da cotação aberta.
+
+    O desconto usa a alavanca canônica da política de 21/09 — `preco_por_desconto` sobre a
+    TABELA, com `ROUND_UP` ao centavo, exatamente como na tela de negociação. Nada de regra de
+    preço nova morando aqui: se a conta divergisse da cotação, a vendedora falaria um número
+    que o sistema depois não confirma, que é o oposto do que esta função existe para fazer.
+    """
+    from app.pricing_engine import preco_por_desconto
+
+    memoria = ps.memoria_do_preco(session, produto, cotacao, quantidade=quantidade)
+    b2b = memoria.get("b2b") or {}
+    if b2b.get("preco_tabela"):
+        # Desconto 0 (o padrão) é o PREÇO DE TABELA, não o B2B. Sem isso a consulta abria no
+        # piso da autonomia — e quem perguntasse um preço numa reunião ouviria o mínimo que a
+        # Anara aceita, com a comissão mais baixa, sem ter dado desconto nenhum.
+        # O desconto é sobre a tabela e o preço é derivado dele, nunca digitado.
+        preco = preco_por_desconto(D(b2b["preco_tabela"]), D(desconto_pct or 0))
+        memoria = ps.memoria_do_preco(session, produto, cotacao, quantidade=quantidade,
+                                      preco_negociado=para_float(preco))
+    memoria["calculavel"] = memoria.get("comercial") is not None
+    memoria["quantidade"] = quantidade
+    memoria["consulta_catalogo"] = True
     return memoria
 
 

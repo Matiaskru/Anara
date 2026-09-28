@@ -130,6 +130,33 @@ async def calcular(request: Request, session: Session = Depends(get_session)):
     return JSONResponse(memoria if economia else calc.resultado_comercial(memoria))
 
 
+@router.post("/calculadora/consultar")
+async def consultar(request: Request, session: Session = Depends(get_session)):
+    """Preço de um produto do catálogo no cenário pedido — consulta, não cotação.
+
+    Mesmo corte de sempre: OWNER/ADMIN recebem a memória inteira, a vendedora recebe o
+    resultado comercial. E, como em toda a calculadora, **nada é gravado**.
+    """
+    exigir_autenticado(request)
+    economia = ve_economia(request)
+    form = await request.form()
+    produto = session.get(Produto, int(form.get("produto_id") or 0))
+    if produto is None:
+        return JSONResponse({"erro": "Produto não encontrado."}, status_code=404)
+    cotacao_id = form.get("cotacao_id")
+    cotacao = (session.get(Cotacao, int(cotacao_id)) if cotacao_id
+               else _cenario_do_form(session, form))
+    bruto = (form.get("desconto_pct") or "").strip().replace(",", ".")
+    try:
+        desconto = float(bruto) / 100 if bruto else None
+    except ValueError:
+        desconto = None
+    if desconto is not None and not (0 <= desconto < 1):
+        return JSONResponse({"erro": "Desconto precisa ficar entre 0% e 99%."}, status_code=400)
+    memoria = calc.consultar_catalogo(session, produto, cotacao=cotacao, desconto_pct=desconto)
+    return JSONResponse(memoria if economia else calc.resultado_comercial(memoria))
+
+
 @router.post("/calculadora/salvar")
 async def salvar(request: Request, session: Session = Depends(get_session)):
     """Grava no catálogo e, se veio de uma cotação, já adiciona o item nela."""

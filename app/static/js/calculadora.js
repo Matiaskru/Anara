@@ -144,3 +144,88 @@ async function salvar(calculavel) {
     anaraToast("Não consegui salvar.");
   }
 }
+
+// ---------------------------------------------------------------------------
+// Consulta rápida: preço de um produto que JÁ está no catálogo, no cenário da tela.
+// Não grava nada — nem produto, nem cotação, nem item. É o motor respondendo uma pergunta.
+// Como no resto da calculadora, quem pinta é o servidor: a resposta da vendedora não traz
+// campo econômico, então não há o que esconder aqui.
+// ---------------------------------------------------------------------------
+let consultaProdutoId = null;
+let consultaBuscaTimer = null;
+
+function cenarioAtual() {
+  // o cenário mora no mesmo formulário (ou vem da cotação, pelo campo oculto)
+  const dados = new URLSearchParams();
+  const form = document.getElementById("form-calc");
+  for (const campo of ["cotacao_id", "estado_destino", "condicao_pagamento", "contribuinte"]) {
+    const el = form.querySelector(`[name="${campo}"]`);
+    if (el && el.value) dados.set(campo, el.value);
+  }
+  return dados;
+}
+
+async function buscarParaConsulta() {
+  const termo = document.getElementById("consulta-busca").value.trim();
+  const caixa = document.getElementById("consulta-achados");
+  clearTimeout(consultaBuscaTimer);
+  if (termo.length < 3) { caixa.style.display = "none"; return; }
+  consultaBuscaTimer = setTimeout(async () => {
+    const resp = await fetch(`/produtos/buscar?q=${encodeURIComponent(termo)}`);
+    const achados = (await resp.json()).slice(0, 6);
+    caixa.innerHTML = achados.map(p =>
+      `<button type="button" class="tile" onclick="escolherParaConsulta(${p.id}, ${JSON.stringify(p.nome)})">
+         <div class="t-nome">${esc(p.nome)}</div>
+         <div class="t-sub">${esc(p.familia || "")}</div>
+       </button>`).join("") || '<div class="small muted">Nada encontrado com esse termo.</div>';
+    caixa.style.display = "";
+  }, 250);
+}
+
+function escolherParaConsulta(id, nome) {
+  consultaProdutoId = id;
+  document.getElementById("consulta-busca").value = nome;
+  document.getElementById("consulta-achados").style.display = "none";
+  consultarPreco();
+}
+
+async function consultarPreco() {
+  if (!consultaProdutoId) return;
+  const dados = cenarioAtual();
+  dados.set("produto_id", consultaProdutoId);
+  dados.set("desconto_pct", document.getElementById("consulta-desconto").value || "0");
+
+  const resp = await fetch("/calculadora/consultar", { method: "POST", body: dados });
+  const r = await resp.json();
+  const saida = document.getElementById("consulta-saida");
+  saida.style.display = "";
+
+  if (r.erro || r.calculavel === false) {
+    saida.innerHTML = `<div class="aviso-inline">${esc(r.erro || r.motivo ||
+      "Este produto não forma preço automático.")}</div>`;
+    return;
+  }
+  // ECONOMIA recebe a memória inteira; a vendedora recebe o resultado comercial. Os campos
+  // comerciais existem nos dois, e são só esses que esta tela mostra.
+  const b2b = ECONOMIA ? (r.b2b || {}) : r;
+  const com = ECONOMIA ? (r.comercial || {}) : r;
+  const preco = ECONOMIA ? com.preco_negociado : r.preco_proposto;
+  const tabela = ECONOMIA ? b2b.preco_tabela : r.preco_tabela;
+  const piso = ECONOMIA ? b2b.preco_b2b : r.preco_b2b;
+  const dentro = preco >= piso;
+  const comissao = ECONOMIA ? null
+    : `${brl(r.comissao_estimada_valor)} · ${pct(r.comissao_estimada_pct)}`;
+
+  saida.innerHTML = `
+    <div class="kpi-grid" style="grid-template-columns: repeat(${comissao ? 4 : 3},1fr);">
+      <div class="kpi"><div class="label">Preço de tabela</div><div class="value">${brl(tabela)}</div></div>
+      <div class="kpi"><div class="label">Preço com o desconto</div><div class="value copper">${brl(preco)}</div></div>
+      <div class="kpi"><div class="label">B2B (menor sem aprovação)</div><div class="value small">${brl(piso)}</div></div>
+      ${comissao ? `<div class="kpi"><div class="label">Sua comissão</div><div class="value small">${comissao}</div></div>` : ""}
+    </div>
+    <div class="aviso-inline" style="margin-top:8px;">
+      ${dentro ? "✓ Dentro da sua autonomia." : "⚠ Abaixo do B2B — este preço precisa de aprovação."}
+      ${r.situacao_rotulo ? " · " + esc(r.situacao_rotulo) : ""}
+    </div>
+    ${(r.pendencias || []).map(p => `<div class="aviso-inline">${esc(p)}</div>`).join("")}`;
+}

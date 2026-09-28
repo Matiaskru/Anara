@@ -138,3 +138,104 @@ def test_7_lencol_de_baixo_aparece_no_grupo_cama():
     cama = fonte.split("{% set cama =")[1].split("%}")[0]
     assert "'Bottom Sheet'" in cama
     assert "'Top Sheet'" in cama and "'Flat Sheet'" in cama
+
+
+# ===========================================================================
+# 8–14. Consulta de preço do catálogo — a pergunta de reunião
+# ===========================================================================
+#: "Quanto sai este lençol para o Rio, a prazo?" antes exigia abrir uma cotação inteira
+#: (venda, cliente, item) só para ler um número e jogar fora.
+@pytest.fixture
+def produto_catalogo(session):
+    """Um SKU de catálogo que forma preço — é o que a consulta responde."""
+    from app.models import Fornecedor
+    from tests.crisis.conftest import produto_ktc_cotado
+
+    fornecedores = {f.codigo: f for f in session.exec(select(Fornecedor)).all()}
+    return produto_ktc_cotado(session, fornecedores, familia="Flat Sheet", thread_count=300,
+                              largura_cm=180, comprimento_cm=280, exw_usd=9.8, peso_kg=0.8)
+
+
+def _consulta(session, produto, desconto=None, **cenario):
+    from app import calculadora as calc
+    from app.routers.calculadora import _cenario_do_form
+    cot = _cenario_do_form(session, _form(**cenario)) if cenario else None
+    return calc.resultado_comercial(
+        calc.consultar_catalogo(session, produto, cotacao=cot, desconto_pct=desconto))
+
+
+def test_8_sem_desconto_o_preco_e_a_tabela(session, produto_catalogo):
+    """Sem isto a consulta abria no B2B e a vendedora falaria o piso sem ter dado desconto."""
+    p = produto_catalogo
+    r = _consulta(session, p)
+    assert r["preco_proposto"] == r["preco_tabela"]
+    assert r["preco_proposto"] > r["preco_b2b"]
+    assert r["desconto_vs_tabela_pct"] == pytest.approx(0, abs=1e-9)
+
+
+def test_9_o_desconto_desce_o_preco_e_a_comissao(session, produto_catalogo):
+    """A escada da política: quanto maior o desconto, menor a comissão dela."""
+    p = produto_catalogo
+    cheio = _consulta(session, p)
+    meio = _consulta(session, p, desconto=0.25)
+    assert meio["preco_proposto"] < cheio["preco_proposto"]
+    assert meio["comissao_estimada_pct"] < cheio["comissao_estimada_pct"]
+    assert meio["preco_tabela"] == cheio["preco_tabela"]      # a tabela não se move
+
+
+def test_10_desconto_abaixo_do_b2b_e_sinalizado(session, produto_catalogo):
+    """O B2B é o piso da autonomia: abaixo dele a proposta precisa de aprovação."""
+    p = produto_catalogo
+    fundo = _consulta(session, p, desconto=0.80)
+    assert fundo["preco_proposto"] < fundo["preco_b2b"]
+
+
+def test_11_o_cenario_muda_o_preco_da_consulta(session, produto_catalogo):
+    p = produto_catalogo
+    sp = _consulta(session, p, estado_destino="São Paulo", contribuinte="nao")
+    rj = _consulta(session, p, estado_destino="Rio de Janeiro", contribuinte="nao")
+    assert sp["preco_tabela"] and rj["preco_tabela"]
+    assert rj["preco_tabela"] != sp["preco_tabela"]
+
+
+def test_12_consultar_nao_grava_nada(session, produto_catalogo):
+    """É o motor respondendo uma pergunta — não um documento nascendo."""
+    from app.models import Cotacao, CotacaoItem, Produto
+
+    antes = (len(session.exec(select(Cotacao)).all()),
+             len(session.exec(select(CotacaoItem)).all()),
+             len(session.exec(select(Produto)).all()))
+    p = produto_catalogo
+    for desconto in (None, 0.1, 0.4):
+        for uf in ("São Paulo", "Bahia"):
+            _consulta(session, p, desconto=desconto, estado_destino=uf, contribuinte="nao")
+    session.flush()
+    depois = (len(session.exec(select(Cotacao)).all()),
+              len(session.exec(select(CotacaoItem)).all()),
+              len(session.exec(select(Produto)).all()))
+    assert depois == antes
+
+
+def test_13_a_vendedora_nao_recebe_economia_na_consulta(session, produto_catalogo):
+    """Mesmo corte da calculadora: lista de permissão, não remoção."""
+    from app import calculadora as calc
+    from app.confidencial import encontrar_confidenciais
+
+    p = produto_catalogo
+    corpo = calc.resultado_comercial(calc.consultar_catalogo(session, p, desconto_pct=0.2))
+    assert encontrar_confidenciais(corpo) == []
+    assert set(corpo) <= set(calc.CAMPOS_RESULTADO_COMERCIAL)
+    texto = str(corpo).lower()
+    for termo in ("custo", "cnet", "exw", "margem", "lucro", "markup", "proteç"):
+        assert termo not in texto, termo
+
+
+def test_14_o_desconto_usa_a_alavanca_canonica_da_politica(session, produto_catalogo):
+    """Se a conta divergisse da cotação, ela falaria um número que o sistema não confirma."""
+    from app.dinheiro import D
+    from app.pricing_engine import preco_por_desconto
+
+    p = produto_catalogo
+    r = _consulta(session, p, desconto=0.18)
+    esperado = preco_por_desconto(D(r["preco_tabela"]), D("0.18"))
+    assert r["preco_proposto"] == pytest.approx(float(esperado), abs=0.005)
