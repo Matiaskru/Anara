@@ -29,6 +29,9 @@ TELAS_COMERCIAIS = [
     "relatorio_aprovacoes.html", "login.html", "primeiro_acesso.html",
     "esqueci_senha.html", "redefinir_senha.html",
     "erro_acao.html", "base.html",
+    # 01/10/2026: controle de amostras — a vendedora usa as duas primeiras; a do Admin também
+    # não tem código interno, então fica na auditoria mais estrita
+    "amostras_lista.html", "amostra_detalhe.html", "admin_amostras.html",
 ]
 
 #: Termos que não podem aparecer como **texto** numa tela comercial.
@@ -121,7 +124,9 @@ def test_menu_e_por_tarefa_e_curto():
     # 25/09/2026: a Calculadora entrou DEPOIS de Produtos, deixando a ordem das cinco
     # principais intacta. O teto sobe de 7 para 8 — e continua sendo um teto de propósito:
     # o menu é por tarefa, e cada item novo precisa justificar por que é tarefa de alguém.
-    assert len(destinos) <= 8, f"o menu voltou a crescer: {destinos}"
+    # 01/10/2026: Amostras entrou (pedido do Matias) — a vendedora registra ali o envio e o
+    # retorno de amostra, tarefa diária dela. Teto 8 → 9.
+    assert len(destinos) <= 9, f"o menu voltou a crescer: {destinos}"
 
 
 def test_menu_nao_tem_ferramenta_tecnica_solta():

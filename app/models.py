@@ -1464,3 +1464,42 @@ class AtividadeComercial(SQLModel, table=True):
     concluida_por: Optional[str] = None
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     criado_por: Optional[str] = None
+
+
+# ---------------------------------------------------------------------------
+# Amostras (01/10/2026)
+# ---------------------------------------------------------------------------
+class AmostraProduto(SQLModel, table=True):
+    """Um produto **do catálogo** controlado como amostra.
+
+    Não é um segundo catálogo: aponta para `produto` e não repete nome, medida nem preço.
+    Também não tem coluna de saldo — disponível e em circulação são derivados das
+    movimentações (`app/amostras.py`), para o saldo sempre responder "por quê".
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    produto_id: int = Field(foreign_key="produto.id", unique=True, index=True)
+    ativo: bool = True
+    observacao: Optional[str] = None
+    criado_por_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+
+
+class AmostraMovimentacao(SQLModel, table=True):
+    """Append-only: entrada, saída, retorno, baixa ou ajuste de amostra.
+
+    Não se edita nem se apaga — corrigir é registrar outra movimentação (ajuste com motivo).
+    `quantidade` é sempre positiva; só o AJUSTE leva sinal (a diferença aplicada ao
+    disponível). O efeito de cada tipo no saldo está em `amostras.EFEITO`.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    amostra_produto_id: int = Field(foreign_key="amostraproduto.id", index=True)
+    tipo: str
+    quantidade: int
+    data: date
+    cliente_id: Optional[int] = Field(default=None, foreign_key="cliente.id")
+    cliente_texto: Optional[str] = None
+    motivo: Optional[str] = None
+    observacao: Optional[str] = None
+    usuario_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    usuario_nome: Optional[str] = None
+    criado_em: datetime = Field(default_factory=datetime.utcnow, index=True)

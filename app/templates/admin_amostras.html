@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Amostras — Administração — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Amostras</h1><span class="contexto">Administração</span></div>
+  <div class="acoes">
+    <a href="/admin" class="btn btn-ghost">Voltar ao Admin</a>
+    <button class="btn btn-ghost" type="button" data-modal="modal-ajuste" {{ 'disabled' if not painel.linhas else '' }}>Ajuste administrativo</button>
+    <button class="btn btn-copper" type="button" data-modal="modal-entrada" {{ 'disabled' if not painel.linhas else '' }}>Registrar entrada</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:14px;">
+  <h3>Adicionar produto às amostras</h3>
+  <form method="get" action="/admin/amostras" class="flex" role="search" style="margin-bottom:10px;">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar no catálogo: nome, medida, fios…" aria-label="Buscar produto" style="width:340px;">
+    <button class="btn btn-ghost" type="submit">Buscar</button>
+  </form>
+  {% if q %}
+  <table class="compacta">
+    <thead><tr><th>Produto</th><th>Especificação</th><th class="num" style="width:120px;">Quantidade inicial</th><th>Observação</th><th></th></tr></thead>
+    <tbody>
+    {% for r in resultados %}
+      <tr>
+        <td class="primaria">{{ r.produto.nome }}</td><td>{{ r.produto.especificacao or '—' }}</td>
+        {% if r.ja_esta %}
+        <td colspan="3" class="muted">Já está no controle de amostras.</td>
+        {% else %}
+        <td colspan="3">
+          <form method="post" action="/admin/amostras" class="flex" style="gap:6px;">
+            <input type="hidden" name="produto_id" value="{{ r.produto.id }}">
+            <input name="quantidade_inicial" type="number" min="0" step="1" value="0" aria-label="Quantidade inicial" style="width:90px;">
+            <input name="observacao" placeholder="opcional" aria-label="Observação" style="width:200px;">
+            <button class="btn btn-copper btn-xs" type="submit">Adicionar</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+    {% else %}
+      <tr><td colspan="5" class="tbl-vazia">Nenhum produto do catálogo encontrado para "{{ q }}".</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+
+<div class="card flush" style="overflow-x:auto;">
+  <table>
+    <thead><tr><th style="min-width:200px;">Produto</th><th>Especificação</th><th class="num">Disponíveis</th><th class="num">Em circulação</th><th class="num">Total</th><th>Última movimentação</th><th></th></tr></thead>
+    <tbody>
+    {% for l in painel.linhas %}
+      <tr>
+        <td class="primaria">{{ l.nome }}</td><td>{{ l.especificacao or '—' }}</td>
+        <td class="num"><strong>{{ l.disponivel }}</strong></td><td class="num">{{ l.circulacao }}</td><td class="num">{{ l.total }}</td>
+        <td>{% if l.ultima %}{{ l.ultima_rotulo }} · {{ 'hoje' if l.ultima.data == hoje else l.ultima.data|data }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="right nowrap"><a class="btn btn-ghost btn-xs" href="/amostras/{{ l.id }}">Histórico</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="tbl-vazia">Nenhum produto no controle de amostras. Busque acima e adicione.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# ------------------------------------------------------------- modais #}
+<div class="modal-bg" id="modal-entrada" role="dialog" aria-modal="true" aria-labelledby="titulo-entrada">
+  <form class="modal" method="post" action="/admin/amostras/entrada">
+    <div class="modal-head"><h2 id="titulo-entrada">Registrar entrada</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="field"><label for="e-produto">Produto</label>
+      <select id="e-produto" name="amostra_id" required>{% for l in painel.linhas %}<option value="{{ l.id }}">{{ l.nome }} · {{ l.disponivel }} disponível(is)</option>{% endfor %}</select></div>
+    <div class="grid-2">
+      <div class="field"><label for="e-qtd">Quantidade</label><input id="e-qtd" name="quantidade" type="number" min="1" step="1" required></div>
+      <div class="field"><label for="e-data">Data</label><input id="e-data" name="data" type="date" value="{{ hoje.isoformat() }}" required></div>
+    </div>
+    <div class="field"><label for="e-obs">Observação</label><input id="e-obs" name="observacao" placeholder="ex.: chegaram com a PI de 23/09"></div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Registrar entrada</button></div>
+  </form>
+</div>
+
+<div class="modal-bg" id="modal-ajuste" role="dialog" aria-modal="true" aria-labelledby="titulo-ajuste">
+  <form class="modal" method="post" action="/admin/amostras/ajuste">
+    <div class="modal-head"><h2 id="titulo-ajuste">Ajuste administrativo</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="field"><label for="a-produto">Produto</label>
+      <select id="a-produto" name="amostra_id" required>{% for l in painel.linhas %}<option value="{{ l.id }}">{{ l.nome }} · sistema: {{ l.disponivel }} disponível(is)</option>{% endfor %}</select></div>
+    <div class="grid-2">
+      <div class="field"><label for="a-contado">Disponível na contagem física</label><input id="a-contado" name="disponivel_contado" type="number" min="0" step="1" required></div>
+      <div class="field"><label for="a-data">Data</label><input id="a-data" name="data" type="date" value="{{ hoje.isoformat() }}" required></div>
+    </div>
+    <div class="field"><label for="a-motivo">Motivo (obrigatório)</label><input id="a-motivo" name="motivo" required placeholder="ex.: contagem física de 01/10 encontrou 4"></div>
+    <p class="nota">O ajuste grava a diferença como movimentação, com você como responsável. Nada é apagado.</p>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Registrar ajuste</button></div>
+  </form>
+</div>
+{% endblock %}

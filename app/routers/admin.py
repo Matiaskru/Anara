@@ -126,6 +126,8 @@ AREAS_ADMIN = [
      "Subir tabela de fornecedor, com conferência antes de gravar."),
     ("Calculadora", "/calculadora",
      "Simular um preço sem criar cotação."),
+    ("Amostras", "/admin/amostras",
+     "Produtos com amostra, entrada de novas peças e ajuste de contagem com motivo."),
     ("Usuários", "/admin/usuarios",
      "Quem entra, com qual papel e com quais permissões."),
     ("Auditoria", "/admin/trilha",

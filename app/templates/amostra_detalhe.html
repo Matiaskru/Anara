@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}{{ produto.nome if produto else 'Amostra' }} — Amostras — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>{{ produto.nome if produto else 'Amostra' }}</h1><span class="contexto">Amostras</span></div>
+  <div class="acoes">
+    <a href="/amostras" class="btn btn-ghost">Voltar</a>
+    <button class="btn btn-ghost" type="button" data-modal="modal-retorno" {{ 'disabled' if not fora else '' }}>Registrar retorno</button>
+    <button class="btn btn-copper" type="button" data-modal="modal-saida" {{ 'disabled' if saldo.disponivel <= 0 else '' }}>Registrar envio / uso</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<p class="muted" style="margin:0 0 12px;">{{ produto.especificacao or '' }}{% if produto and produto.sku_key %} · <span title="SKU">{{ produto.sku_key }}</span>{% endif %}</p>
+
+<div class="kpis" style="margin-bottom:14px;">
+  <div class="kpi"><div class="label">Disponíveis</div><div class="value">{{ saldo.disponivel }}</div></div>
+  <div class="kpi"><div class="label">Em circulação</div><div class="value">{{ saldo.circulacao }}</div></div>
+  <div class="kpi"><div class="label">Total</div><div class="value">{{ saldo.total }}</div></div>
+</div>
+
+{% if fora %}
+<div class="card flush" style="margin-bottom:14px;">
+  <table>
+    <thead><tr><th>Com quem está</th><th class="num">Quantidade</th><th>Desde</th></tr></thead>
+    <tbody>
+    {% for f in fora %}
+      <tr><td class="primaria">{{ f.rotulo }}</td><td class="num">{{ f.quantidade }}</td><td>{{ f.desde|data }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<div class="card flush">
+  <div class="card-title" style="padding:10px 12px 0;"><h3>Histórico</h3></div>
+  <table>
+    <thead><tr><th>Data</th><th>Usuário</th><th>Tipo</th><th class="num">Quantidade</th><th>Cliente / uso</th><th>Observação</th></tr></thead>
+    <tbody>
+    {% for h in historico %}
+      <tr>
+        <td class="nowrap">{{ h.data|data }}</td><td>{{ h.usuario }}</td><td>{{ h.tipo }}</td>
+        <td class="num">{{ h.quantidade }}</td><td>{{ h.uso }}</td><td>{{ h.observacao }}</td>
+      </tr>
+    {% else %}
+      <tr><td colspan="6" class="tbl-vazia">Nenhuma movimentação ainda.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if eh_admin %}<p class="nota">Entrada de novas peças e ajuste de contagem: <a href="/admin/amostras">Admin → Amostras</a>.</p>{% endif %}
+
+{# ------------------------------------------------------------- modais #}
+<div class="modal-bg" id="modal-saida" role="dialog" aria-modal="true" aria-labelledby="titulo-saida">
+  <form class="modal" method="post" action="/amostras/{{ amostra.id }}/saida">
+    <div class="modal-head"><h2 id="titulo-saida">Registrar envio / uso</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="grid-2">
+      <div class="field"><label for="s-qtd">Quantidade</label>
+        <input id="s-qtd" name="quantidade" type="number" min="1" max="{{ saldo.disponivel }}" step="1" value="1" required autofocus>
+        <small>{{ saldo.disponivel }} disponível(is)</small></div>
+      <div class="field"><label for="s-data">Data</label><input id="s-data" name="data" type="date" value="{{ hoje.isoformat() }}" required></div>
+      <div class="field"><label for="s-cliente">Cliente do sistema</label>
+        <select id="s-cliente" name="cliente_id"><option value="">— não está cadastrado —</option>
+          {% for c in clientes %}<option value="{{ c.id }}">{{ c.nome }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="s-texto">ou escreva (empresa / uso)</label>
+        <input id="s-texto" name="cliente_texto" placeholder="ex.: Hotel X · showroom SP"></div>
+      <div class="field span-2"><label for="s-motivo">Motivo</label>
+        <select id="s-motivo" name="motivo" required>{% for m in motivos %}<option>{{ m }}</option>{% endfor %}</select></div>
+      <div class="field span-2"><label for="s-obs">Observação</label><input id="s-obs" name="observacao"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Registrar</button></div>
+  </form>
+</div>
+
+<div class="modal-bg" id="modal-retorno" role="dialog" aria-modal="true" aria-labelledby="titulo-retorno">
+  <form class="modal" method="post" action="/amostras/{{ amostra.id }}/retorno">
+    <div class="modal-head"><h2 id="titulo-retorno">Registrar retorno</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="grid-2">
+      <div class="field span-2"><label for="r-destino">Com quem estava</label>
+        <select id="r-destino" name="destino" required>
+          {% for f in fora %}<option value="{{ f.chave }}">{{ f.rotulo }} · {{ f.quantidade }} em circulação</option>{% endfor %}</select></div>
+      <div class="field"><label for="r-qtd">Quantidade</label><input id="r-qtd" name="quantidade" type="number" min="1" step="1" value="1" required></div>
+      <div class="field"><label for="r-data">Data</label><input id="r-data" name="data" type="date" value="{{ hoje.isoformat() }}" required></div>
+      <div class="field span-2"><label for="r-cond">Condição</label>
+        <select id="r-cond" name="condicao" required>{% for v, rotulo in condicoes %}<option value="{{ v }}">{{ rotulo }}</option>{% endfor %}</select>
+        <small>Só "Retornou normalmente" volta para o disponível.</small></div>
+      <div class="field span-2"><label for="r-obs">Observação</label><input id="r-obs" name="observacao"></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Registrar</button></div>
+  </form>
+</div>
+{% endblock %}

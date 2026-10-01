@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Amostras — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Amostras</h1><span class="contexto">o que temos, o que está fora e com quem</span></div>
+  {% if eh_admin %}<div class="acoes"><a href="/admin/amostras" class="btn btn-ghost">Cadastrar / entrada</a></div>{% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="kpis" style="margin-bottom:14px;">
+  <div class="kpi"><div class="label">Disponíveis</div><div class="value">{{ painel.disponiveis }}</div></div>
+  <div class="kpi"><div class="label">Em circulação</div><div class="value">{{ painel.em_circulacao }}</div></div>
+  <div class="kpi"><div class="label">Produtos com amostra</div><div class="value">{{ painel.produtos }}</div></div>
+</div>
+
+<div class="card flush" style="overflow-x:auto;">
+  <table>
+    <thead><tr>
+      <th style="min-width:200px;">Produto</th><th>SKU</th><th>Especificação</th>
+      <th class="num">Disponíveis</th><th class="num">Em circulação</th><th class="num">Total</th>
+      <th>Última movimentação</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for l in painel.linhas %}
+      <tr class="clicavel" data-href="/amostras/{{ l.id }}">
+        <td class="primaria">{{ l.nome }}</td>
+        <td><span class="muted" title="{{ l.sku }}" style="display:inline-block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;">{{ l.sku }}</span></td>
+        <td style="max-width:160px;">{{ l.especificacao or '—' }}</td>
+        <td class="num"><strong>{{ l.disponivel }}</strong></td>
+        <td class="num">{{ l.circulacao }}</td>
+        <td class="num">{{ l.total }}</td>
+        <td>{% if l.ultima %}{{ l.ultima_rotulo }} · {{ 'hoje' if l.ultima.data == hoje else l.ultima.data|data }}{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="right nowrap"><a class="btn btn-ghost btn-xs" href="/amostras/{{ l.id }}">Ver / movimentar</a></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="8" class="tbl-vazia">Nenhum produto com amostra ainda.
+        {% if eh_admin %}<br><a class="btn btn-copper btn-sm mt-8" href="/admin/amostras">Adicionar produto às amostras</a>
+        {% else %}O administrativo cadastra os produtos em Admin → Amostras.{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
