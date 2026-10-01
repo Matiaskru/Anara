@@ -47,8 +47,11 @@ def detalhe(request: Request, amostra_id: int, session: Session = Depends(get_se
     if amostra is None or not amostra.ativo:
         raise am.AmostraInvalida("Amostra não encontrada.", status=404)
     movs = am.movimentos(session, amostra.id)
+    produto = session.get(Produto, amostra.produto_id) if amostra.produto_id else None
+    nome, especificacao = am.identificacao(amostra, produto)
     return templates.TemplateResponse(request, "amostra_detalhe.html", {
-        "active": "amostras", "amostra": amostra, "produto": session.get(Produto, amostra.produto_id),
+        "active": "amostras", "amostra": amostra, "produto": produto, "nome": nome,
+        "especificacao": especificacao,
         "saldo": am.saldo_de(movs), "fora": am.fora(session, amostra.id, movs),
         "historico": am.historico(session, amostra.id, movs), "clientes": _clientes(session),
         "motivos": am.MOTIVOS_SAIDA, "condicoes": am.CONDICOES_RETORNO, "hoje": date.today(),
@@ -105,6 +108,18 @@ def admin_adicionar(request: Request, produto_id: str = Form(...), quantidade_in
     ator = exigir_admin(request)
     am.adicionar_produto(session, produto_id=produto_id, quantidade_inicial=quantidade_inicial,
                          observacao=observacao, ator=ator)
+    session.commit()
+    return RedirectResponse(url="/admin/amostras", status_code=303)
+
+
+@router.post("/admin/amostras/avulsa")
+def admin_adicionar_avulsa(request: Request, nome: str = Form(...), especificacao: str = Form(""),
+                           quantidade_inicial: str = Form("0"), observacao: str = Form(""),
+                           session: Session = Depends(get_session)):
+    """Amostra de peça que não existe no catálogo: nome e especificação próprios, sem produto."""
+    ator = exigir_admin(request)
+    am.adicionar_avulsa(session, nome=nome, especificacao=especificacao,
+                        quantidade_inicial=quantidade_inicial, observacao=observacao, ator=ator)
     session.commit()
     return RedirectResponse(url="/admin/amostras", status_code=303)
 

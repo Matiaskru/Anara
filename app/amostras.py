@@ -156,6 +156,15 @@ def historico(session: Session, amostra_id: int, movs=None) -> list:
     return linhas
 
 
+def identificacao(amostra: AmostraProduto, produto: Optional[Produto]) -> tuple:
+    """(nome, especificação) que a tela mostra: os do produto do catálogo, ou os da avulsa."""
+    if produto is not None:
+        return produto.nome, produto.especificacao or ""
+    if amostra.produto_id:
+        return f"Produto #{amostra.produto_id}", ""
+    return amostra.nome or "Amostra avulsa", amostra.especificacao or ""
+
+
 def painel(session: Session) -> dict:
     """A lista da aba Amostras: um linha por produto, com saldo e a última movimentação."""
     amostras = session.exec(select(AmostraProduto).where(AmostraProduto.ativo == True)).all()  # noqa: E712
@@ -170,17 +179,18 @@ def painel(session: Session) -> dict:
     for m in todos:
         por_amostra[m.amostra_produto_id].append(m)
     produtos = {p.id: p for p in session.exec(
-        select(Produto).where(Produto.id.in_([a.produto_id for a in amostras]))).all()}
+        select(Produto).where(Produto.id.in_([a.produto_id for a in amostras if a.produto_id]))).all()}
     nomes = _nomes_de_clientes(session, [m.cliente_id for m in todos])
     linhas = []
     for a in amostras:
         movs = por_amostra.get(a.id, [])
         s = saldo_de(movs)
         ultima = max(movs, key=lambda m: (m.criado_em, m.id)) if movs else None
-        p = produtos.get(a.produto_id)
+        p = produtos.get(a.produto_id) if a.produto_id else None
+        nome, especificacao = identificacao(a, p)
         linhas.append({
-            "id": a.id, "produto": p, "nome": p.nome if p else f"Produto #{a.produto_id}",
-            "sku": p.sku_key if p else "", "especificacao": (p.especificacao if p else "") or "",
+            "id": a.id, "produto": p, "nome": nome,
+            "sku": p.sku_key if p else "", "especificacao": especificacao,
             **s, "ultima": ultima,
             "ultima_rotulo": (rotulo_destino(ultima, nomes) or ROTULO_TIPO.get(ultima.tipo, ""))
             if ultima else "",
@@ -254,6 +264,31 @@ def adicionar_produto(session: Session, *, produto_id, quantidade_inicial, obser
     qtd = _quantidade(quantidade_inicial, permite_zero=True)
     amostra = AmostraProduto(produto_id=produto.id, observacao=_texto(observacao),
                              criado_por_id=getattr(ator, "id", None))
+    session.add(amostra)
+    session.flush()
+    if qtd:
+        _gravar(session, amostra, ENTRADA, qtd, _data(data_mov), ator,
+                observacao=_texto(observacao) or "Quantidade inicial")
+    return amostra
+
+
+def adicionar_avulsa(session: Session, *, nome, especificacao, quantidade_inicial, observacao,
+                     ator: Usuario, data_mov=None) -> AmostraProduto:
+    """Amostra de peça que NÃO existe no catálogo (ex.: travesseiro que a Anara ainda não vende).
+
+    Não cria produto nem preço — só o controle da amostra, com nome e especificação próprios.
+    A mesma peça (nome + especificação) não entra duas vezes.
+    """
+    nome, especificacao = _texto(nome), _texto(especificacao)
+    if nome is None:
+        raise AmostraInvalida("Informe o nome da amostra.")
+    chave = (nome.lower(), (especificacao or "").lower())
+    for a in session.exec(select(AmostraProduto).where(AmostraProduto.produto_id == None)).all():  # noqa: E711
+        if ((a.nome or "").lower(), (a.especificacao or "").lower()) == chave:
+            raise AmostraInvalida(f"{nome} já está no controle de amostras.", status=409)
+    qtd = _quantidade(quantidade_inicial, permite_zero=True)
+    amostra = AmostraProduto(produto_id=None, nome=nome, especificacao=especificacao,
+                             observacao=_texto(observacao), criado_por_id=getattr(ator, "id", None))
     session.add(amostra)
     session.flush()
     if qtd:

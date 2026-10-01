@@ -1477,7 +1477,11 @@ class AmostraProduto(SQLModel, table=True):
     movimentações (`app/amostras.py`), para o saldo sempre responder "por quê".
     """
     id: Optional[int] = Field(default=None, primary_key=True)
-    produto_id: int = Field(foreign_key="produto.id", unique=True, index=True)
+    #: o produto do catálogo; vazio só na amostra avulsa (peça que não existe no catálogo)
+    produto_id: Optional[int] = Field(default=None, foreign_key="produto.id", unique=True, index=True)
+    #: nome e especificação só da amostra avulsa — a do catálogo usa os do produto
+    nome: Optional[str] = None
+    especificacao: Optional[str] = None
     ativo: bool = True
     observacao: Optional[str] = None
     criado_por_id: Optional[int] = Field(default=None, foreign_key="usuario.id")

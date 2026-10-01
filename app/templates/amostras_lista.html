@@ -26,7 +26,7 @@
     {% for l in painel.linhas %}
       <tr class="clicavel" data-href="/amostras/{{ l.id }}">
         <td class="primaria">{{ l.nome }}</td>
-        <td><span class="muted" title="{{ l.sku }}" style="display:inline-block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;">{{ l.sku }}</span></td>
+        <td><span class="muted" title="{{ l.sku }}" style="display:inline-block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom;">{{ l.sku or "fora do catálogo" }}</span></td>
         <td style="max-width:160px;">{{ l.especificacao or '—' }}</td>
         <td class="num"><strong>{{ l.disponivel }}</strong></td>
         <td class="num">{{ l.circulacao }}</td>

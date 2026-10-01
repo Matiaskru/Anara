@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}{{ produto.nome if produto else 'Amostra' }} — Amostras — Anara{% endblock %}
+{% block title %}{{ nome }} — Amostras — Anara{% endblock %}
 
 {% block topbar %}
 <div class="topbar">
-  <div class="titulo"><h1>{{ produto.nome if produto else 'Amostra' }}</h1><span class="contexto">Amostras</span></div>
+  <div class="titulo"><h1>{{ nome }}</h1><span class="contexto">Amostras{% if not produto %} · fora do catálogo{% endif %}</span></div>
   <div class="acoes">
     <a href="/amostras" class="btn btn-ghost">Voltar</a>
     <button class="btn btn-ghost" type="button" data-modal="modal-retorno" {{ 'disabled' if not fora else '' }}>Registrar retorno</button>
@@ -13,7 +13,7 @@
 {% endblock %}
 
 {% block content %}
-<p class="muted" style="margin:0 0 12px;">{{ produto.especificacao or '' }}{% if produto and produto.sku_key %} · <span title="SKU">{{ produto.sku_key }}</span>{% endif %}</p>
+<p class="muted" style="margin:0 0 12px;">{{ especificacao }}{% if produto and produto.sku_key %} · <span title="SKU">{{ produto.sku_key }}</span>{% endif %}</p>
 
 <div class="kpis" style="margin-bottom:14px;">
   <div class="kpi"><div class="label">Disponíveis</div><div class="value">{{ saldo.disponivel }}</div></div>

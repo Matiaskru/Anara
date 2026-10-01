@@ -242,7 +242,7 @@ def test_admin_amostras_busca_no_catalogo_e_marca_quem_ja_esta(session, owner):
 
 
 def test_nao_existe_rota_para_apagar_ou_editar_movimentacao():
-    """O módulo inteiro são estas oito rotas: nenhuma apaga, edita ou sobrescreve saldo."""
+    """O módulo inteiro são estas nove rotas: nenhuma apaga, edita ou sobrescreve saldo."""
     from app.main import app
     caminhos = {(r.path, m) for r in rotas.router.routes for m in r.methods}
     assert caminhos == {
@@ -250,7 +250,58 @@ def test_nao_existe_rota_para_apagar_ou_editar_movimentacao():
         ("/amostras/{amostra_id}/saida", "POST"), ("/amostras/{amostra_id}/retorno", "POST"),
         ("/admin/amostras", "GET"), ("/admin/amostras", "POST"),
         ("/admin/amostras/entrada", "POST"), ("/admin/amostras/ajuste", "POST"),
+        ("/admin/amostras/avulsa", "POST"),
     }
     # e o app serve o módulo
     assert app.url_path_for("admin_ajuste") == "/admin/amostras/ajuste"
     assert app.url_path_for("retorno", amostra_id=1) == "/amostras/1/retorno"
+
+
+# ---------------------------------------------------------------------------
+# amostra avulsa: peça que não existe no catálogo (01/10/2026)
+# ---------------------------------------------------------------------------
+def _avulsa(session, ator, nome, especificacao="", quantidade=0):
+    r = rotas.admin_adicionar_avulsa(RequestFalsa(ator), nome=nome, especificacao=especificacao,
+                                     quantidade_inicial=str(quantidade), observacao="", session=session)
+    assert r.status_code == 303
+    return session.exec(select(AmostraProduto).where(AmostraProduto.nome == nome)).one()
+
+
+def test_13_avulsa_entra_sem_produto_e_movimenta_como_as_outras(session, owner, vendedor_interno):
+    nome = f"Travesseiro macio 50x70 {uuid.uuid4().hex[:6]}"
+    amostra = _avulsa(session, owner, nome, "233 fios percal · enchimento 800 g", quantidade=3)
+    assert amostra.produto_id is None and _saldo(session, amostra) == (3, 0)
+    linha = next(l for l in am.painel(session)["linhas"] if l["id"] == amostra.id)
+    assert (linha["nome"], linha["especificacao"], linha["sku"]) == (
+        nome, "233 fios percal · enchimento 800 g", "")
+    _saida(session, vendedor_interno, amostra, 1, cliente_texto="Hotel Avulsa")
+    assert _saldo(session, amostra) == (2, 1)
+    pagina = rotas.detalhe(RequestFalsa(vendedor_interno), amostra.id, session=session).body.decode()
+    assert nome in pagina and "fora do catálogo" in pagina
+    lista = rotas.lista(RequestFalsa(vendedor_interno), session=session).body.decode()
+    assert nome in lista
+
+
+def test_14_avulsa_exige_nome_e_nao_duplica(session, owner):
+    nome = f"Protetor de travesseiro 52x72 {uuid.uuid4().hex[:6]}"
+    _avulsa(session, owner, nome, "233 fios percal · com zíper", quantidade=3)
+    with pytest.raises(HTTPException) as erro:
+        rotas.admin_adicionar_avulsa(RequestFalsa(owner), nome=nome.upper(),
+                                     especificacao="233 FIOS PERCAL · COM ZÍPER",
+                                     quantidade_inicial="1", observacao="", session=session)
+    assert erro.value.status_code == 409
+    session.rollback()
+    with pytest.raises(HTTPException) as erro:
+        rotas.admin_adicionar_avulsa(RequestFalsa(owner), nome="  ", especificacao="x",
+                                     quantidade_inicial="1", observacao="", session=session)
+    assert erro.value.status_code == 400
+    session.rollback()
+
+
+@pytest.mark.parametrize("papel_fixture", ["vendedor_interno", "vendedor_comissionado"])
+def test_15_vendedora_nao_cria_avulsa(session, request, papel_fixture):
+    with pytest.raises(HTTPException) as erro:
+        rotas.admin_adicionar_avulsa(RequestFalsa(request.getfixturevalue(papel_fixture)),
+                                     nome="Qualquer", especificacao="", quantidade_inicial="1",
+                                     observacao="", session=session)
+    assert erro.value.status_code == 403
