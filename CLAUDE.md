@@ -379,6 +379,34 @@ nenhum. Nunca por "tem política ou não".
   seeds de startup já inserem as partes **aditivas** (regras 21/09, premissas, matriz fiscal, ELIS
   fornecedor, NCM vigente 0%, proteção por família); encerramentos e migrações de dados são do script.
 
+## Calibração da fórmula KTC por construção (13/10/2026, migration 0030)
+
+**A fórmula continua sendo o motor; a calibração só corrige o nível de preço da construção.**
+`CalibracaoKTC` (versionada, com as âncoras em `ancoras_json`) é lida por
+`pricing_service.calibracao_ktc` dentro de `custo_net`, para catálogo, calculadora e cotação.
+
+- **Hierarquia do EXW:** cotação direta do SKU (`KTC_DIRECT_QUOTE`) > fórmula calibrada
+  (`KTC_CALCULATED_CALIBRATED`) > fórmula pura (`KTC_CALCULATED`). Está em `memoria["metodo_exw"]`
+  e é independente do peso (REAL/ESTIMADO).
+- **O fator nunca reduz.** `exw = fórmula × max(1, fator_final)`. Fator = mediana(real ÷ fórmula) das
+  âncoras do nível de preço atual × 1,02, e só quando alguma âncora fica mais de 2% acima da
+  fórmula. Fórmula aderente ou conservadora → fator 1,000 (validada). Regra pura em
+  `app/calibracao_ktc.py`; os dados e o QA ficam em `sincronizar_calibracao_rev3.py` (gerador).
+- **QA obrigatório:** nenhuma cotação recente da construção (≤ 60 dias) pode ficar mais de 2% acima
+  do EXW operacional. Se falhar, separa-se o grupo (ex.: fronha por nº de abas); nunca se cria
+  fator por SKU nem fator global.
+- **Status:** fórmula calibrada **não** marca `exw_calculado_pelo_motor` → vende normalmente
+  (decisão do Matias, 13/10). Fórmula pura continua ESTIMADO (cota, emite e não fecha sem
+  confirmar). Construção sem âncora e com evidência concreta de que a fórmula subestima
+  (inversão contra o preço real de uma construção inferior) recebe `bloqueio`: premissa
+  `calibracao_ktc` faltando → REVIEW_REQUIRED (sob consulta).
+- **Calibração PROVISÓRIA** (`provisoria = true`, REV4 13/10): fator derivado de construção ou
+  acabamento adjacente, sem cotação da própria construção (300 70/30 ← 250 70/30; fronha 400 2/3
+  abas ← fator de abas da 300). O fator vale (preço conservador), mas o status fica ESTIMADO até
+  a KTC cotar a construção.
+- Casamento por campo estruturado (família, `material_ref`, liso/listrado, abas), nunca por nome.
+  Vence o registro mais específico.
+
 ## Workflow comercial (Sessão 6)
 
 Estados: `rascunho` → `aguardando_aprovacao` → `aprovada` → `emitida` → `enviada`, com

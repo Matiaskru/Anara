@@ -401,6 +401,49 @@ class ParametroKTC(SQLModel, table=True):
     notas: Optional[str] = None
 
 
+class CalibracaoKTC(SQLModel, table=True):
+    """Fator de calibração do EXW da fórmula KTC, por construção (13/10/2026).
+
+    A fórmula continua sendo o motor: o fator só corrige o NÍVEL de preço da construção contra
+    as cotações reais dela (mediana de real ÷ fórmula, + segurança). Nunca reduz: o motor aplica
+    max(1, fator_final). Cotação direta do SKU continua vencendo — o fator só vale para EXW
+    calculado. Fator 1,000 = construção validada contra cotação (fórmula já aderente/conservadora).
+
+    Casamento por campos estruturados (nunca por nome): família ∈ `familias`, e `material`,
+    `plain_or_stripe` e `abas` quando preenchidos. Vence o registro mais específico.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    construcao: str = Field(index=True)     # "250TC_SATEEN_70_30_PLAIN"
+    grupo: str                              # "TODAS" | "LENCOL_CAPA" | "FRONHA_2_ABAS" | ...
+    familias: str                           # "Top Sheet,Flat Sheet,Bottom Sheet,Duvet Cover"
+    material: Optional[str] = None          # MaterialPreco.material — casa com Produto.material_ref
+    plain_or_stripe: Optional[str] = None
+    abas: Optional[int] = None              # só fronha
+    fator_base: float                       # mediana de real ÷ fórmula das âncoras (≥ 1 ou 1,000)
+    seguranca_pct: float = 0.0              # +2% só quando o fator corrige para cima
+    fator_final: float                      # o que o motor aplica (nunca < 1)
+    n_ancoras: int = 0
+    ratio_min: Optional[float] = None
+    ratio_media: Optional[float] = None
+    ratio_mediana: Optional[float] = None
+    ratio_max: Optional[float] = None
+    dispersao: Optional[float] = None       # desvio-padrão dos ratios
+    qa_pior_erro: Optional[float] = None    # max(real ÷ EXW operacional − 1) nas âncoras
+    ancoras_json: Optional[str] = None      # evidência: documento, data, item, real, fórmula, ratio
+    # Preenchido = a construção NÃO forma preço por fórmula (evidência concreta de que a fórmula
+    # é inadequada, sem âncora para calibrar): o motor devolve REVIEW_REQUIRED com este motivo.
+    bloqueio: Optional[str] = None
+    # PROVISÓRIA = fator derivado de construção/acabamento adjacente, SEM cotação da própria
+    # construção (ex.: 300 70/30 pelo reajuste da 250 70/30). Aplica o fator (nunca < 1), mas o
+    # status fica ESTIMADO: cota e emite; compromisso firme pede cotação da KTC.
+    provisoria: bool = False
+    valid_from: date = Field(default_factory=date.today)
+    valid_to: Optional[date] = None
+    ativo: bool = True
+    fonte: Optional[str] = None
+    notas: Optional[str] = None
+
+
 class NcmRegra(SQLModel, table=True):
     """NCM e Imposto de Importação por família/produto (tabela preferencial Egito)."""
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -685,6 +728,9 @@ class MargemRegra(SQLModel, table=True):
     margem_anterior_pct: Optional[float] = None # rastreabilidade: a margem que esta regra sucedeu
     politica: Optional[str] = None              # rótulo da política que criou a regra
     fonte: Optional[str] = None                 # "Decisão comercial ANARA — 16/09/2026"
+    # 13/10/2026 (migration 0029): comissão FIXA = `comissao_formacao_pct` em qualquer preço,
+    # sem a escada de desconto (Daune e Decor). Falso = escada normal da política 21/09.
+    comissao_fixa: bool = False
 
 
 class CondicaoPagamento(SQLModel, table=True):
@@ -840,6 +886,20 @@ class Produto(SQLModel, table=True):
     protecao_comercial_fonte: Optional[str] = None
     peso_data: Optional[date] = None
     peso_documento: Optional[str] = None
+    # --- Logística por caixa / CBM (09/10/2026, migration 0028) ---
+    # Só ESTRUTURA: todos nulos, nada no motor os lê. Preparam o dia em que produto volumoso
+    # (roupão, cobertor, travesseiro, edredom, pillow top) for rateado por CBM / peso cubado /
+    # peso taxável em vez de só por kg. Dimensão de caixa nunca é inventada: entra quando vier
+    # da packing list da KTC.
+    quantity_per_carton: Optional[int] = None
+    carton_length_cm: Optional[float] = None
+    carton_width_cm: Optional[float] = None
+    carton_height_cm: Optional[float] = None
+    carton_gross_weight_kg: Optional[float] = None
+    cbm_per_carton: Optional[float] = None
+    cbm_per_unit: Optional[float] = None
+    volumetric_weight: Optional[float] = None
+    chargeable_weight: Optional[float] = None
     preco_ktc_usd: Optional[float] = None
     frete_usd_un: Optional[float] = None
     custo_net_usd: Optional[float] = None
@@ -1112,6 +1172,9 @@ class CotacaoItem(SQLModel, table=True):
     # com a semântica anterior e a detecção de premissa velha o aponta — nunca o reescreve.
     piso_margem_pct: Optional[float] = None
     comissao_formacao_pct: Optional[float] = None
+    # 13/10/2026 (migration 0029): o item pina se a regra que o formou tinha comissão fixa.
+    # NULO = escada normal (inclusive todo item anterior) — fica fora do fingerprint.
+    comissao_fixa: Optional[bool] = None
     preco_travado: bool = False
     politica_comercial: Optional[str] = None
     # --- Política comercial de 21/09/2026 (migration 0023) ---

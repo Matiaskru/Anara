@@ -30,7 +30,7 @@ from app.ktc_engine import (
 )
 from app.margin_rules import MargemResolvida, resolver_margem
 from app.models import (
-    AliquotaInterestadual, CondicaoPagamento, CostConfidence, CostMethod, Cotacao, EstadoFiscal,
+    AliquotaInterestadual, CalibracaoKTC, CondicaoPagamento, CostConfidence, CostMethod, Cotacao, EstadoFiscal,
     Finalidade, Fornecedor, MargemRegra, NcmRegra, OrigemFiscal, Produto, RegraFcp,
     RegraFiscalVenda, StatusCusto, TipoFornecedor,
 )
@@ -617,6 +617,48 @@ def parametros_ktc_do_produto(session: Session, produto: Produto) -> Tuple[Param
     return p, faltando
 
 
+#: Rótulos do MÉTODO do EXW (13/10/2026). Dimensão independente do peso (REAL/ESTIMADO) e do
+#: status canônico: dizem de onde veio o EXW, não se ele sustenta compromisso.
+METODO_EXW_COTACAO = "KTC_DIRECT_QUOTE"
+METODO_EXW_CALIBRADO = "KTC_CALCULATED_CALIBRATED"
+METODO_EXW_FORMULA = "KTC_CALCULATED"
+#: premissa faltante quando a construção está bloqueada para fórmula (`CalibracaoKTC.bloqueio`)
+CALIBRACAO_BLOQUEADA = "calibracao_ktc"
+
+
+def calibracao_ktc(session: Session, produto: Produto, ref: Optional[date] = None) -> Optional[CalibracaoKTC]:
+    """O fator de calibração vigente da construção deste produto, ou None.
+
+    Casa por campos estruturados: família ∈ `familias`; `material` (= `Produto.material_ref`),
+    `plain_or_stripe` e `abas` só quando o registro os preenche. Vence o mais específico; no
+    empate, a vigência mais recente. Sem registro, a fórmula fica pura (`KTC_CALCULATED`).
+    """
+    ref = ref or date.today()
+    familia = (produto.familia or "").strip().lower()
+    linhas = _memo("calibracao_ktc", lambda: list(session.exec(
+        select(CalibracaoKTC).where(CalibracaoKTC.ativo == True)).all()))  # noqa: E712
+    abas = _abas_do_produto(produto) if familia in FAMILIAS_FRONHA else None
+    candidatas = []
+    for c in linhas:
+        if c.valid_from and c.valid_from > ref:
+            continue
+        if c.valid_to and c.valid_to <= ref:
+            continue
+        if familia not in {f.strip().lower() for f in (c.familias or "").split(",")}:
+            continue
+        if c.material and (produto.material_ref or "").strip().lower() != c.material.strip().lower():
+            continue
+        if c.plain_or_stripe and (produto.plain_or_stripe or "plain") != c.plain_or_stripe:
+            continue
+        if c.abas is not None and abas != c.abas:
+            continue
+        especificidade = sum(x is not None for x in (c.material, c.plain_or_stripe, c.abas))
+        candidatas.append((especificidade, c.valid_from or date.min, c.id or 0, c))
+    if not candidatas:
+        return None
+    return max(candidatas, key=lambda t: t[:3])[3]
+
+
 def calcular_exw(session: Session, produto: Produto):
     """EXW calculado pelo motor industrial, quando a família é calculável."""
     familia = _familia_normalizada(produto)
@@ -761,6 +803,12 @@ def status_canonico_do_custo(cnet, memoria: dict) -> str:
     # **não** sustenta compromisso firme antes de a KTC confirmar (`validar_compromisso_firme`).
     if memoria.get("peso_por_analogia"):
         return StatusCusto.estimado.value
+    # 13/10/2026: peso estimado do próprio SKU e EXW de fórmula SEM calibração da construção
+    # também são proxy — utilizável, mas não é evidência do fornecedor. A fórmula CALIBRADA
+    # (`calibracao_ktc`, QA contra as cotações da construção) não marca `exw_calculado_pelo_motor`
+    # e segue a regra do custo derivado: vende normalmente (decisão do Matias, 13/10/2026).
+    if memoria.get("peso_estimado_proprio") or memoria.get("exw_calculado_pelo_motor"):
+        return StatusCusto.estimado.value
     if fonte in (CUSTO_DERIVADO_AGORA, CUSTO_DO_FORNECEDOR_NACIONAL):
         # Referência direta que envelheceu (cotação KTC além do limite de frescor) ou
         # cadastrada com pedido de revisão aberto: tem número próprio e utilizável, mas não
@@ -894,12 +942,51 @@ def custo_net(session: Session, produto: Produto) -> dict:
         memoria["industrial"] = resultado.como_dict()
         if resultado.exw_usd is not None:
             exw, origem_exw = resultado.exw_usd, "EXW calculado pelo motor industrial"
+            cal = calibracao_ktc(session, produto)
+            if cal is not None and cal.bloqueio:
+                # Construção com evidência concreta de que a fórmula é inadequada e sem âncora
+                # para calibrar: não forma preço por fórmula (sob consulta até cotação).
+                memoria["exw_calculado_pelo_motor"] = True
+                memoria["metodo_exw"] = METODO_EXW_FORMULA
+                memoria["bloqueio_calibracao"] = {"id": cal.id, "construcao": cal.construcao,
+                                                  "grupo": cal.grupo, "motivo": cal.bloqueio}
+                memoria["avisos"].append(f"Fórmula KTC bloqueada para esta construção ({cal.construcao} · "
+                                         f"{cal.grupo}): {cal.bloqueio}")
+            elif cal is not None:
+                # 13/10/2026: fórmula CALIBRADA contra as cotações reais da construção. O fator
+                # só sobe (max 1): o EXW operacional nunca fica abaixo da fórmula. Passou no QA
+                # (nenhuma cotação conhecida > 2% acima do operacional) — vende normalmente.
+                fator = max(D(1), D(cal.fator_final))
+                memoria["exw_formula_usd"] = para_float(resultado.exw_usd)
+                exw = D(resultado.exw_usd) * fator
+                memoria["calibracao_ktc"] = {
+                    "id": cal.id, "construcao": cal.construcao, "grupo": cal.grupo,
+                    "fator_base": cal.fator_base, "seguranca_pct": cal.seguranca_pct,
+                    "fator_final": para_float(fator), "n_ancoras": cal.n_ancoras,
+                    "valid_from": cal.valid_from.isoformat() if cal.valid_from else None,
+                    "fonte": cal.fonte}
+                memoria["metodo_exw"] = METODO_EXW_CALIBRADO
+                origem_exw = (f"EXW do motor industrial × fator de calibração {para_float(fator):.4f} "
+                              f"({cal.construcao} · {cal.grupo})")
+                if cal.provisoria:
+                    # fator derivado (sem cotação da própria construção): preço conservador, mas
+                    # é proxy — ESTIMADO até a KTC cotar a construção
+                    memoria["calibracao_ktc"]["provisoria"] = True
+                    memoria["exw_calculado_pelo_motor"] = True
+                    origem_exw += " — calibração PROVISÓRIA (sem cotação da construção)"
+            else:
+                # 13/10/2026: EXW de fórmula sem calibração da construção não é cotação do
+                # fornecedor — status ESTIMADO (proxy). Cota e emite PDF; compromisso firme pede
+                # cotação ou calibração da construção.
+                memoria["exw_calculado_pelo_motor"] = True
+                memoria["metodo_exw"] = METODO_EXW_FORMULA
         else:
             memoria["avisos"].extend(resultado.avisos)
 
     historico = False
     if exw is None and produto.exw_cotado_usd:
         exw = produto.exw_cotado_usd
+        memoria["metodo_exw"] = METODO_EXW_COTACAO
         origem_exw = (f"EXW cotado pela KTC em "
                       f"{produto.exw_cotado_data.strftime('%d/%m/%Y') if produto.exw_cotado_data else '—'}"
                       f" ({produto.exw_cotado_fonte or 'fonte não registrada'})")
@@ -937,6 +1024,13 @@ def custo_net(session: Session, produto: Produto) -> dict:
     # produto sem peso gravado (o caso da calculadora, e de SKU novo) tem o peso estimado aqui.
     # Peso real da KTC nunca é tocado — `peso_do_produto` só estima quando não existe.
     peso_kg = produto.peso_kg
+    if peso_kg is not None and produto.peso_tipo == "ESTIMADO":
+        # 13/10/2026: peso PRÓPRIO do SKU, mas estimado (âncora/análogo/área × GSM) — forma
+        # preço normalmente e o status sai ESTIMADO, como o peso herdado por analogia. Antes
+        # saía CONFIRMADO: o produto dizia ESTIMADO e o status dizia o contrário.
+        memoria["peso"] = {"peso_kg": para_float(D(peso_kg)), "tipo": "ESTIMADO",
+                           "fonte": produto.peso_fonte}
+        memoria["peso_estimado_proprio"] = True
     if peso_kg is None:
         herdado = peso_herdado_do_historico(session, produto)
         if herdado is not None:
@@ -978,6 +1072,8 @@ def custo_net(session: Session, produto: Produto) -> dict:
     # O que a nacionalização precisou assumir como zero fica declarado — e decide o status.
     if peso_kg is None:
         faltantes.append("peso")
+    if memoria.get("bloqueio_calibracao"):
+        faltantes.append(CALIBRACAO_BLOQUEADA)
     if faltantes:
         memoria["premissas_faltantes"] = faltantes
     memoria["caminho"] = ("Especificação → motor industrial KTC → EXW → nacionalização → NET"

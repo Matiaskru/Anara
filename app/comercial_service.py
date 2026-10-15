@@ -314,7 +314,9 @@ def avaliar_negociacao(session: Session, cotacao: Cotacao,
                 tabela, a.linha.preco_recomendado, a.linha.preco_negociado,
                 a.linha.quantidade, a.regras.comissao_base_icms_pct,
                 base=vigente.comissao_base_pct, minima=vigente.comissao_min_pct,
-                faixas=vigente.faixas)
+                faixas=vigente.faixas,
+                fixa_pct=(a.item.comissao_formacao_pct
+                          if getattr(a.item, "comissao_fixa", None) else None))
             a.linha.comissao_aplicada_pct = a.comissao_item.taxa_pct
             a.abaixo_do_b2b = a.comissao_item.abaixo_do_b2b
 

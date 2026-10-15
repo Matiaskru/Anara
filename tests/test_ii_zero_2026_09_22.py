@@ -472,7 +472,10 @@ def test_blankets_da_cotacao_de_29_07(session, fornecedores, owner):
     # REVALIDAR quando passa do limite (60 dias) — cota e emite, não sustenta compromisso
     # firme. Fixar "CONFIRMADO" fazia o teste apodrecer sozinho (28/09/2026); o que importa
     # aqui é a REGRA, e a economia abaixo não muda com a idade do documento.
-    esperado = "REVALIDAR" if mem.get("exw_frescor") == "STALE" else "CONFIRMADO"
+    # 13/10/2026: o peso do BL-001 é ESTIMADO (próprio do SKU) — o status passa a dizer isso
+    # (ESTIMADO cota e emite, não sustenta compromisso firme), em vez de CONFIRMADO/REVALIDAR.
+    assert mem.get("peso_estimado_proprio") is True
+    esperado = "ESTIMADO"
     assert ps.status_canonico_do_custo(custo, mem) == esperado
     assert m.margem_pct == aprox(0.19)
     assert mem["nacionalizacao"]["frete_usd"] == aprox(2.40 * 0.516) and mem["exw_usd"] == aprox(10.71)

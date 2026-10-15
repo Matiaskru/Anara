@@ -113,7 +113,10 @@ def test_bl001_nacionaliza_com_o_peso_estimado_e_b2b_sai_do_motor(session, owner
     # REVALIDAR quando passa do limite (60 dias) — cota e emite, não sustenta compromisso
     # firme. Fixar "CONFIRMADO" fazia o teste apodrecer sozinho (28/09/2026); o que importa
     # aqui é a REGRA, e a economia abaixo não muda com a idade do documento.
-    esperado = "REVALIDAR" if mem.get("exw_frescor") == "STALE" else "CONFIRMADO"
+    # 13/10/2026: o peso do BL-001 é ESTIMADO (próprio do SKU) — o status passa a dizer isso
+    # (ESTIMADO cota e emite, não sustenta compromisso firme), em vez de CONFIRMADO/REVALIDAR.
+    assert mem.get("peso_estimado_proprio") is True
+    esperado = "ESTIMADO"
     assert ps.status_canonico_do_custo(custo, mem) == esperado
     # margem-alvo 19% (KTC — demais famílias) e B2B = primeiro centavo válido do motor
     m = ps.margem_padrao(session, p)

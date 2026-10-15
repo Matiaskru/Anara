@@ -516,6 +516,8 @@ CAMPOS_MATERIAIS_ITEM_2026_09_21 = (
     # 22/09/2026: a base comercial que formou o B2B e a proteção usada são materiais — mudou a
     # referência de preço, mudou a decisão. Só entram quando preenchidas (item antigo intacto).
     "base_comercial_precificacao", "protecao_comercial_pct",
+    # 13/10/2026: comissão fixa da regra (Daune/Decor) — só quando verdadeira.
+    "comissao_fixa",
 )
 #: Os campos da COTAÇÃO. `observacoes` e notas internas ficam de fora de propósito: são
 #: descritivas, não mudam economia nem contexto fiscal, e invalidar aprovação por causa

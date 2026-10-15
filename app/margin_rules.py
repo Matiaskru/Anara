@@ -43,6 +43,7 @@ class MargemResolvida:
     preco_travado: bool = False
     politica: Optional[str] = None
     margem_anterior_pct: Optional[Decimal] = None
+    comissao_fixa: bool = False             # 13/10/2026: comissão de formação em qualquer preço
 
     @property
     def tem_politica(self) -> bool:
@@ -59,7 +60,8 @@ class MargemResolvida:
                 "piso_pct": para_float(self.piso_pct),
                 "comissao_formacao_pct": para_float(self.comissao_formacao_pct),
                 "preco_travado": bool(self.preco_travado), "politica": self.politica,
-                "margem_anterior_pct": para_float(self.margem_anterior_pct)}
+                "margem_anterior_pct": para_float(self.margem_anterior_pct),
+                "comissao_fixa": bool(self.comissao_fixa)}
 
 
 #: Até 21/09/2026 um produto sem regra recebia 15% "de último recurso". A política de
@@ -164,4 +166,5 @@ def resolver_margem(regras: Sequence, fornecedor_id: Optional[int] = None,
         comissao_formacao_pct=D(getattr(escolhida, "comissao_formacao_pct", None)),
         preco_travado=bool(getattr(escolhida, "preco_travado", False)),
         politica=getattr(escolhida, "politica", None),
-        margem_anterior_pct=D(getattr(escolhida, "margem_anterior_pct", None)))
+        margem_anterior_pct=D(getattr(escolhida, "margem_anterior_pct", None)),
+        comissao_fixa=bool(getattr(escolhida, "comissao_fixa", False)))

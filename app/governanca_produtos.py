@@ -38,6 +38,9 @@ MOTIVO_PENDENCIA = {
     "peso": ("Falta o peso da peça. Sem ele o frete internacional entraria como zero, então o "
              "custo sairia subestimado. Registre o peso informado pela KTC (ou o estimado, "
              "declarando que é estimativa)."),
+    ps.CALIBRACAO_BLOQUEADA: ("A fórmula KTC está bloqueada para esta construção: há evidência "
+                              "concreta de que ela subestima o custo e não há cotação recente da "
+                              "mesma construção para calibrar. Sob consulta até a cotação da KTC."),
     "protecao_comercial": ("A família não tem regra de proteção comercial de precificação "
                            "cadastrada (ParametroKTC `protecao_comercial_pct`). Sem ela o preço "
                            "comercial não se forma."),
@@ -73,6 +76,8 @@ class LinhaGovernanca:
     pendencias: List[str]
     pode_confirmar: bool
     importado: bool
+    metodo_exw: Optional[str] = None     # KTC_DIRECT_QUOTE · KTC_CALCULATED_CALIBRATED · KTC_CALCULATED
+    calibracao: Optional[dict] = None    # fator e construção, quando o EXW é de fórmula calibrada
 
     @property
     def peso_situacao(self) -> str:
@@ -95,6 +100,7 @@ class LinhaGovernanca:
             "peso_situacao": self.peso_situacao,
             "premissas_faltantes": self.premissas_faltantes, "pendencias": self.pendencias,
             "pode_confirmar": self.pode_confirmar, "importado": self.importado,
+            "metodo_exw": self.metodo_exw, "calibracao": self.calibracao,
             "preco_base": self.produto.preco_base,
             "referencia": ({"versao": ref.versao, "status": ref.status_custo,
                             "valor": ref.cnet_brl, "tipo": ref.tipo,
@@ -122,6 +128,16 @@ def diagnosticar(session: Session, produto: Produto) -> LinhaGovernanca:
             "mesmo modelo, tamanho, gramatura e composição. O EXW é cotado e documentado, "
             "então o produto forma preço e sai em proposta; confirme o peso com a KTC antes "
             "do pedido/importação.")
+    if status == StatusCusto.estimado.value and (memoria.get("calibracao_ktc") or {}).get("provisoria"):
+        pendencias.append(
+            "EXW da fórmula KTC com calibração PROVISÓRIA (fator derivado de construção ou acabamento "
+            "adjacente, sem cotação desta construção). Forma preço e sai em proposta; para compromisso "
+            "firme, registre a cotação da KTC.")
+    elif status == StatusCusto.estimado.value and memoria.get("exw_calculado_pelo_motor"):
+        pendencias.append(
+            "EXW calculado pela fórmula KTC sem calibração desta construção (nenhuma cotação "
+            "recente da mesma construção para comparar). Forma preço e sai em proposta; para "
+            "compromisso firme, registre a cotação da KTC ou calibre a construção.")
     if status == StatusCusto.a_cotar.value:
         pendencias.append("Não há custo nem EXW para este SKU. Registre a cotação do fornecedor "
                           "(EXW em US$ para a KTC, custo em R$ para fornecedor nacional).")
@@ -148,6 +164,8 @@ def diagnosticar(session: Session, produto: Produto) -> LinhaGovernanca:
                                                      StatusCusto.revalidar.value,
                                                      StatusCusto.estimado.value)),
         importado=bool(fornecedor and fornecedor.tipo == TipoFornecedor.importado_ktc),
+        metodo_exw=memoria.get("metodo_exw"),
+        calibracao=memoria.get("calibracao_ktc"),
     )
 
 
@@ -299,6 +317,11 @@ def registrar_exw_ktc(session: Session, produto: Produto, *, exw_usd, data_ref: 
     faltantes = memoria.get("premissas_faltantes") or []
     if faltantes and status == StatusCusto.confirmado.value:
         status = StatusCusto.review_required.value
+    # 13/10/2026: com peso estimado (próprio ou herdado) a evidência sustenta ESTIMADO, não
+    # CONFIRMADO — a versão registrada é o que `status_do_produto` lê primeiro.
+    if status == StatusCusto.confirmado.value and \
+            ps.status_canonico_do_custo(custo, memoria) == StatusCusto.estimado.value:
+        status = StatusCusto.estimado.value
     ref = cs.registrar_referencia(
         session, produto, cnet_brl=para_float(custo), metodo=produto.cost_method,
         status=status, fonte=fonte, documento=documento, data_ref=data_ref,
@@ -384,6 +407,11 @@ def confirmar_referencia(session: Session, produto: Produto, *, fonte: str, moti
                if "«" in (linha.peso_fonte or "") else "")
             + ". Registre o peso próprio/documentado do SKU antes de confirmar a referência — "
               "o produto segue cotável e pode gerar proposta enquanto isso.")
+    _custo_vivo, _mem_viva = _cnet_vivo(session, produto)
+    _exigir(not (_mem_viva.get("peso_estimado_proprio") or _mem_viva.get("exw_calculado_pelo_motor")),
+            "Este produto usa peso logístico ESTIMADO ou EXW calculado pelo motor industrial — "
+            "registre o peso real/cotação do fornecedor antes de confirmar. O produto segue "
+            "cotável e pode gerar proposta enquanto isso.")
     _exigir(linha.custo, "Não há custo para confirmar — registre a cotação ou o custo primeiro.")
     _exigir(linha.net_fonte not in (ps.CUSTO_DO_CATALOGO, ps.CUSTO_HISTORICO_SEM_EVIDENCIA),
             "O custo atual não tem evidência (veio do catálogo/planilha). Registre a cotação.")

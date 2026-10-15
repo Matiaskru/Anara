@@ -1150,6 +1150,7 @@ def _preencher_item(session: Session, item: CotacaoItem, produto: Produto, marge
     item.comissao_formacao_pct = para_float(margem.comissao_formacao_pct)
     item.preco_travado = bool(margem.preco_travado)
     item.politica_comercial = margem.politica
+    item.comissao_fixa = True if getattr(margem, "comissao_fixa", False) else None
     # A versão de custo que está valendo AGORA fica presa ao item. Depois disto, a
     # genealogia deste preço não depende mais de nenhum lookup vivo.
     vigente = cs.referencia_vigente(session, produto.id)

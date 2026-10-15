@@ -236,8 +236,8 @@ class ComissaoDoItem:
 
 def comissao_do_item(preco_tabela, preco_b2b, preco_negociado, quantidade,
                      icms_base_comissao_pct, base=COMISSAO_BASE_PCT,
-                     minima=COMISSAO_MINIMA_PCT, faixas=FAIXAS_COMISSAO_2026_09_21
-                     ) -> ComissaoDoItem:
+                     minima=COMISSAO_MINIMA_PCT, faixas=FAIXAS_COMISSAO_2026_09_21,
+                     fixa_pct=None) -> ComissaoDoItem:
     """Taxa, base e valor da comissão de um item, sem consultar nada de fora.
 
     A base é `receita × (1 − ICMS dedutível)` com a receita já ao centavo; a comissão vira
@@ -249,7 +249,9 @@ def comissao_do_item(preco_tabela, preco_b2b, preco_negociado, quantidade,
     b2b = dinheiro(preco_b2b) or ZERO
     negociado = dinheiro(preco_negociado) or ZERO
     desconto = desconto_vs_tabela(negociado, tabela)
-    taxa = faixa_comissao(desconto, base, minima, faixas)
+    # 13/10/2026: regra com comissão FIXA (Daune, Decor) — a taxa não acompanha o desconto;
+    # vender mais perto da tabela aumenta a margem realizada, não a comissão.
+    taxa = D0(fixa_pct) if fixa_pct is not None else faixa_comissao(desconto, base, minima, faixas)
     receita = dinheiro(negociado * D0(quantidade)) or ZERO
     fator = D("1") - D0(icms_base_comissao_pct)
     base_cheia = receita * fator

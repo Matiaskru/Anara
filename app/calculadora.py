@@ -329,8 +329,11 @@ def resultado_comercial(memoria: dict) -> dict:
     if b2b.get("preco_b2b") and b2b.get("preco_tabela"):
         preco = D0(comercial.get("preco_negociado") or b2b["preco_b2b"])
         tabela, piso = D0(b2b["preco_tabela"]), D0(b2b["preco_b2b"])
+        margem = memoria.get("margem") or {}
         c = pol.comissao_do_item(tabela, piso, preco, quantidade,
-                                 D0(b2b.get("icms_base_comissao_pct")))
+                                 D0(b2b.get("icms_base_comissao_pct")),
+                                 fixa_pct=(margem.get("comissao_formacao_pct")
+                                           if margem.get("comissao_fixa") else None))
         corpo.update({
             "preco_b2b": para_float(piso), "preco_tabela": para_float(tabela),
             "preco_proposto": para_float(preco),

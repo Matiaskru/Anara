@@ -586,7 +586,7 @@ def preview_margem(session: Session, *, margem_pct, nome: str, fornecedor_id=Non
                    fonte: str = "", vigente_a_partir_de: Optional[date] = None,
                    motivo: Optional[str] = None, piso_pct=None, comissao_formacao_pct=None,
                    preco_travado: Optional[bool] = None, min_thread_count=None,
-                   max_thread_count=None) -> Proposta:
+                   max_thread_count=None, comissao_fixa: Optional[bool] = None) -> Proposta:
     fonte = valida_fonte(fonte)
     nova = valida_percentual(margem_pct, "margem")
     inicio = vigente_a_partir_de or date.today()
@@ -647,7 +647,8 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
                    motivo: Optional[str] = None, origem: str = "admin-ui",
                    correlacao: Optional[str] = None, piso_pct=None,
                    comissao_formacao_pct=None, preco_travado: Optional[bool] = None,
-                   min_thread_count=None, max_thread_count=None) -> Optional[MargemRegra]:
+                   min_thread_count=None, max_thread_count=None,
+                   comissao_fixa: Optional[bool] = None) -> Optional[MargemRegra]:
     """Versiona a margem de um escopo. **A política do escopo é herdada**, não perdida.
 
     Desde 16/09/2026 a regra carrega piso, comissão de formação e preço travado. Uma regra
@@ -687,6 +688,7 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
     piso = herdar(piso_pct, "piso_pct")
     comissao = herdar(comissao_formacao_pct, "comissao_formacao_pct")
     travado = herdar(preco_travado, "preco_travado")
+    fixa = herdar(comissao_fixa, "comissao_fixa")
 
     nova = MargemRegra(nome=nome, fornecedor_id=fornecedor_id, familia=familia,
                        sku_key=sku_key, margem_pct=para_float(D(margem_pct)),
@@ -700,7 +702,7 @@ def aplicar_margem(session: Session, prop: Proposta, *, ator: Usuario, margem_pc
                        margem_anterior_pct=(para_float(D(encerrada.margem_pct))
                                             if encerrada is not None else None),
                        politica=getattr(encerrada, "politica", None),
-                       fonte=fonte or None)
+                       fonte=fonte or None, comissao_fixa=bool(fixa))
     session.add(nova)
     session.flush()
     registrar(session, ator=ator, acao="CRIAR_VERSAO", entidade="MargemRegra",
