@@ -1,0 +1,1331 @@
+{
+ "BL-001": {
+  "b2b": 127.33,
+  "sku_key": "KTC · Blanket · 220x230 · — · 0/100 · plain · BL-001 · amostra 12",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "BL-002": {
+  "b2b": 319.34,
+  "sku_key": "KTC · Blanket · 244x274 · 400 g/m² · 100/0 · plain · BL-002 · amostra 14",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "BL-003": {
+  "b2b": 245.41,
+  "sku_key": "KTC · Blanket · 210x230 · — · 0/100 · plain · BL-003 · amostra 13",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "BR-001": {
+  "b2b": 241.67,
+  "sku_key": "KTC · Bathrobe · L · — · 0/100 · plain · BR-001 · amostra 34",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "BR-003": {
+  "b2b": 232.49,
+  "sku_key": "KTC · Bathrobe · L · — · 100/0 · plain · BR-003 · amostra 32",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "BR-008": {
+  "b2b": 172.2,
+  "sku_key": "KTC · Bathrobe · L · 240 g/m² · 100/0 · plain · BR-008 · amostra 31",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "BR-019": {
+  "b2b": 222.49,
+  "sku_key": "KTC · Bathrobe · 2XL · 240 g/m² · 100/0 · plain · BR-019 · amostra 30",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "BR-028": {
+  "b2b": 272.14,
+  "sku_key": "KTC · Bathrobe · Unisize · 160 g/m² · 0/85 · plain · BR-028 · amostra 35",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "E01": {
+  "b2b": 33.63,
+  "sku_key": "KTC · Pillow Case · 250TC Sateen CVC 70/30 plain · oxford 5 cm + aba 20 · 2 abas · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "E02": {
+  "b2b": 33.63,
+  "sku_key": "KTC · Pillow Case · 250TC Sateen CVC 70/30 plain · oxford 5 cm + aba 20 · 3 abas · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "E03": {
+  "b2b": 33.63,
+  "sku_key": "KTC · Pillow Case · 250TC Sateen CVC 70/30 plain · sem abas (faturada como oxford na PI) · 50x70",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "E04": {
+  "b2b": 38.52,
+  "sku_key": "KTC · Pillow Case · 250TC Sateen CVC 70/30 plain · oxford 5 cm + aba 20 · 2 abas · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "E05": {
+  "b2b": 38.52,
+  "sku_key": "KTC · Pillow Case · 250TC Sateen CVC 70/30 plain · oxford 5 cm + aba 20 · 3 abas · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "E06": {
+  "b2b": 38.52,
+  "sku_key": "KTC · Pillow Case · 250TC Sateen CVC 70/30 plain · oxford 5 cm + aba 20 · 4 abas · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "E07": {
+  "b2b": 323.91,
+  "sku_key": "KTC · Duvet Cover · 250TC Sateen CVC 70/30 plain · 270x275 (pedido 270x275; KTC fatura 270x265)",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "E08": {
+  "b2b": 323.91,
+  "sku_key": "KTC · Duvet Cover · 300TC Sateen 100% algodão plain · 270x275 (pedido 270x275; KTC fatura 270x265)",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "E09": {
+  "b2b": 182.2,
+  "sku_key": "KTC · Bathrobe · waffle 240 g/m² · kimono · XL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N10": {
+  "b2b": 124.97,
+  "sku_key": "ELIS · Blanket · 180x220 · Boa Noite Casal · xadrez preto/branco/cinza · 600 g/m²",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "N13": {
+  "b2b": 138.24,
+  "spec": {
+   "composicao_toalha": "100/0",
+   "comprimento_cm": 170,
+   "familia": "Pool Towel",
+   "gsm": 600,
+   "largura_cm": 90,
+   "plain_or_stripe": "stripe"
+  },
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N14": {
+  "b2b": 111.14,
+  "sku_key": "DAUNE · Travesseiros · Visco poliuretano · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N15": {
+  "b2b": 152.86,
+  "sku_key": "DAUNE · Travesseiros · Látex poliuretano · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N16": {
+  "b2b": 291.19,
+  "sku_key": "KTC · Bathrobe · velour 420 g/m² · gola xale · XXL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N17": {
+  "b2b": 245.59,
+  "sku_key": "KTC · Bathrobe · M · 420 g/m² · 100/0 · plain · BR-002 · amostra 29",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N18": {
+  "b2b": 260.78,
+  "sku_key": "Waffle Velour Bathrobe  ·  L · 420 GSM · 100% algodão",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N19": {
+  "b2b": 276.0,
+  "sku_key": "Waffle Velour Bathrobe XL  ·  XL · 420 GSM · 100% algodão · shawl collar",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N20": {
+  "b2b": 291.19,
+  "sku_key": "KTC · Bathrobe · waffle velour 420 g/m² · gola xale · XXL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N21": {
+  "b2b": 192.49,
+  "sku_key": "KTC · Bathrobe · waffle piqué 240 g/m² · gola xale em velour · M",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N22": {
+  "b2b": 202.48,
+  "sku_key": "KTC · Bathrobe · waffle piqué 240 g/m² · gola xale em velour · L",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N23": {
+  "b2b": 212.5,
+  "sku_key": "KTC · Bathrobe · waffle piqué 240 g/m² · gola xale em velour · XL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N24": {
+  "b2b": 162.2,
+  "sku_key": "KTC · Bathrobe · waffle 240 g/m² · kimono · M",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N25": {
+  "b2b": 192.18,
+  "sku_key": "KTC · Bathrobe · waffle 240 g/m² · kimono · XXL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N26": {
+  "b2b": 222.49,
+  "sku_key": "KTC · Bathrobe · jacquard sateen texturizado · vivo preto · kimono · M",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N27": {
+  "b2b": 242.5,
+  "sku_key": "KTC · Bathrobe · jacquard sateen texturizado · vivo preto · kimono · XL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N28": {
+  "b2b": 252.53,
+  "sku_key": "KTC · Bathrobe · jacquard sateen texturizado · vivo preto · kimono · XXL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N29": {
+  "b2b": 231.69,
+  "sku_key": "KTC · Bathrobe · microfibra com forro fleece · kimono · M",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N30": {
+  "b2b": 251.64,
+  "sku_key": "KTC · Bathrobe · microfibra com forro fleece · kimono · XL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N31": {
+  "b2b": 261.61,
+  "sku_key": "KTC · Bathrobe · microfibra com forro fleece · kimono · XXL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N32": {
+  "b2b": 262.14,
+  "sku_key": "KTC · Bathrobe · spa 85% poliéster/15% nylon 160 g + forro jacquard algodão 110 g · gola xale · M",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N33": {
+  "b2b": 272.14,
+  "sku_key": "KTC · Bathrobe · spa 85% poliéster/15% nylon 160 g + forro jacquard algodão 110 g · gola xale · L",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N34": {
+  "b2b": 282.14,
+  "sku_key": "KTC · Bathrobe · spa 85% poliéster/15% nylon 160 g + forro jacquard algodão 110 g · gola xale · XL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N35": {
+  "b2b": 292.12,
+  "sku_key": "KTC · Bathrobe · spa 85% poliéster/15% nylon 160 g + forro jacquard algodão 110 g · gola xale · XXL",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "N36": {
+  "b2b": 159.05,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com alça · 100x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N37": {
+  "b2b": 207.15,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com alça · 160x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N38": {
+  "b2b": 225.23,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com alça · 180x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N39": {
+  "b2b": 285.24,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com alça · 200x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N40": {
+  "b2b": 176.54,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com slip · 100x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N41": {
+  "b2b": 725.91,
+  "sku_key": "DAUNE · Topper Colchão · 90% penas 10% plumas · 103x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N42": {
+  "b2b": 999.87,
+  "sku_key": "DAUNE · Topper Colchão · 90% penas 10% plumas · 163x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N43": {
+  "b2b": 1306.62,
+  "sku_key": "DAUNE · Topper Colchão · 90% penas 10% plumas · 183x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N44": {
+  "b2b": 1451.86,
+  "sku_key": "DAUNE · Topper Colchão · 90% penas 10% plumas · 193x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N45": {
+  "b2b": 533.21,
+  "sku_key": "DAUNE · Topper Colchão · 100% fibras de poliéster · 103x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N46": {
+  "b2b": 697.35,
+  "sku_key": "DAUNE · Topper Colchão · 100% fibras de poliéster · 163x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N47": {
+  "b2b": 968.74,
+  "sku_key": "DAUNE · Topper Colchão · 100% fibras de poliéster · 183x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "N48": {
+  "b2b": 1090.65,
+  "sku_key": "DAUNE · Topper Colchão · 100% fibras de poliéster · 193x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P001": {
+  "b2b": 67.62,
+  "sku_key": "KTC · Bath Towel · 550 g/m² · 90/10 · 86x150",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P002": {
+  "b2b": 25.06,
+  "sku_key": "KTC · Hand Towel · 550 g/m² · 90/10 · 50x85",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P003": {
+  "b2b": 31.54,
+  "sku_key": "Bath Mat 50x80 750g  ·  50x80 · 750 GSM · 100% algodão",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P004": {
+  "b2b": 88.5,
+  "sku_key": "Oversized Bath Towel 90x160 650g  ·  90x160 · 650 GSM · 100% algodão",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P005": {
+  "b2b": 29.29,
+  "sku_key": "Hand Towel 50x85 650g  ·  50x85 · 650 GSM · 100% algodão",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P006": {
+  "b2b": 39.3,
+  "sku_key": "Bath Mat 50x80 950g  ·  50x80 · 950 GSM · 100% algodão",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P014": {
+  "b2b": 260.78,
+  "sku_key": "Plain Bathrobe  ·  L · 420 GSM · 100% algodão",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P015": {
+  "b2b": 276.0,
+  "sku_key": "Plain Velour Bathrobe XL  ·  XL · 420 GSM · 100% algodão · shawl collar",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P016": {
+  "b2b": 126.91,
+  "sku_key": "Pool Towel 90x170 550g Taupe  ·  90x170 · 550 GSM · 100% algodão · taupe",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P017": {
+  "b2b": 328.02,
+  "sku_key": "DAUNE · Travesseiros · 100% plumas de ganso · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P018": {
+  "b2b": 477.84,
+  "sku_key": "DAUNE · Travesseiros · 100% plumas de ganso · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P019": {
+  "b2b": 201.71,
+  "sku_key": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P020": {
+  "b2b": 272.3,
+  "sku_key": "DAUNE · Travesseiros · 50% plumas 50% penas de ganso · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P021": {
+  "b2b": 249.52,
+  "sku_key": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P022": {
+  "b2b": 347.37,
+  "sku_key": "DAUNE · Travesseiros · Camara dupla 70% penas 30% plumas · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P023": {
+  "b2b": 60.69,
+  "sku_key": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P024": {
+  "b2b": 81.93,
+  "sku_key": "DAUNE · Travesseiros · 233 fios 100% fibras de poliester · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P025": {
+  "b2b": 74.85,
+  "sku_key": "DAUNE · Travesseiros · Toque de plumas 100% poliester · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P026": {
+  "b2b": 104.08,
+  "sku_key": "DAUNE · Travesseiros · Toque de plumas 100% poliester · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P031": {
+  "b2b": 1451.07,
+  "sku_key": "DAUNE · Topper Colchão · 90% penas 10% plumas · 203x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P036": {
+  "b2b": 1090.65,
+  "sku_key": "DAUNE · Topper Colchão · 100% fibras de poliéster · 203x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P037": {
+  "b2b": 1135.81,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 190x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P038": {
+  "b2b": 1496.19,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 250x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P039": {
+  "b2b": 1599.92,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 270x265",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P040": {
+  "b2b": 1736.45,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 285x265",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P041": {
+  "b2b": 1604.46,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 180 g · 290x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P042": {
+  "b2b": null,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 190x260",
+  "status": "REVIEW_REQUIRED",
+  "utilizavel": false
+ },
+ "P043": {
+  "b2b": null,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 250x260",
+  "status": "REVIEW_REQUIRED",
+  "utilizavel": false
+ },
+ "P044": {
+  "b2b": null,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 270x265",
+  "status": "REVIEW_REQUIRED",
+  "utilizavel": false
+ },
+ "P045": {
+  "b2b": null,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 285x265",
+  "status": "REVIEW_REQUIRED",
+  "utilizavel": false
+ },
+ "P046": {
+  "b2b": null,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 180 g · 290x260",
+  "status": "REVIEW_REQUIRED",
+  "utilizavel": false
+ },
+ "P047": {
+  "b2b": 1234.58,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 190x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P048": {
+  "b2b": 1624.43,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 250x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P049": {
+  "b2b": 1788.12,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 270x265",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P050": {
+  "b2b": 1887.47,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 285x265",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P051": {
+  "b2b": 1743.98,
+  "sku_key": "DAUNE · Edredom · 100% plumas de ganso · 250 g · 290x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P052": {
+  "b2b": 281.92,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 190x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P053": {
+  "b2b": 361.72,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 250x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P054": {
+  "b2b": 395.22,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 270x265",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P055": {
+  "b2b": 415.56,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 285x265",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P056": {
+  "b2b": 414.91,
+  "sku_key": "DAUNE · Edredom · 100% fibras de poliéster · 250 g · 290x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P057": {
+  "b2b": 29.99,
+  "sku_key": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P058": {
+  "b2b": 42.43,
+  "sku_key": "DAUNE · Protetor de Fronha · 100% algodâo 200 fios · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P062": {
+  "b2b": 279.43,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com alça · 193x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P065": {
+  "b2b": 229.95,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com slip · 160x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P066": {
+  "b2b": 250.03,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com slip · 180x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P067": {
+  "b2b": 310.17,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com slip · 193x203",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P068": {
+  "b2b": 316.62,
+  "sku_key": "DAUNE · Protetor Colchão · Matelassado com slip · 200x200",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P069": {
+  "b2b": 135.15,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 190,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P070": {
+  "b2b": 161.54,
+  "spec": {
+   "comprimento_cm": 290,
+   "familia": "Bottom Sheet",
+   "largura_cm": 200,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P071": {
+  "b2b": 166.58,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 240,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P072": {
+  "b2b": 197.91,
+  "spec": {
+   "comprimento_cm": 290,
+   "familia": "Bottom Sheet",
+   "largura_cm": 250,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P073": {
+  "b2b": 179.12,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 260,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P074": {
+  "b2b": 219.95,
+  "sku_key": "KTC · Bottom Sheet · 400TC Sateen 100% algodão plain · 280x290",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P075": {
+  "b2b": 188.56,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 275,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P076": {
+  "b2b": 226.94,
+  "spec": {
+   "comprimento_cm": 295,
+   "familia": "Bottom Sheet",
+   "largura_cm": 285,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P077": {
+  "b2b": 382.87,
+  "spec": {
+   "comprimento_cm": 265,
+   "familia": "Duvet Cover",
+   "largura_cm": 285,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P078": {
+  "b2b": 204.3,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 300,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P079": {
+  "b2b": 249.33,
+  "spec": {
+   "comprimento_cm": 310,
+   "familia": "Bottom Sheet",
+   "largura_cm": 300,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P080": {
+  "b2b": 382.25,
+  "spec": {
+   "comprimento_cm": 260,
+   "familia": "Duvet Cover",
+   "largura_cm": 290,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P081": {
+  "b2b": 120.21,
+  "sku_key": "KTC · Top Sheet · 300TC Sateen 100% algodão plain · 190x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P082": {
+  "b2b": 143.44,
+  "sku_key": "KTC · Bottom Sheet · 300TC Sateen 100% algodão plain · 200x290",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P083": {
+  "b2b": 230.29,
+  "sku_key": "KTC · Duvet Cover · 300TC Sateen 100% algodão plain · 190x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P084": {
+  "b2b": 147.71,
+  "sku_key": "KTC · Top Sheet · 300TC Sateen 100% algodão plain · 240x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P085": {
+  "b2b": 175.8,
+  "sku_key": "KTC · Bottom Sheet · 300TC Sateen 100% algodão plain · 250x290",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P086": {
+  "b2b": 295.87,
+  "sku_key": "KTC · Duvet Cover · 300TC Sateen 100% algodão plain · 250x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P087": {
+  "b2b": 158.99,
+  "sku_key": "KTC · Top Sheet · 300TC Sateen 100% algodão plain · 260x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P088": {
+  "b2b": 195.62,
+  "sku_key": "KTC · Bottom Sheet · 300TC Sateen 100% algodão plain · 280x290",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P090": {
+  "b2b": 173.52,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 275,
+   "material_id": 9
+  },
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P091": {
+  "b2b": 208.68,
+  "spec": {
+   "comprimento_cm": 295,
+   "familia": "Bottom Sheet",
+   "largura_cm": 285,
+   "material_id": 9
+  },
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P092": {
+  "b2b": 352.45,
+  "spec": {
+   "comprimento_cm": 265,
+   "familia": "Duvet Cover",
+   "largura_cm": 285,
+   "material_id": 9
+  },
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P093": {
+  "b2b": 187.9,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 300,
+   "material_id": 9
+  },
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P094": {
+  "b2b": 229.17,
+  "spec": {
+   "comprimento_cm": 310,
+   "familia": "Bottom Sheet",
+   "largura_cm": 300,
+   "material_id": 9
+  },
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P095": {
+  "b2b": 351.93,
+  "spec": {
+   "comprimento_cm": 260,
+   "familia": "Duvet Cover",
+   "largura_cm": 290,
+   "material_id": 9
+  },
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P096": {
+  "b2b": 131.29,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 190,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P097": {
+  "b2b": 156.63,
+  "spec": {
+   "comprimento_cm": 290,
+   "familia": "Bottom Sheet",
+   "largura_cm": 200,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P098": {
+  "b2b": 252.6,
+  "spec": {
+   "comprimento_cm": 260,
+   "familia": "Duvet Cover",
+   "largura_cm": 190,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P099": {
+  "b2b": 161.45,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 240,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P100": {
+  "b2b": 191.54,
+  "spec": {
+   "comprimento_cm": 290,
+   "familia": "Bottom Sheet",
+   "largura_cm": 250,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P101": {
+  "b2b": 323.2,
+  "spec": {
+   "comprimento_cm": 260,
+   "familia": "Duvet Cover",
+   "largura_cm": 250,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P102": {
+  "b2b": 173.52,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 260,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P103": {
+  "b2b": 212.48,
+  "spec": {
+   "comprimento_cm": 290,
+   "familia": "Bottom Sheet",
+   "largura_cm": 280,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P104": {
+  "b2b": 352.86,
+  "spec": {
+   "comprimento_cm": 265,
+   "familia": "Duvet Cover",
+   "largura_cm": 270,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P105": {
+  "b2b": 182.54,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 275,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P106": {
+  "b2b": 219.39,
+  "spec": {
+   "comprimento_cm": 295,
+   "familia": "Bottom Sheet",
+   "largura_cm": 285,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P107": {
+  "b2b": 370.84,
+  "spec": {
+   "comprimento_cm": 265,
+   "familia": "Duvet Cover",
+   "largura_cm": 285,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P108": {
+  "b2b": 197.65,
+  "spec": {
+   "comprimento_cm": 250,
+   "familia": "Top Sheet",
+   "largura_cm": 300,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P109": {
+  "b2b": 240.88,
+  "spec": {
+   "comprimento_cm": 310,
+   "familia": "Bottom Sheet",
+   "largura_cm": 300,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P110": {
+  "b2b": 370.29,
+  "spec": {
+   "comprimento_cm": 260,
+   "familia": "Duvet Cover",
+   "largura_cm": 290,
+   "material_id": 7
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "P111": {
+  "b2b": 116.25,
+  "sku_key": "KTC · Top Sheet · 250TC Sateen CVC 70/30 plain · 190x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P112": {
+  "b2b": 119.93,
+  "sku_key": "KTC · Bottom Sheet · 250TC Sateen CVC 70/30 plain · 200x290",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P113": {
+  "b2b": 231.61,
+  "sku_key": "KTC · Duvet Cover · 250TC Sateen CVC 70/30 plain · 190x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P114": {
+  "b2b": 142.29,
+  "sku_key": "KTC · Top Sheet · 250TC Sateen CVC 70/30 plain · 240x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P115": {
+  "b2b": 146.63,
+  "sku_key": "KTC · Bottom Sheet · 250TC Sateen CVC 70/30 plain · 250x290",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P116": {
+  "b2b": 296.19,
+  "sku_key": "KTC · Duvet Cover · 250TC Sateen CVC 70/30 plain · 250x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P117": {
+  "b2b": 153.0,
+  "sku_key": "KTC · Top Sheet · 250TC Sateen CVC 70/30 plain · 260x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P118": {
+  "b2b": 163.1,
+  "sku_key": "KTC · Bottom Sheet · 250TC Sateen CVC 70/30 plain · 280x290",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P120": {
+  "b2b": 163.59,
+  "sku_key": "KTC · Top Sheet · 250TC Sateen CVC 70/30 plain · 275x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P121": {
+  "b2b": 196.37,
+  "sku_key": "KTC · Bottom Sheet · 250TC Sateen CVC 70/30 plain · 285x295",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P122": {
+  "b2b": 346.14,
+  "sku_key": "KTC · Duvet Cover · 250TC Sateen CVC 70/30 plain · 285x265",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P123": {
+  "b2b": 177.02,
+  "sku_key": "KTC · Top Sheet · 250TC Sateen CVC 70/30 plain · 300x250",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P124": {
+  "b2b": 215.5,
+  "sku_key": "KTC · Bottom Sheet · 250TC Sateen CVC 70/30 plain · 300x310",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P125": {
+  "b2b": 345.63,
+  "sku_key": "KTC · Duvet Cover · 250TC Sateen CVC 70/30 plain · 290x260",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "P149": {
+  "b2b": 195.18,
+  "sku_key": "DECOR_TRICOT · Peseira · RELEVO · 0,60x1,90",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P150": {
+  "b2b": 246.55,
+  "sku_key": "DECOR_TRICOT · Peseira · RELEVO · 0,60x2,40",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P151": {
+  "b2b": 277.36,
+  "sku_key": "DECOR_TRICOT · Peseira · RELEVO · 0,60x2,70",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P152": {
+  "b2b": 292.75,
+  "sku_key": "DECOR_TRICOT · Peseira · RELEVO · 0,60x2,85",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P153": {
+  "b2b": 191.87,
+  "sku_key": "DECOR_TRICOT · Peseira · SOFIA · 0,60x1,90",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P154": {
+  "b2b": 242.35,
+  "sku_key": "DECOR_TRICOT · Peseira · SOFIA · 0,60x2,40",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P155": {
+  "b2b": 272.66,
+  "sku_key": "DECOR_TRICOT · Peseira · SOFIA · 0,60x2,70",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P156": {
+  "b2b": 287.8,
+  "sku_key": "DECOR_TRICOT · Peseira · SOFIA · 0,60x2,85",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P157": {
+  "b2b": 191.87,
+  "sku_key": "DECOR_TRICOT · Peseira · AREZZO · 0,60x1,90",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P158": {
+  "b2b": 242.35,
+  "sku_key": "DECOR_TRICOT · Peseira · AREZZO · 0,60x2,40",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P159": {
+  "b2b": 272.66,
+  "sku_key": "DECOR_TRICOT · Peseira · AREZZO · 0,60x2,70",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P160": {
+  "b2b": 287.8,
+  "sku_key": "DECOR_TRICOT · Peseira · AREZZO · 0,60x2,85",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P161": {
+  "b2b": 190.3,
+  "sku_key": "DECOR_TRICOT · Peseira · SISSI · 0,60x1,90",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P162": {
+  "b2b": 240.4,
+  "sku_key": "DECOR_TRICOT · Peseira · SISSI · 0,60x2,40",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P163": {
+  "b2b": 270.45,
+  "sku_key": "DECOR_TRICOT · Peseira · SISSI · 0,60x2,70",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "P164": {
+  "b2b": 285.46,
+  "sku_key": "DECOR_TRICOT · Peseira · SISSI · 0,60x2,85",
+  "status": "REVALIDAR",
+  "utilizavel": true
+ },
+ "R024": {
+  "b2b": 130.26,
+  "sku_key": "KTC · Blanket · Softcozy 100% poliéster fleece 310 g/m² · caramelo · 180x230",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R025": {
+  "b2b": 177.57,
+  "sku_key": "KTC · Blanket · Softcozy 100% poliéster fleece 310 g/m² · caramelo · 250x230",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R026": {
+  "b2b": 200.15,
+  "sku_key": "KTC · Blanket · Softcozy 100% poliéster fleece 310 g/m² · caramelo · 290x230",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R032": {
+  "b2b": 245.59,
+  "sku_key": "KTC · Bathrobe · velour 420 g/m² · gola xale · M",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R197": {
+  "b2b": 37.0,
+  "sku_key": "KTC · Pillow Case · 300TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 2 abas · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "R198": {
+  "b2b": 42.63,
+  "sku_key": "KTC · Pillow Case · 300TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 2 abas · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "R199": {
+  "b2b": 37.0,
+  "sku_key": "KTC · Pillow Case · 300TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 3 abas · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "R200": {
+  "b2b": 42.63,
+  "sku_key": "KTC · Pillow Case · 300TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 3 abas · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "R201": {
+  "b2b": 37.0,
+  "sku_key": "KTC · Pillow Case · 300TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 4 abas · 50x70",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "R202": {
+  "b2b": 42.63,
+  "sku_key": "KTC · Pillow Case · 300TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 4 abas · 50x90",
+  "status": "CONFIRMADO",
+  "utilizavel": true
+ },
+ "R203": {
+  "b2b": 40.22,
+  "sku_key": "KTC · Pillow Case · 400TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 2 abas · 50x70",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R204": {
+  "b2b": 46.25,
+  "sku_key": "KTC · Pillow Case · 400TC Sateen 100% algodão plain · oxford 5 cm + aba 20 · 2 abas · 50x90",
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R205": {
+  "b2b": 40.28,
+  "spec": {
+   "abas": 3,
+   "comprimento_cm": 70,
+   "familia": "Pillow Case",
+   "flap_cm": 20,
+   "largura_cm": 50,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R206": {
+  "b2b": 46.25,
+  "spec": {
+   "abas": 3,
+   "comprimento_cm": 90,
+   "familia": "Pillow Case",
+   "flap_cm": 20,
+   "largura_cm": 50,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R207": {
+  "b2b": 40.54,
+  "spec": {
+   "abas": 4,
+   "comprimento_cm": 70,
+   "familia": "Pillow Case",
+   "flap_cm": 20,
+   "largura_cm": 50,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ },
+ "R208": {
+  "b2b": 46.65,
+  "spec": {
+   "abas": 4,
+   "comprimento_cm": 90,
+   "familia": "Pillow Case",
+   "flap_cm": 20,
+   "largura_cm": 50,
+   "material_id": 11
+  },
+  "status": "ESTIMADO",
+  "utilizavel": true
+ }
+}
