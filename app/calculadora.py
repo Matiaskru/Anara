@@ -350,6 +350,30 @@ def resultado_comercial(memoria: dict) -> dict:
     return sem_confidenciais(apenas(corpo, CAMPOS_RESULTADO_COMERCIAL))
 
 
+def sku_key_da_calculadora(produto: Produto, familia: str, largura_cm: Optional[float],
+                           comprimento_cm: Optional[float], gsm: Optional[int] = None,
+                           plain_or_stripe: str = "plain", festone: bool = False,
+                           composicao_toalha: Optional[str] = None) -> str:
+    """A identidade (`sku_key`) do produto que a calculadora grava no catálogo.
+
+    Função própria (15/10/2026) para que quem precisa saber a chave antes de gravar — a lista da
+    tabela comercial (`app/tabela_comercial.py`) e o script que cria os itens calculados da
+    tabela — use exatamente a mesma regra que `salvar_no_catalogo`.
+    """
+    medida = (f"{int(largura_cm)}x{int(comprimento_cm)}"
+              if largura_cm and comprimento_cm else "sem medida")
+    # toalha é identificada pela gramatura; tecido plano e fronha, pelo material
+    detalhe = produto.material_ref or (f"{gsm} GSM" if gsm else "sem tecido")
+    chave = f"CALC · {familia} · {medida} · {detalhe} · {plain_or_stripe}"
+    if TIPO_POR_FAMILIA.get(familia) == "toalha":
+        # composições diferentes são SKUs diferentes (mesmo custo, por decisão da KTC)
+        chave += f" · {composicao_toalha or '100/0'}"
+    if TIPO_POR_FAMILIA.get(familia) == "fronha":
+        # construções diferentes são SKUs diferentes: 4 abas com festonê não é a standard
+        chave += f" · {produto.construcao} · {produto.fechamento}" + (" · festonê" if festone else "")
+    return chave
+
+
 def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[float],
                        comprimento_cm: Optional[float], material_id: Optional[int] = None,
                        gsm: Optional[int] = None, plain_or_stripe: str = "plain",
@@ -368,18 +392,9 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
                                plain_or_stripe, acabamento=acabamento, abas=abas,
                                flap_cm=flap_cm, festone=festone,
                                composicao_toalha=composicao_toalha)
-    medida = (f"{int(largura_cm)}x{int(comprimento_cm)}"
-              if largura_cm and comprimento_cm else "sem medida")
-    # toalha é identificada pela gramatura; tecido plano e fronha, pelo material
-    detalhe = produto.material_ref or (f"{gsm} GSM" if gsm else "sem tecido")
-    produto.sku_key = f"CALC · {familia} · {medida} · {detalhe} · {plain_or_stripe}"
-    if TIPO_POR_FAMILIA.get(familia) == "toalha":
-        # composições diferentes são SKUs diferentes (mesmo custo, por decisão da KTC)
-        produto.sku_key += f" · {composicao_toalha or '100/0'}"
-    if TIPO_POR_FAMILIA.get(familia) == "fronha":
-        # construções diferentes são SKUs diferentes: 4 abas com festonê não é a standard
-        produto.sku_key += f" · {produto.construcao} · {produto.fechamento}" + \
-            (" · festonê" if festone else "")
+    produto.sku_key = sku_key_da_calculadora(produto, familia, largura_cm, comprimento_cm, gsm,
+                                             plain_or_stripe, festone=festone,
+                                             composicao_toalha=composicao_toalha)
 
     existente = session.exec(select(Produto).where(Produto.sku_key == produto.sku_key)).first()
     if existente:

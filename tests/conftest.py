@@ -183,6 +183,21 @@ def _sessao_recuperavel(request):
 # `request=None` é o caso "sem sessão", e ele **não** é um atalho de conveniência: é o
 # cenário de segurança mais importante da suíte, porque prova que a ausência de usuário
 # nega em vez de liberar.
+@pytest.fixture
+def na_tabela_comercial(monkeypatch):
+    """Põe produtos de teste na lista da Tabela comercial (`app/tabela_comercial.py`).
+
+    Desde 15/10/2026 a busca da cotação, a consulta da calculadora e a página Produtos só
+    mostram o que está na tabela; produto criado pelo teste, com `sku_key` inventada, só aparece
+    nelas se o teste o puser na lista. Vale só para o teste (monkeypatch).
+    """
+    from app import tabela_comercial as tc
+
+    def incluir(*produtos):
+        monkeypatch.setattr(tc, "_CHAVES", tc._CHAVES | {tc._normalizar(p.sku_key) for p in produtos})
+    return incluir
+
+
 class RequestFalsa:
     """O mínimo que as rotas e os templates leem de uma Request."""
 

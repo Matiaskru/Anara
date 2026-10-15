@@ -403,8 +403,10 @@ def test_payload_do_calc_leva_economia_para_admin(session, cenario):
 
 
 @pytest.mark.parametrize("papel", ["VENDEDOR_INTERNO", "VENDEDOR_COMISSIONADO"])
-def test_payload_da_busca_de_produtos_nao_leva_custo(session, papel):
+def test_payload_da_busca_de_produtos_nao_leva_custo(session, papel, na_tabela_comercial):
     from app.routers.produtos import buscar
+    # a busca só mostra o que está na Tabela comercial (15/10/2026): o catálogo de teste entra nela
+    na_tabela_comercial(*session.exec(select(Produto).where(Produto.ativo == True)).all())  # noqa: E712
     linhas = corpo(chamar(buscar, RequestFalsa(_novo_usuario(papel)), q="", session=session))
     assert linhas, "a busca precisa continuar funcionando para o vendedor"
     for linha in linhas:

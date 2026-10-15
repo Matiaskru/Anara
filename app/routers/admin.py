@@ -209,7 +209,9 @@ def produtos_governanca(request: Request, q: str = "", fornecedor: str = "", fam
     """O catálogo com o diagnóstico do MOTOR por SKU — e a ação para resolver cada pendência."""
     exigir_admin(request)
     # uma varredura só: os contadores olham o catálogo inteiro, a tabela mostra o filtrado
-    todas = gov.listar(session)
+    # o catálogo INTEIRO: com o limite padrão de 400, o que passasse disso sumia da tela e dos
+    # contadores (achado em 15/10/2026, quando o catálogo passou de 400 SKUs ativos)
+    todas = gov.listar(session, limite=None)
     contagem = {}
     for l in todas:
         contagem[l.status] = contagem.get(l.status, 0) + 1

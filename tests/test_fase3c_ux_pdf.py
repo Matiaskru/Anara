@@ -577,14 +577,16 @@ def test_14_dashboard_admin_kpis_filtros_e_serie(session, vendedora, owner, forn
     assert fam["vendas_fechadas"] == 1 and outra["vendas_fechadas"] == 0
 
 
-def test_15_produtos_catalogo_comercial_sem_economia(session, vendedora, fornecedores):
+def test_15_produtos_catalogo_comercial_sem_economia(session, vendedora, fornecedores, na_tabela_comercial):
     from app.routers.produtos import listar, situacao_comercial
     p = produto(session, fornecedores, familia="Familia3C")
+    na_tabela_comercial(p)   # a página Produtos só mostra o que está na Tabela comercial (15/10/2026)
     pagina = html(chamar(listar, RequestFalsa(vendedora), familia="Familia3C", session=session))
     assert p.nome in pagina and "Disponível" in pagina
     for termo in ("Custo NET", "Margem padrão", "Método", "Origem do custo", "Memória"):
         assert termo not in pagina
     sem = produto(session, fornecedores, custo=0.0, familia="Familia3C")
+    na_tabela_comercial(p, sem)
     assert situacao_comercial(sem) == "SOB_CONSULTA"
     pagina = html(chamar(listar, RequestFalsa(vendedora), familia="Familia3C", situacao="SOB_CONSULTA",
                          session=session))

@@ -91,12 +91,13 @@ def test_12c_pela_rota_da_calculadora_como_a_tela_manda(session, material):
 # ===========================================================================
 # 13–14. Cotação, PDF e busca mostram a gramatura
 # ===========================================================================
-def test_13_14_cotacao_pdf_e_busca_mostram_a_gramatura(session, material):
+def test_13_14_cotacao_pdf_e_busca_mostram_a_gramatura(session, material, na_tabela_comercial):
     from app.pdf_bridge import montar_documento
     from app.routers.produtos import buscar
     salvo = calc.salvar_no_catalogo(session, "Bath Towel", 80, 90, material_id=material.id,
                                     gsm=650, plain_or_stripe="plain")
     session.commit()
+    na_tabela_comercial(salvo)   # a busca só mostra o que está na Tabela comercial (15/10/2026)
     cot = nova_cotacao(session, condicao_pagamento="30")
     it = add_item(session, cot, salvo)
     session.expire_all()

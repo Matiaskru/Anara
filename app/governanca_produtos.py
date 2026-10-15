@@ -170,7 +170,7 @@ def diagnosticar(session: Session, produto: Produto) -> LinhaGovernanca:
 
 
 def listar(session: Session, *, q: str = "", fornecedor: str = "", familia: str = "",
-           status: str = "", limite: int = 400) -> List[LinhaGovernanca]:
+           status: str = "", limite: Optional[int] = 400) -> List[LinhaGovernanca]:
     """Catálogo ativo com o diagnóstico de cada SKU, filtrado como a tela pede.
 
     A varredura inteira roda dentro de `ps.cache_de_leitura()`: diagnosticar 380 SKUs relia as

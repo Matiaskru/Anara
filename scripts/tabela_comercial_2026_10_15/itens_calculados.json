@@ -1,0 +1,456 @@
+[
+ {
+  "codigo": "N13",
+  "parametros": {
+   "familia": "Pool Towel",
+   "largura_cm": 90,
+   "comprimento_cm": 170,
+   "gsm": 600,
+   "composicao_toalha": "100/0",
+   "plain_or_stripe": "stripe"
+  },
+  "sku_key": "CALC · Pool Towel · 90x170 · 600 GSM · stripe · 100/0",
+  "nome": "Toalha de piscina 90x170 · 600 g/m² · 100% algodão · listrado",
+  "b2b_sp_nao_30": 138.24
+ },
+ {
+  "codigo": "P069",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 190,
+   "comprimento_cm": 250,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Top Sheet · 190x250 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de cima 190x250 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 135.15
+ },
+ {
+  "codigo": "P070",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 200,
+   "comprimento_cm": 290,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Bottom Sheet · 200x290 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de baixo 200x290 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 161.54
+ },
+ {
+  "codigo": "P071",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 240,
+   "comprimento_cm": 250,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Top Sheet · 240x250 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de cima 240x250 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 166.58
+ },
+ {
+  "codigo": "P072",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 250,
+   "comprimento_cm": 290,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Bottom Sheet · 250x290 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de baixo 250x290 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 197.91
+ },
+ {
+  "codigo": "P073",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 260,
+   "comprimento_cm": 250,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Top Sheet · 260x250 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de cima 260x250 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 179.12
+ },
+ {
+  "codigo": "P075",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 275,
+   "comprimento_cm": 250,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Top Sheet · 275x250 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de cima 275x250 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 188.56
+ },
+ {
+  "codigo": "P076",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 285,
+   "comprimento_cm": 295,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Bottom Sheet · 285x295 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de baixo 285x295 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 226.94
+ },
+ {
+  "codigo": "P077",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 285,
+   "comprimento_cm": 265,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Duvet Cover · 285x265 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Capa duvet 285x265 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 382.87
+ },
+ {
+  "codigo": "P078",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 300,
+   "comprimento_cm": 250,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Top Sheet · 300x250 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de cima 300x250 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 204.3
+ },
+ {
+  "codigo": "P079",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 300,
+   "comprimento_cm": 310,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Bottom Sheet · 300x310 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de baixo 300x310 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 249.33
+ },
+ {
+  "codigo": "P080",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 290,
+   "comprimento_cm": 260,
+   "material_id": 11
+  },
+  "sku_key": "CALC · Duvet Cover · 290x260 · 400TC Sateen 100% Cotton · plain",
+  "nome": "Capa duvet 290x260 · 400 fios · 100% algodão",
+  "b2b_sp_nao_30": 382.25
+ },
+ {
+  "codigo": "P090",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 275,
+   "comprimento_cm": 250,
+   "material_id": 9
+  },
+  "sku_key": "CALC · Top Sheet · 275x250 · 300TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de cima 275x250 · 300 fios · 100% algodão",
+  "b2b_sp_nao_30": 173.52
+ },
+ {
+  "codigo": "P091",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 285,
+   "comprimento_cm": 295,
+   "material_id": 9
+  },
+  "sku_key": "CALC · Bottom Sheet · 285x295 · 300TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de baixo 285x295 · 300 fios · 100% algodão",
+  "b2b_sp_nao_30": 208.68
+ },
+ {
+  "codigo": "P092",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 285,
+   "comprimento_cm": 265,
+   "material_id": 9
+  },
+  "sku_key": "CALC · Duvet Cover · 285x265 · 300TC Sateen 100% Cotton · plain",
+  "nome": "Capa duvet 285x265 · 300 fios · 100% algodão",
+  "b2b_sp_nao_30": 352.45
+ },
+ {
+  "codigo": "P093",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 300,
+   "comprimento_cm": 250,
+   "material_id": 9
+  },
+  "sku_key": "CALC · Top Sheet · 300x250 · 300TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de cima 300x250 · 300 fios · 100% algodão",
+  "b2b_sp_nao_30": 187.9
+ },
+ {
+  "codigo": "P094",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 300,
+   "comprimento_cm": 310,
+   "material_id": 9
+  },
+  "sku_key": "CALC · Bottom Sheet · 300x310 · 300TC Sateen 100% Cotton · plain",
+  "nome": "Lençol de baixo 300x310 · 300 fios · 100% algodão",
+  "b2b_sp_nao_30": 229.17
+ },
+ {
+  "codigo": "P095",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 290,
+   "comprimento_cm": 260,
+   "material_id": 9
+  },
+  "sku_key": "CALC · Duvet Cover · 290x260 · 300TC Sateen 100% Cotton · plain",
+  "nome": "Capa duvet 290x260 · 300 fios · 100% algodão",
+  "b2b_sp_nao_30": 351.93
+ },
+ {
+  "codigo": "P096",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 190,
+   "comprimento_cm": 250,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Top Sheet · 190x250 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de cima 190x250 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 131.29
+ },
+ {
+  "codigo": "P097",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 200,
+   "comprimento_cm": 290,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Bottom Sheet · 200x290 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de baixo 200x290 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 156.63
+ },
+ {
+  "codigo": "P098",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 190,
+   "comprimento_cm": 260,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Duvet Cover · 190x260 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Capa duvet 190x260 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 252.6
+ },
+ {
+  "codigo": "P099",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 240,
+   "comprimento_cm": 250,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Top Sheet · 240x250 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de cima 240x250 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 161.45
+ },
+ {
+  "codigo": "P100",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 250,
+   "comprimento_cm": 290,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Bottom Sheet · 250x290 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de baixo 250x290 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 191.54
+ },
+ {
+  "codigo": "P101",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 250,
+   "comprimento_cm": 260,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Duvet Cover · 250x260 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Capa duvet 250x260 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 323.2
+ },
+ {
+  "codigo": "P102",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 260,
+   "comprimento_cm": 250,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Top Sheet · 260x250 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de cima 260x250 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 173.52
+ },
+ {
+  "codigo": "P103",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 280,
+   "comprimento_cm": 290,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Bottom Sheet · 280x290 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de baixo 280x290 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 212.48
+ },
+ {
+  "codigo": "P104",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 270,
+   "comprimento_cm": 265,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Duvet Cover · 270x265 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Capa duvet 270x265 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 352.86
+ },
+ {
+  "codigo": "P105",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 275,
+   "comprimento_cm": 250,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Top Sheet · 275x250 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de cima 275x250 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 182.54
+ },
+ {
+  "codigo": "P106",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 285,
+   "comprimento_cm": 295,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Bottom Sheet · 285x295 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de baixo 285x295 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 219.39
+ },
+ {
+  "codigo": "P107",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 285,
+   "comprimento_cm": 265,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Duvet Cover · 285x265 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Capa duvet 285x265 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 370.84
+ },
+ {
+  "codigo": "P108",
+  "parametros": {
+   "familia": "Top Sheet",
+   "largura_cm": 300,
+   "comprimento_cm": 250,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Top Sheet · 300x250 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de cima 300x250 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 197.65
+ },
+ {
+  "codigo": "P109",
+  "parametros": {
+   "familia": "Bottom Sheet",
+   "largura_cm": 300,
+   "comprimento_cm": 310,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Bottom Sheet · 300x310 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Lençol de baixo 300x310 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 240.88
+ },
+ {
+  "codigo": "P110",
+  "parametros": {
+   "familia": "Duvet Cover",
+   "largura_cm": 290,
+   "comprimento_cm": 260,
+   "material_id": 7
+  },
+  "sku_key": "CALC · Duvet Cover · 290x260 · 300TC Sateen CVC 70/30 · plain",
+  "nome": "Capa duvet 290x260 · 300 fios · 70/30",
+  "b2b_sp_nao_30": 370.29
+ },
+ {
+  "codigo": "R205",
+  "parametros": {
+   "familia": "Pillow Case",
+   "largura_cm": 50,
+   "comprimento_cm": 70,
+   "material_id": 11,
+   "abas": 3,
+   "flap_cm": 20
+  },
+  "sku_key": "CALC · Pillow Case · 50x70 · 400TC Sateen 100% Cotton · plain · 3 abas · flap 20 cm",
+  "nome": "Fronha com aba 50x70 · 400 fios · 100% algodão · 3 abas",
+  "b2b_sp_nao_30": 40.28
+ },
+ {
+  "codigo": "R206",
+  "parametros": {
+   "familia": "Pillow Case",
+   "largura_cm": 50,
+   "comprimento_cm": 90,
+   "material_id": 11,
+   "abas": 3,
+   "flap_cm": 20
+  },
+  "sku_key": "CALC · Pillow Case · 50x90 · 400TC Sateen 100% Cotton · plain · 3 abas · flap 20 cm",
+  "nome": "Fronha com aba 50x90 · 400 fios · 100% algodão · 3 abas",
+  "b2b_sp_nao_30": 46.25
+ },
+ {
+  "codigo": "R207",
+  "parametros": {
+   "familia": "Pillow Case",
+   "largura_cm": 50,
+   "comprimento_cm": 70,
+   "material_id": 11,
+   "abas": 4,
+   "flap_cm": 20
+  },
+  "sku_key": "CALC · Pillow Case · 50x70 · 400TC Sateen 100% Cotton · plain · 4 abas · flap 20 cm",
+  "nome": "Fronha com aba 50x70 · 400 fios · 100% algodão · 4 abas",
+  "b2b_sp_nao_30": 40.54
+ },
+ {
+  "codigo": "R208",
+  "parametros": {
+   "familia": "Pillow Case",
+   "largura_cm": 50,
+   "comprimento_cm": 90,
+   "material_id": 11,
+   "abas": 4,
+   "flap_cm": 20
+  },
+  "sku_key": "CALC · Pillow Case · 50x90 · 400TC Sateen 100% Cotton · plain · 4 abas · flap 20 cm",
+  "nome": "Fronha com aba 50x90 · 400 fios · 100% algodão · 4 abas",
+  "b2b_sp_nao_30": 46.65
+ }
+]

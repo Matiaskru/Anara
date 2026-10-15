@@ -407,6 +407,25 @@ nenhum. Nunca por "tem política ou não".
 - Casamento por campo estruturado (família, `material_ref`, liso/listrado, abas), nunca por nome.
   Vence o registro mais específico.
 
+## Filtros só com a Tabela comercial (15/10/2026)
+
+**A busca mostra o que a vendedora pode oferecer: a Tabela comercial vigente, e nada mais.** A busca
+da cotação ("+ Adicionar produto") e os filtros dela (`/produtos/buscar`, `/produtos/facetas`), a
+consulta de preço da calculadora (usa `/produtos/buscar`) e a página Produtos passam por
+`tabela_comercial.so_da_tabela` — lista de `sku_key` em `app/tabela_comercial.py`, gerada pelo
+gerador da tabela (`gerar_tabela_app.py`, fora do Git). **Não editar a lista à mão.**
+
+- Busca por nome e filtros, como sempre — o código da tabela (P031…) não é critério de busca
+  (decisão do Matias).
+- Continua igual: calculadora (qualquer medida), cotação que já tem produto fora da tabela (o item
+  aponta pelo `produto_id`; recalcular, PDF e duplicar não passam pela busca) e a administração
+  (`/admin/produtos`), que mostra o catálogo inteiro — sem o corte de 400 SKUs (`limite=None`).
+- Os itens que a tabela calcula na hora (lençóis 400 fios, 300 algodão Super King, 300 70/30,
+  fronha 400 com 3/4 abas, toalha de piscina listras finas) viraram SKU `CALC · …` pelo mesmo
+  caminho da calculadora (`scripts/tabela_comercial_2026_10_15/aplicar.py`), para aparecerem no
+  filtro. A chave sai de `calculadora.sku_key_da_calculadora`, a mesma de `salvar_no_catalogo`.
+- Teste que cria produto e espera achá-lo na busca usa a fixture `na_tabela_comercial`.
+
 ## Workflow comercial (Sessão 6)
 
 Estados: `rascunho` → `aguardando_aprovacao` → `aprovada` → `emitida` → `enviada`, com

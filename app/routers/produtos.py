@@ -4,6 +4,7 @@ from sqlmodel import Session, select
 
 from app import pricing_service as ps
 from app import rotulos
+from app import tabela_comercial
 from app.busca import buscar as buscar_produtos
 from app.confidencial import produto_comercial
 from app.permissoes import exigir_economia, ve_economia
@@ -55,8 +56,11 @@ ROTULO_SITUACAO = {"DISPONIVEL": "Disponível", "SOB_CONSULTA": "Sob consulta", 
 def listar(request: Request, q: str = "", fornecedor: str = "", metodo: str = "",
            revisao: str = "", familia: str = "", situacao: str = "",
            session: Session = Depends(get_session)):
-    todos = session.exec(select(Produto).where(Produto.ativo == True)  # noqa: E712
-                         .order_by(Produto.categoria, Produto.nome)).all()
+    # só o que está na Tabela comercial (decisão de 15/10/2026, ver `app/tabela_comercial.py`);
+    # o catálogo inteiro continua na administração
+    todos = tabela_comercial.so_da_tabela(session.exec(
+        select(Produto).where(Produto.ativo == True)  # noqa: E712
+        .order_by(Produto.categoria, Produto.nome)).all())
     produtos = list(todos)
     fornecedores = {f.id: f for f in session.exec(select(Fornecedor)).all()}
 
@@ -112,11 +116,12 @@ def tamanho_de(p: Produto):
 def facetas(request: Request, session: Session = Depends(get_session)):
     """As opções dos filtros da busca (Fase 3C): família, fornecedor, tamanho, fios, gramatura.
 
-    Derivadas do catálogo ativo — nada cadastrado à mão. É informação comercial: a
-    vendedora usa os mesmos filtros que o cotador offline tinha.
+    Derivadas dos produtos da Tabela comercial (15/10/2026) — nada cadastrado à mão. É
+    informação comercial: a vendedora usa os mesmos filtros que o cotador offline tinha.
     """
     from app import rotulos
-    produtos = session.exec(select(Produto).where(Produto.ativo == True)).all()  # noqa: E712
+    produtos = tabela_comercial.so_da_tabela(
+        session.exec(select(Produto).where(Produto.ativo == True)).all())  # noqa: E712
     fornecedores = {f.id: f for f in session.exec(select(Fornecedor)).all()}
     familias = {}
     for p in produtos:
@@ -147,8 +152,12 @@ def buscar(request: Request, q: str = "", fornecedor: str = "", familia: str = "
     que muda é o que ela devolve. `custo_unitario`, `margem_padrao_pct` e `cost_method` saem
     do payload de quem não vê economia. `sem_custo` continua, porque é informação operacional
     (o item não forma margem) e não revela valor nenhum.
+
+    Desde 15/10/2026 busca só no que está na Tabela comercial (`app/tabela_comercial.py`):
+    medida fora da tabela se calcula na calculadora.
     """
-    produtos = session.exec(select(Produto).where(Produto.ativo == True)).all()  # noqa: E712
+    produtos = tabela_comercial.so_da_tabela(
+        session.exec(select(Produto).where(Produto.ativo == True)).all())  # noqa: E712
     fornecedores = {f.id: f for f in session.exec(select(Fornecedor)).all()}
     if fornecedor:
         produtos = [p for p in produtos if fornecedores.get(p.fornecedor_id)
