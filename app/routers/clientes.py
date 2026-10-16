@@ -139,7 +139,20 @@ def detalhe(request: Request, cliente_id: int, session: Session = Depends(get_se
 
     oportunidades = crm.listar_oportunidades(session, cliente_id=cliente_id, limite=1000)
     vendas = {o.id: o for o in oportunidades}
+    # --- CRM de relacionamento (15/10/2026): visitas, acompanhamentos, produtos utilizados, amostras ---
+    from app import crm_relacionamento as rel
+    from app.routers.relacionamento import _contexto_formularios
+    eu = usuario_da_request(request)
     return templates.TemplateResponse(request, "cliente_detail.html", {
+        "visitas": rel.visitas_do_cliente(session, cliente_id),
+        "acomp": rel.painel_acompanhamentos(session, cliente_id=cliente_id),
+        "relacionamento": rel.resumo_relacionamento(session, cliente_id),
+        "produtos_utilizados": rel.produtos_utilizados(session, cliente_id),
+        "amostras_cliente": rel.amostras_do_cliente(session, cliente_id),
+        "especificacao": rel.especificacao, "data_prevista": rel.data_prevista, "hoje": rel.hoje_sp(),
+        "pode_operar": (lambda a: rel.pode_operar_acompanhamento(eu, a)) if eu else (lambda a: False),
+        "nomes_usuarios": {u.id: u.nome for u in session.exec(select(Usuario)).all()},
+        **{k: v for k, v in _contexto_formularios(session).items() if k != "usuarios"},
         "active": "clientes", "cliente": cliente, "cotacoes": cotacoes,
         "totais": totais, "vendas_por_id": vendas,
         "ultimos_precos": sorted(ultimos_precos.items(), key=lambda x: x[1]["data"], reverse=True),

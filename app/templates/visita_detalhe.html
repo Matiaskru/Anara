@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}{% set v = linha.visita %}Visita {{ v.data_visita|data }} — {{ cliente.nome }} — Anara{% endblock %}
+
+{% block topbar %}
+{% set v = linha.visita %}
+<div class="topbar">
+  <div class="titulo">
+    <div>
+      <div class="crumbs"><a href="/clientes">Clientes</a> / <a href="/clientes/{{ cliente.id }}#visitas">{{ cliente.nome }}</a></div>
+      <h1>Visita de {{ v.data_visita|data }}{% if linha.assunto %} · {{ linha.assunto }}{% endif %}</h1>
+    </div>
+  </div>
+  <div class="acoes">
+    {% if pode_editar and not v.removida_em %}
+    <button class="btn btn-ghost btn-sm" type="button" data-modal="modal-remover">Retirar do histórico</button>
+    <a class="btn btn-ghost" href="/visitas/{{ v.id }}/editar">Editar</a>
+    {% endif %}
+    <a class="btn btn-copper" href="/clientes/{{ cliente.id }}/visitas/nova">+ Nova visita</a>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% set v = linha.visita %}
+{% import "_crm_macros.html" as crmm with context %}
+{% if v.removida_em %}
+<div class="banner banner-warn"><div>Esta visita foi retirada do histórico em {{ v.removida_em|datahora }}{% if v.removida_por %} por {{ v.removida_por }}{% endif %}.</div></div>
+{% endif %}
+<div class="split-2">
+  <div class="card">
+    <div class="card-title"><h3>Relatório</h3></div>
+    <div class="relato">{{ v.relatorio }}</div>
+    {% for rotulo, valor in [('Necessidades identificadas', v.necessidades), ('Produtos discutidos', v.produtos_discutidos),
+                             ('Oportunidades identificadas', v.oportunidades), ('Próximos passos', v.proximos_passos),
+                             ('Observações', v.observacoes)] %}
+      {% if valor %}<h4 style="margin:14px 0 4px;">{{ rotulo }}</h4><div class="relato">{{ valor }}</div>{% endif %}
+    {% endfor %}
+  </div>
+  <div>
+    <div class="card">
+      <div class="card-title"><h3>Participantes</h3></div>
+      {% if linha.participantes or v.participantes_externos %}
+      <ul class="small" style="margin:0; padding-left:18px;">
+        {% for p in linha.participantes %}<li>{{ p.nome }}{% if p.cargo %} <span class="muted">· {{ p.cargo }}</span>{% endif %}{% if not p.ativo %} <span class="muted">(não está mais ativo)</span>{% endif %}</li>{% endfor %}
+        {% if v.participantes_externos %}<li>{{ v.participantes_externos }} <span class="muted">(externo)</span></li>{% endif %}
+      </ul>
+      {% else %}<p class="muted small">Sem participantes registrados.</p>{% endif %}
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Registro</h3></div>
+      <table class="limpa compacta"><tbody>
+        <tr><td class="muted" style="width:40%;">Responsável</td><td>{{ linha.responsavel or '—' }}</td></tr>
+        <tr><td class="muted">Registrada por</td><td>{{ linha.autor or '—' }} em {{ v.criado_em|datahora }}</td></tr>
+        {% if v.atualizado_em %}<tr><td class="muted">Última correção</td><td>{{ v.atualizado_por or '—' }} em {{ v.atualizado_em|datahora }}</td></tr>{% endif %}
+      </tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="card flush tw">
+  <div class="card-title" style="padding:12px 14px 0;"><h3>Acompanhamentos desta visita</h3>
+    {% if not v.removida_em %}<button class="btn-link small" type="button" data-modal="modal-acomp-visita">+ Novo</button>{% endif %}</div>
+  <table class="compacta">
+    <tbody>
+    {% for a in linha.acompanhamentos %}{{ crmm.linha_acompanhamento(a, '/visitas/' ~ v.id, link_visita=False) }}
+    {% else %}<tr><td class="tbl-vazia">Nenhum acompanhamento registrado para esta visita.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="modal-bg" id="modal-acomp-visita" role="dialog" aria-modal="true">
+  <form class="modal" method="post" action="/clientes/{{ cliente.id }}/acompanhamentos">
+    <div class="modal-head"><h2>Novo acompanhamento</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <input type="hidden" name="visita_id" value="{{ v.id }}">
+    <input type="hidden" name="voltar" value="/visitas/{{ v.id }}">
+    <div class="field"><label for="av-desc">O que precisa ser feito</label><input id="av-desc" name="descricao" required></div>
+    <div class="grid-2">
+      <div class="field"><label for="av-data">Data prevista</label><input id="av-data" name="data_prevista" type="date"></div>
+      <div class="field"><label for="av-resp">Responsável</label>
+        <select id="av-resp" name="responsavel_id">{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if eu and eu.id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Criar</button></div>
+  </form>
+</div>
+
+{% if pode_editar and not v.removida_em %}
+<div class="modal-bg" id="modal-remover" role="dialog" aria-modal="true">
+  <form class="modal" method="post" action="/visitas/{{ v.id }}/remover">
+    <div class="modal-head"><h2>Retirar visita do histórico</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <p class="small">A visita deixa de aparecer na ficha do cliente, mas o registro não é apagado.</p>
+    <div class="field"><label for="rv-motivo">Motivo</label><input id="rv-motivo" name="motivo" required placeholder="ex.: registrada no cliente errado"></div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-danger" type="submit">Retirar</button></div>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

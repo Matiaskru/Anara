@@ -14,6 +14,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy import Enum as SAEnum
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -1421,6 +1422,10 @@ class Contato(SQLModel, table=True):
     ativo: bool = True
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     criado_por: Optional[str] = None
+    # CRM de relacionamento (15/10/2026, migration 0031)
+    whatsapp: Optional[str] = None
+    atualizado_em: Optional[datetime] = None
+    atualizado_por: Optional[str] = None
 
 
 class Oportunidade(SQLModel, table=True):
@@ -1527,6 +1532,87 @@ class AtividadeComercial(SQLModel, table=True):
     concluida_por: Optional[str] = None
     criado_em: datetime = Field(default_factory=datetime.utcnow)
     criado_por: Optional[str] = None
+    # CRM de relacionamento (15/10/2026, migration 0031): o acompanhamento que nasceu de uma
+    # visita aponta para ela; o criado direto no cliente fica com NULO
+    visita_id: Optional[int] = Field(default=None, foreign_key="visitacliente.id", index=True)
+    atualizado_em: Optional[datetime] = None
+
+
+# ---------------------------------------------------------------------------
+# CRM de relacionamento (15/10/2026, migration 0031)
+# ---------------------------------------------------------------------------
+#: Assuntos de visita — poucos, de propósito. Vazio é permitido.
+ASSUNTOS_VISITA = (("PROSPECCAO", "Prospecção inicial"), ("APRESENTACAO", "Apresentação de produtos"),
+                   ("NEGOCIACAO", "Negociação"), ("ACOMPANHAMENTO", "Acompanhamento comercial"),
+                   ("POS_VENDA", "Pós-venda"), ("OUTRO", "Outro"))
+
+
+class VisitaCliente(SQLModel, table=True):
+    """Relatório de visita/atendimento comercial — híbrido: o texto livre é o que importa e é o
+    único campo obrigatório além do cliente e da data; o resto ajuda a buscar depois.
+
+    **Autoria original é imutável** (`criado_por_id`/`criado_por`): editar registra
+    `atualizado_em/por` e o AuditLog, nunca reescreve quem escreveu. Não se apaga: `removida_em`
+    tira a visita do histórico normal sem perder o registro.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cliente_id: int = Field(foreign_key="cliente.id", index=True)
+    data_visita: date = Field(index=True)
+    responsavel_id: Optional[int] = Field(default=None, foreign_key="usuario.id", index=True)
+    assunto: Optional[str] = None
+    relatorio: str
+    necessidades: Optional[str] = None
+    produtos_discutidos: Optional[str] = None
+    oportunidades: Optional[str] = None
+    proximos_passos: Optional[str] = None
+    observacoes: Optional[str] = None
+    participantes_externos: Optional[str] = None
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+    criado_por_id: Optional[int] = Field(default=None, foreign_key="usuario.id")
+    criado_por: Optional[str] = None
+    atualizado_em: Optional[datetime] = None
+    atualizado_por: Optional[str] = None
+    removida_em: Optional[datetime] = None
+    removida_por: Optional[str] = None
+
+
+class VisitaParticipante(SQLModel, table=True):
+    """Contato do cliente que participou da visita. Contato desativado depois continua aqui —
+    o histórico não perde quem estava na reunião."""
+    __table_args__ = (UniqueConstraint("visita_id", "contato_id",
+                                       name="uq_visitaparticipante_visita_contato"),)
+    id: Optional[int] = Field(default=None, primary_key=True)
+    visita_id: int = Field(foreign_key="visitacliente.id", index=True)
+    contato_id: int = Field(foreign_key="contato.id", index=True)
+
+
+class ClienteProdutoUtilizado(SQLModel, table=True):
+    """O que o hotel USA hoje — conhecimento comercial, não venda, não cotação, não estoque.
+
+    `produto_id` é opcional: quando há correspondência no catálogo, aponta para ele; quando não
+    há (a toalha de 650 g/m² que a ANARA não tem), o registro é descritivo. Nunca cria SKU nem
+    mexe em produto. Os atributos estruturados (família, fios, composição, tamanho, g/m²) são os
+    que a busca "clientes por produto" filtra; desconhecido fica NULO — não se inventa.
+    """
+    id: Optional[int] = Field(default=None, primary_key=True)
+    cliente_id: int = Field(foreign_key="cliente.id", index=True)
+    produto_id: Optional[int] = Field(default=None, foreign_key="produto.id", index=True)
+    familia: Optional[str] = Field(default=None, index=True)
+    descricao: Optional[str] = None
+    thread_count: Optional[int] = Field(default=None, index=True)
+    composicao: Optional[str] = Field(default=None, index=True)
+    tamanho: Optional[str] = Field(default=None, index=True)
+    medidas: Optional[str] = None
+    gsm: Optional[int] = Field(default=None, index=True)
+    volume_aproximado: Optional[str] = None
+    frequencia_reposicao: Optional[str] = None
+    fornecedor_atual: Optional[str] = None
+    observacoes: Optional[str] = None
+    ativo: bool = True
+    criado_em: datetime = Field(default_factory=datetime.utcnow)
+    criado_por: Optional[str] = None
+    atualizado_em: Optional[datetime] = None
+    atualizado_por: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

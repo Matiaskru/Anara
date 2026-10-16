@@ -676,3 +676,26 @@ tr.linha-aprovacao td { background: #fbf3ef; }
   #tabela-itens .col-produto { min-width: 130px; }
   #tabela-itens td:first-child .small { display: none; }
 }
+
+/* ------------------------------------------------------------------ CRM de relacionamento (15/10/2026)
+   Só classes novas — nada do que já existia muda de aparência. */
+.tabs.rolavel { overflow-x: auto; scrollbar-width: thin; }
+.tabs.rolavel button, .tabs.rolavel a { white-space: nowrap; flex: 0 0 auto; }
+form.inline { display: inline; margin: 0; }
+.acoes-linha { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+/* o formulário abre EM LINHA (não flutua): dentro de tabela com rolagem (.tw) um elemento
+   posicionado seria recortado pelo container */
+details.acao-inline { display: inline-block; }
+details.acao-inline > summary { list-style: none; cursor: pointer; display: inline-block; }
+details.acao-inline > summary::-webkit-details-marker { display: none; }
+details.acao-inline[open] { display: block; width: 100%; }
+details.acao-inline[open] > form { display: flex; gap: 6px; align-items: center; margin-top: 6px; padding: 8px;
+  background: var(--row-alt); border: 1px solid var(--line); border-radius: 8px; }
+details.acao-inline[open] > form input { min-width: 0; flex: 1; }
+.relato { white-space: pre-wrap; line-height: 1.55; }
+.visita-card .card-title h3 { font-size: 14px; }
+.visita-card p { margin: 4px 0; }
+.lista-acomp-novo { display: grid; grid-template-columns: 1fr 150px 180px; gap: 8px; margin-bottom: 8px; }
+@media (max-width: 640px) {
+  .lista-acomp-novo { grid-template-columns: 1fr; }
+}

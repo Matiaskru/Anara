@@ -12,7 +12,7 @@ from app.migrations import backfill, migrar
 from app.seeds import semear
 from app.routers import (
     admin, amostras, calculadora, clientes, configuracoes, cotacoes, crm, dashboard, importar,
-    login, negociacao, produtos, relatorios, relatorios_comerciais, usuarios, vendas,
+    login, negociacao, produtos, relacionamento, relatorios, relatorios_comerciais, usuarios, vendas,
     workflow,
 )
 
@@ -137,6 +137,7 @@ app.include_router(crm.router)
 app.include_router(relatorios_comerciais.router)
 app.include_router(usuarios.router)
 app.include_router(amostras.router)
+app.include_router(relacionamento.router)
 
 
 @app.on_event("startup")

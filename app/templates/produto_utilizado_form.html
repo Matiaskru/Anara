@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar produto utilizado' if registro else 'Produto utilizado' }} — {{ cliente.nome }} — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo">
+    <div>
+      <div class="crumbs"><a href="/clientes">Clientes</a> / <a href="/clientes/{{ cliente.id }}#produtos">{{ cliente.nome }}</a></div>
+      <h1>{{ 'Editar produto utilizado' if registro else 'O que o hotel usa' }}</h1>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% import "_crm_macros.html" as crmm with context %}
+<form method="post" action="{{ '/produtos-utilizados/' ~ registro.id ~ '/editar' if registro else '/clientes/' ~ cliente.id ~ '/produtos-utilizados' }}" class="card" style="max-width:860px;">
+  {{ crmm.campos_produto(registro, 'pu') }}
+  <div class="modal-foot" style="padding:12px 0 0;">
+    <a class="btn btn-ghost" href="/clientes/{{ cliente.id }}#produtos">Cancelar</a>
+    <button class="btn btn-copper" type="submit">{{ 'Salvar' if registro else 'Adicionar' }}</button>
+  </div>
+</form>
+<p class="nota">Registre o que o hotel usa hoje, com o que souber. Isso não é pedido, cotação nem venda.</p>
+{% endblock %}

@@ -13,6 +13,7 @@
   <div class="acoes">
     <button class="btn btn-ghost btn-sm" type="button" data-modal="modal-editar">Editar cadastro</button>
     <button class="btn btn-ghost btn-sm" type="button" data-modal="modal-contato">Adicionar contato</button>
+    <a href="/clientes/{{ cliente.id }}/visitas/nova" class="btn btn-ghost">Registrar visita</a>
     <button class="btn btn-ghost" type="button" data-modal="modal-nova-venda">+ Nova venda</button>
     <a href="/cotacoes/nova?cliente_id={{ cliente.id }}" class="btn btn-copper">+ Nova cotação</a>
   </div>
@@ -20,6 +21,7 @@
 {% endblock %}
 
 {% block content %}
+{% import "_crm_macros.html" as crmm with context %}
 {% if faltando_fiscal %}
 <div class="banner banner-warn"><div><strong>Para emitir cotação ainda falta:</strong> {{ faltando_fiscal|join('; ') }}.
   <button class="btn-link" type="button" data-modal="modal-editar">Completar cadastro</button></div></div>
@@ -34,15 +36,40 @@
   <div class="kpi"><div class="label">Atrasado</div><div class="value {{ 'valor-alerta' if comercial.valor_atrasado else '' }}">{{ comercial.valor_atrasado|brl if comercial.valor_atrasado is not none else '—' }}</div></div>
 </div>
 
-<div class="tabs" data-tab-group="cliente" role="tablist">
+{% set pendentes = acomp.atrasados + acomp.hoje + acomp.proximos + acomp.sem_data %}
+<div class="tabs rolavel" data-tab-group="cliente" role="tablist">
   <button type="button" role="tab" data-tab="visao" class="ativa">Visão geral</button>
+  <button type="button" role="tab" data-tab="visitas">Visitas <span class="conta">{{ visitas|length }}</span></button>
+  <button type="button" role="tab" data-tab="acompanhamentos">Acompanhamentos <span class="conta">{{ pendentes|length }}</span></button>
+  <button type="button" role="tab" data-tab="contatos">Contatos <span class="conta">{{ contatos|selectattr('ativo')|list|length }}</span></button>
+  <button type="button" role="tab" data-tab="produtos">Produtos utilizados <span class="conta">{{ produtos_utilizados|selectattr('ativo')|list|length }}</span></button>
   <button type="button" role="tab" data-tab="vendas">Vendas <span class="conta">{{ abertas|length + vendidas|length + perdidas|length }}</span></button>
   <button type="button" role="tab" data-tab="cotacoes">Cotações <span class="conta">{{ cotacoes|length }}</span></button>
-  <button type="button" role="tab" data-tab="contatos">Contatos <span class="conta">{{ contatos|selectattr('ativo')|list|length }}</span></button>
+  <button type="button" role="tab" data-tab="amostras">Amostras <span class="conta">{{ amostras_cliente|length }}</span></button>
 </div>
 
 {# ------------------------------------------------------------- Visão geral #}
 <div class="tab-panel ativa" data-group="cliente" data-panel="visao">
+  <div class="split-2">
+    <div class="card">
+      <div class="card-title"><h3>Última visita</h3><a class="btn-link small" href="/clientes/{{ cliente.id }}/visitas/nova">Registrar visita</a></div>
+      {% set uv = relacionamento.ultima_visita %}
+      {% if uv %}
+      <p><strong>{{ uv.visita.data_visita|data }}</strong>{% if uv.assunto %} · {{ uv.assunto }}{% endif %} · <span class="muted">{{ uv.responsavel or uv.autor or '—' }}</span></p>
+      <p class="small">{{ uv.trecho }}</p>
+      <a class="link small" href="/visitas/{{ uv.visita.id }}">Ler relatório completo</a>
+      {% else %}<p class="muted small">Nenhuma visita registrada ainda.</p>{% endif %}
+    </div>
+    <div class="card">
+      <div class="card-title"><h3>Próximo acompanhamento</h3><button class="btn-link small" type="button" data-modal="modal-acomp">Novo</button></div>
+      {% set pa = relacionamento.proximo_acompanhamento %}
+      {% if pa %}
+      {% set dpa = data_prevista(pa) %}
+      <p><strong>{{ dpa|data if dpa else 'sem data' }}</strong>{% if dpa and dpa < hoje %} <span class="pill sem-ponto pill-atrasado">atrasado</span>{% endif %} · {{ pa.titulo }}</p>
+      <p class="muted small">Responsável: {{ nomes_usuarios.get(pa.responsavel_id, '—') }}{% if relacionamento.acompanhamentos_atrasados %} · {{ relacionamento.acompanhamentos_atrasados }} atrasado(s) no total{% endif %}</p>
+      {% else %}<p class="muted small">Nenhum acompanhamento pendente.</p>{% endif %}
+    </div>
+  </div>
   <div class="split-2">
     <div class="card">
       <div class="card-title"><h3>Cadastro</h3><button class="btn-link small" type="button" data-modal="modal-editar">Editar</button></div>
@@ -53,6 +80,8 @@
         <tr><td class="muted">Telefone</td><td>{{ cliente.telefone or '—' }}</td></tr>
         <tr><td class="muted">E-mail</td><td>{{ cliente.email or '—' }}</td></tr>
         <tr><td class="muted">Contato principal</td><td>{% set principal = contatos|selectattr('principal')|selectattr('ativo')|first %}{{ principal.nome if principal else (cliente.contato_nome or '—') }}{% if principal and principal.cargo %} · {{ principal.cargo }}{% endif %}</td></tr>
+        {% set outros = contatos|selectattr('ativo')|rejectattr('principal')|list %}
+        {% if outros %}<tr><td class="muted">Outros contatos</td><td>{% for c in outros[:3] %}{{ c.nome }}{% if c.cargo %} ({{ c.cargo }}){% endif %}{{ ', ' if not loop.last else '' }}{% endfor %}{% if outros|length > 3 %} e mais {{ outros|length - 3 }}{% endif %}</td></tr>{% endif %}
         <tr><td class="muted">Cliente desde</td><td>{{ cliente.criado_em|data }}</td></tr>
       </tbody></table>
     </div>
@@ -147,17 +176,110 @@
 
 {# ------------------------------------------------------------- Contatos #}
 <div class="tab-panel" data-group="cliente" data-panel="contatos">
-  <div class="card flush">
+  <div class="acoes-linha" style="margin-bottom:8px;"><button class="btn btn-copper btn-sm" type="button" data-modal="modal-contato">+ Adicionar contato</button></div>
+  <div class="card flush tw">
     <table>
-      <thead><tr><th>Nome</th><th>Cargo</th><th>E-mail</th><th>Telefone</th><th></th></tr></thead>
+      <thead><tr><th>Nome</th><th>Cargo</th><th>Telefone</th><th>WhatsApp</th><th>E-mail</th><th>Situação</th><th></th></tr></thead>
       <tbody>
       {% for c in contatos %}
-        <tr {% if not c.ativo %}style="opacity:.5;"{% endif %}>
-          <td class="primaria">{{ c.nome }}{% if c.principal %} <span class="tag tag-calc">principal</span>{% endif %}</td>
-          <td>{{ c.cargo or '—' }}</td><td>{{ c.email or '—' }}</td><td>{{ c.telefone or '—' }}</td>
-          <td class="muted small">{{ c.observacao or '' }}</td></tr>
+        <tr {% if not c.ativo %}style="opacity:.55;"{% endif %}>
+          <td class="primaria">{{ c.nome }}{% if c.principal %} <span class="tag tag-calc">principal</span>{% endif %}
+            {% if c.observacao %}<div class="muted small">{{ c.observacao }}</div>{% endif %}</td>
+          <td>{{ c.cargo or '—' }}</td><td class="nowrap">{{ c.telefone or '—' }}</td><td class="nowrap">{{ c.whatsapp or '—' }}</td><td>{{ c.email or '—' }}</td>
+          <td>{{ 'ativo' if c.ativo else 'inativo' }}</td>
+          <td><div class="acoes-linha">
+            <button class="btn btn-xs btn-ghost" type="button" data-modal="modal-contato-{{ c.id }}">Editar</button>
+            <form class="inline" method="post" action="/contatos/{{ c.id }}/ativo"><input type="hidden" name="ativo" value="{{ 'nao' if c.ativo else 'sim' }}">
+              <button class="btn btn-xs btn-ghost" type="submit">{{ 'Desativar' if c.ativo else 'Reativar' }}</button></form></div></td></tr>
       {% else %}
-        <tr><td colspan="5" class="tbl-vazia">Nenhum contato cadastrado. <button class="btn-link" type="button" data-modal="modal-contato">Adicionar contato</button></td></tr>
+        <tr><td colspan="7" class="tbl-vazia">Nenhum contato cadastrado. <button class="btn-link" type="button" data-modal="modal-contato">Adicionar contato</button></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">Contato desativado sai das listas de seleção, mas continua nas visitas de que participou.</p>
+</div>
+
+{# ------------------------------------------------------------- Visitas #}
+<div class="tab-panel" data-group="cliente" data-panel="visitas">
+  <div class="acoes-linha" style="margin-bottom:8px;"><a class="btn btn-copper btn-sm" href="/clientes/{{ cliente.id }}/visitas/nova">+ Registrar visita</a></div>
+  {% for v in visitas %}
+  <div class="card visita-card">
+    <div class="card-title"><h3>{{ v.visita.data_visita|data }}{% if v.assunto %} · {{ v.assunto }}{% endif %}</h3>
+      <span class="muted small">{{ v.responsavel or v.autor or '—' }}</span></div>
+    {% if v.participantes or v.visita.participantes_externos %}
+    <p class="muted small">Participantes: {% for p in v.participantes %}{{ p.nome }}{% if not p.ativo %} (inativo){% endif %}{{ ', ' if not loop.last else '' }}{% endfor %}{% if v.participantes and v.visita.participantes_externos %}, {% endif %}{{ v.visita.participantes_externos or '' }}</p>
+    {% endif %}
+    <p class="small">{{ v.trecho }}</p>
+    {% if v.proximo_passo %}<p class="small"><strong>Próximo passo:</strong> {{ v.proximo_passo }}</p>{% endif %}
+    <a class="link small" href="/visitas/{{ v.visita.id }}">Abrir relatório</a>
+  </div>
+  {% else %}
+  <div class="card"><div class="empty-state"><h3>Nenhuma visita registrada</h3>Registre a primeira visita ou reunião com este cliente.<br>
+    <a class="btn btn-copper btn-sm" style="margin-top:10px;" href="/clientes/{{ cliente.id }}/visitas/nova">Registrar visita</a></div></div>
+  {% endfor %}
+</div>
+
+{# ------------------------------------------------------------- Acompanhamentos #}
+<div class="tab-panel" data-group="cliente" data-panel="acompanhamentos">
+  <div class="acoes-linha" style="margin-bottom:8px;"><button class="btn btn-copper btn-sm" type="button" data-modal="modal-acomp">+ Novo acompanhamento</button></div>
+  <div class="card flush tw">
+    <table class="compacta">
+      <thead><tr><th>Data prevista</th><th>Ação</th><th>Responsável</th><th></th></tr></thead>
+      <tbody>
+      {% for a in pendentes %}{{ crmm.linha_acompanhamento(a, '/clientes/' ~ cliente.id ~ '#acompanhamentos', responsavel=nomes_usuarios.get(a.responsavel_id, '')) }}
+      {% else %}<tr><td colspan="4" class="tbl-vazia">Nenhum acompanhamento pendente.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if acomp.concluidos %}
+  <details class="mais"><summary>Concluídos ({{ acomp.concluidos|length }})</summary>
+    <div class="card flush tw"><table class="compacta"><tbody>
+      {% for a in acomp.concluidos %}{{ crmm.linha_acompanhamento(a, '/clientes/' ~ cliente.id ~ '#acompanhamentos', responsavel=nomes_usuarios.get(a.responsavel_id, '')) }}{% endfor %}
+    </tbody></table></div></details>
+  {% endif %}
+</div>
+
+{# ------------------------------------------------------------- Produtos utilizados #}
+<div class="tab-panel" data-group="cliente" data-panel="produtos">
+  <div class="acoes-linha" style="margin-bottom:8px;">
+    <a class="btn btn-ghost btn-sm" href="/clientes-por-produto">Buscar clientes por produto</a>
+    <a class="btn btn-copper btn-sm" href="/clientes/{{ cliente.id }}/produtos-utilizados/novo">+ Adicionar produto utilizado</a></div>
+  <div class="card flush tw">
+    <table class="compacta">
+      <thead><tr><th>O que o hotel usa</th><th>Volume</th><th>Reposição</th><th>Fornecedor atual</th><th>Atualizado</th><th></th></tr></thead>
+      <tbody>
+      {% for r in produtos_utilizados %}
+        <tr {% if not r.ativo %}style="opacity:.55;"{% endif %}>
+          <td class="primaria">{{ especificacao(r) }}{% if not r.ativo %} <span class="tag">inativo</span>{% endif %}
+            {% if r.observacoes %}<div class="muted small">{{ r.observacoes }}</div>{% endif %}</td>
+          <td>{{ r.volume_aproximado or '—' }}</td><td>{{ r.frequencia_reposicao or '—' }}</td><td>{{ r.fornecedor_atual or '—' }}</td>
+          <td class="muted nowrap">{{ (r.atualizado_em or r.criado_em)|data }}</td>
+          <td><div class="acoes-linha">
+            <a class="btn btn-xs btn-ghost" href="/produtos-utilizados/{{ r.id }}/editar">Editar</a>
+            <form class="inline" method="post" action="/produtos-utilizados/{{ r.id }}/ativo"><input type="hidden" name="ativo" value="{{ 'nao' if r.ativo else 'sim' }}">
+              <button class="btn btn-xs btn-ghost" type="submit">{{ 'Inativar' if r.ativo else 'Reativar' }}</button></form></div></td></tr>
+      {% else %}
+        <tr><td colspan="6" class="tbl-vazia">Nenhum produto cadastrado. <a class="link" href="/clientes/{{ cliente.id }}/produtos-utilizados/novo">Adicionar o que o hotel usa</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="nota">O que o hotel usa hoje — não é o que comprou ou cotou com a ANARA.</p>
+</div>
+
+{# ------------------------------------------------------------- Amostras #}
+<div class="tab-panel" data-group="cliente" data-panel="amostras">
+  <div class="card flush tw">
+    <table class="compacta">
+      <thead><tr><th>Data</th><th>Amostra</th><th>Movimento</th><th class="num">Qtd.</th><th>Motivo</th><th>Por</th></tr></thead>
+      <tbody>
+      {% for m in amostras_cliente %}
+        <tr class="clicavel" data-href="/amostras/{{ m.amostra_id }}">
+          <td class="nowrap">{{ m.data|data }}</td><td class="primaria">{{ m.nome }}{% if m.especificacao %} <span class="muted small">{{ m.especificacao }}</span>{% endif %}</td>
+          <td>{{ m.tipo }}</td><td class="num">{{ m.quantidade }}</td><td>{{ m.motivo or '—' }}</td><td class="muted">{{ m.quem or '—' }}</td></tr>
+      {% else %}
+        <tr><td colspan="6" class="tbl-vazia">Nenhuma amostra enviada para este cliente. <a class="link" href="/amostras">Abrir amostras</a></td></tr>
       {% endfor %}
       </tbody>
     </table>
@@ -184,11 +306,46 @@
       <div class="field"><label for="ct-cargo">Cargo</label><input id="ct-cargo" name="cargo"></div>
       <div class="field"><label for="ct-email">E-mail</label><input id="ct-email" name="email" type="email"></div>
       <div class="field"><label for="ct-tel">Telefone</label><input id="ct-tel" name="telefone"></div>
+      <div class="field"><label for="ct-wpp">WhatsApp</label><input id="ct-wpp" name="whatsapp"></div>
+      <div class="field span-2"><label for="ct-obs">Observações</label><input id="ct-obs" name="observacao"></div>
       <div class="field span-2 inline"><input type="checkbox" id="ct-principal" name="principal" value="sim"><label for="ct-principal">Contato principal</label></div>
     </div>
     <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Adicionar</button></div>
   </form>
 </div>
+
+{% for c in contatos %}
+<div class="modal-bg" id="modal-contato-{{ c.id }}" role="dialog" aria-modal="true">
+  <form class="modal" method="post" action="/contatos/{{ c.id }}/editar">
+    <div class="modal-head"><h2>Editar contato</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <div class="grid-2">
+      <div class="field"><label for="ce{{ c.id }}-nome">Nome</label><input id="ce{{ c.id }}-nome" name="nome" value="{{ c.nome }}" required></div>
+      <div class="field"><label for="ce{{ c.id }}-cargo">Cargo</label><input id="ce{{ c.id }}-cargo" name="cargo" value="{{ c.cargo or '' }}"></div>
+      <div class="field"><label for="ce{{ c.id }}-email">E-mail</label><input id="ce{{ c.id }}-email" name="email" type="email" value="{{ c.email or '' }}"></div>
+      <div class="field"><label for="ce{{ c.id }}-tel">Telefone</label><input id="ce{{ c.id }}-tel" name="telefone" value="{{ c.telefone or '' }}"></div>
+      <div class="field"><label for="ce{{ c.id }}-wpp">WhatsApp</label><input id="ce{{ c.id }}-wpp" name="whatsapp" value="{{ c.whatsapp or '' }}"></div>
+      <div class="field"><label for="ce{{ c.id }}-obs">Observações</label><input id="ce{{ c.id }}-obs" name="observacao" value="{{ c.observacao or '' }}"></div>
+      <div class="field span-2 inline"><input type="checkbox" id="ce{{ c.id }}-principal" name="principal" value="sim" {{ 'checked' if c.principal else '' }} {{ 'disabled' if not c.ativo else '' }}><label for="ce{{ c.id }}-principal">Contato principal</label></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Salvar</button></div>
+  </form>
+</div>
+{% endfor %}
+
+<div class="modal-bg" id="modal-acomp" role="dialog" aria-modal="true">
+  <form class="modal" method="post" action="/clientes/{{ cliente.id }}/acompanhamentos">
+    <div class="modal-head"><h2>Novo acompanhamento — {{ cliente.nome }}</h2><button class="modal-fechar" type="button" data-fecha aria-label="Fechar">×</button></div>
+    <input type="hidden" name="voltar" value="/clientes/{{ cliente.id }}#acompanhamentos">
+    <div class="field"><label for="ac-desc">O que precisa ser feito</label><input id="ac-desc" name="descricao" required placeholder="ex.: enviar amostra da fronha 400 fios"></div>
+    <div class="grid-2">
+      <div class="field"><label for="ac-data">Data prevista</label><input id="ac-data" name="data_prevista" type="date"></div>
+      <div class="field"><label for="ac-resp">Responsável</label>
+        <select id="ac-resp" name="responsavel_id">{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if eu and eu.id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" type="button" data-fecha>Cancelar</button><button class="btn btn-copper" type="submit">Criar</button></div>
+  </form>
+</div>
+
 
 <div class="modal-bg" id="modal-editar" role="dialog" aria-modal="true">
   <form class="modal" method="post" action="/clientes/{{ cliente.id }}/editar">

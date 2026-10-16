@@ -32,6 +32,10 @@ TELAS_COMERCIAIS = [
     # 01/10/2026: controle de amostras — a vendedora usa as duas primeiras; a do Admin também
     # não tem código interno, então fica na auditoria mais estrita
     "amostras_lista.html", "amostra_detalhe.html", "admin_amostras.html",
+    # 15/10/2026: CRM de relacionamento — visitas, acompanhamentos, busca por produto
+    "visita_form.html", "visita_detalhe.html", "acompanhamentos.html", "clientes_por_produto.html",
+    "produto_utilizado_form.html",
+    "_crm_macros.html",
 ]
 
 #: Termos que não podem aparecer como **texto** numa tela comercial.
@@ -126,7 +130,10 @@ def test_menu_e_por_tarefa_e_curto():
     # o menu é por tarefa, e cada item novo precisa justificar por que é tarefa de alguém.
     # 01/10/2026: Amostras entrou (pedido do Matias) — a vendedora registra ali o envio e o
     # retorno de amostra, tarefa diária dela. Teto 8 → 9.
-    assert len(destinos) <= 9, f"o menu voltou a crescer: {destinos}"
+    # 15/10/2026: Acompanhamentos entrou depois de Amostras (pedido do Matias, CRM de
+    # relacionamento) — a vendedora abre ali, todo dia, o que combinou com os clientes nas
+    # visitas e o que está atrasado. Teto 9 → 10.
+    assert len(destinos) <= 10, f"o menu voltou a crescer: {destinos}"
 
 
 def test_menu_nao_tem_ferramenta_tecnica_solta():

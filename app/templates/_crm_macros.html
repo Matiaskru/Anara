@@ -1,0 +1,73 @@
+{# CRM de relacionamento — peças reutilizadas pela ficha do cliente e por "Acompanhamentos".
+   Importar com contexto: usa `data_prevista`, `hoje` e `pode_operar` da página. #}
+
+{% macro linha_acompanhamento(a, voltar, cliente=None, responsavel=None, link_visita=True) -%}
+{% set d = data_prevista(a) %}
+<tr {% if a.concluida_em %}style="opacity:.6;"{% endif %}>
+  <td class="nowrap">{{ d|data if d else 'sem data' }}
+    {% if d and not a.concluida_em and d < hoje %}<span class="pill sem-ponto pill-atrasado">atrasado</span>
+    {% elif d and not a.concluida_em and d == hoje %}<span class="pill sem-ponto pill-aguardando">hoje</span>{% endif %}</td>
+  <td>{{ a.titulo }}
+    {% if a.visita_id and link_visita %}<a class="link small" href="/visitas/{{ a.visita_id }}">· ver visita</a>{% endif %}
+    {% if a.oportunidade_id %}<a class="link small" href="/vendas/{{ a.oportunidade_id }}">· ver venda</a>{% endif %}</td>
+  {% if cliente is not none %}<td>{% if cliente %}<a class="link" href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
+  {% if responsavel is not none %}<td class="muted">{{ responsavel or '—' }}</td>{% endif %}
+  <td>
+    <div class="acoes-linha">
+    {% if a.concluida_em %}
+      <span class="muted small">concluído em {{ a.concluida_em|data }}</span>
+    {% elif pode_operar(a) %}
+      <form class="inline" method="post" action="/acompanhamentos/{{ a.id }}/concluir">
+        <input type="hidden" name="voltar" value="{{ voltar }}">
+        <button class="btn btn-xs btn-copper" type="submit">Concluir</button></form>
+      <details class="acao-inline"><summary class="btn btn-xs btn-ghost">Reagendar</summary>
+        <form method="post" action="/acompanhamentos/{{ a.id }}/reagendar">
+          <input type="hidden" name="voltar" value="{{ voltar }}">
+          <input type="date" name="data_prevista" required value="{{ d.isoformat() if d else '' }}" aria-label="Nova data">
+          <button class="btn btn-xs btn-copper" type="submit">Salvar</button></form></details>
+      <details class="acao-inline"><summary class="btn btn-xs btn-ghost">Editar</summary>
+        <form method="post" action="/acompanhamentos/{{ a.id }}/editar">
+          <input type="hidden" name="voltar" value="{{ voltar }}">
+          <input name="descricao" required value="{{ a.titulo }}" aria-label="Descrição">
+          <button class="btn btn-xs btn-copper" type="submit">Salvar</button></form></details>
+    {% else %}
+      <span class="muted small">de outra pessoa</span>
+    {% endif %}
+    </div>
+  </td>
+</tr>
+{%- endmacro %}
+
+{% macro campos_produto(r=None, prefixo='pu') -%}
+<div class="grid-2">
+  <div class="field"><label for="{{ prefixo }}-familia">Família</label>
+    <select id="{{ prefixo }}-familia" name="familia"><option value="">—</option>
+      {% for codigo, rotulo in familias %}<option value="{{ codigo }}" {{ 'selected' if r and r.familia == codigo else '' }}>{{ rotulo }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="{{ prefixo }}-produto">Produto ANARA correspondente <span class="muted">(opcional)</span></label>
+    <select id="{{ prefixo }}-produto" name="produto_id"><option value="">— nenhum / não sei —</option>
+      {% for p in produtos_catalogo %}<option value="{{ p.id }}" {{ 'selected' if r and r.produto_id == p.id else '' }}>{{ p.nome }}</option>{% endfor %}</select></div>
+  <div class="field span-2"><label for="{{ prefixo }}-desc">Descrição</label>
+    <input id="{{ prefixo }}-desc" name="descricao" value="{{ r.descricao if r and r.descricao else '' }}" placeholder="ex.: lençol de baixo King, liso, branco"></div>
+  <div class="field"><label for="{{ prefixo }}-fios">Fios</label>
+    <input id="{{ prefixo }}-fios" name="thread_count" type="number" min="1" step="1" inputmode="numeric" value="{{ r.thread_count if r and r.thread_count else '' }}" placeholder="ex.: 300"></div>
+  <div class="field"><label for="{{ prefixo }}-gsm">Gramatura (g/m²)</label>
+    <input id="{{ prefixo }}-gsm" name="gsm" type="number" min="1" step="1" inputmode="numeric" value="{{ r.gsm if r and r.gsm else '' }}" placeholder="ex.: 650"></div>
+  <div class="field"><label for="{{ prefixo }}-comp">Composição</label>
+    <select id="{{ prefixo }}-comp" name="composicao"><option value="">—</option>
+      {% for c in composicoes %}<option value="{{ c }}" {{ 'selected' if r and r.composicao == c else '' }}>{{ c }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="{{ prefixo }}-tam">Tamanho</label>
+    <select id="{{ prefixo }}-tam" name="tamanho"><option value="">—</option>
+      {% for t in tamanhos %}<option value="{{ t }}" {{ 'selected' if r and r.tamanho == t else '' }}>{{ t }}</option>{% endfor %}</select></div>
+  <div class="field"><label for="{{ prefixo }}-med">Medidas</label>
+    <input id="{{ prefixo }}-med" name="medidas" value="{{ r.medidas if r and r.medidas else '' }}" placeholder="ex.: 2,80x2,90"></div>
+  <div class="field"><label for="{{ prefixo }}-vol">Volume aproximado</label>
+    <input id="{{ prefixo }}-vol" name="volume_aproximado" value="{{ r.volume_aproximado if r and r.volume_aproximado else '' }}" placeholder="ex.: 400 peças/mês"></div>
+  <div class="field"><label for="{{ prefixo }}-freq">Reposição</label>
+    <input id="{{ prefixo }}-freq" name="frequencia_reposicao" value="{{ r.frequencia_reposicao if r and r.frequencia_reposicao else '' }}" placeholder="ex.: semestral"></div>
+  <div class="field"><label for="{{ prefixo }}-forn">Fornecedor atual</label>
+    <input id="{{ prefixo }}-forn" name="fornecedor_atual" value="{{ r.fornecedor_atual if r and r.fornecedor_atual else '' }}"></div>
+  <div class="field span-2"><label for="{{ prefixo }}-obs">Observações</label>
+    <textarea id="{{ prefixo }}-obs" name="observacoes" rows="2">{{ r.observacoes if r and r.observacoes else '' }}</textarea></div>
+</div>
+<p class="nota">Só a família, a descrição ou o produto ANARA são necessários — deixe em branco o que não souber.</p>
+{%- endmacro %}

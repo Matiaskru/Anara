@@ -527,6 +527,31 @@ Sessão 6; a venda tem **um status comercial só**, e são coisas diferentes:
 - **Confidencialidade não muda porque o dado virou card.** Preço e total comerciais podem
   aparecer no pipeline; custo, margem, lucro e markup, não
 
+## CRM de relacionamento (15/10/2026, migration 0031)
+
+**Contatos, visitas, acompanhamentos e o que o hotel usa — em cima do CRM da Fase 3B, sem
+duplicar.** Regras em `app/crm_relacionamento.py`; rotas em `app/routers/relacionamento.py`.
+
+- **Reaproveita:** contato é o `Contato` (+ `whatsapp`, `atualizado_em/por`); acompanhamento é a
+  `AtividadeComercial` (+ `visita_id`, `atualizado_em`). Novas só `VisitaCliente` (relatório
+  híbrido: texto livre obrigatório + campos opcionais), `VisitaParticipante` e
+  `ClienteProdutoUtilizado`.
+- **Quem vê o quê não muda** (Sessão 4: toda vendedora vê todo cliente). O que se restringe é
+  **agir sobre registro alheio**: editar/retirar visita = autor ou OWNER/ADMIN; concluir,
+  reagendar, editar acompanhamento = responsável, quem criou ou OWNER/ADMIN — inclusive na rota
+  antiga `POST /atividades/{id}/concluir`.
+- **Nada se apaga:** contato e produto utilizado inativam; visita sai do histórico com
+  `removida_em` (motivo no AuditLog); autoria original (`criado_por_*`) nunca é reescrita.
+- **UTILIZA ≠ INTERESSE ≠ COTADO ≠ VENDIDO.** `ClienteProdutoUtilizado` é o que o hotel usa, dito
+  pela vendedora; nada é inferido de visita ou cotação, nenhum SKU é criado, produto/custo/preço
+  não mudam. Vínculo ao catálogo é opcional e completa só o que o catálogo sabe.
+- **Busca "clientes por produto"** (`/clientes-por-produto`): igualdade em família, produto,
+  fios, composição, tamanho e g/m² (vocabulários `COMPOSICOES`/`TAMANHOS`); um cliente por linha.
+- **Datas comerciais em São Paulo** (`hoje_sp`). O prazo do acompanhamento é gravado às 23:59 do
+  dia previsto (as telas antigas comparam `due_em` com o relógio).
+- Formulário de produto utilizado é **página própria**: a ficha do cliente não carrega a lista de
+  famílias ("Toalha de piso" bate no termo "piso" das varreduras de economia).
+
 ## Interface comercial e PDF cliente (Fase 3C — 16/09/2026)
 
 **O frontend não calcula economia.** Toda tela redesenhada chama o endpoint canônico e

@@ -286,14 +286,16 @@ def vincular(request: Request, oportunidade_id: int, cotacao_id: int = Form(...)
 @router.post("/clientes/{cliente_id}/contatos")
 def criar_contato(request: Request, cliente_id: int, nome: str = Form(...),
                   cargo: str = Form(""), email: str = Form(""), telefone: str = Form(""),
-                  principal: str = Form(""), observacao: str = Form(""),
+                  whatsapp: str = Form(""), principal: str = Form(""), observacao: str = Form(""),
                   session: Session = Depends(get_session)):
+    # 15/10/2026: pelo CRM de relacionamento — mesmo cadastro, + WhatsApp e trilha de auditoria
+    from app import crm_relacionamento as rel
     ator = exigir_autenticado(request)
-    crm.criar_contato(session, ator=ator, cliente_id=cliente_id, nome=nome, cargo=cargo,
-                      email=email, telefone=telefone, observacao=observacao,
+    rel.criar_contato(session, ator=ator, cliente_id=cliente_id, nome=nome, cargo=cargo,
+                      email=email, telefone=telefone, whatsapp=whatsapp, observacao=observacao,
                       principal=(principal in ("sim", "on", "true", "1")))
     session.commit()
-    return RedirectResponse(url=f"/clientes/{cliente_id}", status_code=303)
+    return RedirectResponse(url=f"/clientes/{cliente_id}#contatos", status_code=303)
 
 
 # ---------------------------------------------------------------------------
@@ -321,11 +323,13 @@ def criar_atividade(request: Request, titulo: str = Form(...),
 @router.post("/atividades/{atividade_id}/concluir")
 def concluir(request: Request, atividade_id: int,
              session: Session = Depends(get_session)):
+    from app import crm_relacionamento as rel
     ator = exigir_autenticado(request)
     atividade = session.get(AtividadeComercial, atividade_id)
     if atividade is None:
         raise crm.DadoInvalido("Atividade não encontrada.", status=404)
-    crm.concluir_atividade(session, atividade, ator=ator)
+    # 15/10/2026: concluir é do responsável, de quem criou ou da administração (a recusa é 403)
+    rel.concluir_acompanhamento(session, ator=ator, atividade=atividade)
     session.commit()
     return JSONResponse({"concluida_em": str(atividade.concluida_em),
                          "mensagem": "Atividade concluída."})

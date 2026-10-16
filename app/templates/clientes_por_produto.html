@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Clientes por produto — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><div><div class="crumbs"><a href="/clientes">Clientes</a></div><h1>Clientes por produto</h1></div>
+    <span class="contexto oculta-mobile">Quem usa o quê, segundo o perfil de produtos de cada cliente</span></div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form class="filters" method="get" action="/clientes-por-produto">
+  <select name="familia" aria-label="Família"><option value="">Família</option>
+    {% for codigo, rotulo in familias %}<option value="{{ codigo }}" {{ 'selected' if filtro.familia == codigo else '' }}>{{ rotulo }}</option>{% endfor %}</select>
+  <select name="produto_id" aria-label="Produto ANARA"><option value="">Produto ANARA</option>
+    {% for p in produtos_catalogo %}<option value="{{ p.id }}" {{ 'selected' if filtro.produto_id == p.id|string else '' }}>{{ p.nome }}</option>{% endfor %}</select>
+  <input name="fios" type="number" min="1" step="1" inputmode="numeric" placeholder="Fios" value="{{ filtro.fios }}" aria-label="Fios" style="min-width:90px;">
+  <select name="composicao" aria-label="Composição"><option value="">Composição</option>
+    {% for c in composicoes %}<option value="{{ c }}" {{ 'selected' if filtro.composicao == c else '' }}>{{ c }}</option>{% endfor %}</select>
+  <select name="tamanho" aria-label="Tamanho"><option value="">Tamanho</option>
+    {% for t in tamanhos %}<option value="{{ t }}" {{ 'selected' if filtro.tamanho == t else '' }}>{{ t }}</option>{% endfor %}</select>
+  <input name="gsm" type="number" min="1" step="1" inputmode="numeric" placeholder="g/m²" value="{{ filtro.gsm }}" aria-label="Gramatura" style="min-width:90px;">
+  <button class="btn btn-copper btn-sm" type="submit">Buscar</button>
+  {% if algum_filtro %}<a class="btn-link small" href="/clientes-por-produto">Limpar</a>{% endif %}
+</form>
+
+{% if not algum_filtro %}
+<div class="card"><div class="empty-state"><h3>Escolha pelo menos um filtro</h3>
+  Ex.: família Lençol + 300 fios, ou composição 100% algodão, ou toalha com 650 g/m².</div></div>
+{% else %}
+<div class="card flush tw">
+  <table>
+    <thead><tr><th>Cliente</th><th>O que usa (que bate com a busca)</th><th>Registrado por</th></tr></thead>
+    <tbody>
+    {% for r in resultados %}
+      <tr class="clicavel" data-href="/clientes/{{ r.cliente.id }}#produtos">
+        <td class="primaria">{{ r.cliente.nome }}{% if r.cliente.cidade_uf %}<div class="muted small">{{ r.cliente.cidade_uf }}</div>{% endif %}</td>
+        <td>{% for e in r.especificacoes %}<div class="small">{{ especificacao(e) }}{% if e.volume_aproximado %} <span class="muted">· {{ e.volume_aproximado }}</span>{% endif %}</div>{% endfor %}</td>
+        <td class="muted small">{{ r.registrado_por|join(', ') or '—' }}</td></tr>
+    {% else %}
+      <tr><td colspan="3" class="tbl-vazia">Nenhum cliente com essa especificação no perfil de produtos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="nota">{{ resultados|length }} cliente(s). A busca olha o que o hotel <strong>usa</strong> — não o que cotou ou comprou com a ANARA.</p>
+{% endif %}
+{% endblock %}

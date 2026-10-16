@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Editar visita' if visita else 'Registrar visita' }} — {{ cliente.nome }} — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo">
+    <div>
+      <div class="crumbs"><a href="/clientes">Clientes</a> / <a href="/clientes/{{ cliente.id }}#visitas">{{ cliente.nome }}</a></div>
+      <h1>{{ 'Editar visita' if visita else 'Registrar visita' }}</h1>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" action="{{ '/visitas/' ~ visita.id ~ '/editar' if visita else '/clientes/' ~ cliente.id ~ '/visitas' }}" class="card" style="max-width:860px;">
+  <div class="grid-2">
+    <div class="field"><label for="vi-data">Data da visita</label>
+      <input id="vi-data" name="data_visita" type="date" required value="{{ (visita.data_visita if visita else hoje).isoformat() }}"></div>
+    <div class="field"><label for="vi-assunto">Assunto <span class="muted">(opcional)</span></label>
+      <select id="vi-assunto" name="assunto"><option value="">—</option>
+        {% for codigo, rotulo in assuntos %}<option value="{{ codigo }}" {{ 'selected' if visita and visita.assunto == codigo else '' }}>{{ rotulo }}</option>{% endfor %}</select></div>
+  </div>
+
+  <div class="field"><label>Participantes do cliente</label>
+    {% if contatos %}
+    <div class="grid-2">
+      {% for c in contatos %}
+      <div class="field inline"><input type="checkbox" id="vi-p{{ c.id }}" name="participantes" value="{{ c.id }}" {{ 'checked' if c.id in participantes else '' }}>
+        <label for="vi-p{{ c.id }}">{{ c.nome }}{% if c.cargo %} <span class="muted">· {{ c.cargo }}</span>{% endif %}{% if not c.ativo %} <span class="muted">(inativo)</span>{% endif %}</label></div>
+      {% endfor %}
+    </div>
+    {% else %}<p class="muted small">Nenhum contato ativo neste cliente — use o campo abaixo ou cadastre o contato na ficha do cliente.</p>{% endif %}
+  </div>
+  <div class="field"><label for="vi-ext">Outros participantes <span class="muted">(opcional — não vira contato)</span></label>
+    <input id="vi-ext" name="participantes_externos" value="{{ visita.participantes_externos if visita and visita.participantes_externos else '' }}" placeholder="ex.: Carla (consultora de enxoval)"></div>
+
+  <div class="field"><label for="vi-rel">Relatório</label>
+    <textarea id="vi-rel" name="relatorio" rows="9" required placeholder="O que aconteceu na visita: com quem falou, o que viu, o que o cliente pediu…">{{ visita.relatorio if visita else '' }}</textarea></div>
+
+  <details class="mais" {{ 'open' if visita and (visita.necessidades or visita.produtos_discutidos or visita.oportunidades or visita.proximos_passos or visita.observacoes) else '' }}>
+    <summary>Mais detalhes (opcional)</summary>
+    <div class="grid-2" style="margin-top:8px;">
+      <div class="field"><label for="vi-nec">Necessidades identificadas</label><textarea id="vi-nec" name="necessidades" rows="3">{{ visita.necessidades if visita and visita.necessidades else '' }}</textarea></div>
+      <div class="field"><label for="vi-prod">Produtos discutidos</label><textarea id="vi-prod" name="produtos_discutidos" rows="3">{{ visita.produtos_discutidos if visita and visita.produtos_discutidos else '' }}</textarea></div>
+      <div class="field"><label for="vi-op">Oportunidades identificadas</label><textarea id="vi-op" name="oportunidades" rows="3">{{ visita.oportunidades if visita and visita.oportunidades else '' }}</textarea></div>
+      <div class="field"><label for="vi-pp">Próximos passos</label><textarea id="vi-pp" name="proximos_passos" rows="3">{{ visita.proximos_passos if visita and visita.proximos_passos else '' }}</textarea></div>
+      <div class="field span-2"><label for="vi-obs">Observações</label><textarea id="vi-obs" name="observacoes" rows="2">{{ visita.observacoes if visita and visita.observacoes else '' }}</textarea></div>
+    </div>
+  </details>
+
+  {% if not visita %}
+  <div class="field" style="margin-top:12px;"><label>Acompanhamentos <span class="muted">(opcional — viram pendências em "Acompanhamentos")</span></label>
+    <div id="vi-acomp">
+      {% for i in range(2) %}
+      <div class="lista-acomp-novo">
+        <input name="acomp_descricao" placeholder="O que fazer — ex.: enviar proposta" aria-label="Descrição do acompanhamento">
+        <input name="acomp_data" type="date" aria-label="Data prevista">
+        <select name="acomp_responsavel" aria-label="Responsável">{% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if eu and eu.id == u.id else '' }}>{{ u.nome }}</option>{% endfor %}</select>
+      </div>
+      {% endfor %}
+    </div>
+    <button class="btn-link small" type="button" id="vi-mais-acomp">+ outro acompanhamento</button>
+  </div>
+  {% endif %}
+
+  <div class="modal-foot" style="padding:12px 0 0;">
+    <a class="btn btn-ghost" href="{{ '/visitas/' ~ visita.id if visita else '/clientes/' ~ cliente.id ~ '#visitas' }}">Cancelar</a>
+    <button class="btn btn-copper" type="submit">{{ 'Salvar correção' if visita else 'Salvar visita' }}</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  var botao = document.getElementById('vi-mais-acomp');
+  if (!botao) return;
+  botao.addEventListener('click', function () {
+    var lista = document.getElementById('vi-acomp');
+    var modelo = lista.querySelector('.lista-acomp-novo');
+    var nova = modelo.cloneNode(true);
+    nova.querySelectorAll('input').forEach(function (i) { i.value = ''; });
+    lista.appendChild(nova);
+  });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Acompanhamentos — Anara{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><div><h1>Acompanhamentos</h1></div>
+    <span class="contexto oculta-mobile">O que foi combinado com os clientes e ainda precisa ser feito</span></div>
+</div>
+{% endblock %}
+
+{% block content %}
+{% import "_crm_macros.html" as crmm with context %}
+{% set voltar = '/acompanhamentos' ~ ('?responsavel=' ~ responsavel if responsavel != 'eu' else '') %}
+{% set ver_resp = responsavel != 'eu' %}
+<form class="filters" method="get" action="/acompanhamentos">
+  <div class="field"><label for="f-resp" class="small muted">De quem</label>
+    <select id="f-resp" name="responsavel" data-auto-submit>
+      <option value="eu" {{ 'selected' if responsavel == 'eu' else '' }}>Meus</option>
+      <option value="todos" {{ 'selected' if responsavel == 'todos' else '' }}>Todos</option>
+      {% for u in usuarios %}{% if u.id != eu.id %}<option value="{{ u.id }}" {{ 'selected' if responsavel == u.id|string else '' }}>{{ u.nome }}</option>{% endif %}{% endfor %}
+    </select></div>
+</form>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="label">Atrasados</div><div class="value {{ 'valor-alerta' if painel.atrasados else '' }}">{{ painel.atrasados|length }}</div></div>
+  <div class="kpi"><div class="label">Para hoje</div><div class="value">{{ painel.hoje|length }}</div></div>
+  <div class="kpi"><div class="label">Próximos</div><div class="value">{{ painel.proximos|length }}</div></div>
+  <div class="kpi"><div class="label">Sem data</div><div class="value">{{ painel.sem_data|length }}</div></div>
+</div>
+
+{% for titulo, lista, vazio in [('Atrasados', painel.atrasados, 'Nada atrasado.'), ('Para hoje', painel.hoje, 'Nada para hoje.'),
+                               ('Próximos', painel.proximos, 'Nenhum acompanhamento agendado.'), ('Sem data', painel.sem_data, '')] %}
+{% if lista or vazio %}
+<div class="card flush tw">
+  <div class="card-title" style="padding:12px 14px 0;"><h3>{{ titulo }}</h3><span class="muted small">{{ lista|length }}</span></div>
+  <table class="compacta">
+    <thead><tr><th>Data prevista</th><th>Ação</th><th>Cliente</th>{% if ver_resp %}<th>Responsável</th>{% endif %}<th></th></tr></thead>
+    <tbody>
+    {% for a in lista %}{{ crmm.linha_acompanhamento(a, voltar, cliente=clientes.get(a.cliente_id, False), responsavel=(nomes.get(a.responsavel_id, '') if ver_resp else none)) }}
+    {% else %}<tr><td colspan="{{ 5 if ver_resp else 4 }}" class="tbl-vazia">{{ vazio }}</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endfor %}
+
+<details class="mais">
+  <summary>Concluídos recentemente ({{ painel.concluidos|length }})</summary>
+  <div class="card flush tw">
+    <table class="compacta"><tbody>
+    {% for a in painel.concluidos %}{{ crmm.linha_acompanhamento(a, voltar, cliente=clientes.get(a.cliente_id, False), responsavel=(nomes.get(a.responsavel_id, '') if ver_resp else none)) }}
+    {% else %}<tr><td class="tbl-vazia">Nenhum acompanhamento concluído ainda.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</details>
+<p class="nota">Acompanhamentos nascem das visitas ou direto na ficha do cliente. Datas no horário de São Paulo.</p>
+{% endblock %}

@@ -172,7 +172,9 @@ def test_01_menu_da_vendedora_e_do_admin(session):
     # 25/09/2026: a Calculadora entrou no menu, depois de Produtos, para os dois papéis —
     # é ferramenta de operação desde 22/09 (a vendedora monta ali o produto fora de catálogo).
     # 01/10/2026: Amostras entrou depois da Calculadora, para todos os papéis.
-    assert destinos == ["/vendas", "/clientes", "/cotacoes", "/produtos", "/calculadora", "/amostras"]
+    # 15/10/2026: Acompanhamentos entrou depois de Amostras (CRM de relacionamento), para todos.
+    assert destinos == ["/vendas", "/clientes", "/cotacoes", "/produtos", "/calculadora", "/amostras",
+                        "/acompanhamentos"]
     assert "Olá" not in pagina and "Bom dia" not in pagina
 
     pagina = templates.env.get_template("base.html").render(
@@ -180,7 +182,7 @@ def test_01_menu_da_vendedora_e_do_admin(session):
     nav = pagina.split("<nav>")[1].split("</nav>")[0]
     destinos = re.findall(r'href="(/[^"]*)"', nav)
     assert destinos == ["/dashboard", "/vendas", "/clientes", "/cotacoes", "/produtos",
-                        "/calculadora", "/amostras", "/aprovacoes", "/admin"]
+                        "/calculadora", "/amostras", "/acompanhamentos", "/aprovacoes", "/admin"]
 
 
 def test_02_login_limpo_sem_texto_tecnico():
