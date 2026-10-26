@@ -25,6 +25,7 @@ FAMILIA_POR_CATEGORIA = {
     "euro sham": "Pillow Case",
     "pillow sham": "Pillow Case",
     "protetor de fronha": "Pillow Protector",
+    "protetor de travesseiro": "Pillow Protector",
     "toalha banho": "Bath Towel",
     "toalha rosto": "Hand Towel",
     "toalha piso": "Bath Mat",

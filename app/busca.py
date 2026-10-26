@@ -45,7 +45,7 @@ SINONIMOS = [
     {"travesseiro", "pillow"},
     {"protetor de colchao", "mattress protector"},
     {"topper de colchao", "mattress topper", "pillow top", "pillowtop"},
-    {"protetor de fronha", "pillow protector", "capa protetora"},
+    {"protetor de travesseiro", "protetor de fronha", "pillow protector", "capa protetora"},
     {"capa de almofada", "cushion cover", "almofada", "cushion"},
     # atributos
     {"algodao", "cotton"},

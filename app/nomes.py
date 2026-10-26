@@ -36,7 +36,9 @@ ROTULO_POR_CATEGORIA = {
     "fronha hospitalar": "Fronha hospitalar",
     "euro sham": "Fronha decorativa euro",
     "pillow sham": "Fronha decorativa",
-    "protetor de fronha": "Protetor de fronha",
+    # 26/10/2026: a peça é "protetor de travesseiro" (pedido da operação); a categoria do
+    # catálogo continua "Protetor de Fronha" — só o nome que vai para a proposta mudou
+    "protetor de fronha": "Protetor de travesseiro",
     "toalha banho": "Toalha de banho",
     "toalha rosto": "Toalha de rosto",
     "toalha piso": "Toalha de piso",
