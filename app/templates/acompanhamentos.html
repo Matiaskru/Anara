@@ -45,11 +45,11 @@
 {% endfor %}
 
 <details class="mais">
-  <summary>Concluídos recentemente ({{ painel.concluidos|length }})</summary>
+  <summary>Concluídos e cancelados recentemente ({{ painel.concluidos|length }})</summary>
   <div class="card flush tw">
     <table class="compacta"><tbody>
     {% for a in painel.concluidos %}{{ crmm.linha_acompanhamento(a, voltar, cliente=clientes.get(a.cliente_id, False), responsavel=(nomes.get(a.responsavel_id, '') if ver_resp else none)) }}
-    {% else %}<tr><td class="tbl-vazia">Nenhum acompanhamento concluído ainda.</td></tr>{% endfor %}
+    {% else %}<tr><td class="tbl-vazia">Nenhum acompanhamento concluído ou cancelado ainda.</td></tr>{% endfor %}
     </tbody></table>
   </div>
 </details>

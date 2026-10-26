@@ -124,15 +124,16 @@
   <table class="compacta" style="margin-top:10px;">
     <tbody>
     {% for a in atividades %}
-      <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
+      <tr {% if a.concluida_em or a.cancelada_em %}style="opacity:.55;"{% endif %}>
         <td style="font-size:11px;">{{ a.due_em.strftime('%d/%m %H:%M') if a.due_em else '—' }}</td>
         <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td>
         <td>{{ a.titulo }}</td>
         <td style="font-size:11px;">
           {% if a.concluida_em %}concluída {{ a.concluida_em.strftime('%d/%m') }}
+          {% elif a.cancelada_em %}cancelada {{ a.cancelada_em.strftime('%d/%m') }}
           {% elif atrasada(a) %}<span class="tag tag-review">atrasada</span>
           {% else %}pendente{% endif %}</td>
-        <td>{% if not a.concluida_em %}<button class="btn btn-ghost btn-sm" onclick="concluir({{ a.id }})">Concluir</button>{% endif %}</td></tr>
+        <td>{% if not a.concluida_em and not a.cancelada_em %}<button class="btn btn-ghost btn-sm" onclick="concluir({{ a.id }})">Concluir</button>{% endif %}</td></tr>
     {% endfor %}
     </tbody>
   </table>

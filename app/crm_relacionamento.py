@@ -282,7 +282,7 @@ class LinhaVisita:
 
     @property
     def proximo_passo(self) -> Optional[str]:
-        pend = [a for a in self.acompanhamentos if not a.concluida_em]
+        pend = [a for a in self.acompanhamentos if not a.concluida_em and not a.cancelada_em]
         if pend:
             return pend[0].titulo
         return self.visita.proximos_passos
@@ -355,6 +355,7 @@ def reagendar_acompanhamento(session: Session, *, ator: Usuario, atividade: Opti
                              data_prevista: Optional[date]) -> AtividadeComercial:
     atividade = _exigir_acompanhamento(ator, atividade)
     _exigir(atividade.concluida_em is None, "Acompanhamento concluído não se reagenda.", 409)
+    _exigir(atividade.cancelada_em is None, "Acompanhamento cancelado não se reagenda.", 409)
     _exigir(data_prevista is not None, "Informe a nova data.", 400)
     antes = atividade.due_em.date().isoformat() if atividade.due_em else "sem data"
     atividade.due_em = prazo_do_dia(data_prevista)
@@ -369,6 +370,7 @@ def reagendar_acompanhamento(session: Session, *, ator: Usuario, atividade: Opti
 def editar_acompanhamento(session: Session, *, ator: Usuario, atividade: Optional[AtividadeComercial],
                           descricao: str) -> AtividadeComercial:
     atividade = _exigir_acompanhamento(ator, atividade)
+    _exigir(atividade.cancelada_em is None, "Acompanhamento cancelado não se edita.", 409)
     _exigir(bool(_texto(descricao)), "A descrição é obrigatória.", 400)
     if atividade.titulo != descricao.strip():
         antes = atividade.titulo
@@ -379,6 +381,28 @@ def editar_acompanhamento(session: Session, *, ator: Usuario, atividade: Optiona
                       entidade_id=atividade.id, escopo=f"cliente {atividade.cliente_id}", antes=antes,
                       depois=atividade.titulo, origem=ORIGEM)
     return atividade
+
+
+def cancelar_acompanhamento(session: Session, *, ator: Usuario, atividade: Optional[AtividadeComercial],
+                            motivo: Optional[str] = None) -> AtividadeComercial:
+    """Encerra SEM ter sido feito (criado por engano, perdeu o sentido). Sai dos pendentes como o
+    concluído, mas não conta como concluído; nada é apagado. Mesmas pessoas que podem concluir."""
+    atividade = _exigir_acompanhamento(ator, atividade)
+    _exigir(atividade.concluida_em is None, "Acompanhamento concluído não se cancela.", 409)
+    if atividade.cancelada_em:
+        return atividade
+    atividade.cancelada_em = datetime.utcnow()
+    atividade.cancelada_por = ator.email
+    atividade.motivo_cancelamento = _texto(motivo)
+    session.add(atividade)
+    adm.registrar(session, ator=ator, acao="CANCEL_ACTIVITY", entidade="AtividadeComercial",
+                  entidade_id=atividade.id, escopo=atividade.titulo,
+                  motivo=atividade.motivo_cancelamento, origem=ORIGEM)
+    return atividade
+
+
+def encerrado_em(atividade: AtividadeComercial) -> Optional[datetime]:
+    return atividade.concluida_em or atividade.cancelada_em
 
 
 def data_prevista(atividade: AtividadeComercial) -> Optional[date]:
@@ -403,7 +427,7 @@ def painel_acompanhamentos(session: Session, *, responsavel_id: Optional[int] = 
                              pendentes=True, limite=2000)
     conc = crm.atividades_de(session, responsavel_id=responsavel_id, cliente_id=cliente_id,
                              pendentes=False, limite=2000)
-    conc = sorted(conc, key=lambda a: a.concluida_em or datetime.min, reverse=True)[:limite_concluidos]
+    conc = sorted(conc, key=lambda a: encerrado_em(a) or datetime.min, reverse=True)[:limite_concluidos]
     return Painel(atrasados=[a for a in pend if a.due_em and data_prevista(a) < hoje],
                   hoje=[a for a in pend if a.due_em and data_prevista(a) == hoje],
                   proximos=[a for a in pend if a.due_em and data_prevista(a) > hoje],

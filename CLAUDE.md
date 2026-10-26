@@ -549,6 +549,11 @@ duplicar.** Regras em `app/crm_relacionamento.py`; rotas em `app/routers/relacio
   fios, composição, tamanho e g/m² (vocabulários `COMPOSICOES`/`TAMANHOS`); um cliente por linha.
 - **Datas comerciais em São Paulo** (`hoje_sp`). O prazo do acompanhamento é gravado às 23:59 do
   dia previsto (as telas antigas comparam `due_em` com o relógio).
+- **Cancelar acompanhamento** (19/10/2026, migration 0032): `cancelada_em/por` +
+  `motivo_cancelamento` (opcional). Cancelado = encerrado **sem** ter sido feito: pendente é "nem
+  concluída nem cancelada" (`crm.atividades_de`, `esta_atrasada`), então some de toda lista e
+  contador de pendentes/atrasados, mas não conta como concluído. Cancelado não conclui, não reagenda
+  e não edita (409); concluído não cancela. Quem pode concluir pode cancelar; `CANCEL_ACTIVITY`.
 - Formulário de produto utilizado é **página própria**: a ficha do cliente não carrega a lista de
   famílias ("Toalha de piso" bate no termo "piso" das varreduras de economia).
 

@@ -117,11 +117,11 @@
     <div class="card-title"><h3>Atividades recentes</h3></div>
     <table class="compacta"><tbody>
       {% for a in atividades %}
-      <tr {% if a.concluida_em %}style="opacity:.55;"{% endif %}>
+      <tr {% if a.concluida_em or a.cancelada_em %}style="opacity:.55;"{% endif %}>
         <td class="muted nowrap">{{ a.due_em|datahora if a.due_em else '—' }}</td>
         <td><span class="tag">{{ a.tipo|rotulo_atividade }}</span></td>
         <td>{{ a.titulo }}</td>
-        <td class="muted">{{ 'concluída' if a.concluida_em else 'pendente' }}</td></tr>
+        <td class="muted">{{ 'concluída' if a.concluida_em else ('cancelada' if a.cancelada_em else 'pendente') }}</td></tr>
       {% endfor %}
     </tbody></table>
   </div>

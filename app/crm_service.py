@@ -27,6 +27,7 @@ from datetime import date, datetime
 from typing import List, Optional, Sequence
 
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlmodel import Session, select
 
 from app import admin_service as adm
@@ -563,6 +564,8 @@ def concluir_atividade(session: Session, atividade: AtividadeComercial, *,
     """Idempotente. A atividade concluída **permanece** — é o histórico do que foi feito."""
     if atividade.concluida_em:
         return atividade
+    if atividade.cancelada_em:
+        raise DadoInvalido("Esta atividade foi cancelada; não se conclui.", status=409)
     atividade.concluida_em = datetime.utcnow()
     atividade.concluida_por = ator.email
     session.add(atividade)
@@ -582,10 +585,13 @@ def atividades_de(session: Session, *, oportunidade_id: Optional[int] = None,
         q = q.where(AtividadeComercial.cliente_id == cliente_id)
     if responsavel_id is not None:
         q = q.where(AtividadeComercial.responsavel_id == responsavel_id)
+    # pendente = nem concluída nem cancelada (19/10/2026); False devolve as encerradas (as duas)
     if pendentes is True:
-        q = q.where(AtividadeComercial.concluida_em.is_(None))
+        q = q.where(AtividadeComercial.concluida_em.is_(None),
+                    AtividadeComercial.cancelada_em.is_(None))
     elif pendentes is False:
-        q = q.where(AtividadeComercial.concluida_em.is_not(None))
+        q = q.where(or_(AtividadeComercial.concluida_em.is_not(None),
+                        AtividadeComercial.cancelada_em.is_not(None)))
     linhas = session.exec(q.limit(limite)).all()
     # `due_em` nulo vai para o fim: atividade sem data não disputa a próxima posição.
     return sorted(linhas, key=lambda a: (a.due_em is None, a.due_em or datetime.max,
@@ -601,7 +607,7 @@ def proxima_atividade(session: Session, oportunidade_id: int
 
 def esta_atrasada(atividade: AtividadeComercial, agora: Optional[datetime] = None) -> bool:
     """Derivado na leitura — não há coluna nem job. Ver o docstring de `AtividadeComercial`."""
-    if atividade is None or atividade.concluida_em or not atividade.due_em:
+    if atividade is None or atividade.concluida_em or atividade.cancelada_em or not atividade.due_em:
         return False
     return atividade.due_em < (agora or datetime.utcnow())
 
@@ -728,6 +734,9 @@ def timeline(session: Session, op: Oportunidade) -> List[dict]:
         if a.concluida_em:
             eventos.append({"quando": a.concluida_em, "tipo": "atividade",
                             "texto": f"Concluída: {a.titulo} ({a.concluida_por or '—'})"})
+        if a.cancelada_em:
+            eventos.append({"quando": a.cancelada_em, "tipo": "atividade",
+                            "texto": f"Cancelada: {a.titulo} ({a.cancelada_por or '—'})"})
     from app.models import AprovacaoCotacao
     for c in cotacoes_de(session, op.id):
         eventos.append({"quando": c.criado_em, "tipo": "cotacao",

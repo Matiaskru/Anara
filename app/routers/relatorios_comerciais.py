@@ -211,10 +211,11 @@ def csv_atividades(request: Request, responsavel: str = "",
                a.due_em.strftime("%Y-%m-%d %H:%M") if a.due_em else "",
                "sim" if a.concluida_em else "nao",
                "sim" if crm.esta_atrasada(a, agora) else "nao",
-               a.oportunidade_id or ""]
+               a.oportunidade_id or "",
+               "sim" if a.cancelada_em else "nao"]
               for a in atividades]
     return _csv(linhas, ["id", "tipo", "titulo", "responsavel", "quando", "concluida",
-                         "atrasada", "oportunidade_id"], "atividades")
+                         "atrasada", "oportunidade_id", "cancelada"], "atividades")
 
 
 @router.get("/relatorios/cotacoes.csv")

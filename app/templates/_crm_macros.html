@@ -3,11 +3,12 @@
 
 {% macro linha_acompanhamento(a, voltar, cliente=None, responsavel=None, link_visita=True) -%}
 {% set d = data_prevista(a) %}
-<tr {% if a.concluida_em %}style="opacity:.6;"{% endif %}>
+{% set aberto = not a.concluida_em and not a.cancelada_em %}
+<tr {% if not aberto %}style="opacity:.6;"{% endif %}>
   <td class="nowrap">{{ d|data if d else 'sem data' }}
-    {% if d and not a.concluida_em and d < hoje %}<span class="pill sem-ponto pill-atrasado">atrasado</span>
-    {% elif d and not a.concluida_em and d == hoje %}<span class="pill sem-ponto pill-aguardando">hoje</span>{% endif %}</td>
-  <td>{{ a.titulo }}
+    {% if d and aberto and d < hoje %}<span class="pill sem-ponto pill-atrasado">atrasado</span>
+    {% elif d and aberto and d == hoje %}<span class="pill sem-ponto pill-aguardando">hoje</span>{% endif %}</td>
+  <td>{% if a.cancelada_em %}<s>{{ a.titulo }}</s>{% else %}{{ a.titulo }}{% endif %}
     {% if a.visita_id and link_visita %}<a class="link small" href="/visitas/{{ a.visita_id }}">· ver visita</a>{% endif %}
     {% if a.oportunidade_id %}<a class="link small" href="/vendas/{{ a.oportunidade_id }}">· ver venda</a>{% endif %}</td>
   {% if cliente is not none %}<td>{% if cliente %}<a class="link" href="/clientes/{{ cliente.id }}">{{ cliente.nome }}</a>{% else %}<span class="muted">—</span>{% endif %}</td>{% endif %}
@@ -16,6 +17,8 @@
     <div class="acoes-linha">
     {% if a.concluida_em %}
       <span class="muted small">concluído em {{ a.concluida_em|data }}</span>
+    {% elif a.cancelada_em %}
+      <span class="muted small">cancelado em {{ a.cancelada_em|data }}{% if a.motivo_cancelamento %} · {{ a.motivo_cancelamento }}{% endif %}</span>
     {% elif pode_operar(a) %}
       <form class="inline" method="post" action="/acompanhamentos/{{ a.id }}/concluir">
         <input type="hidden" name="voltar" value="{{ voltar }}">
@@ -30,6 +33,11 @@
           <input type="hidden" name="voltar" value="{{ voltar }}">
           <input name="descricao" required value="{{ a.titulo }}" aria-label="Descrição">
           <button class="btn btn-xs btn-copper" type="submit">Salvar</button></form></details>
+      <details class="acao-inline"><summary class="btn btn-xs btn-ghost">Cancelar</summary>
+        <form method="post" action="/acompanhamentos/{{ a.id }}/cancelar">
+          <input type="hidden" name="voltar" value="{{ voltar }}">
+          <input name="motivo" placeholder="motivo (opcional)" aria-label="Motivo do cancelamento">
+          <button class="btn btn-xs btn-copper" type="submit">Confirmar cancelamento</button></form></details>
     {% else %}
       <span class="muted small">de outra pessoa</span>
     {% endif %}

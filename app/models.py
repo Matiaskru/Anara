@@ -1536,6 +1536,11 @@ class AtividadeComercial(SQLModel, table=True):
     # visita aponta para ela; o criado direto no cliente fica com NULO
     visita_id: Optional[int] = Field(default=None, foreign_key="visitacliente.id", index=True)
     atualizado_em: Optional[datetime] = None
+    # 19/10/2026 (migration 0032): cancelado = encerrado SEM ter sido feito. Sai dos pendentes
+    # como o concluído, mas não conta como concluído; nada é apagado.
+    cancelada_em: Optional[datetime] = None
+    cancelada_por: Optional[str] = None
+    motivo_cancelamento: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------

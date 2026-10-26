@@ -257,6 +257,16 @@ async def editar_acompanhamento(request: Request, atividade_id: int, session: Se
     return RedirectResponse(url=_voltar(form.get("voltar"), "/acompanhamentos"), status_code=303)
 
 
+@router.post("/acompanhamentos/{atividade_id}/cancelar")
+async def cancelar_acompanhamento(request: Request, atividade_id: int, session: Session = Depends(get_session)):
+    ator = exigir_autenticado(request)
+    form = await request.form()
+    rel.cancelar_acompanhamento(session, ator=ator, atividade=session.get(AtividadeComercial, atividade_id),
+                                motivo=form.get("motivo"))
+    session.commit()
+    return RedirectResponse(url=_voltar(form.get("voltar"), "/acompanhamentos"), status_code=303)
+
+
 # ---------------------------------------------------------------------------
 # Perfil de produtos utilizados
 # ---------------------------------------------------------------------------
