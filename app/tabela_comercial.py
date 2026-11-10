@@ -204,6 +204,41 @@ SKUS = {'KTC · Bathrobe · L · — · 0/100 · plain · BR-001 · amostra 34':
  'CALC · Pillow Case · 50x90 · 400TC Sateen 100% Cotton · plain · 4 abas · flap 20 cm': 'R208'}
 
 
+#: 10/11/2026 (pedido do Matias: "pode colocar no sistema o que tem na tabela e não tem lá"): os itens da
+#: cotação KTC ANARA20102026 (20/10/2026) que entraram na Tabela de preços do sistema — tapetes de banheiro
+#: (N53–N57) e 600 fios 100% algodão (N58–N80). Os SKUs são gravados por
+#: `scripts/ktc_20_10_2026_11_10/aplicar.py` (mesma fonte: `itens.json`). A próxima revisão da planilha
+#: (REV6) precisa trazê-los; até lá, a lista da REV5 é estendida aqui.
+SKUS_KTC_20_10 = {'KTC · Bath Mat · 2050 g/m² · 100/0 · borda em relevo · 53x53': 'N53',
+ 'KTC · Bath Mat · 2050 g/m² · 100/0 · borda em relevo · 53x69': 'N54',
+ 'KTC · Bath Mat · 2050 g/m² · 100/0 · borda em relevo · 61x91': 'N55',
+ 'KTC · Bath Mat · 2050 g/m² · 100/0 · borda em relevo · 69x122': 'N56',
+ 'KTC · Bath Mat · 2050 g/m² · 100/0 · borda em relevo · 76x127': 'N57',
+ 'KTC · Top Sheet · 600TC Sateen 100% Cotton plain · 190x250': 'N58',
+ 'KTC · Bottom Sheet · 600TC Sateen 100% Cotton plain · 200x290': 'N59',
+ 'KTC · Duvet Cover · 600TC Sateen 100% Cotton plain · 190x260': 'N60',
+ 'KTC · Top Sheet · 600TC Sateen 100% Cotton plain · 240x250': 'N61',
+ 'KTC · Bottom Sheet · 600TC Sateen 100% Cotton plain · 250x290': 'N62',
+ 'KTC · Duvet Cover · 600TC Sateen 100% Cotton plain · 250x260': 'N63',
+ 'KTC · Top Sheet · 600TC Sateen 100% Cotton plain · 260x250': 'N64',
+ 'KTC · Bottom Sheet · 600TC Sateen 100% Cotton plain · 280x290': 'N65',
+ 'KTC · Duvet Cover · 600TC Sateen 100% Cotton plain · 270x265': 'N66',
+ 'KTC · Top Sheet · 600TC Sateen 100% Cotton plain · 275x250': 'N67',
+ 'KTC · Bottom Sheet · 600TC Sateen 100% Cotton plain · 285x295': 'N68',
+ 'KTC · Duvet Cover · 600TC Sateen 100% Cotton plain · 285x265': 'N69',
+ 'KTC · Top Sheet · 600TC Sateen 100% Cotton plain · 300x250': 'N70',
+ 'KTC · Bottom Sheet · 600TC Sateen 100% Cotton plain · 300x310': 'N71',
+ 'KTC · Duvet Cover · 600TC Sateen 100% Cotton plain · 290x260': 'N72',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · standard · flap 20 cm · 50x70': 'N73',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · 2 abas · flap 20 cm · 50x70': 'N74',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · 3 abas · flap 20 cm · 50x70': 'N75',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · 4 abas · flap 20 cm · 50x70': 'N76',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · standard · flap 20 cm · 50x90': 'N77',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · 2 abas · flap 20 cm · 50x90': 'N78',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · 3 abas · flap 20 cm · 50x90': 'N79',
+ 'KTC · Pillow Case · 600TC Sateen 100% Cotton plain · 4 abas · flap 20 cm · 50x90': 'N80'}
+SKUS = {**SKUS, **SKUS_KTC_20_10}
+
 def _normalizar(texto):
     return " ".join((texto or "").split())
 

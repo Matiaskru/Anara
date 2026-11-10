@@ -119,7 +119,11 @@ def test_lista_da_tabela_e_coerente_com_os_itens_calculados():
     calculados = json.load(open(os.path.join(RAIZ, "scripts", "tabela_comercial_2026_10_15",
                                              "itens_calculados.json"), encoding="utf-8"))
     codigos = list(tc.SKUS.values())
-    assert len(tc.SKUS) == 187 and len(set(codigos)) == len(codigos)
+    # 187 da REV5 + 28 da cotação KTC 20/10 que entraram na tabela do sistema em 10/11/2026 (tapetes N53–N57
+    # e 600 fios N58–N80, `scripts/ktc_20_10_2026_11_10/itens.json`)
+    novos = json.load(open(os.path.join(RAIZ, "scripts", "ktc_20_10_2026_11_10", "itens.json"), encoding="utf-8"))["novos"]
+    assert tc.SKUS_KTC_20_10 == {n["sku_key"]: n["codigo"] for n in novos}
+    assert len(tc.SKUS) == 187 + 28 and len(set(codigos)) == len(codigos)
     assert {c["sku_key"] for c in calculados} == {k for k in tc.SKUS if k.startswith("CALC · ")}
     assert {c["codigo"] for c in calculados} <= set(codigos) and len(calculados) == 37
     # N50/N51 saíram da tabela (rev. 5); BL-001..003 estão fora da oferta
