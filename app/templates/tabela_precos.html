@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Tabela de preços — Anara{% endblock %}
+
+{% block extra_head %}
+<style>
+  .tp-nota { color: var(--gray); font-size: 12px; line-height: 1.5; margin: 0 0 12px; max-width: 980px; }
+  .tp-tabela th { white-space: pre-line; vertical-align: bottom; }
+  .tp-tabela td.codigo { font-weight: 700; white-space: nowrap; }
+  .tp-tabela tr.secao td { font-weight: 700; letter-spacing: .02em; }
+  .tp-tabela tr.secao.nivel-1 td { background: var(--midnight); color: #fff; }
+  .tp-tabela tr.secao.nivel-2 td { background: var(--sand-soft); color: var(--ink); }
+  .tp-tabela td.b2b { font-weight: 700; background: var(--cotton); }
+  .tp-tabela td.consulta { color: var(--gray); font-style: italic; }
+  .tp-vazio { color: var(--gray); font-size: 12.5px; padding: 12px; }
+</style>
+{% endblock %}
+
+{% block topbar %}
+<div class="topbar">
+  <div class="titulo"><h1>Tabela de preços</h1><span class="contexto">Tabela comercial {{ versao }} · {{ n_itens }} produtos{% if n_sob_consulta %} ({{ n_sob_consulta }} sob consulta){% endif %}</span></div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="get" class="filters" action="/tabela-precos">
+  <select name="estado" data-auto-submit aria-label="Estado de destino">
+    {% for uf in estados %}<option value="{{ uf }}" {{ 'selected' if uf == estado else '' }}>{{ uf }}</option>{% endfor %}
+  </select>
+  <select name="contribuinte" data-auto-submit aria-label="Cliente é contribuinte de ICMS?">
+    <option value="nao" {{ 'selected' if contribuinte == 'nao' else '' }}>Não contribuinte</option>
+    <option value="sim" {{ 'selected' if contribuinte == 'sim' else '' }}>Contribuinte</option>
+  </select>
+  <select name="condicao" data-auto-submit aria-label="Condição de pagamento">
+    {% for codigo, rotulo in condicoes %}<option value="{{ codigo }}" {{ 'selected' if codigo == condicao else '' }}>{{ rotulo }}</option>{% endfor %}
+  </select>
+  <input type="search" id="tp-busca" placeholder="Buscar código ou produto" aria-label="Buscar na tabela">
+</form>
+
+<p class="tp-nota">Tabela cheia = 2 × B2B. O B2B é o piso da sua autonomia: abaixo dele a proposta vai para aprovação. Entre as colunas o preço é livre, e a comissão segue a faixa do desconto sobre a tabela. Exceção: Daune e Decor (seções marcadas "comissão fixa 5%"), com comissão de 5% em qualquer preço. Frete nacional não incluído · Cartão de crédito: consultar o administrativo.</p>
+
+<div class="card flush">
+  <div class="tw">
+  <table class="tp-tabela">
+    <thead><tr>
+      <th>Código</th><th style="min-width:200px;">Descrição</th><th>Medidas</th><th style="min-width:220px;">Composição / especificação</th>
+      <th class="num">Tabela cheia
+0% · 10% com.</th><th class="num">−10%
+9% com.</th><th class="num">−20%
+8% com.</th><th class="num">−30%
+7% com.</th><th class="num">−40%
+6% com.</th><th class="num">B2B · −50%
+5% com.</th>
+    </tr></thead>
+    <tbody>
+    {% for l in linhas %}
+      {% if l.tipo == 'secao' %}
+      <tr class="secao nivel-{{ l.nivel }}"><td colspan="10">{{ l.texto }}</td></tr>
+      {% else %}
+      <tr class="item">
+        <td class="codigo">{{ l.codigo }}</td>
+        <td>{{ l.descricao }}</td>
+        <td class="muted">{{ l.medida }}</td>
+        <td class="muted">{{ l.especificacao }}</td>
+        {% if l.situacao == 'PRECO' %}
+        <td class="num">{{ l.tabela|brl }}</td>
+        {% for v in l.escada %}<td class="num">{{ v|brl }}</td>{% endfor %}
+        <td class="num b2b">{{ l.b2b|brl }}</td>
+        {% elif l.situacao == 'SOB_CONSULTA' %}
+        <td colspan="6" class="consulta">Preço sob consulta — pedir ao administrativo</td>
+        {% else %}
+        <td colspan="6" class="consulta">Sem preço neste cenário — pedir ao administrativo</td>
+        {% endif %}
+      </tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <div class="tp-vazio" id="tp-vazio" hidden>Nenhum produto com essa busca.</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Busca na própria página: esconde as linhas que não batem e as seções que ficaram vazias.
+(function () {
+  const campo = document.getElementById("tp-busca");
+  const linhas = Array.from(document.querySelectorAll(".tp-tabela tbody tr"));
+  const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  const textos = linhas.map((tr) => norm(tr.textContent));
+  campo.addEventListener("input", () => {
+    const termos = norm(campo.value).split(/\s+/).filter(Boolean);
+    let algum = false;
+    linhas.forEach((tr, i) => {
+      if (tr.classList.contains("item")) {
+        const ok = termos.every((t) => textos[i].includes(t));
+        tr.hidden = !ok;
+        algum = algum || ok;
+      }
+    });
+    // seção aparece se algum item até a próxima seção do mesmo nível ou acima estiver visível
+    linhas.forEach((tr, i) => {
+      if (!tr.classList.contains("secao")) return;
+      const nivel = tr.classList.contains("nivel-1") ? 1 : 2;
+      let visivel = false;
+      for (let j = i + 1; j < linhas.length; j++) {
+        const o = linhas[j];
+        if (o.classList.contains("secao") && (o.classList.contains("nivel-1") || nivel === 2)) break;
+        if (o.classList.contains("item") && !o.hidden) { visivel = true; break; }
+      }
+      tr.hidden = termos.length > 0 && !visivel;
+    });
+    document.getElementById("tp-vazio").hidden = algum || termos.length === 0;
+  });
+})();
+</script>
+{% endblock %}

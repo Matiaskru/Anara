@@ -12,8 +12,8 @@ from app.migrations import backfill, migrar
 from app.seeds import semear
 from app.routers import (
     admin, amostras, calculadora, clientes, configuracoes, cotacoes, crm, dashboard, importar,
-    login, negociacao, produtos, relacionamento, relatorios, relatorios_comerciais, usuarios, vendas,
-    workflow,
+    login, negociacao, produtos, relacionamento, relatorios, relatorios_comerciais, tabela_precos,
+    usuarios, vendas, workflow,
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -138,6 +138,7 @@ app.include_router(relatorios_comerciais.router)
 app.include_router(usuarios.router)
 app.include_router(amostras.router)
 app.include_router(relacionamento.router)
+app.include_router(tabela_precos.router)
 
 
 @app.on_event("startup")

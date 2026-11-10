@@ -36,6 +36,8 @@ TELAS_COMERCIAIS = [
     "visita_form.html", "visita_detalhe.html", "acompanhamentos.html", "clientes_por_produto.html",
     "produto_utilizado_form.html",
     "_crm_macros.html",
+    # 10/11/2026: Tabela de preços — a tabela comercial das vendedoras, com preço do sistema
+    "tabela_precos.html",
 ]
 
 #: Termos que não podem aparecer como **texto** numa tela comercial.
@@ -133,7 +135,10 @@ def test_menu_e_por_tarefa_e_curto():
     # 15/10/2026: Acompanhamentos entrou depois de Amostras (pedido do Matias, CRM de
     # relacionamento) — a vendedora abre ali, todo dia, o que combinou com os clientes nas
     # visitas e o que está atrasado. Teto 9 → 10.
-    assert len(destinos) <= 10, f"o menu voltou a crescer: {destinos}"
+    # 10/11/2026: Tabela de preços entrou depois de Produtos (pedido do Matias) — a vendedora
+    # consulta ali a tabela comercial, com o preço do sistema no cenário do cliente, em vez da
+    # planilha que circulava por WhatsApp. Teto 10 → 11.
+    assert len(destinos) <= 11, f"o menu voltou a crescer: {destinos}"
 
 
 def test_menu_nao_tem_ferramenta_tecnica_solta():

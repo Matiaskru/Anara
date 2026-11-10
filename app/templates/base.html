@@ -39,6 +39,10 @@
         <a href="/produtos" class="{{ 'active' if active == 'produtos' else '' }}">
           <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2l5.5 3v6L8 14l-5.5-3V5z"/><path d="M8 8l5.5-3M8 8L2.5 5M8 8v6"/></svg>
           Produtos</a>
+        {# 10/11/2026: a Tabela comercial das vendedoras dentro do sistema, com o preço fixo publicado #}
+        <a href="/tabela-precos" class="{{ 'active' if active == 'tabela_precos' else '' }}">
+          <svg class="ico" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2.5" width="12" height="11" rx="1"/><path d="M2 6h12M2 9.5h12M6 6v7.5"/></svg>
+          Tabela de preços</a>
         {#
           A calculadora é ferramenta de operação, não de administração: a vendedora monta o
           produto que não está no catálogo para poder cotar. Ela já vivia dentro da cotação;
