@@ -274,6 +274,7 @@ class Cliente(SQLModel, table=True):
     nome: str
     cnpj_cpf: Optional[str] = None
     cidade_uf: Optional[str] = None
+    endereco: Optional[str] = None              # rua, nº, bairro, CEP — informativo (0033)
     telefone: Optional[str] = None
     email: Optional[str] = None
     contato_nome: Optional[str] = None

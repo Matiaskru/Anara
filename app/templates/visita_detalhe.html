@@ -38,6 +38,15 @@
   </div>
   <div>
     <div class="card">
+      <div class="card-title"><h3>Empresa</h3><a class="link small" href="/clientes/{{ cliente.id }}">Ver cadastro</a></div>
+      <table class="limpa compacta"><tbody>
+        <tr><td class="muted" style="width:40%;">Cliente</td><td>{{ cliente.nome }}</td></tr>
+        <tr><td class="muted">Endereço</td><td>{{ cliente.endereco or '—' }}</td></tr>
+        <tr><td class="muted">Cidade/UF</td><td>{{ cliente.cidade_uf or '—' }}</td></tr>
+      </tbody></table>
+      {% if not cliente.endereco %}<p class="muted small" style="margin:6px 0 0;">Endereço não cadastrado — preencha em <a class="link" href="/clientes/{{ cliente.id }}">Editar cadastro</a>.</p>{% endif %}
+    </div>
+    <div class="card">
       <div class="card-title"><h3>Participantes</h3></div>
       {% if linha.participantes or v.participantes_externos %}
       <ul class="small" style="margin:0; padding-left:18px;">

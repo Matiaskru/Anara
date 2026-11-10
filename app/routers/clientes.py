@@ -49,7 +49,7 @@ def restaurar(cliente_id: int, session: Session = Depends(get_session)):
 @router.post("/clientes")
 def criar(request: Request, nome: str = Form(...), cnpj_cpf: str = Form(""),
           cidade_uf: str = Form(""), telefone: str = Form(""), email: str = Form(""),
-          voltar_para: str = Form("/clientes"),
+          endereco: str = Form(""), voltar_para: str = Form("/clientes"),
           session: Session = Depends(get_session)):
     """Cadastro mínimo: nome. CNPJ repetido de cliente ativo é recusado (409)."""
     from app import crm_service as crm
@@ -57,6 +57,7 @@ def criar(request: Request, nome: str = Form(...), cnpj_cpf: str = Form(""),
 
     cliente = crm.criar_cliente(session, ator=usuario_da_request(request), nome=nome,
                                 cnpj_cpf=cnpj_cpf or None, cidade_uf=cidade_uf or None,
+                                endereco=(endereco or "").strip() or None,
                                 telefone=telefone or None, email=email or None)
     session.commit()
     session.refresh(cliente)
@@ -68,7 +69,7 @@ def criar(request: Request, nome: str = Form(...), cnpj_cpf: str = Form(""),
 @router.post("/clientes/{cliente_id}/editar")
 def editar(request: Request, cliente_id: int, nome: str = Form(...), cnpj_cpf: str = Form(""),
            cidade_uf: str = Form(""), finalidade: str = Form(""), telefone: str = Form(""),
-           email: str = Form(""), contato_nome: str = Form(""),
+           email: str = Form(""), contato_nome: str = Form(""), endereco: str = Form(""),
            session: Session = Depends(get_session)):
     """Edita o cadastro comercial (Fase 3C). Não toca em cotação nenhuma.
 
@@ -94,10 +95,11 @@ def editar(request: Request, cliente_id: int, nome: str = Form(...), cnpj_cpf: s
         raise crm.DadoInvalido("Finalidade fiscal inválida.")
 
     antes = {"nome": cliente.nome, "cnpj_cpf": cliente.cnpj_cpf, "cidade_uf": cliente.cidade_uf,
-             "finalidade": cliente.finalidade}
+             "endereco": cliente.endereco, "finalidade": cliente.finalidade}
     cliente.nome = nome.strip()
     cliente.cnpj_cpf = (cnpj_cpf or "").strip() or None
     cliente.cidade_uf = (cidade_uf or "").strip() or None
+    cliente.endereco = (endereco or "").strip() or None
     cliente.finalidade = finalidade or None
     cliente.telefone = (telefone or "").strip() or None
     cliente.email = (email or "").strip() or None
@@ -106,7 +108,8 @@ def editar(request: Request, cliente_id: int, nome: str = Form(...), cnpj_cpf: s
     adm.registrar(session, ator=ator, acao="UPDATE_CLIENT", entidade="Cliente",
                   entidade_id=cliente.id, escopo=cliente.nome, antes=str(antes),
                   depois=str({"nome": cliente.nome, "cnpj_cpf": cliente.cnpj_cpf,
-                              "cidade_uf": cliente.cidade_uf, "finalidade": cliente.finalidade}),
+                              "cidade_uf": cliente.cidade_uf, "endereco": cliente.endereco,
+                              "finalidade": cliente.finalidade}),
                   origem="crm")
     session.commit()
     return RedirectResponse(url=f"/clientes/{cliente.id}", status_code=303)

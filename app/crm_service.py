@@ -98,7 +98,7 @@ def criar_cliente(session: Session, *, ator: Usuario, nome: str, **campos) -> Cl
             f"Cliente já cadastrado com este CNPJ: {duplicado.nome} (#{duplicado.id}).",
             status=409)
 
-    permitidos = ("cnpj_cpf", "cidade_uf", "telefone", "email", "contato_nome",
+    permitidos = ("cnpj_cpf", "cidade_uf", "endereco", "telefone", "email", "contato_nome",
                   "departamento", "finalidade", "nome_fantasia", "segmento", "site",
                   "origem", "observacoes_comerciais")
     cliente = Cliente(nome=nome.strip(),

@@ -76,6 +76,7 @@
       <table class="limpa compacta"><tbody>
         <tr><td class="muted" style="width:38%;">CNPJ/CPF</td><td>{{ cliente.cnpj_cpf or '—' }}</td></tr>
         <tr><td class="muted">Cidade/UF</td><td>{{ cliente.cidade_uf or '—' }}</td></tr>
+        <tr><td class="muted">Endereço</td><td>{{ cliente.endereco or '—' }}</td></tr>
         <tr><td class="muted">Finalidade fiscal</td><td>{{ cliente.finalidade or '—' }}</td></tr>
         <tr><td class="muted">Telefone</td><td>{{ cliente.telefone or '—' }}</td></tr>
         <tr><td class="muted">E-mail</td><td>{{ cliente.email or '—' }}</td></tr>
@@ -354,6 +355,7 @@
       <div class="field span-2"><label for="ed-nome">Nome</label><input id="ed-nome" name="nome" value="{{ cliente.nome }}" required></div>
       <div class="field"><label for="ed-cnpj">CNPJ/CPF</label><input id="ed-cnpj" name="cnpj_cpf" value="{{ cliente.cnpj_cpf or '' }}"></div>
       <div class="field"><label for="ed-cidade">Cidade/UF</label><input id="ed-cidade" name="cidade_uf" value="{{ cliente.cidade_uf or '' }}" placeholder="ex.: São Paulo"><small>Define o destino fiscal das cotações.</small></div>
+      <div class="field span-2"><label for="ed-endereco">Endereço</label><input id="ed-endereco" name="endereco" value="{{ cliente.endereco or '' }}" placeholder="rua, número, bairro, CEP"></div>
       <div class="field"><label for="ed-fin">Finalidade fiscal</label>
         <select id="ed-fin" name="finalidade"><option value="">—</option>{% for f in finalidades %}<option value="{{ f }}" {{ 'selected' if cliente.finalidade == f else '' }}>{{ f|replace('_', ' ')|capitalize }}</option>{% endfor %}</select></div>
       <div class="field"><label for="ed-tel">Telefone</label><input id="ed-tel" name="telefone" value="{{ cliente.telefone or '' }}"></div>
