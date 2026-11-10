@@ -284,3 +284,37 @@ def test_tela_de_governanca_mostra_o_diagnostico(session, fornecedores):
     assert r.status_code == 200 and p.sku_key in html
     assert "Revisão necessária" in html and "Falta o peso da peça" in html
     assert "US$ 24.00" in html and "29/07/2026" in html.replace("2026-07-29", "29/07/2026")
+
+
+def test_5c_cotacao_ktc_em_sku_calculado_passa_a_formar_o_preco(session, fornecedores, gestor):
+    """10/11/2026: SKU formado pela fórmula (KTC_CALCULATED) que recebe cotação direta da KTC pelo Admin.
+
+    Antes o método continuava "calculado" e o `custo_net` seguia na fórmula: a cotação registrada não mexia no
+    preço, e a referência gravava o EXW cotado ao lado do CNET da fórmula. A cotação do SKU é o topo da
+    hierarquia do EXW — agora ela forma o custo, e a troca de método fica na auditoria.
+    """
+    from app import calculadora as calc
+    from app.models import AuditLog, MaterialPreco
+    mat = session.exec(select(MaterialPreco).where(MaterialPreco.material == "400TC Sateen 100% Cotton",
+                                                   MaterialPreco.plain_or_stripe == "plain")).first()
+    p = calc.salvar_no_catalogo(session, "Top Sheet", 213, 287, material_id=mat.id)
+    session.commit()
+    assert p.cost_method == CostMethod.ktc_calculated.value
+    _, antes = ps.custo_para_precificar(session, p)
+    assert antes["metodo_exw"] != ps.METODO_EXW_COTACAO
+    exw = round(antes["exw_usd"] * 1.5, 2)                     # bem diferente da fórmula
+
+    r = gov.registrar_exw_ktc(session, p, exw_usd=exw, data_ref=date.today(), documento="KTC Quotation teste",
+                              fonte="KTC comercial", motivo="cotação direta recebida", ator=gestor)
+    session.commit()
+    session.refresh(p)
+    custo, depois = ps.custo_para_precificar(session, p)
+    assert p.cost_method == CostMethod.ktc_quoted.value
+    assert depois["metodo_exw"] == ps.METODO_EXW_COTACAO and depois["exw_usd"] == aprox(exw)
+    assert custo > antes["net_brl"] and r["cnet"] == aprox(custo)
+    assert cs.referencia_vigente(session, p.id).cnet_brl == aprox(custo)   # a versão guarda o CNET da cotação
+    log = session.exec(select(AuditLog).where(AuditLog.acao == "REGISTRAR_COTACAO_KTC",
+                                              AuditLog.entidade_id == p.id)).all()[-1]
+    detalhe = json.loads(log.detalhe)
+    assert detalhe["metodo_antes"] == "KTC_CALCULATED" and detalhe["metodo_depois"] == "KTC_QUOTED"
+    assert "método KTC_CALCULATED" in log.versao_anterior

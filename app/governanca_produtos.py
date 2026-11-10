@@ -295,15 +295,19 @@ def registrar_exw_ktc(session: Session, produto: Produto, *, exw_usd, data_ref: 
     _exigir(status in {s.value for s in StatusCusto}, "Status inválido.")
     exw = D(exw_usd)
     _exigir(exw is not None and exw > 0, "O EXW precisa ser positivo, em US$.")
+    metodo_antes = produto.cost_method
     antes = (f"EXW {produto.exw_cotado_usd} ({produto.exw_cotado_data}) · "
-             f"{produto.exw_cotado_fonte or 'sem fonte'}")
+             f"{produto.exw_cotado_fonte or 'sem fonte'} · método {metodo_antes}")
     produto.exw_cotado_usd = para_float(exw)
     produto.exw_cotado_data = data_ref
     produto.exw_cotado_fonte = fonte
     produto.custo_ref_documento = documento
     produto.custo_ref_data = data_ref
-    if produto.cost_method not in (CostMethod.ktc_calculated.value,):
-        produto.cost_method = CostMethod.ktc_quoted.value
+    # 10/11/2026: a cotação direta da KTC é o topo da hierarquia do EXW (cotação do SKU > fórmula calibrada >
+    # fórmula pura). Até aqui um SKU "calculado" continuava calculado — e o `custo_net` de SKU calculado só lê
+    # o EXW cotado quando a fórmula não sai: a cotação registrada não formava preço, e a referência gravava o
+    # CNET da fórmula com o EXW cotado ao lado. Agora o método passa a KTC_QUOTED (a troca vai na auditoria).
+    produto.cost_method = CostMethod.ktc_quoted.value
     session.add(produto)
     session.flush()
     if peso_kg not in (None, ""):
@@ -333,7 +337,9 @@ def registrar_exw_ktc(session: Session, produto: Produto, *, exw_usd, data_ref: 
     session.flush()
     _auditar(session, ator, "REGISTRAR_COTACAO_KTC", produto, antes,
              f"EXW US$ {para_float(exw)} em {data_ref} · {documento} → CNET {para_float(custo)}",
-             motivo, {"versao": ref.versao, "status": status})
+             motivo, {"versao": ref.versao, "status": status,
+                      **({"metodo_antes": metodo_antes, "metodo_depois": produto.cost_method}
+                         if metodo_antes != produto.cost_method else {})})
     return {"versao": ref.versao, "cnet": para_float(custo), "status": status,
             "premissas_faltantes": list(faltantes),
             "status_vivo": ps.status_do_produto(session, produto, custo, memoria)}
