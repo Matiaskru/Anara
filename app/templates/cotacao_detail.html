@@ -71,7 +71,7 @@
     <form method="post" action="/cotacoes/{{ cotacao.id }}/atualizar" class="card" id="form-cabecalho" {% if not editavel %}data-somente-leitura{% endif %}>
       <div class="grid-6" style="gap:10px;">
         <div class="field"><label>Cliente</label><div style="font-weight:700;padding-top:4px;">{{ cliente.nome if cliente else '—' }}</div>
-          <small>{{ cotacao.contato_nome or (cliente.contato_nome if cliente else '') or '' }}</small></div>
+          <small>{{ cotacao.contato_nome or (contato_crm[0] if editavel and contato_crm else '') or (cliente.contato_nome if cliente else '') or '' }}</small></div>
         <div class="field"><label for="c-destino">Destino</label>
           <select id="c-destino" name="estado_destino" data-material {% if not editavel %}disabled{% endif %}>
             <option value="">Definir depois</option>
@@ -124,8 +124,8 @@
         <div class="grid-4 mt-12">
           <div class="field"><label for="c-prazo">Prazo de entrega</label><input id="c-prazo" name="prazo_entrega" value="{{ cotacao.prazo_entrega or '' }}" placeholder="ex.: 30 dias" {% if not editavel %}disabled{% endif %}></div>
           <div class="field"><label for="c-local">Local de entrega</label><input id="c-local" name="local_entrega" value="{{ cotacao.local_entrega or '' }}" placeholder="ex.: unidade Campos do Jordão" {% if not editavel %}disabled{% endif %}></div>
-          <div class="field"><label for="c-contato">Contato</label><input id="c-contato" name="contato_nome" value="{{ cotacao.contato_nome or '' }}" {% if not editavel %}disabled{% endif %}></div>
-          <div class="field"><label for="c-depto">Departamento</label><input id="c-depto" name="departamento_contato" value="{{ cotacao.departamento_contato or '' }}" list="departamentos" {% if not editavel %}disabled{% endif %}>
+          <div class="field"><label for="c-contato">Contato</label><input id="c-contato" name="contato_nome" value="{{ cotacao.contato_nome or (contato_crm[0] if editavel and contato_crm else '') or '' }}" {% if not editavel %}disabled{% endif %}></div>
+          <div class="field"><label for="c-depto">Departamento</label><input id="c-depto" name="departamento_contato" value="{{ cotacao.departamento_contato or (contato_crm[1] if editavel and contato_crm and not cotacao.contato_nome else '') or '' }}" list="departamentos" {% if not editavel %}disabled{% endif %}>
             <datalist id="departamentos"><option>Compras</option><option>Governança</option><option>Operações</option><option>Financeiro</option><option>Diretoria</option></datalist></div>
           <div class="field"><label for="c-vendedor">Responsável</label><input id="c-vendedor" name="vendedor" value="{{ cotacao.vendedor or '' }}" {% if not editavel %}disabled{% endif %}></div>
           <div class="field"><label for="c-frete-txt">Frete (texto na proposta)</label><input id="c-frete-txt" name="frete" value="{{ cotacao.frete or '' }}" placeholder="ex.: incluso até a portaria" {% if not editavel %}disabled{% endif %}></div>

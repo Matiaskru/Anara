@@ -658,6 +658,7 @@ def detalhe(request: Request, cotacao_id: int, session: Session = Depends(get_se
 
 
 def _detalhe(request: Request, cotacao: Cotacao, session: Session):
+    from app import crm_service as crm
     cotacao_id = cotacao.id
     cliente = session.get(Cliente, cotacao.cliente_id)
     itens = session.exec(select(CotacaoItem).where(CotacaoItem.cotacao_id == cotacao_id)
@@ -678,6 +679,10 @@ def _detalhe(request: Request, cotacao: Cotacao, session: Session):
                   if cotacao.oportunidade_id else None),
         "editavel": (_valor_status(cotacao) not in wf.ESTADOS_IMUTAVEIS
                      and _valor_status(cotacao) not in wf.ESTADOS_LEGADOS),
+        # Contato vazio: a tela mostra o contato principal do cliente, o mesmo que o PDF do
+        # rascunho e a emissão vão usar. Só sugere — grava quando a vendedora salva ou emite.
+        "contato_crm": (crm.contato_sugerido(session, cotacao.cliente_id)
+                        if not (cotacao.contato_nome or "").strip() else (None, None)),
         "revisoes": ws.revisoes_de(session, cotacao),
         "economia": economia,
         "estados_difal": estados(session), "regra_icms_atual": regra_icms,
@@ -1634,6 +1639,9 @@ def gerar_pdf(request: Request, cotacao_id: int, session: Session = Depends(get_
 
     if not cotacao.termos_texto:
         cotacao.termos_texto = cfg.txt(session, "termos_padrao")
+    if rascunho:
+        # Rascunho sem contato puxa o contato principal do cliente; o emitido fica como saiu.
+        ws.completar_contato(session, cotacao)
     if not rascunho and not cotacao.emitida_em:
         cotacao.emitida_em = datetime.utcnow()
 

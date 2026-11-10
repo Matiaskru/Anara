@@ -353,6 +353,9 @@ def emitir(session: Session, cotacao: Cotacao, *, ator: Usuario,
     aprov = aprovacao_vigente(session, cotacao.id, prontidao.fingerprint) \
         if prontidao.precisa_aprovacao else None
     cliente = session.get(Cliente, cotacao.cliente_id) if cotacao.cliente_id else None
+    # O contato não é material (fica fora do fingerprint): completá-lo aqui não derruba
+    # aprovação, e o documento emitido sai com o nome em vez de "—".
+    completar_contato(session, cotacao)
 
     snapshot = SnapshotEmissao(
         cotacao_id=cotacao.id, revisao=cotacao.revisao, numero=cotacao.numero,
@@ -479,6 +482,25 @@ def cancelar(session: Session, cotacao: Cotacao, *, ator: Usuario, motivo: str) 
 # ---------------------------------------------------------------------------
 # Revisão
 # ---------------------------------------------------------------------------
+def completar_contato(session: Session, cotacao: Cotacao) -> bool:
+    """Preenche o contato VAZIO da cotação com o contato principal do cliente no CRM.
+
+    Contato digitado na cotação nunca é trocado; departamento só entra se também estiver
+    vazio. Sem contato no cadastro, nada muda. Devolve se alterou a cotação.
+    """
+    if (cotacao.contato_nome or "").strip():
+        return False
+    from app import crm_service as crm
+    nome, cargo = crm.contato_sugerido(session, cotacao.cliente_id)
+    if not nome:
+        return False
+    cotacao.contato_nome = nome
+    if not (cotacao.departamento_contato or "").strip():
+        cotacao.departamento_contato = cargo
+    session.add(cotacao)
+    return True
+
+
 def criar_revisao(session: Session, cotacao: Cotacao, *, ator: Usuario) -> Cotacao:
     """Cria a próxima revisão a partir de uma emitida. A original fica intacta.
 
@@ -509,6 +531,7 @@ def criar_revisao(session: Session, cotacao: Cotacao, *, ator: Usuario) -> Cotac
         departamento_contato=cotacao.departamento_contato,
         prazo_entrega=cotacao.prazo_entrega, local_entrega=cotacao.local_entrega,
         observacoes=cotacao.observacoes, termos_texto=cotacao.termos_texto)
+    completar_contato(session, nova)
     session.add(nova)
     session.flush()
 

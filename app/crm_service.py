@@ -171,6 +171,19 @@ def contato_principal(session: Session, cliente_id: int) -> Optional[Contato]:
     return next((c for c in ativos if c.principal), ativos[0] if ativos else None)
 
 
+def contato_sugerido(session: Session, cliente_id: Optional[int]) -> tuple:
+    """`(nome, cargo)` do contato principal do cliente — para a cotação que está sem contato.
+
+    A cotação guarda o contato quando nasce. Contato cadastrado depois, ou revisão de uma
+    cotação que já nasceu sem ele, deixava o campo vazio e a proposta saía com "—" no lugar
+    do nome (10/11/2026). Sem contato no cadastro, devolve `(None, None)`: nada é inventado.
+    """
+    contato = contato_principal(session, cliente_id) if cliente_id else None
+    if contato is None:
+        return None, None
+    return (contato.nome or None), (getattr(contato, "cargo", None) or None)
+
+
 # ---------------------------------------------------------------------------
 # Oportunidades
 # ---------------------------------------------------------------------------
