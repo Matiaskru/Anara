@@ -497,6 +497,42 @@ def ver_trilha(request: Request, entidade: str = "",
 
 
 # ---------------------------------------------------------------------------
+# Itens da Tabela de preços fora do catálogo (12/11/2026)
+# ---------------------------------------------------------------------------
+@router.get("/admin/catalogo-tabela", response_class=HTMLResponse)
+def catalogo_tabela(request: Request, cadastrados: str = "", session: Session = Depends(get_session)):
+    """Prévia dos itens da Tabela de preços (cotação KTC 20/10) que ainda não são SKU — sem gravar nada."""
+    from app import catalogo_tabela as ct
+    exigir_economia_gerenciavel(request)
+    linhas = ct.previa(session)
+    session.rollback()
+    return templates.TemplateResponse(request, "admin_catalogo_tabela.html", {
+        "active": "admin", "linhas": linhas, "faltam": sum(1 for x in linhas if x.produto_id is None),
+        "problemas": [x for x in linhas if not x.ok], "cadastrados": cadastrados,
+    })
+
+
+@router.post("/admin/catalogo-tabela/cadastrar")
+def catalogo_tabela_cadastrar(request: Request, session: Session = Depends(get_session)):
+    """Cria os SKUs que faltam (caminho da calculadora + cotação KTC registrada), numa transação só."""
+    from fastapi.responses import RedirectResponse
+    from app import catalogo_tabela as ct
+    ator = exigir_economia_gerenciavel(request)
+    problemas = [f"{x.codigo}: B2B {x.b2b} ≠ tabela {x.b2b_tabela}" for x in ct.previa(session) if not x.ok]
+    session.rollback()
+    if problemas:
+        return _erro("Prévia com diferença — nada foi cadastrado: " + "; ".join(problemas), 409)
+    try:
+        resultado = ct.cadastrar(session, ator)
+        session.commit()
+    except (gov.AcaoInvalida, ValueError) as e:
+        session.rollback()
+        return _erro(str(e))
+    return RedirectResponse(url=f"/admin/catalogo-tabela?cadastrados={len(resultado['criados'])}",
+                            status_code=303)
+
+
+# ---------------------------------------------------------------------------
 # Rascunho com premissa desatualizada
 # ---------------------------------------------------------------------------
 @router.get("/admin/cotacao/{cotacao_id}/premissas")

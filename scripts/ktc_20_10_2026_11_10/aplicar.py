@@ -11,6 +11,8 @@
    método "calculado" ignora o EXW cotado — o método muda para KTC_QUOTED, auditado).
    Atenção: a Tabela de preços fica parada (preço fixo), mas a COTAÇÃO forma o B2B pela margem — onde o EXW
    mudou, o B2B da cotação muda junto. A prévia mostra antes → depois.
+   (12/11/2026: o cadastro dos itens novos também está no Admin → /admin/catalogo-tabela, mesma lógica em
+   `app/catalogo_tabela.py`; este script continua valendo e é idempotente com ele.)
 2. **Cadastrar o que está na tabela e não estava no sistema** ("pode colocar no sistema o que tem na tabela e
    não tem lá"): 5 tapetes (N53–N57) e 23 itens 600 fios (N58–N80), montados como a calculadora monta
    (`itens.produto_novo`), com o EXW cotado registrado pelo mesmo caminho do item 1. Peso: estimativa da
@@ -136,7 +138,6 @@ def aplicar(s, dados, ator):
         criado = prod is None
         if criado:
             prod = itens.produto_novo(s, it, dados)
-            prod.sku_key = it["sku_key"]
             prod.precisa_revisao = False
             prod.custo_ref_nota = f"Item {it['codigo']} da Tabela de preços (cotação KTC 20/10, SN {it['sn']})"
             peso = ps.peso_do_produto(s, prod)

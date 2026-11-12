@@ -36,7 +36,7 @@ TELAS_COMERCIAIS = [
     "visita_form.html", "visita_detalhe.html", "acompanhamentos.html", "clientes_por_produto.html",
     "produto_utilizado_form.html",
     "_crm_macros.html",
-    # 10/11/2026: Tabela de preços — a tabela comercial das vendedoras, com preço do sistema
+    # 10/11/2026: Tabela de preços — a tabela comercial das vendedoras, com o preço fixo publicado
     "tabela_precos.html",
 ]
 
@@ -56,7 +56,9 @@ TELAS_TECNICAS = ["saude.html", "admin_sku.html", "admin_trilha.html",
                   "aprovacao_detalhe.html", "relatorio_economico.html",
                   "admin_hub.html", "admin_usuarios.html", "importar.html",
                   "importar_preview.html", "calculadora.html", "aprovacoes_fila.html",
-                  "admin_produtos.html", "403.html"]
+                  "admin_produtos.html", "403.html",
+                  # 12/11/2026: Admin → itens da Tabela de preços no catálogo (mostra situação do custo)
+                  "admin_catalogo_tabela.html"]
 
 
 def _texto_visivel(html: str) -> str:

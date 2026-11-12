@@ -6,7 +6,7 @@ contribuinte e prazo (a tabela cheia é 2 × B2B e a escada sai de `preco_por_de
 o script confere as duas coisas em todas as células e recusa se alguma não bater).
 
 Itens novos (pedido do Matias em 10/11: "até o tapete também" e "incluo os 600 fios na tabela? pode"), da
-cotação KTC ANARA20102026 (`scripts/ktc_20_10_2026_11_10/itens.json`), com preço fixo formado a 5,19
+cotação KTC ANARA20102026 (`app/ktc_20_10_2026_itens.json`), com preço fixo formado a 5,19
 (`precos_ktc_20_10.py`):
   - 600 fios 100% algodão, lençóis e capas: subseção no topo de "TECIDO 100% ALGODÃO ACABAMENTO CLASSIC"
     (antes da 400 fios — a planilha vai do maior número de fios para o menor);
@@ -18,7 +18,7 @@ Saídas:
   - `app/tabela_comercial_precos.json` — B2B fixo por código × "UF|SIM/NÃO" × prazo.
 
 Uso: python3 scripts/tabela_precos_2026_11_10/gerar_layout.py "<Tabela comercial ... REV5.xlsx>" \
-         scripts/ktc_20_10_2026_11_10/itens.json scripts/tabela_precos_2026_11_10/precos_ktc_20_10_5_19.json
+         app/ktc_20_10_2026_itens.json scripts/tabela_precos_2026_11_10/precos_ktc_20_10_5_19.json
 """
 import json
 import os

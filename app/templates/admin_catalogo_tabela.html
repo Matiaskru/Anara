@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Itens da Tabela de preços no catálogo — Anara{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div><h1>Itens da Tabela de preços no catálogo</h1>
+    <div class="sub">Itens da cotação KTC 20/10/2026 (tapetes de banheiro e 600 fios) que estão na Tabela de preços.
+      Para a vendedora cotar, cada um precisa existir como produto. Cadastrar cria os que faltam — pelo mesmo
+      caminho da calculadora, com a cotação da KTC registrada (fonte, documento e auditoria) — e o B2B sai o da
+      Tabela de preços. Peso estimado pela família (a KTC não informou): o produto cota e emite proposta; fechar
+      venda pede o peso real.</div></div>
+  <a href="/admin" class="btn btn-ghost">Voltar</a>
+</div>
+{% if cadastrados %}<div class="banner"><div>{{ cadastrados }} produto(s) cadastrado(s) agora.</div></div>{% endif %}
+<div class="card">
+  <div class="card-title"><h3>{{ linhas|length }} itens · {{ faltam }} a cadastrar</h3>
+    {% if faltam %}
+    <form method="post" action="/admin/catalogo-tabela/cadastrar">
+      <button class="btn btn-copper" type="submit" {% if problemas %}disabled{% endif %}>Cadastrar {{ faltam }} produto(s)</button>
+    </form>
+    {% else %}<span class="muted small">Todos já estão no catálogo.</span>{% endif %}
+  </div>
+  {% if problemas %}<p class="muted small">{{ problemas|length }} item(ns) com B2B diferente da Tabela de preços ou sem preço — nada é cadastrado enquanto houver diferença.</p>{% endif %}
+  <table class="compacta">
+    <thead><tr><th>Código</th><th>Produto</th><th>No catálogo</th><th class="num">B2B (SP · não contrib. · 30 dias)</th>
+      <th class="num">Tabela de preços</th><th>Situação</th></tr></thead>
+    <tbody>
+    {% for l in linhas %}
+      <tr>
+        <td class="codigo"><strong>{{ l.codigo }}</strong></td>
+        <td>{{ l.nome }}</td>
+        <td>{% if l.produto_id %}#{{ l.produto_id }}{% if not l.ativo %} (inativo){% endif %}{% else %}<span class="muted">a cadastrar</span>{% endif %}</td>
+        <td class="num">{{ l.b2b|brl if l.b2b is not none else '—' }}</td>
+        <td class="num">{{ l.b2b_tabela|brl if l.b2b_tabela is not none else '—' }}</td>
+        <td>{% if l.ok %}<span class="tag">ok</span>{% else %}<span class="tag tag-review">confere</span>{% endif %} <span class="muted small">{{ l.status }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

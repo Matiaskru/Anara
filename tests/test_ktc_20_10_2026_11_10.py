@@ -1,6 +1,6 @@
 """Cotação KTC ANARA20102026 (20/10/2026) no sistema — 10/11/2026.
 
-`scripts/ktc_20_10_2026_11_10/itens.json` é a fonte única de três coisas: o custo novo dos 21 SKUs 250 fios
+`app/ktc_20_10_2026_itens.json` é a fonte única de três coisas: o custo novo dos 21 SKUs 250 fios
 70/30 da tabela, os 28 itens novos do catálogo (tapetes N53–N57, 600 fios N58–N80) e — via
 `precos_ktc_20_10.py` — o preço fixo deles na Tabela de preços. Estes testes amarram as três pontas.
 A paridade preço da cotação × preço fixo foi conferida numa cópia do runtime a 5,19 (9.072 células) e o
@@ -18,7 +18,7 @@ from app.tabela_comercial_layout import LINHAS
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PASTA = os.path.join(RAIZ, "scripts", "ktc_20_10_2026_11_10")
-DADOS = json.load(open(os.path.join(PASTA, "itens.json"), encoding="utf-8"))
+DADOS = json.load(open(os.path.join(RAIZ, "app", "ktc_20_10_2026_itens.json"), encoding="utf-8"))
 ITENS_LAYOUT = {x["codigo"]: x for x in LINHAS if x["tipo"] == "item"}
 #: SN → EXW US$ da cotação (PDF "Anara  Quotation 20-10-2026.pdf", linhas 1–51)
 COTACAO = {1: 9.89, 2: 12.47, 3: 20.42, 4: 12.20, 5: 15.14, 6: 26.14, 7: 13.12, 8: 16.74, 9: 28.55, 10: 13.81,
