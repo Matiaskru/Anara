@@ -3,6 +3,8 @@
 Rota de OPERAÇÃO, como a calculadora: qualquer usuário autenticado abre. Só preço comercial, para todos os
 papéis (a página não tem modo econômico).
 """
+from datetime import date
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from sqlmodel import Session
@@ -30,9 +32,11 @@ def pagina(request: Request, estado: str = "", contribuinte: str = "", condicao:
     rotulos = {c.codigo: c.label for c in cfg.condicoes_pagamento(session, apenas_ativas=False)}
     linhas = tp.montar(estado, contribuinte == "sim", condicao)
     itens = [x for x in linhas if x.tipo == "item"]
+    condicoes = [(c, rotulos.get(c, c)) for c in tp.PRAZOS]
     return templates.TemplateResponse(request, "tabela_precos.html", {
         "active": "tabela_precos", "linhas": linhas, "versao": tp.versao(),
         "n_itens": len(itens), "n_sob_consulta": sum(1 for x in itens if x.situacao == "SOB_CONSULTA"),
-        "estados": tp.ESTADOS, "condicoes": [(c, rotulos.get(c, c)) for c in tp.PRAZOS],
+        "estados": tp.ESTADOS, "condicoes": condicoes, "rotulo_condicao": dict(condicoes)[condicao],
+        "hoje": date.today().strftime("%d/%m/%Y"),
         "estado": estado, "contribuinte": contribuinte, "condicao": condicao,
     })

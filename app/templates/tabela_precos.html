@@ -12,6 +12,32 @@
   .tp-tabela td.b2b { font-weight: 700; background: var(--cotton); }
   .tp-tabela td.consulta { color: var(--gray); font-style: italic; }
   .tp-vazio { color: var(--gray); font-size: 12.5px; padding: 12px; }
+  .tp-tabela th .com { display: block; font-weight: 400; color: var(--gray); }
+  .tp-tabela th .rot-unico, .tp-impressao, .tp-tabela .so-impressao { display: none; }
+  .tp-colunas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 0 12px; font-size: 12.5px; }
+  .tp-colunas label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .tp-colunas .rotulo { color: var(--gray); }
+  .tp-colunas .btn { margin-left: auto; }
+  {% for i in range(6) %}.tp-tabela.sem-{{ i }} .pc-{{ i }} { display: none; }
+  {% endfor %}
+  /* Impressão / PDF (pedido da Ines, 12/11/2026): é o que vai para redes em homologação — só as colunas
+     escolhidas, sem comissão, sem a nota interna e sem os filtros. */
+  @media print {
+    .filters, .tp-nota, .tp-colunas, .tp-vazio { display: none !important; }
+    .tp-impressao { display: block; margin: 0 0 10px; }
+    .tp-impressao h2 { margin: 0 0 2px; font-size: 16px; }
+    .tp-impressao p { margin: 0; font-size: 11px; color: #444; }
+    .card.flush { border: 0; box-shadow: none; }
+    .tw { overflow: visible !important; }
+    .tp-tabela { font-size: 10px; }
+    .tp-tabela th .com, .tp-tabela .so-tela { display: none !important; }
+    .tp-tabela .so-impressao { display: inline; }
+    .tp-tabela.uma-coluna th .rot { display: none; }
+    .tp-tabela.uma-coluna th .rot-unico { display: inline; }
+    .tp-tabela tr { break-inside: avoid; }
+    .tp-tabela tr.secao td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .tp-tabela td.b2b { background: none; }
+  }
 </style>
 {% endblock %}
 
@@ -38,18 +64,28 @@
 
 <p class="tp-nota">Tabela cheia = 2 × B2B. O B2B é o piso da sua autonomia: abaixo dele a proposta vai para aprovação. Entre as colunas o preço é livre, e a comissão segue a faixa do desconto sobre a tabela. Exceção: Daune e Decor (seções marcadas "comissão fixa 5%"), com comissão de 5% em qualquer preço. Frete nacional não incluído · Cartão de crédito: consultar o administrativo.</p>
 
+<div class="tp-colunas" id="tp-colunas">
+  <span class="rotulo">Colunas de preço:</span>
+  {% for rot in ["Tabela cheia", "−10%", "−20%", "−30%", "−40%", "B2B"] %}
+  <label><input type="checkbox" data-coluna="{{ loop.index0 }}" checked> {{ rot }}</label>
+  {% endfor %}
+  <button type="button" class="btn btn-ghost btn-sm" id="tp-imprimir">Imprimir / salvar PDF</button>
+</div>
+
+<div class="tp-impressao">
+  <h2>Anara — Tabela de preços</h2>
+  <p>Destino: {{ estado }} · {{ 'Contribuinte de ICMS' if contribuinte == 'sim' else 'Não contribuinte de ICMS' }} · Pagamento: {{ rotulo_condicao }} · {{ hoje }}</p>
+  <p>Valores em R$ por unidade, para o estado de destino e a condição de pagamento indicados. Frete nacional não incluído.</p>
+</div>
+
 <div class="card flush">
   <div class="tw">
   <table class="tp-tabela">
     <thead><tr>
       <th>Código</th><th style="min-width:200px;">Descrição</th><th>Medidas</th><th style="min-width:220px;">Composição / especificação</th>
-      <th class="num">Tabela cheia
-0% · 10% com.</th><th class="num">−10%
-9% com.</th><th class="num">−20%
-8% com.</th><th class="num">−30%
-7% com.</th><th class="num">−40%
-6% com.</th><th class="num">B2B · −50%
-5% com.</th>
+      {% for rot, com in [("Tabela cheia", "0% · 10% com."), ("−10%", "9% com."), ("−20%", "8% com."), ("−30%", "7% com."), ("−40%", "6% com."), ("B2B · −50%", "5% com.")] %}
+      <th class="num pc pc-{{ loop.index0 }}"><span class="rot">{{ rot }}</span><span class="rot-unico">Preço (R$)</span><span class="com">{{ com }}</span></th>
+      {% endfor %}
     </tr></thead>
     <tbody>
     {% for l in linhas %}
@@ -62,13 +98,13 @@
         <td class="muted">{{ l.medida }}</td>
         <td class="muted">{{ l.especificacao }}</td>
         {% if l.situacao == 'PRECO' %}
-        <td class="num">{{ l.tabela|brl }}</td>
-        {% for v in l.escada %}<td class="num">{{ v|brl }}</td>{% endfor %}
-        <td class="num b2b">{{ l.b2b|brl }}</td>
+        <td class="num pc pc-0">{{ l.tabela|brl }}</td>
+        {% for v in l.escada %}<td class="num pc pc-{{ loop.index }}">{{ v|brl }}</td>{% endfor %}
+        <td class="num b2b pc pc-5">{{ l.b2b|brl }}</td>
         {% elif l.situacao == 'SOB_CONSULTA' %}
-        <td colspan="6" class="consulta">Preço sob consulta — pedir ao administrativo</td>
+        <td colspan="6" class="consulta"><span class="so-tela">Preço sob consulta — pedir ao administrativo</span><span class="so-impressao">Sob consulta</span></td>
         {% else %}
-        <td colspan="6" class="consulta">Sem preço neste cenário — pedir ao administrativo</td>
+        <td colspan="6" class="consulta"><span class="so-tela">Sem preço neste cenário — pedir ao administrativo</span><span class="so-impressao">Sob consulta</span></td>
         {% endif %}
       </tr>
       {% endif %}
@@ -82,6 +118,31 @@
 
 {% block extra_scripts %}
 <script>
+// Colunas de preço visíveis (tela e impressão). A escolha fica neste navegador: trocar estado/prazo recarrega a página.
+(function () {
+  const tabela = document.querySelector(".tp-tabela");
+  const caixas = Array.from(document.querySelectorAll("#tp-colunas input[data-coluna]"));
+  const CHAVE = "anara.tabelaPrecos.colunas";
+  let salvas = null;
+  try { salvas = JSON.parse(localStorage.getItem(CHAVE) || "null"); } catch (e) { salvas = null; }
+  if (Array.isArray(salvas) && salvas.length === caixas.length && salvas.some(Boolean)) {
+    caixas.forEach((c, i) => { c.checked = !!salvas[i]; });
+  }
+  function aplicar() {
+    const visiveis = caixas.filter((c) => c.checked).length;
+    caixas.forEach((c, i) => tabela.classList.toggle("sem-" + i, !c.checked));
+    tabela.classList.toggle("uma-coluna", visiveis === 1);
+    tabela.querySelectorAll("td.consulta").forEach((td) => { td.colSpan = Math.max(visiveis, 1); });
+    try { localStorage.setItem(CHAVE, JSON.stringify(caixas.map((c) => c.checked))); } catch (e) { /* sem armazenamento */ }
+  }
+  caixas.forEach((c) => c.addEventListener("change", () => {
+    if (!caixas.some((x) => x.checked)) { c.checked = true; }   // pelo menos uma coluna de preço
+    aplicar();
+  }));
+  document.getElementById("tp-imprimir").addEventListener("click", () => window.print());
+  aplicar();
+})();
+
 // Busca na própria página: esconde as linhas que não batem e as seções que ficaram vazias.
 (function () {
   const campo = document.getElementById("tp-busca");
