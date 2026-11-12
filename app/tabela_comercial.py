@@ -207,7 +207,7 @@ SKUS = {'KTC · Bathrobe · L · — · 0/100 · plain · BR-001 · amostra 34':
 #: 10/11/2026 (pedido do Matias: "pode colocar no sistema o que tem na tabela e não tem lá"): os itens da
 #: cotação KTC ANARA20102026 (20/10/2026) que entraram na Tabela de preços do sistema — tapetes de banheiro
 #: (N53–N57) e 600 fios 100% algodão (N58–N80). Os SKUs são gravados por
-#: `scripts/ktc_20_10_2026_11_10/aplicar.py` (mesma fonte: `itens.json`). A próxima revisão da planilha
+#: `app/catalogo_tabela.py` (Admin → /admin/catalogo-tabela; mesma fonte: `app/ktc_20_10_2026_itens.json`). A próxima revisão da planilha
 #: (REV6) precisa trazê-los; até lá, a lista da REV5 é estendida aqui.
 SKUS_KTC_20_10 = {'KTC · Bath Mat · 2050 g/m² · 100/0 · borda em relevo · 53x53': 'N53',
  'KTC · Bath Mat · 2050 g/m² · 100/0 · borda em relevo · 53x69': 'N54',
@@ -244,6 +244,12 @@ def _normalizar(texto):
 
 
 _CHAVES = frozenset(_normalizar(k) for k in SKUS)
+_CODIGO_POR_CHAVE = {_normalizar(k): c for k, c in SKUS.items()}
+
+
+def codigo_do_produto(produto):
+    """O código da tabela (P001, N58…) do produto, ou None se ele não está na tabela."""
+    return _CODIGO_POR_CHAVE.get(_normalizar(getattr(produto, "sku_key", None)))
 
 
 def na_tabela(produto) -> bool:

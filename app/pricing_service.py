@@ -145,6 +145,51 @@ def fiscal_do_item(session: Session, cotacao: Cotacao, produto: Optional[Produto
     return resultado
 
 
+#: o que precisa ser igual entre o fiscal do item e o fiscal com que a tabela foi formada
+_CAMPOS_FISCAIS_DA_TABELA = ("icms_pct", "fcp_pct", "difal_pct", "difal_responsavel",
+                             "difal_entra_na_margem", "uf_origem", "uf_destino", "contribuinte")
+
+
+def b2b_da_tabela_fixa(session: Session, cotacao: Cotacao, produto: Optional[Produto], fiscal,
+                       percentual_sinal) -> Optional[float]:
+    """B2B FIXO da Tabela de preços para este item neste cenário, ou None (forma pela margem).
+
+    Regra do Matias (10/11/2026, reafirmada em 12/11: "deixe a tabela e o sistema coerentes"): o preço
+    da tabela fica parado; câmbio e custo mexem na MARGEM, não no preço. Então, para produto que está na
+    tabela (`tabela_comercial.codigo_do_produto`) e cenário que a tabela tem, o B2B da cotação, da
+    calculadora e do catálogo é o publicado (`tabela_precos.preco_b2b`) — e a margem sai do custo real.
+
+    "Cenário que a tabela tem" = um dos 6 prazos, sem sinal, e o MESMO fiscal com que a tabela foi
+    formada para aquele estado e contribuinte (cenário padrão do catálogo: origem, finalidade). Outra
+    finalidade, outra origem, sinal ou cartão: a tabela não tem esse preço — o B2B continua pela margem.
+    """
+    if produto is None or fiscal is None or (percentual_sinal or 0) > 0:
+        return None
+    from app import tabela_comercial as tc
+    from app import tabela_precos as tp
+    codigo = tc.codigo_do_produto(produto)
+    condicao = (getattr(cotacao, "condicao_pagamento", None) or "").strip()
+    if codigo is None or condicao not in tp.PRAZOS or fiscal.uf_destino is None:
+        return None
+    estado = next((e.estado for e in session.exec(select(EstadoFiscal)).all()
+                   if (e.uf or "").strip().upper() == fiscal.uf_destino.strip().upper()), None)
+    contribuinte = bool(getattr(cotacao, "contribuinte_icms", False))
+    b2b = tp.preco_b2b(codigo, estado, contribuinte, condicao) if estado else None
+    if b2b is None:
+        return None
+    padrao = cenario_padrao_catalogo(session)
+    cenario_da_tabela = Cotacao(
+        cliente_id=padrao.cliente_id, estado_origem=padrao.estado_origem,
+        uf_origem_fiscal=padrao.uf_origem_fiscal, finalidade=padrao.finalidade,
+        estado_destino=estado, condicao_pagamento=condicao, contribuinte_icms=contribuinte,
+        freight_type=padrao.freight_type, percentual_sinal=0.0)
+    referencia = fiscal_do_item(session, cenario_da_tabela, produto)
+    if referencia.bloqueado or any(getattr(referencia, c) != getattr(fiscal, c)
+                                   for c in _CAMPOS_FISCAIS_DA_TABELA):
+        return None
+    return b2b
+
+
 def _condicao_vigente(condicoes, codigo):
     """A linha de `CondicaoPagamento` que o resolvedor efetivamente escolheu."""
     from app.payment_terms import _vigente_em
@@ -305,6 +350,9 @@ def regras_da_cotacao(session: Session, cotacao: Cotacao,
     if contexto["bloqueado"]:
         contexto["motivo_bloqueio"] = fiscal.motivo or encargo.motivo
         return None, contexto
+    if politica_2026_09_21:
+        contexto["b2b_fixo_tabela"] = b2b_da_tabela_fixa(session, cotacao, produto, fiscal,
+                                                         percentual_sinal)
 
     regras = TaxRuleSet(icms_pct=fiscal.icms_pct, pis_cofins_pct=pis_cofins,
                         encargo_financeiro_pct=encargo.pct, comissao_tabela=comissao,
@@ -1240,7 +1288,13 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
         if e_2026_09_21 and margem.tem_regra:
             vigente = politica_comercial_vigente(session)
             fator = vigente.fator_tabela if vigente and vigente.fator_tabela else D("2")
-            ref = preco_b2b(base, margem.margem_pct, regras, produto.preco_base)
+            fixo = contexto.get("b2b_fixo_tabela") if margem_override is None else None
+            if fixo is not None:
+                # preço PUBLICADO da Tabela de preços (fica parado); a margem é a que esse preço dá
+                ref = calcular_por_preco(base, 1, fixo, regras, produto.preco_base)
+                ref.preco_preciso = D(fixo)
+            else:
+                ref = preco_b2b(base, margem.margem_pct, regras, produto.preco_base)
             eco = preco_b2b(net, margem.margem_pct, regras, produto.preco_base) if base != net else ref
             real_no_b2b = calcular_por_preco(net, 1, ref.preco_negociado, regras, produto.preco_base)
             b2b = {"preco_b2b": para_float(ref.preco_negociado),
@@ -1257,7 +1311,8 @@ def memoria_do_preco(session: Session, produto: Produto, cotacao: Optional[Cotac
                    "base_comercial_brl": para_float(base),
                    "protecao_comercial_pct": (custo.get("referencia_comercial") or {}).get("protecao_pct"),
                    "preco_b2b_economico": para_float(eco.preco_negociado),
-                   "custo_real_brl": para_float(net)}
+                   "custo_real_brl": para_float(net),
+                   "origem_b2b": "TABELA_DE_PRECOS" if fixo is not None else "MARGEM_ALVO"}
         if preco_negociado:
             resultado = calcular_por_preco(net, quantidade, preco_negociado, regras,
                                            produto.preco_base)

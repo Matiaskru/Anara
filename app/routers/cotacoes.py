@@ -139,13 +139,23 @@ def _e_politica_nova(contexto: dict) -> bool:
     return bool(contexto) and contexto.get("politica_comercial") == ROTULO_2026_09_21
 
 
-def _b2b_e_tabela(custo, margem_alvo, regras: TaxRuleSet, contexto: dict, preco_base=None):
+def _b2b_e_tabela(custo, margem_alvo, regras: TaxRuleSet, contexto: dict, preco_base=None,
+                  usar_tabela_fixa: bool = True):
     """(B2B unitário, tabela) da política de 21/09 para este custo neste cenário.
 
     O B2B é o menor centavo com margem ≥ alvo (`pricing_engine.preco_b2b`); a tabela é
     `fator × B2B`, com o fator lido da premissa pinada no contexto — nunca de cache.
+
+    12/11/2026: produto da Tabela de preços em cenário que a tabela tem → o B2B é o PUBLICADO
+    (`contexto["b2b_fixo_tabela"]`, de `pricing_service.b2b_da_tabela_fixa`) e a margem é a que esse
+    preço dá. Margem forçada explicitamente (`usar_tabela_fixa=False`) continua pela margem.
     """
-    b2b = preco_b2b(custo, margem_alvo, regras, preco_base)
+    fixo = (contexto or {}).get("b2b_fixo_tabela") if usar_tabela_fixa else None
+    if fixo is not None:
+        b2b = calcular_por_preco(custo, 1, fixo, regras, preco_base)
+        b2b.preco_preciso = D0(fixo)
+    else:
+        b2b = preco_b2b(custo, margem_alvo, regras, preco_base)
     fator = contexto.get("fator_tabela") if contexto else None
     if fator is None:
         raise HTTPException(status_code=409,
@@ -191,7 +201,9 @@ def _calcular(modo: str, custo: float, qtd: float, valor: float,
         alvo = (valor if valor is not None else margem_alvo) if modo == "margem" else margem_alvo
         if alvo is None or not custo or D0(custo) <= 0:
             return _resultado_bloqueado(qtd, custo)
-        b2b, tabela = _b2b_e_tabela(base, alvo, regras, contexto, preco_base)
+        # margem forçada (≠ alvo da regra) é decisão explícita de quem edita margem: não usa a tabela fixa
+        forcada = modo == "margem" and margem_alvo is not None and D0(alvo) != D0(margem_alvo)
+        b2b, tabela = _b2b_e_tabela(base, alvo, regras, contexto, preco_base, usar_tabela_fixa=not forcada)
         preco = b2b.preco_negociado if modo == "margem" else preco_por_desconto(tabela, valor)
         r = calcular_por_preco(custo, qtd, preco, regras, preco_base)
         r.preco_preciso = b2b.preco_preciso

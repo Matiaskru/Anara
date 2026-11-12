@@ -788,7 +788,9 @@ def recalcular_preco_base_catalogo(session: Session) -> dict:
                 session.add(p)
             sem_preco += 1
             continue
-        b2b = preco_b2b(base, margem.margem_pct, regras).preco_negociado
+        # 12/11/2026: produto da Tabela de preços → o B2B de referência é o publicado (fica parado)
+        fixo = _ctx.get("b2b_fixo_tabela")
+        b2b = D(fixo) if fixo is not None else preco_b2b(base, margem.margem_pct, regras).preco_negociado
         p.preco_base = para_float(b2b)
         p.margem_padrao_pct = para_float(margem.margem_pct)
         session.add(p)

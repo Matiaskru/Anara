@@ -426,6 +426,26 @@ gerador da tabela (`gerar_tabela_app.py`, fora do Git). **Não editar a lista à
   filtro. A chave sai de `calculadora.sku_key_da_calculadora`, a mesma de `salvar_no_catalogo`.
 - Teste que cria produto e espera achá-lo na busca usa a fixture `na_tabela_comercial`.
 
+## Preço fixo da Tabela de preços (10–12/11/2026)
+
+**O preço da tabela fica parado; câmbio e custo mexem na MARGEM** (Matias, 10/11: "a regra não seria manter a
+margem, mas sim o preço"; 12/11: "deixe a tabela e o sistema coerentes").
+
+- **Tabela de preços** (`/tabela-precos`, menu de todos): linhas de `app/tabela_comercial_layout.py` e B2B fixo
+  por código × "UF|SIM/NÃO" × prazo em `app/tabela_comercial_precos.json` (REV5 + 28 itens da KTC 20/10, todos
+  formados a câmbio 5,19). Gerados por `scripts/tabela_precos_2026_11_10/` — não editar à mão. Escolha de
+  colunas e impressão/PDF sem comissão nem nota interna.
+- **Cotação, calculadora e catálogo usam o mesmo preço:** `pricing_service.b2b_da_tabela_fixa` põe
+  `contexto["b2b_fixo_tabela"]` quando o produto está na tabela (`tabela_comercial.codigo_do_produto`) e o
+  cenário é um que a tabela tem — um dos 6 prazos, sem sinal e o MESMO fiscal com que a tabela foi formada
+  (cenário padrão do catálogo para aquele estado e contribuinte). Aí o B2B é o publicado e a margem é a que esse
+  preço dá sobre o custo real (`memoria["b2b"]["origem_b2b"] = "TABELA_DE_PRECOS"`). Fora disso (sinal, outra
+  finalidade/origem com efeito fiscal, cartão, produto fora da tabela, margem forçada) continua pela margem-alvo.
+- **Itens novos da tabela no catálogo:** Admin → `/admin/catalogo-tabela` (`app/catalogo_tabela.py`, dados em
+  `app/ktc_20_10_2026_itens.json`): prévia sem gravar e cadastro idempotente pelo caminho da calculadora, com a
+  cotação KTC registrada.
+- Margem pode cair muito se o custo subir: não há piso automático — acompanhar no Dashboard/memória.
+
 ## Workflow comercial (Sessão 6)
 
 Estados: `rascunho` → `aguardando_aprovacao` → `aprovada` → `emitida` → `enviada`, com

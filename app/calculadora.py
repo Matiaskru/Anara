@@ -442,7 +442,9 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
         base = memoria.get("base_comercial_brl") or produto.custo_unitario
         if regras is not None:
             from app.dinheiro import para_float
-            if margem.politica == ROTULO_2026_09_21:
+            if margem.politica == ROTULO_2026_09_21 and ctx.get("b2b_fixo_tabela") is not None:
+                produto.preco_base = para_float(ctx["b2b_fixo_tabela"])   # produto da Tabela de preços
+            elif margem.politica == ROTULO_2026_09_21:
                 produto.preco_base = para_float(preco_b2b(base, margem.margem_pct, regras).preco_negociado)
             else:
                 produto.preco_base = para_float(
