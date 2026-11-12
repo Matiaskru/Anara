@@ -18,6 +18,7 @@ from app.permissoes import (
 from app import workflow as wf
 from app import workflow_service as ws
 from app.dinheiro import D0, ZERO, dinheiro, divide, para_float, soma
+from app.fiscal_rules import nome_do_estado
 from app.models import (
     Cliente, CondicaoPagamento, Cotacao, CotacaoItem, EstadoFiscal, Fornecedor, Oportunidade,
     Produto, SnapshotEmissao, StatusCotacao, TipoFrete,
@@ -473,6 +474,7 @@ def exigir_venda(session: Session, *, ator, cliente_id: int, oportunidade_id=Non
 
 def criar_cotacao_da_venda(session: Session, request: Request, op, *, ator, **campos) -> Cotacao:
     """O caminho canônico de criação: cliente e vínculo vêm da venda; o resto é herdado."""
+    from app import crm_service as crm
     from app.models import Oportunidade  # noqa: F401
     cliente = session.get(Cliente, op.cliente_id)
     dias = int(cfg.num(session, "validade_dias", 5))
@@ -484,7 +486,8 @@ def criar_cotacao_da_venda(session: Session, request: Request, op, *, ator, **ca
         vendedor=herdado["vendedor"], oportunidade_id=op.id,
         condicao_pagamento=campos.get("condicao_pagamento") or "30",
         percentual_sinal=para_float(campos.get("percentual_sinal") or 0) or 0.0,
-        estado_destino=campos.get("estado_destino") or getattr(cliente, "cidade_uf", None),
+        # o destino herdado é o ESTADO que a "Cidade/UF" do cadastro indica ("São Paulo/SP" → "São Paulo")
+        estado_destino=campos.get("estado_destino") or crm.destino_do_cliente(session, cliente),
         contribuinte_icms=campos.get("contribuinte_icms", True),
         finalidade=getattr(cliente, "finalidade", None),
         freight_type=campos.get("freight_type") or TipoFrete.cif.value,
@@ -686,6 +689,10 @@ def _detalhe(request: Request, cotacao: Cotacao, session: Session):
         "revisoes": ws.revisoes_de(session, cotacao),
         "economia": economia,
         "estados_difal": estados(session), "regra_icms_atual": regra_icms,
+        # o seletor marca o estado que o destino gravado indica — cotação antiga pode ter herdado o
+        # texto do cadastro ("São Paulo/SP"); "Atualizar cenário" então grava o nome do estado
+        "destino_selecionado": nome_do_estado(session.exec(select(EstadoFiscal)).all(),
+                                              cotacao.estado_destino),
         "contexto_fiscal": contexto, "condicoes": cfg.condicoes_pagamento(session),
         # Sinal / entrada (21/09/2026): percentual para o campo e o texto comercial da
         # condição composta — só isso vai à tela; encargo efetivo e fórmula ficam no motor.

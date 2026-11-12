@@ -75,7 +75,7 @@
         <div class="field"><label for="c-destino">Destino</label>
           <select id="c-destino" name="estado_destino" data-material {% if not editavel %}disabled{% endif %}>
             <option value="">Definir depois</option>
-            {% for uf in estados_difal %}<option value="{{ uf }}" {{ 'selected' if uf == cotacao.estado_destino else '' }}>{{ uf }}</option>{% endfor %}
+            {% for uf in estados_difal %}<option value="{{ uf }}" {{ 'selected' if uf == destino_selecionado else '' }}>{{ uf }}</option>{% endfor %}
           </select></div>
         <div class="field"><label>Contribuinte de ICMS</label>
           <div class="mode-toggle">

@@ -167,7 +167,7 @@ def detalhe(request: Request, oportunidade_id: int,
         "proxima": crm.proxima_atividade(session, op.id),
         "timeline": crm.timeline(session, op),
         "responsavel": session.get(Usuario, op.responsavel_id) if op.responsavel_id else None,
-        "faltando_fiscal": crm.dados_fiscais_faltando(cliente) if cliente else [],
+        "faltando_fiscal": crm.dados_fiscais_faltando(cliente, session) if cliente else [],
         "atrasada": crm.esta_atrasada,
         **_contexto_comum(session, request),
     })
@@ -257,7 +257,7 @@ def nova_cotacao(request: Request, oportunidade_id: int,
 
     cot = Cotacao(cliente_id=op.cliente_id, oportunidade_id=op.id,
                   numero=proximo_numero(session), vendedor=ator.nome,
-                  estado_destino=getattr(cliente, "cidade_uf", None),
+                  estado_destino=crm.destino_do_cliente(session, cliente),
                   finalidade=getattr(cliente, "finalidade", None),
                   contato_nome=getattr(contato, "nome", None),
                   departamento_contato=getattr(contato, "cargo", None))

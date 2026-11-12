@@ -26,6 +26,8 @@ O que **não** mudou, de propósito:
 As funções aqui são puras: recebem as linhas já lidas do banco e devolvem um resultado. Não
 conhecem sessão, FastAPI nem Jinja.
 """
+import re
+import unicodedata
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import List, Optional, Sequence, Tuple
@@ -99,20 +101,70 @@ def _bloqueio(motivo: str, **campos) -> ResultadoFiscal:
 # ---------------------------------------------------------------------------
 # Apoio
 # ---------------------------------------------------------------------------
+def _chave_texto(valor) -> str:
+    """Minúsculas, sem acento, espaços colapsados — "SÃO  Paulo" e "sao paulo" viram a mesma chave."""
+    texto = unicodedata.normalize("NFD", str(valor or ""))
+    texto = "".join(c for c in texto if not unicodedata.combining(c))
+    return " ".join(texto.lower().split())
+
+
+#: "Cidade/UF" com separador explícito: "São Paulo/SP", "São Paulo/sP", "Campo Grande - MS",
+#: "Curitiba, PR", "Recife (PE)". A sigla é sempre a ÚLTIMA coisa do texto.
+_CIDADE_SEPARADOR_UF = re.compile(r"^(?P<cidade>.+?)\s*[/,\-–—(]\s*(?P<uf>[A-Za-z]{2})\s*\)?\s*$")
+#: Sigla separada só por espaço ("Vila Velha ES"): só em MAIÚSCULAS — em minúsculas, "do", "se",
+#: "to", "pa"... são palavras, não estados.
+_CIDADE_ESPACO_UF = re.compile(r"^(?P<cidade>.*\S)\s+(?P<uf>[A-Z]{2})$")
+
+
+def estado_do_texto(estados: Sequence, valor: Optional[str]):
+    """A linha de `estados` (EstadoFiscal) que o texto indica com certeza, ou None.
+
+    Existe porque o cadastro do cliente se chama "Cidade/UF" e a vendedora escreve "São Paulo/SP" —
+    e até 12/11/2026 só o nome exato do estado ou a sigla sozinha eram reconhecidos: a cotação nascia
+    com destino "Definir depois" e nenhum item tinha preço. Aceita, sem diferenciar maiúscula, acento
+    ou espaço: o nome do estado ("São Paulo", "rio de janeiro"), a sigla ("SP", "sp") e cidade + sigla
+    ("São Paulo/SP", "Campo Grande - MS", "Curitiba, PR", "Recife (PE)", "Vila Velha ES").
+    Não chuta: cidade sem sigla ("Campinas"), sigla que não existe e texto contraditório
+    ("São Paulo/RJ" — o nome de um estado com a sigla de outro) → None.
+    """
+    texto = (valor or "").strip()
+    if not texto:
+        return None
+    por_nome, por_uf = {}, {}
+    # linhas ativas por último: em chave repetida, vale a ativa
+    for e in sorted(estados, key=lambda x: bool(getattr(x, "ativo", True))):
+        if e.estado:
+            por_nome[_chave_texto(e.estado)] = e
+        if e.uf:
+            por_uf[e.uf.strip().lower()] = e
+    chave = _chave_texto(texto)
+    if chave in por_nome:
+        return por_nome[chave]
+    if len(chave) == 2:
+        return por_uf.get(chave)
+    achado = _CIDADE_SEPARADOR_UF.match(texto) or _CIDADE_ESPACO_UF.match(texto)
+    if not achado:
+        return None
+    estado = por_uf.get(achado.group("uf").lower())
+    if estado is None:
+        return None
+    homonimo = por_nome.get(_chave_texto(achado.group("cidade")))
+    if homonimo is not None and (homonimo.uf or "").strip().upper() != (estado.uf or "").strip().upper():
+        return None
+    return estado
+
+
 def normalizar_uf(estados: Sequence, valor: Optional[str]) -> Optional[str]:
-    """Aceita "SP", "sp", "São Paulo" e devolve sempre a sigla. Desconhecido → None."""
-    alvo = (valor or "").strip().lower()
-    if not alvo:
-        return None
-    if len(alvo) == 2:
-        for e in estados:
-            if (e.uf or "").strip().lower() == alvo:
-                return e.uf.strip().upper()
-        return None
-    for e in estados:
-        if (e.estado or "").strip().lower() == alvo:
-            return (e.uf or "").strip().upper()
-    return None
+    """Aceita "SP", "sp", "São Paulo", "São Paulo/SP", "Campo Grande - MS"… e devolve sempre a
+    sigla. Desconhecido ou contraditório → None (ver `estado_do_texto`)."""
+    estado = estado_do_texto(estados, valor)
+    return ((estado.uf or "").strip().upper() or None) if estado is not None else None
+
+
+def nome_do_estado(estados: Sequence, valor: Optional[str]) -> Optional[str]:
+    """O NOME do estado como está na tabela de estados (o que o seletor "Destino" usa), ou None."""
+    estado = estado_do_texto(estados, valor)
+    return estado.estado if estado is not None else None
 
 
 def linha_estado(estados: Sequence, uf: Optional[str]):

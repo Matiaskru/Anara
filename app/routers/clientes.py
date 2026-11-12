@@ -164,7 +164,7 @@ def detalhe(request: Request, cliente_id: int, session: Session = Depends(get_se
         "vendidas": [crm.cartao(session, o) for o in oportunidades if o.status == "GANHA"],
         "perdidas": [crm.cartao(session, o) for o in oportunidades if o.status == "PERDIDA"],
         "atividades": crm.atividades_de(session, cliente_id=cliente_id, limite=20),
-        "faltando_fiscal": crm.dados_fiscais_faltando(cliente),
+        "faltando_fiscal": crm.dados_fiscais_faltando(cliente, session),
         "comercial": mx.cliente_360(session, cliente_id),
         "etapas": crm.ETAPAS,
         "finalidades": [f.value for f in Finalidade],

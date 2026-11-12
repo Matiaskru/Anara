@@ -120,15 +120,33 @@ def clientes_parecidos(session: Session, nome: str, limite: int = 5) -> List[Cli
     return achados[:limite]
 
 
-def dados_fiscais_faltando(cliente: Cliente) -> List[str]:
+def destino_do_cliente(session: Session, cliente: Optional[Cliente]) -> Optional[str]:
+    """O estado de destino que a cotação herda do cadastro — o NOME da tabela de estados, ou None.
+
+    O campo do cadastro é "Cidade/UF" e a vendedora escreve "São Paulo/SP". Até 12/11/2026 a cotação
+    herdava o texto cru, que não casava com nenhum estado: destino "Definir depois" e nenhum item com
+    preço (ANARA-2026-0062 e 0063). Texto sem estado reconhecível → None (nunca um estado chutado).
+    """
+    from app.fiscal_rules import nome_do_estado
+    from app.models import EstadoFiscal
+    if cliente is None or not (cliente.cidade_uf or "").strip():
+        return None
+    return nome_do_estado(session.exec(select(EstadoFiscal)).all(), cliente.cidade_uf)
+
+
+def dados_fiscais_faltando(cliente: Cliente, session: Optional[Session] = None) -> List[str]:
     """O que ainda falta para este cliente poder receber uma cotação emitida.
 
     Existe para a UX explicar a pendência **antes** de o vendedor montar a proposta inteira e
-    esbarrar num erro obscuro na hora de emitir.
+    esbarrar num erro obscuro na hora de emitir. Com `session`, também avisa quando a cidade/UF
+    está preenchida mas não indica o estado (ex.: "Campinas" sem a sigla).
     """
     faltando = []
     if not (cliente.cidade_uf or "").strip():
         faltando.append("cidade/UF — define o destino fiscal da operação")
+    elif session is not None and destino_do_cliente(session, cliente) is None:
+        faltando.append(f"cidade/UF \"{cliente.cidade_uf}\" não indica o estado — escreva como "
+                        "\"São Paulo/SP\" ou só o estado")
     if not (cliente.finalidade or "").strip():
         faltando.append("finalidade da operação (revenda, uso e consumo…)")
     return faltando

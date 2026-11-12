@@ -192,7 +192,7 @@ def detalhe(request: Request, venda_id: int, session: Session = Depends(get_sess
         "timeline": crm.timeline(session, op),
         "pos_venda": pv.resumo(op),
         "responsavel": session.get(Usuario, op.responsavel_id) if op.responsavel_id else None,
-        "faltando_fiscal": crm.dados_fiscais_faltando(cliente) if cliente else [],
+        "faltando_fiscal": crm.dados_fiscais_faltando(cliente, session) if cliente else [],
         "atrasada": crm.esta_atrasada,
         **_contexto(session, request),
     })
