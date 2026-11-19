@@ -443,6 +443,27 @@ def confirmar_referencia(session: Session, produto: Produto, *, fonte: str, moti
     return {"versao": ref.versao, "status": StatusCusto.confirmado.value, "cnet": linha.custo}
 
 
+def renomear(session: Session, produto: Produto, *, nome: str, motivo: str, ator: Usuario) -> dict:
+    """Troca o nome de exibição do SKU (19/11/2026) — o que a vendedora vê na busca e na proposta nova.
+
+    Só `Produto.nome`: identidade (`sku_key`), `nome_original`, preço, custo e medidas não mudam, e item de
+    cotação já existente continua com o nome pinado. Motivo obrigatório; vai para a auditoria.
+    """
+    novo = " ".join((nome or "").split())
+    _exigir(novo, "O nome não pode ficar vazio.")
+    _exigir(len(novo) <= 200, "Nome longo demais (máximo 200 caracteres).")
+    _exigir(motivo and motivo.strip(), "Renomear exige motivo.")
+    antes = produto.nome
+    if novo == antes:
+        raise AcaoInvalida("O nome já é esse.")
+    produto.nome = novo
+    session.add(produto)
+    session.flush()
+    _auditar(session, ator, "RENOMEAR_PRODUTO", produto, antes, novo, motivo)
+    custo, memoria = _cnet_vivo(session, produto)
+    return {"nome": novo, "status": ps.status_do_produto(session, produto, custo, memoria)}
+
+
 def marcar_status(session: Session, produto: Produto, *, status: str, motivo: str,
                   fonte: str, ator: Usuario) -> dict:
     """Rebaixa explicitamente: `REVALIDAR` (reconferir antes de fechar) ou `A_COTAR` (sem base).

@@ -296,6 +296,13 @@ def gov_confirmar(request: Request, produto_id: int, fonte: str = Form(...),
         session, p, fonte=fonte, motivo=motivo, documento=documento or None, ator=ator))
 
 
+@router.post("/admin/produtos/{produto_id}/nome")
+def gov_nome(request: Request, produto_id: int, nome: str = Form(...), motivo: str = Form(...),
+             session: Session = Depends(get_session)):
+    return _acao_governanca(request, produto_id, session, lambda p, ator: gov.renomear(
+        session, p, nome=nome, motivo=motivo, ator=ator))
+
+
 @router.post("/admin/produtos/{produto_id}/status")
 def gov_status(request: Request, produto_id: int, status: str = Form(...), motivo: str = Form(...),
                fonte: str = Form(""), session: Session = Depends(get_session)):

@@ -74,6 +74,16 @@ const GOV_ACOES = {
     nota: "Rebaixar é decisão administrativa registrada: vira versão com autor e motivo. " +
           "A_COTAR limpa o preço-base do catálogo.",
   },
+  // 19/11/2026: nome que a vendedora vê na busca e na proposta (ex.: tamanho faltando no roupão)
+  renomear: {
+    rotulo: "Renomear",
+    rota: p => `/admin/produtos/${p}/nome`,
+    campos: [
+      {nome: "nome", label: "Nome do produto", tipo: "text", obrigatorio: true, valor: d => d.nome || ""},
+    ],
+    nota: "Muda só o nome que aparece na busca e nas propostas novas. Não mexe em preço, custo, medida " +
+          "nem na identidade do SKU; proposta já feita continua com o nome que tinha.",
+  },
 };
 
 function abrirGovernanca(d) {
@@ -107,8 +117,9 @@ function escolherAcao(chave) {
     }
     const passo = c.passo ? ` step="${c.passo}"` : "";
     const dica = c.dica ? `<small>${esc(c.dica)}</small>` : "";
+    const valor = c.valor ? ` value="${esc(c.valor(govProduto))}"` : "";
     return `<div class="field"><label>${esc(c.label)}${req}</label>` +
-           `<input type="${c.tipo}" name="${c.nome}"${passo}>${dica}</div>`;
+           `<input type="${c.tipo}" name="${c.nome}"${passo}${valor}>${dica}</div>`;
   }).join("");
   document.getElementById("gov-campos").innerHTML =
     (acao.nota ? `<p class="muted small">${esc(acao.nota)}</p>` : "") + campos;

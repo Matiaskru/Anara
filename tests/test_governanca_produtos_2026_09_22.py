@@ -318,3 +318,33 @@ def test_5c_cotacao_ktc_em_sku_calculado_passa_a_formar_o_preco(session, fornece
     detalhe = json.loads(log.detalhe)
     assert detalhe["metodo_antes"] == "KTC_CALCULATED" and detalhe["metodo_depois"] == "KTC_QUOTED"
     assert "método KTC_CALCULATED" in log.versao_anterior
+
+
+def test_5d_renomear_muda_so_o_nome_e_audita(session, fornecedores, gestor):
+    """19/11/2026: o roupão L (BR-008) aparecia como 'Bathrobe waffle kimono · 240 g/m²', sem tamanho."""
+    from app.models import AuditLog
+    p = _roupao(session, fornecedores, peso_kg=1.9)
+    chave, preco = p.sku_key, p.preco_base
+    r = gov.renomear(session, p, nome="  Roupão waffle 240 g/m²  · kimono · L ", motivo="tamanho no nome",
+                     ator=gestor)
+    session.commit()
+    session.refresh(p)
+    assert p.nome == r["nome"] == "Roupão waffle 240 g/m² · kimono · L"
+    assert p.sku_key == chave and p.preco_base == preco
+    log = session.exec(select(AuditLog).where(AuditLog.acao == "RENOMEAR_PRODUTO",
+                                              AuditLog.entidade_id == p.id)).all()[-1]
+    assert log.versao_nova == "Roupão waffle 240 g/m² · kimono · L" and log.motivo == "tamanho no nome"
+    for ruim in ("", "   "):
+        with pytest.raises(gov.AcaoInvalida):
+            gov.renomear(session, p, nome=ruim, motivo="x", ator=gestor)
+    with pytest.raises(gov.AcaoInvalida):
+        gov.renomear(session, p, nome="Outro nome", motivo=" ", ator=gestor)
+
+
+def test_5e_vendedora_nao_renomeia(session, fornecedores):
+    from app.routers.admin import gov_nome
+    p = _roupao(session, fornecedores, peso_kg=1.9)
+    with pytest.raises(HTTPException) as e:
+        chamar(gov_nome, RequestFalsa(_novo_usuario("VENDEDOR_INTERNO")), produto_id=p.id, nome="X",
+               motivo="y", session=session)
+    assert e.value.status_code == 403
