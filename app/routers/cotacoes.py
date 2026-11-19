@@ -752,6 +752,7 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
                         termos_texto: str = Form(""), local_entrega: str = Form(""),
                         freight_manual_confirmado: str = Form(""),
                         freight_manual_obs: str = Form(""),
+                        frete_incluso: str = Form(""),
                         possui_sinal: str = Form(""),
                         percentual_sinal: str = Form(""),
                         request: Request = None,
@@ -801,11 +802,18 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
     cotacao.frete = frete or None
     cotacao.freight_type = freight_type or TipoFrete.cif.value
     valor_frete_novo = float(freight_valor) if freight_valor else None
-    # Frete CIF manual confirmado (21/09/2026): só vale com tipo CIF e valor positivo. Mudar
-    # o valor ou a confirmação é mudança material (entra no total e no fingerprint).
-    confirmado_novo = (cotacao.freight_type == TipoFrete.cif.value
-                       and freight_manual_confirmado in ("sim", "on", "1", "true")
-                       and (valor_frete_novo or 0) > 0)
+    # Frete incluso (19/11/2026, pedido da Ines): "Anara entrega" sem cobrar o frete à parte — entrega em SP
+    # com frete incluso travava a proposta, porque CIF só valia com valor > 0. É decisão comercial
+    # explícita: CIF + valor 0 + confirmado (com autoria), e a proposta diz "Frete nacional: incluso".
+    incluso_novo = (cotacao.freight_type == TipoFrete.cif.value
+                    and frete_incluso in ("sim", "on", "1", "true"))
+    if incluso_novo:
+        valor_frete_novo = 0.0
+    # Frete CIF manual confirmado (21/09/2026): só vale com tipo CIF e valor positivo (ou o frete
+    # incluso, acima). Mudar o valor ou a confirmação é mudança material (entra no total e no fingerprint).
+    confirmado_novo = incluso_novo or (cotacao.freight_type == TipoFrete.cif.value
+                                       and freight_manual_confirmado in ("sim", "on", "1", "true")
+                                       and (valor_frete_novo or 0) > 0)
     mudou_frete = ((cotacao.freight_valor or 0) != (valor_frete_novo or 0)
                    or bool(cotacao.freight_manual_confirmado) != confirmado_novo)
     if confirmado_novo and (not cotacao.freight_manual_confirmado
@@ -817,7 +825,8 @@ def atualizar_cabecalho(cotacao_id: int, condicao_pagamento: str = Form("30"),
         cotacao.freight_manual_por = None
         cotacao.freight_manual_em = None
     cotacao.freight_manual_confirmado = confirmado_novo
-    cotacao.freight_manual_obs = (freight_manual_obs or None) if confirmado_novo else None
+    cotacao.freight_manual_obs = ((freight_manual_obs or ("Frete incluso" if incluso_novo else None))
+                                  if confirmado_novo else None)
     cotacao.freight_valor = valor_frete_novo
     cotacao.prazo_entrega = prazo_entrega or None
     cotacao.contato_nome = contato_nome or None

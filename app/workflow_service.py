@@ -90,16 +90,19 @@ def frete_para_avaliar(session: Session, cotacao: Cotacao) -> Optional[dict]:
     # prestação, pedágio, origem sem tabela — não se aplicam a um valor que o usuário
     # confirmou. O valor soma ao total e não entra no preço unitário, na comissão nem na margem.
     valor = D(getattr(cotacao, "freight_valor", None))
-    if getattr(cotacao, "freight_manual_confirmado", False) and valor is not None and valor > 0:
+    # valor 0 confirmado = frete INCLUSO (19/11/2026): a Anara entrega sem cobrar à parte
+    if getattr(cotacao, "freight_manual_confirmado", False) and valor is not None and valor >= 0:
         return {"cif": True, "responsavel": "ANARA", "status": wf.FRETE_MANUAL_CONFIRMADO,
                 "manual": True, "valor": para_float(dinheiro(valor)),
                 "confirmado_por": getattr(cotacao, "freight_manual_por", None),
                 "confirmado_em": (cotacao.freight_manual_em.isoformat()
                                   if getattr(cotacao, "freight_manual_em", None) else None),
                 "observacao": getattr(cotacao, "freight_manual_obs", None),
-                "bloqueado": False, "grupos": [], "motivos": [],
-                "memoria": "Frete informado manualmente e confirmado pelo usuário — fora do "
-                           "motor automático de frete."}
+                "bloqueado": False, "grupos": [], "motivos": [], "incluso": valor == 0,
+                "memoria": ("Frete incluso — a Anara entrega sem cobrar à parte (confirmado pelo usuário)."
+                            if valor == 0 else
+                            "Frete informado manualmente e confirmado pelo usuário — fora do "
+                            "motor automático de frete.")}
     from app import frete_service as fs
     try:
         return fs.frete_da_cotacao(session, cotacao, itens_de(session, cotacao.id))

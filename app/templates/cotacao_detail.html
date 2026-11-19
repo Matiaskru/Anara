@@ -107,6 +107,11 @@
             <option value="A_COMBINAR" {{ 'selected' if cotacao.freight_type == 'A_COMBINAR' else '' }}>A combinar</option>
           </select>
           <div id="c-frete-valor-wrap" {% if cotacao.freight_type != 'CIF' %}hidden{% endif %}>
+            {% set frete_incluso = cotacao.freight_manual_confirmado and cotacao.freight_valor is not none and cotacao.freight_valor == 0 %}
+            <label class="small" style="display:flex;gap:6px;align-items:center;margin-top:6px;text-transform:none;letter-spacing:0;font-weight:500;">
+              <input type="checkbox" name="frete_incluso" value="sim" data-material {% if frete_incluso %}checked{% endif %} {% if not editavel %}disabled{% endif %} style="width:auto;margin:0;">
+              Frete incluso (sem cobrar à parte)
+            </label>
             <div class="flex mt-8" style="gap:4px;">
               <input type="number" step="0.01" min="0" name="freight_valor" value="{{ cotacao.freight_valor if cotacao.freight_valor else '' }}" placeholder="valor R$" class="input-sm" {% if not editavel %}disabled{% endif %} aria-label="Valor do frete">
             </div>
@@ -117,7 +122,7 @@
             <input name="freight_manual_obs" value="{{ cotacao.freight_manual_obs or '' }}" placeholder="ex.: cotação Transal 21/09" class="input-sm mt-8" {% if not editavel %}disabled{% endif %} aria-label="Observação do frete">
             {% if cotacao.freight_manual_confirmado %}<small>Confirmado por {{ cotacao.freight_manual_por or '—' }}{% if cotacao.freight_manual_em %} em {{ cotacao.freight_manual_em|data }}{% endif %}.</small>{% endif %}
           </div>
-          <small>{% if cotacao.freight_type == 'CIF' and not cotacao.freight_valor %}Informe o valor de frete combinado e marque como confirmado para incluí-lo na proposta.{% endif %}</small></div>
+          <small>{% if cotacao.freight_type == 'CIF' and not cotacao.freight_manual_confirmado %}Marque "Frete incluso" ou informe o valor de frete combinado e marque como confirmado para incluí-lo na proposta.{% endif %}</small></div>
       </div>
       <details class="mais" id="mais-opcoes" {% if cotacao.observacoes or cotacao.observacao_cliente %}open{% endif %}>
         <summary>Mais opções</summary>

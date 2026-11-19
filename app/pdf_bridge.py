@@ -60,9 +60,11 @@ ROTULO_FRETE = {"CIF": "Frete nacional", "FOB": "Por conta do cliente",
                 "OUTRO": "Conforme combinado"}
 
 
-def _texto_frete(tipo: Optional[str], valor, texto_livre: Optional[str], rascunho: bool):
+def _texto_frete(tipo: Optional[str], valor, texto_livre: Optional[str], rascunho: bool,
+                 incluso: bool = False):
     """Como o frete aparece para o cliente — nunca um código.
 
+        CIF incluso        → "Frete nacional: incluso"   (19/11/2026: a Anara entrega sem cobrar à parte)
         CIF com valor      → "Frete nacional: R$ X"      (e o valor entra no total)
         FOB                → "Por conta do cliente"
         A_COMBINAR         → "A combinar"
@@ -71,7 +73,9 @@ def _texto_frete(tipo: Optional[str], valor, texto_livre: Optional[str], rascunh
     tipo = (tipo or "").upper()
     v = D0(valor) if valor not in (None, "") else ZERO
     if tipo == "CIF":
-        if v > ZERO:
+        if incluso:
+            rotulo = "Frete nacional: incluso"
+        elif v > ZERO:
             rotulo = f"Frete nacional: {pdf_proposta.brl(v)}"
         else:
             rotulo = "Frete nacional: a definir" if rascunho else "Frete nacional"
@@ -151,6 +155,7 @@ def montar_documento(cotacao, cliente, itens, *, rascunho: bool = False, snapsho
         data = _data(snapshot.emitido_em)
         cliente_nome, cnpj, cidade = cli.get("nome"), cli.get("cnpj_cpf"), cli.get("cidade_uf")
         frete_valor = frete_json.get("valor") if frete_json.get("cif") else None
+        incluso = bool(frete_json.get("cif") and frete_json.get("manual") and frete_valor == 0)
     else:
         itens_dicts = [{"nome": it.nome_produto, "especificacao": it.especificacao,
                         "quantidade": it.quantidade, "preco_negociado": it.preco_negociado,
@@ -162,11 +167,12 @@ def montar_documento(cotacao, cliente, itens, *, rascunho: bool = False, snapsho
         cnpj = cliente.cnpj_cpf if cliente else None
         cidade = cliente.cidade_uf if cliente else None
         frete_valor = cotacao.freight_valor
+        incluso = bool(getattr(cotacao, "freight_manual_confirmado", False) and frete_valor == 0)
 
     items = _linhas(itens_dicts)
     subtotal = soma(D0(i["total"]) for i in items)
     frete_texto, frete_no_total = _texto_frete(cotacao.freight_type, frete_valor, cotacao.frete,
-                                               rascunho)
+                                               rascunho, incluso=incluso)
     total_geral = subtotal + (dinheiro(frete_no_total) if frete_no_total is not None else ZERO)
 
     header = {
