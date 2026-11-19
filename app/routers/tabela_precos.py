@@ -6,7 +6,7 @@ papéis (a página não tem modo econômico).
 from datetime import date
 
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from sqlmodel import Session
 
 from app import config_service as cfg
@@ -40,3 +40,24 @@ def pagina(request: Request, estado: str = "", contribuinte: str = "", condicao:
         "hoje": date.today().strftime("%d/%m/%Y"),
         "estado": estado, "contribuinte": contribuinte, "condicao": condicao,
     })
+
+
+@router.get("/tabela-precos/excel")
+def excel(request: Request, estado: str = "", contribuinte: str = "", condicao: str = "", colunas: str = "",
+          session: Session = Depends(get_session)):
+    """Excel para mandar a cliente/rede: o cenário e as colunas escolhidos na página, com valores fixos."""
+    exigir_autenticado(request)
+    estado = estado if estado in tp.ESTADOS else PADRAO["estado"]
+    contribuinte = contribuinte if contribuinte in ("sim", "nao") else PADRAO["contribuinte"]
+    condicao = condicao if condicao in tp.PRAZOS else PADRAO["condicao"]
+    rotulos = {c.codigo: c.label for c in cfg.condicoes_pagamento(session, apenas_ativas=False)}
+    rotulo = rotulos.get(condicao, condicao)
+    hoje = date.today()
+    conteudo = tp.planilha_para_cliente(estado, contribuinte == "sim", condicao, tp.colunas_do_pedido(colunas),
+                                        rotulo, hoje.strftime("%d/%m/%Y"))
+    nome = (f"Tabela de precos Anara - {estado} - {'contribuinte' if contribuinte == 'sim' else 'nao contribuinte'}"
+            f" - {rotulo} - {hoje.strftime('%d-%m-%Y')}.xlsx").replace("/", "-")
+    from urllib.parse import quote
+    return Response(content=conteudo,
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(nome)}"})

@@ -17,7 +17,7 @@
   .tp-colunas { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 0 12px; font-size: 12.5px; }
   .tp-colunas label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
   .tp-colunas .rotulo { color: var(--gray); }
-  .tp-colunas .btn { margin-left: auto; }
+  .tp-colunas #tp-imprimir { margin-left: auto; }
   {% for i in range(6) %}.tp-tabela.sem-{{ i }} .pc-{{ i }} { display: none; }
   {% endfor %}
   /* Impressão / PDF (pedido da Ines, 12/11/2026): é o que vai para redes em homologação — só as colunas
@@ -70,6 +70,7 @@
   <label><input type="checkbox" data-coluna="{{ loop.index0 }}" checked> {{ rot }}</label>
   {% endfor %}
   <button type="button" class="btn btn-ghost btn-sm" id="tp-imprimir">Imprimir / salvar PDF</button>
+  <a class="btn btn-ghost btn-sm" id="tp-excel" href="/tabela-precos/excel?estado={{ estado|urlencode }}&contribuinte={{ contribuinte }}&condicao={{ condicao|urlencode }}" data-base="/tabela-precos/excel?estado={{ estado|urlencode }}&contribuinte={{ contribuinte }}&condicao={{ condicao|urlencode }}">Baixar Excel</a>
 </div>
 
 <div class="tp-impressao">
@@ -90,7 +91,7 @@
     <tbody>
     {% for l in linhas %}
       {% if l.tipo == 'secao' %}
-      <tr class="secao nivel-{{ l.nivel }}"><td colspan="10">{{ l.texto }}</td></tr>
+      <tr class="secao nivel-{{ l.nivel }}"><td colspan="10">{{ l.texto_cliente }}{% if l.texto != l.texto_cliente %}<span class="so-tela">{{ l.texto[l.texto_cliente|length:] }}</span>{% endif %}</td></tr>
       {% else %}
       <tr class="item">
         <td class="codigo">{{ l.codigo }}</td>
@@ -134,6 +135,8 @@
     tabela.classList.toggle("uma-coluna", visiveis === 1);
     tabela.querySelectorAll("td.consulta").forEach((td) => { td.colSpan = Math.max(visiveis, 1); });
     try { localStorage.setItem(CHAVE, JSON.stringify(caixas.map((c) => c.checked))); } catch (e) { /* sem armazenamento */ }
+    const excel = document.getElementById("tp-excel");   // o Excel leva só as colunas marcadas
+    excel.href = excel.dataset.base + "&colunas=" + caixas.map((c, i) => (c.checked ? i : null)).filter((i) => i !== null).join(",");
   }
   caixas.forEach((c) => c.addEventListener("change", () => {
     if (!caixas.some((x) => x.checked)) { c.checked = true; }   // pelo menos uma coluna de preço
