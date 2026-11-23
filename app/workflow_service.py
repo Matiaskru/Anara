@@ -533,7 +533,16 @@ def criar_revisao(session: Session, cotacao: Cotacao, *, ator: Usuario) -> Cotac
         contato_nome=cotacao.contato_nome,
         departamento_contato=cotacao.departamento_contato,
         prazo_entrega=cotacao.prazo_entrega, local_entrega=cotacao.local_entrega,
-        observacoes=cotacao.observacoes, termos_texto=cotacao.termos_texto)
+        observacoes=cotacao.observacoes, termos_texto=cotacao.termos_texto,
+        # 23/11/2026: a revisão nascia sem a venda ("Legado — sem venda vinculada" em toda R2+: a revisão atual
+        # sumia da venda e o valor do funil ficava o da R1), sem a observação para o cliente e sem o frete
+        # confirmado (o frete incluso voltava a travar a proposta).
+        oportunidade_id=cotacao.oportunidade_id,
+        observacao_cliente=getattr(cotacao, "observacao_cliente", None),
+        freight_manual_confirmado=bool(getattr(cotacao, "freight_manual_confirmado", False)),
+        freight_manual_por=getattr(cotacao, "freight_manual_por", None),
+        freight_manual_em=getattr(cotacao, "freight_manual_em", None),
+        freight_manual_obs=getattr(cotacao, "freight_manual_obs", None))
     completar_contato(session, nova)
     session.add(nova)
     session.flush()

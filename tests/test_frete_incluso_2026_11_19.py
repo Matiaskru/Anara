@@ -82,3 +82,24 @@ def test_frete_incluso_so_vale_para_anara_entrega(session, fornecedores):
     salvar_cabecalho(session, cot, freight_type="FOB", frete_incluso="sim")
     c = session.get(Cotacao, cot.id)
     assert c.freight_manual_confirmado is False and ws.frete_para_avaliar(session, c) is None
+
+
+def test_revisao_herda_venda_observacao_e_frete_incluso(session, fornecedores, admin):
+    """23/11/2026: toda R2+ nascia "Legado — sem venda vinculada" e o frete incluso voltava a travar."""
+    from app import crm_service as crm
+    cot = _cotacao_cif(session, fornecedores)
+    c = session.get(Cotacao, cot.id)
+    dono = session.exec(select(__import__("app.models", fromlist=["Usuario"]).Usuario)).first() or admin
+    op = crm.criar_oportunidade(session, ator=dono, cliente_id=c.cliente_id, titulo="Venda da revisão")
+    c.oportunidade_id = op.id
+    session.add(c)
+    session.commit()
+    salvar_cabecalho(session, cot, freight_type="CIF", frete_incluso="sim", observacao_cliente="Entrega na portaria")
+    c = session.get(Cotacao, cot.id)
+    ws.emitir(session, c, ator=admin, frete=ws.frete_para_avaliar(session, c))
+    session.commit()
+    r2 = ws.criar_revisao(session, session.get(Cotacao, cot.id), ator=admin)
+    session.commit()
+    assert r2.revisao == 2 and r2.oportunidade_id == op.id and r2.observacao_cliente == "Entrega na portaria"
+    assert r2.freight_manual_confirmado is True and r2.freight_valor == 0
+    assert ws.frete_para_avaliar(session, r2)["incluso"] is True
