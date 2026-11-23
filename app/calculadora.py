@@ -364,7 +364,11 @@ def sku_key_da_calculadora(produto: Produto, familia: str, largura_cm: Optional[
               if largura_cm and comprimento_cm else "sem medida")
     # toalha é identificada pela gramatura; tecido plano e fronha, pelo material
     detalhe = produto.material_ref or (f"{gsm} GSM" if gsm else "sem tecido")
-    chave = f"CALC · {familia} · {medida} · {detalhe} · {plain_or_stripe}"
+    # 23/11/2026: o liso/listrado é o do TECIDO escolhido (`produto_simulado` copia do material). O
+    # formulário não manda `plain_or_stripe` para lençol — vinha sempre "plain" — e o 250 70/30 liso e o
+    # listrado têm o mesmo `material`: o listrado caía no SKU liso e a proposta saía "Lençol plano" (Ines).
+    listra = produto.plain_or_stripe or plain_or_stripe
+    chave = f"CALC · {familia} · {medida} · {detalhe} · {listra}"
     if TIPO_POR_FAMILIA.get(familia) == "toalha":
         # composições diferentes são SKUs diferentes (mesmo custo, por decisão da KTC)
         chave += f" · {composicao_toalha or '100/0'}"
@@ -397,6 +401,11 @@ def salvar_no_catalogo(session: Session, familia: str, largura_cm: Optional[floa
                                              composicao_toalha=composicao_toalha)
 
     existente = session.exec(select(Produto).where(Produto.sku_key == produto.sku_key)).first()
+    if existente and (existente.plain_or_stripe or "plain") != (produto.plain_or_stripe or "plain"):
+        # SKU antigo gravado com a chave errada (listrado com chave "plain", até 23/11/2026): não serve para
+        # esta peça — grava a peça certa numa chave própria, sem tocar no antigo.
+        produto.sku_key = f"{produto.sku_key} · tecido {produto.plain_or_stripe}"
+        existente = session.exec(select(Produto).where(Produto.sku_key == produto.sku_key)).first()
     if existente:
         return existente
 

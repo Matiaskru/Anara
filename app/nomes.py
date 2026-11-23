@@ -98,6 +98,8 @@ def _rotulo_peca(produto) -> str:
     familia = (produto.familia or "").strip().lower()
     if familia in ROTULO_POR_FAMILIA:
         return ROTULO_POR_FAMILIA[familia]
+    if familia == "pillow case" and _construcao_estruturada(produto):
+        return "Fronha"            # as abas vêm no detalhe ("sem abas", "2 abas") — nunca "com aba" genérico
     categoria = (produto.categoria or "").strip().lower()
     if categoria in ROTULO_POR_CATEGORIA:
         return ROTULO_POR_CATEGORIA[categoria]
@@ -195,22 +197,32 @@ _ABAS = re.compile(r"^\s*(\d+)\s*abas?\s*$", re.I)
 
 
 def _construcao_estruturada(produto) -> Optional[str]:
-    """As abas declaradas no cadastro, quando houver. `standard`/0 abas não vira texto."""
-    achado = _ABAS.match(produto.construcao or "")
+    """As abas declaradas no cadastro, quando houver.
+
+    23/11/2026: a fronha `standard` (sem abas, só o flap) passa a dizer "sem abas" — a peça saía como
+    "Fronha com aba", e a vendedora que escolheu "Sem abas" via a proposta dizer o contrário (Ines).
+    """
+    construcao = (produto.construcao or "").strip().lower()
+    if construcao == "standard" and (produto.familia or "") == "Pillow Case":
+        return "sem abas"
+    achado = _ABAS.match(construcao)
     if not achado:
         return None
     quantas = int(achado.group(1))
-    return f"{quantas} abas" if quantas > 0 else None
+    return f"{quantas} abas" if quantas > 0 else "sem abas"
 
 
 def _extras(produto) -> list:
     texto = _normalizar(f"{produto.nome_original or produto.nome} {produto.especificacao or ''} "
                         f"{produto.acabamento or ''} {produto.construcao or ''} {produto.cor or ''}")
+    estruturada = _construcao_estruturada(produto)
     achados = []
     for chave, rotulo in EXTRAS:
+        # com as abas no cadastro, o termo legado ("oxford" → "4 abas") não se aplica: dava "2 abas · 4 abas"
+        if estruturada and rotulo.endswith("abas"):
+            continue
         if _normalizar(chave) in texto and rotulo not in achados:
             achados.append(rotulo)
-    estruturada = _construcao_estruturada(produto)
     if estruturada and estruturada not in achados:
         achados.insert(0, estruturada)      # a construção manda mais que cor/acabamento
     if produto.plain_or_stripe == "stripe" and "listrado" not in achados:

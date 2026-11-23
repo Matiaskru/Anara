@@ -117,8 +117,11 @@ def test_11_fronha_salva_pela_calculadora_mostra_as_abas(session):
 
 
 def test_12_fronha_standard_nao_ganha_ruido_no_nome(session):
+    # 23/11/2026 (Ines: "coloquei fronha 300 sem abas e na proposta aparece como fronha com aba"): a standard
+    # passa a dizer "sem abas", uma vez, e não "com aba" — sem ruído de outra contagem ("0 abas", "4 abas").
     material = next(m for m in __import__("app.config_service", fromlist=["x"]).materiais(session)
                     if m.thread_count == 300)
     p = calc.salvar_no_catalogo(session, "Pillow Case", 50, 90, material_id=material.id)
     session.commit()
-    assert "abas" not in p.nome, p.nome
+    assert p.nome.count("abas") == 1 and p.nome.endswith("· sem abas"), p.nome
+    assert "com aba" not in p.nome and not any(f"{n} abas" in p.nome for n in "01234")
